@@ -3,6 +3,7 @@ import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { PLANS_CONFIG } from '@/config/plans.config';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 import {
   Sidebar,
   SidebarContent,
@@ -16,18 +17,19 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 
-const menuItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Buscar Vagas', url: '/jobs', icon: Search },
-  { title: 'Minha Fila', url: '/queue', icon: ListTodo },
-  { title: 'Planos', url: '/plans', icon: Diamond },
-  { title: 'Configurações', url: '/settings', icon: Settings },
-];
-
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
+  const { t } = useTranslation();
   const planTier = profile?.plan_tier || 'free';
   const planConfig = PLANS_CONFIG[planTier];
+
+  const menuItems = [
+    { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard },
+    { title: t('nav.jobs'), url: '/jobs', icon: Search },
+    { title: t('nav.queue'), url: '/queue', icon: ListTodo },
+    { title: t('nav.plans'), url: '/plans', icon: Diamond },
+    { title: t('nav.settings'), url: '/settings', icon: Settings },
+  ];
 
   const getPlanBadgeClasses = () => {
     switch (planConfig.color) {
@@ -96,7 +98,7 @@ export function AppSidebar() {
             className="justify-start text-muted-foreground hover:text-destructive"
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Sair
+            {t('common.logout')}
           </Button>
         </div>
       </SidebarFooter>

@@ -1,0 +1,17 @@
+{
+  "app": {
+    "name": "H2B Sender"
+  },
+  "common": {
+    "loading": "Loading...",
+    "logout": "Sign out",
+    "language": "Language"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "jobs": "Find Jobs",
+    "queue": "My Queue",
+    "plans": "Plans",
+    "settings": "Settings"
+  }
+}

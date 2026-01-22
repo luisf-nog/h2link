@@ -10,6 +10,7 @@ interface Profile {
   plan_tier: PlanTier;
   credits_used_today: number;
   credits_reset_date: string;
+  preferred_language?: string;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   created_at: string;
