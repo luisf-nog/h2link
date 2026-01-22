@@ -94,57 +94,90 @@ export type Database = {
           city: string
           company: string
           created_at: string
+          description: string | null
+          education_required: string | null
           email: string
+          end_date: string | null
+          experience_months: number | null
           housing_info: string | null
           id: string
           job_id: string
           job_title: string
+          openings: number | null
+          overtime_salary: number | null
+          phone: string | null
           posted_date: string
+          requirements: string | null
           salary: number | null
+          source_url: string | null
           start_date: string | null
           state: string
           tools_provided: boolean | null
           transport_provided: boolean | null
           visa_type: string | null
           weekly_hours: number | null
+          worksite_address: string | null
+          worksite_zip: string | null
         }
         Insert: {
           category?: string | null
           city: string
           company: string
           created_at?: string
+          description?: string | null
+          education_required?: string | null
           email: string
+          end_date?: string | null
+          experience_months?: number | null
           housing_info?: string | null
           id?: string
           job_id: string
           job_title: string
+          openings?: number | null
+          overtime_salary?: number | null
+          phone?: string | null
           posted_date?: string
+          requirements?: string | null
           salary?: number | null
+          source_url?: string | null
           start_date?: string | null
           state: string
           tools_provided?: boolean | null
           transport_provided?: boolean | null
           visa_type?: string | null
           weekly_hours?: number | null
+          worksite_address?: string | null
+          worksite_zip?: string | null
         }
         Update: {
           category?: string | null
           city?: string
           company?: string
           created_at?: string
+          description?: string | null
+          education_required?: string | null
           email?: string
+          end_date?: string | null
+          experience_months?: number | null
           housing_info?: string | null
           id?: string
           job_id?: string
           job_title?: string
+          openings?: number | null
+          overtime_salary?: number | null
+          phone?: string | null
           posted_date?: string
+          requirements?: string | null
           salary?: number | null
+          source_url?: string | null
           start_date?: string | null
           state?: string
           tools_provided?: boolean | null
           transport_provided?: boolean | null
           visa_type?: string | null
           weekly_hours?: number | null
+          worksite_address?: string | null
+          worksite_zip?: string | null
         }
         Relationships: []
       }

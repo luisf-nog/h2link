@@ -25,13 +25,24 @@ type MappedJob = {
   category: string | null;
   city: string;
   state: string;
+  openings: number | null;
   salary: number | null;
+  overtime_salary: number | null;
+  source_url: string | null;
+  phone: string | null;
   start_date: string | null;
+  end_date: string | null;
   posted_date: string | null;
+  experience_months: number | null;
+  description: string | null;
+  requirements: string | null;
   housing_info: string | null;
   transport_provided: boolean;
   tools_provided: boolean;
   weekly_hours: number | null;
+  education_required: string | null;
+  worksite_address: string | null;
+  worksite_zip: string | null;
 };
 
 /**
@@ -48,13 +59,24 @@ const COL_MAP: Record<keyof MappedJob, string[]> = {
   category: ["category", "CATEGORY", "Categoria"],
   city: ["city", "CITY", "Cidade"],
   state: ["state", "STATE", "Estado", "UF"],
+  openings: ["openings", "OPENINGS", "Vagas", "Aberturas"],
   salary: ["salary", "SALARY", "Salário", "Salario"],
+  overtime_salary: ["overtime_salary", "OVERTIME_SALARY", "Hora extra", "Overtime"],
+  source_url: ["source_url", "SOURCE_URL", "URL", "Fonte"],
+  phone: ["phone", "PHONE", "Telefone"],
   start_date: ["start_date", "START_DATE", "Data Início", "Data Inicio", "Início"],
+  end_date: ["end_date", "END_DATE", "Fim", "Data Fim"],
   posted_date: ["posted_date", "POSTED_DATE", "Postado", "Data Postagem"],
+  experience_months: ["experience_months", "EXPERIENCE_MONTHS", "Experiência", "Experience"],
+  description: ["description", "DESCRIPTION", "Descrição", "Descricao"],
+  requirements: ["requirements", "REQUIREMENTS", "Requisitos"],
   housing_info: ["housing_info", "HOUSING_INFO", "Moradia", "Housing"],
   transport_provided: ["transport_provided", "TRANSPORT_PROVIDED", "Transporte"],
   tools_provided: ["tools_provided", "TOOLS_PROVIDED", "Ferramentas", "Tools"],
   weekly_hours: ["weekly_hours", "WEEKLY_HOURS", "Horas Semanais", "Horas"],
+  education_required: ["education_required", "EDUCATION_REQUIRED", "Educação", "Educacao"],
+  worksite_address: ["worksite_address", "WORKSITE_ADDRESS", "Endereço", "Endereco"],
+  worksite_zip: ["worksite_zip", "WORKSITE_ZIP", "CEP", "Zip"],
 };
 
 function pickValue(row: Record<string, unknown>, keys: string[]): unknown {
@@ -72,11 +94,45 @@ function parseDate(v: unknown): string | null {
     if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
   }
   if (typeof v === "string" && v.trim()) {
-    const iso = new Date(v.trim());
+    const s = v.trim();
+
+    // Handles formats like "15/03/2026" and "21/01/2026 21:39"
+    const matchBr = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+\d{2}:\d{2})?$/);
+    if (matchBr) {
+      const [, dd, mm, yyyy] = matchBr;
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const iso = new Date(s);
     if (!Number.isNaN(iso.getTime())) return iso.toISOString().slice(0, 10);
-    return v.trim();
+    return s;
   }
   return null;
+}
+
+function parseNumber(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return null;
+    // supports "12,92" and "12.92"
+    const normalized = s.replace(/\./g, "").replace(/,/, ".");
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function parseBool01(v: unknown): boolean {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v === 1;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (["1", "true", "sim", "yes"].includes(s)) return true;
+    if (["0", "false", "nao", "não", "no"].includes(s)) return false;
+  }
+  return Boolean(v);
 }
 
 function mapRow(row: Record<string, unknown>): MappedJob | null {
@@ -91,7 +147,10 @@ function mapRow(row: Record<string, unknown>): MappedJob | null {
   if (!job_id || !company || !email || !job_title || !city || !state) return null;
 
   const salaryRaw = pickValue(row, COL_MAP.salary);
+  const overtimeRaw = pickValue(row, COL_MAP.overtime_salary);
   const weeklyRaw = pickValue(row, COL_MAP.weekly_hours);
+  const openingsRaw = pickValue(row, COL_MAP.openings);
+  const expRaw = pickValue(row, COL_MAP.experience_months);
 
   return {
     job_id,
@@ -102,13 +161,24 @@ function mapRow(row: Record<string, unknown>): MappedJob | null {
     category: String(pickValue(row, COL_MAP.category) ?? "").trim() || null,
     city,
     state,
-    salary: salaryRaw != null ? Number(salaryRaw) || null : null,
+    openings: parseNumber(openingsRaw),
+    salary: parseNumber(salaryRaw),
+    overtime_salary: parseNumber(overtimeRaw),
+    source_url: String(pickValue(row, COL_MAP.source_url) ?? "").trim() || null,
+    phone: String(pickValue(row, COL_MAP.phone) ?? "").trim() || null,
     start_date: parseDate(pickValue(row, COL_MAP.start_date)),
+    end_date: parseDate(pickValue(row, COL_MAP.end_date)),
     posted_date: parseDate(pickValue(row, COL_MAP.posted_date)),
+    experience_months: parseNumber(expRaw),
+    description: String(pickValue(row, COL_MAP.description) ?? "").trim() || null,
+    requirements: String(pickValue(row, COL_MAP.requirements) ?? "").trim() || null,
     housing_info: String(pickValue(row, COL_MAP.housing_info) ?? "").trim() || null,
-    transport_provided: Boolean(pickValue(row, COL_MAP.transport_provided)),
-    tools_provided: Boolean(pickValue(row, COL_MAP.tools_provided)),
-    weekly_hours: weeklyRaw != null ? Math.round(Number(weeklyRaw)) || null : null,
+    weekly_hours: weeklyRaw != null ? Math.round(parseNumber(weeklyRaw) ?? 0) || null : null,
+    education_required: String(pickValue(row, COL_MAP.education_required) ?? "").trim() || null,
+    transport_provided: parseBool01(pickValue(row, COL_MAP.transport_provided)),
+    tools_provided: parseBool01(pickValue(row, COL_MAP.tools_provided)),
+    worksite_address: String(pickValue(row, COL_MAP.worksite_address) ?? "").trim() || null,
+    worksite_zip: String(pickValue(row, COL_MAP.worksite_zip) ?? "").trim() || null,
   };
 }
 
@@ -227,6 +297,7 @@ export function JobImportDialog() {
                       <TableHead>Cargo</TableHead>
                       <TableHead>Empresa</TableHead>
                       <TableHead>Local</TableHead>
+                      <TableHead>Aberturas</TableHead>
                       <TableHead>Salário</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -240,6 +311,7 @@ export function JobImportDialog() {
                         <TableCell>
                           {j.city}, {j.state}
                         </TableCell>
+                        <TableCell>{j.openings ?? "-"}</TableCell>
                         <TableCell>{j.salary ? `$${j.salary}/h` : "-"}</TableCell>
                       </TableRow>
                     ))}
