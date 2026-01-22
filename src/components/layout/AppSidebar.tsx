@@ -46,19 +46,17 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <BrandLogo height={40} className="shrink-0" />
-          <div>
-            <h1 className="font-bold text-lg text-sidebar-foreground">{t('app.name')}</h1>
-            <span
-              className={cn(
-                'text-xs px-2 py-0.5 rounded-full border font-medium',
-                getPlanBadgeClasses()
-              )}
-            >
-              {t(`plans.tiers.${planTier}.label`)}
-            </span>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <BrandLogo height={44} className="shrink-0 max-w-[160px]" />
+
+          <span
+            className={cn(
+              'text-xs px-2 py-0.5 rounded-full border font-medium',
+              getPlanBadgeClasses()
+            )}
+          >
+            {t(`plans.tiers.${planTier}.label`)}
+          </span>
         </div>
       </SidebarHeader>
 
