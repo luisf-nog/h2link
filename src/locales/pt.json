@@ -4,6 +4,7 @@
   },
   "common": {
     "loading": "Carregando...",
+    "menu": "Menu",
     "cancel": "Cancelar",
     "logout": "Sair",
     "language": "Idioma",

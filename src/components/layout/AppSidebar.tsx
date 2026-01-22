@@ -10,17 +10,20 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
   const { t } = useTranslation();
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
   const planTier = profile?.plan_tier || 'free';
   const planConfig = PLANS_CONFIG[planTier];
 
@@ -44,15 +47,18 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center justify-between gap-3">
-          <BrandLogo height={44} className="shrink-0 max-w-[160px]" />
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="p-3 border-b border-sidebar-border">
+        <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+          <div className={cn('min-w-0', collapsed && 'hidden')}>
+            <div className="text-xs font-medium text-sidebar-foreground/70">{t('common.menu')}</div>
+          </div>
 
           <span
             className={cn(
               'text-xs px-2 py-0.5 rounded-full border font-medium',
-              getPlanBadgeClasses()
+              getPlanBadgeClasses(),
+              collapsed && 'hidden'
             )}
           >
             {t(`plans.tiers.${planTier}.label`)}
@@ -62,18 +68,22 @@ export function AppSidebar() {
 
       <SidebarContent className="p-2">
         <SidebarGroup>
+          <SidebarGroupLabel>{t('common.menu')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors',
+                        collapsed && 'justify-center px-0'
+                      )}
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     >
                       <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
+                      {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -85,17 +95,25 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="flex flex-col gap-2">
-          <div className="text-sm text-muted-foreground truncate">
-            {profile?.email}
-          </div>
+          {!collapsed && (
+            <div className="text-sm text-muted-foreground truncate">
+              {profile?.email}
+            </div>
+          )}
+
           <Button
             variant="ghost"
-            size="sm"
+            size={collapsed ? 'icon' : 'sm'}
             onClick={signOut}
-            className="justify-start text-muted-foreground hover:text-destructive"
+            className={cn(
+              'text-muted-foreground hover:text-destructive',
+              collapsed ? 'mx-auto' : 'justify-start'
+            )}
+            title={t('common.logout')}
+            aria-label={t('common.logout')}
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            {t('common.logout')}
+            <LogOut className={cn('h-4 w-4', !collapsed && 'mr-2')} />
+            {!collapsed && t('common.logout')}
           </Button>
         </div>
       </SidebarFooter>
