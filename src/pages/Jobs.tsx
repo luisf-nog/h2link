@@ -67,6 +67,9 @@ export default function Jobs() {
   const [cityFilter, setCityFilter] = useState(() => searchParams.get('city') ?? '');
   const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') ?? '');
 
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
   type SalaryBand = 'any' | 'lt15' | '15-18' | '18-22' | '22-26' | '26plus';
   const SALARY_BANDS: Array<{ value: SalaryBand; label: string; min: number | null; max: number | null }> = [
     { value: 'any', label: t('jobs.salary.any'), min: null, max: null },
@@ -219,11 +222,44 @@ export default function Jobs() {
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    setCategoriesLoading(true);
+    // Note: PostgREST distinct isn't consistently exposed in client; we fetch and de-dupe client-side.
+    const { data, error } = await supabase
+      .from('public_jobs')
+      .select('category')
+      .not('category', 'is', null)
+      .order('category', { ascending: true })
+      .limit(1000);
+
+    if (error) {
+      console.warn('Error fetching categories:', error);
+      setCategories([]);
+    } else {
+      const raw = (data ?? []).map((r) => String((r as { category: string | null }).category ?? '').trim()).filter(Boolean);
+      const uniq = Array.from(new Set(raw));
+      setCategories(uniq);
+    }
+    setCategoriesLoading(false);
+  };
+
   // Fetch on filter changes (server-side pagination)
   useEffect(() => {
     fetchJobs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
+
+  useEffect(() => {
+    fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const categoryOptions = useMemo(() => {
+    const base = categories;
+    const current = categoryFilter.trim();
+    if (current && !base.includes(current)) return [current, ...base];
+    return base;
+  }, [categories, categoryFilter]);
 
   // Persist filters in URL (debounced)
   useEffect(() => {
@@ -423,14 +459,31 @@ export default function Jobs() {
                 setPage(1);
               }}
             />
-            <Input
-              placeholder={t('jobs.filters.category')}
-              value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
+            <Select
+              value={categoryFilter.trim() ? categoryFilter : '__all__'}
+              onValueChange={(v) => {
+                setCategoryFilter(v === '__all__' ? '' : v);
                 setPage(1);
               }}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t('jobs.filters.category')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t('jobs.filters.category_all')}</SelectItem>
+                {categoriesLoading ? (
+                  <SelectItem value="__loading__" disabled>
+                    {t('common.loading')}
+                  </SelectItem>
+                ) : (
+                  categoryOptions.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
             <Select
               value={salaryBand}
               onValueChange={(v) => {

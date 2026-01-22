@@ -25,7 +25,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "jobs": "Hub Vagas",
+    "jobs": "Jobs Hub",
     "queue": "My Queue",
     "plans": "Plans",
     "settings": "Settings"
@@ -141,7 +141,7 @@
       },
       "loading": "Loading queue...",
       "empty": "Your queue is empty",
-      "go_jobs": "Open Hub Vagas"
+      "go_jobs": "Open Jobs Hub"
     },
     "status": { "sent": "Sent", "pending": "Pending" },
     "toasts": {
@@ -206,7 +206,8 @@
       },
       "state": "State (e.g., FL)",
       "city": "City",
-      "category": "Category"
+      "category": "Category",
+      "category_all": "All categories"
     },
     "search": { "placeholder": "Search by role, company, city..." },
     "salary": {
