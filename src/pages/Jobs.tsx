@@ -225,22 +225,40 @@ export default function Jobs() {
   const fetchCategories = async () => {
     setCategoriesLoading(true);
     // Note: PostgREST distinct isn't consistently exposed in client; we fetch and de-dupe client-side.
-    const { data, error } = await supabase
-      .from('public_jobs')
-      .select('category')
-      .not('category', 'is', null)
-      .order('category', { ascending: true })
-      .limit(1000);
+    // IMPORTANT: paginate because the backend caps at 1000 rows per request.
+    const pageSize = 1000;
+    const maxPages = 25; // safety cap (25k rows)
+    const seen = new Set<string>();
 
-    if (error) {
-      console.warn('Error fetching categories:', error);
-      setCategories([]);
-    } else {
-      const raw = (data ?? []).map((r) => String((r as { category: string | null }).category ?? '').trim()).filter(Boolean);
-      const uniq = Array.from(new Set(raw));
+    try {
+      for (let page = 0; page < maxPages; page++) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from('public_jobs')
+          .select('category')
+          .not('category', 'is', null)
+          .range(from, to);
+
+        if (error) throw error;
+
+        const batch = (data ?? [])
+          .map((r) => String((r as { category: string | null }).category ?? '').trim())
+          .filter(Boolean);
+
+        batch.forEach((c) => seen.add(c));
+
+        if (!data || data.length < pageSize) break;
+      }
+
+      const uniq = Array.from(seen).sort((a, b) => a.localeCompare(b));
       setCategories(uniq);
+    } catch (err) {
+      console.warn('Error fetching categories:', err);
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
     }
-    setCategoriesLoading(false);
   };
 
   // Fetch on filter changes (server-side pagination)

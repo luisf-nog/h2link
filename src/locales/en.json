@@ -89,6 +89,18 @@
       "step2_desc": "Add jobs to your sending queue",
       "step3_title": "3. Send emails",
       "step3_desc": "Send your applications in bulk"
+    },
+    "market": {
+      "title": "Job market snapshot",
+      "subtitle": "Quick view of what’s available right now",
+      "visa_h2a": "H-2A jobs",
+      "visa_h2b": "H-2B jobs",
+      "hot_last_day": "Hot (last day)",
+      "top_categories": "Jobs by category",
+      "top_states": "Most jobs by state",
+      "best_paid_state": "Best paid state (avg)",
+      "no_data": "No data",
+      "error": "Could not load job market stats."
     }
   },
   "settings": {
