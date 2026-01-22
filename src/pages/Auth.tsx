@@ -8,14 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useTranslation();
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -29,7 +27,7 @@ export default function Auth() {
 
     if (error) {
       toast({
-        title: t('auth.toasts.signin_error_title'),
+        title: 'Erro ao entrar',
         description: error.message,
         variant: 'destructive',
       });
@@ -53,14 +51,14 @@ export default function Auth() {
 
     if (error) {
       toast({
-        title: t('auth.toasts.signup_error_title'),
+        title: 'Erro ao criar conta',
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: t('auth.toasts.signup_success_title'),
-        description: t('auth.toasts.signup_success_desc'),
+        title: 'Conta criada!',
+        description: 'Você já pode fazer login.',
       });
       navigate('/dashboard');
     }
@@ -77,7 +75,7 @@ export default function Auth() {
           </div>
           <h1 className="text-3xl font-bold text-foreground">H2B Sender</h1>
           <p className="text-muted-foreground mt-2">
-            {t('auth.hero_tagline')}
+            Aplique para vagas H-2B de forma massiva e segura
           </p>
         </div>
 
@@ -85,31 +83,31 @@ export default function Auth() {
           <Tabs defaultValue="signin" className="w-full">
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">{t('auth.tabs.signin')}</TabsTrigger>
-                <TabsTrigger value="signup">{t('auth.tabs.signup')}</TabsTrigger>
+                <TabsTrigger value="signin">Entrar</TabsTrigger>
+                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
               </TabsList>
             </CardHeader>
 
             <CardContent>
               <TabsContent value="signin" className="mt-0">
-                <CardTitle className="text-xl mb-1">{t('auth.signin.title')}</CardTitle>
+                <CardTitle className="text-xl mb-1">Bem-vindo de volta</CardTitle>
                 <CardDescription className="mb-6">
-                  {t('auth.signin.description')}
+                  Entre com sua conta para continuar
                 </CardDescription>
 
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
+                    <Label htmlFor="signin-email">Email</Label>
                     <Input
                       id="signin-email"
                       name="email"
                       type="email"
-                      placeholder={t('auth.placeholders.email')}
+                      placeholder="seu@email.com"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">{t('auth.fields.password')}</Label>
+                    <Label htmlFor="signin-password">Senha</Label>
                     <Input
                       id="signin-password"
                       name="password"
@@ -120,40 +118,40 @@ export default function Auth() {
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t('auth.actions.signin')}
+                    Entrar
                   </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0">
-                <CardTitle className="text-xl mb-1">{t('auth.signup.title')}</CardTitle>
+                <CardTitle className="text-xl mb-1">Crie sua conta</CardTitle>
                 <CardDescription className="mb-6">
-                  {t('auth.signup.description')}
+                  Comece a aplicar para vagas H-2B hoje
                 </CardDescription>
 
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">{t('auth.fields.full_name')}</Label>
+                    <Label htmlFor="signup-name">Nome Completo</Label>
                     <Input
                       id="signup-name"
                       name="fullName"
                       type="text"
-                      placeholder={t('auth.placeholders.full_name')}
+                      placeholder="Seu nome"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">{t('auth.fields.email')}</Label>
+                    <Label htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
                       name="email"
                       type="email"
-                      placeholder={t('auth.placeholders.email')}
+                      placeholder="seu@email.com"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">{t('auth.fields.password')}</Label>
+                    <Label htmlFor="signup-password">Senha</Label>
                     <Input
                       id="signup-password"
                       name="password"
@@ -165,7 +163,7 @@ export default function Auth() {
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t('auth.actions.signup')}
+                    Criar Conta
                   </Button>
                 </form>
               </TabsContent>
