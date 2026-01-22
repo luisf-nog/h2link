@@ -16,10 +16,12 @@ import {
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { JobDetailsDialog, type JobDetails } from '@/components/jobs/JobDetailsDialog';
+import { JobImportDialog } from '@/components/jobs/JobImportDialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Info, Search, Plus, Home, Bus, Wrench, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +32,7 @@ interface Job extends JobDetails {
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const isAdmin = useIsAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -187,11 +190,14 @@ export default function Jobs() {
     <TooltipProvider>
       <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Buscar Vagas</h1>
-          <p className="text-muted-foreground mt-1">
-            {totalCount} vagas {visaType} disponíveis
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Buscar Vagas</h1>
+            <p className="text-muted-foreground mt-1">
+              {totalCount} vagas {visaType} disponíveis
+            </p>
+          </div>
+          {isAdmin && <JobImportDialog />}
         </div>
       </div>
 
