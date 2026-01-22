@@ -155,7 +155,8 @@ export default function Jobs() {
     return visaType;
   }, [visaType]);
 
-  const tableColSpan = planSettings.show_housing_icons ? 8 : 7;
+  // Cargo, Empresa, Local, Aberturas, Salário, Visto, Email, (Benefícios?), Ação
+  const tableColSpan = planSettings.show_housing_icons ? 9 : 8;
 
   const addToQueue = async (job: Job) => {
     if (planSettings.job_db_blur) {
@@ -324,6 +325,7 @@ export default function Jobs() {
                 <TableHead>Cargo</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Local</TableHead>
+                <TableHead>Aberturas</TableHead>
                 <TableHead>Salário</TableHead>
                 <TableHead>Visto</TableHead>
                 <TableHead>Email</TableHead>
@@ -366,6 +368,7 @@ export default function Jobs() {
                     <TableCell>
                       {job.city}, {job.state}
                     </TableCell>
+                    <TableCell>{job.openings ?? '-'}</TableCell>
                     <TableCell>{formatSalary(job.salary)}</TableCell>
                     <TableCell>
                       <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
