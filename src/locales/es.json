@@ -89,6 +89,18 @@
       "step2_desc": "Agrega empleos a tu cola de envío",
       "step3_title": "3. Enviar emails",
       "step3_desc": "Envía tus solicitudes en masa"
+    },
+    "market": {
+      "title": "Panorama del mercado",
+      "subtitle": "Vista rápida de lo disponible ahora",
+      "visa_h2a": "Empleos H-2A",
+      "visa_h2b": "Empleos H-2B",
+      "hot_last_day": "Calientes (último día)",
+      "top_categories": "Empleos por categoría",
+      "top_states": "Más empleos por estado",
+      "best_paid_state": "Estado mejor pagado (prom.)",
+      "no_data": "Sin datos",
+      "error": "No se pudieron cargar las estadísticas de empleos."
     }
   },
   "settings": {

@@ -89,6 +89,18 @@
       "step2_desc": "Adicione vagas à sua fila de envio",
       "step3_title": "3. Enviar Emails",
       "step3_desc": "Dispare suas aplicações em massa"
+    },
+    "market": {
+      "title": "Panorama de vagas",
+      "subtitle": "Visão rápida do que está disponível agora",
+      "visa_h2a": "Vagas H-2A",
+      "visa_h2b": "Vagas H-2B",
+      "hot_last_day": "Quentes (último dia)",
+      "top_categories": "Vagas por categoria",
+      "top_states": "Mais vagas por estado",
+      "best_paid_state": "Estado com melhor salário (média)",
+      "no_data": "Sem dados",
+      "error": "Não foi possível carregar as estatísticas de vagas."
     }
   },
   "settings": {
