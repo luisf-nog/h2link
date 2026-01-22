@@ -16,13 +16,24 @@ interface ImportedJob {
   category?: string | null;
   city: string;
   state: string;
+  openings?: number | null;
   salary?: number | null;
+  overtime_salary?: number | null;
+  source_url?: string | null;
+  phone?: string | null;
   start_date?: string | null;
+  end_date?: string | null;
   posted_date?: string | null;
+  experience_months?: number | null;
+  description?: string | null;
+  requirements?: string | null;
   housing_info?: string | null;
   transport_provided?: boolean;
   tools_provided?: boolean;
   weekly_hours?: number | null;
+  education_required?: string | null;
+  worksite_address?: string | null;
+  worksite_zip?: string | null;
 }
 
 serve(async (req) => {
@@ -91,13 +102,24 @@ serve(async (req) => {
       category: j.category || null,
       city: j.city,
       state: j.state,
+      openings: j.openings ?? null,
       salary: j.salary ?? null,
+      overtime_salary: j.overtime_salary ?? null,
+      source_url: j.source_url ?? null,
+      phone: j.phone ?? null,
       start_date: j.start_date || null,
+      end_date: j.end_date || null,
       posted_date: j.posted_date || new Date().toISOString().slice(0, 10),
+      experience_months: j.experience_months ?? null,
+      description: j.description ?? null,
+      requirements: j.requirements ?? null,
       housing_info: j.housing_info || null,
       transport_provided: !!j.transport_provided,
       tools_provided: !!j.tools_provided,
       weekly_hours: j.weekly_hours ?? null,
+      education_required: j.education_required ?? null,
+      worksite_address: j.worksite_address ?? null,
+      worksite_zip: j.worksite_zip ?? null,
     }));
 
     // Upsert by (job_id, visa_type)
