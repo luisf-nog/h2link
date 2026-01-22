@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "H2B Sender"
+    "name": "H2Link"
   },
   "common": {
     "loading": "Cargando...",
@@ -167,7 +167,7 @@
   },
   "plans": {
     "title": "Elige tu plan",
-    "subtitle": "Desbloquea todo el potencial de H2B Sender y acelera tus solicitudes",
+    "subtitle": "Desbloquea todo el potencial de H2Link y acelera tus solicitudes",
     "recommended": "Recomendado",
     "free": "Gratis",
     "lifetime": "(de por vida)",
