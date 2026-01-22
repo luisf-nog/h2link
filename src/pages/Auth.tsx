@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -72,8 +73,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 mb-4">
-            <span className="text-primary-foreground font-bold text-2xl">H2</span>
+          <div className="inline-flex items-center justify-center mb-4">
+            <BrandLogo height={72} className="drop-shadow-sm" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">{t('app.name')}</h1>
           <p className="text-muted-foreground mt-2">
