@@ -8,6 +8,7 @@ import { Check, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
+import { formatNumber } from '@/lib/number';
 
 export default function Plans() {
   const { profile, refreshProfile } = useAuth();
@@ -60,11 +61,14 @@ export default function Plans() {
     const config = PLANS_CONFIG[planId];
     const features = [];
 
-    features.push(t('plans.features.daily_emails', { count: config.limits.daily_emails }));
+    features.push(t('plans.features.daily_emails', { count: formatNumber(config.limits.daily_emails) } as any));
     features.push(
       t('plans.features.queue_size', {
-        size: config.limits.max_queue_size === 9999 ? t('plans.features.unlimited') : config.limits.max_queue_size,
-      })
+        size:
+          config.limits.max_queue_size === 9999
+            ? t('plans.features.unlimited')
+            : formatNumber(config.limits.max_queue_size),
+      } as any)
     );
 
     if (config.features.cloud_sending) features.push(t('plans.features.cloud_sending'));

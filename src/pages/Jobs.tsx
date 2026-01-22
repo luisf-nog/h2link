@@ -32,6 +32,7 @@ import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowU
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
+import { formatNumber } from '@/lib/number';
 
 interface Job extends JobDetails {
   id: string;
@@ -401,7 +402,7 @@ export default function Jobs() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">{t('nav.jobs')}</h1>
             <p className="text-muted-foreground mt-1">
-              {t('jobs.subtitle', { totalCount, visaLabel })}
+              {t('jobs.subtitle', { totalCount: formatNumber(totalCount), visaLabel })}
             </p>
           </div>
           {isAdmin && <JobImportDialog />}
@@ -651,7 +652,7 @@ export default function Jobs() {
                     <TableCell>
                       {job.city}, {job.state}
                     </TableCell>
-                    <TableCell>{job.openings ?? '-'}</TableCell>
+                    <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
                     <TableCell>{formatSalary(job.salary)}</TableCell>
                     <TableCell>
                       <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>

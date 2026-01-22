@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Mail, ListTodo, Zap, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
+import { formatNumber } from '@/lib/number';
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -28,7 +29,7 @@ export default function Dashboard() {
     {
       title: t('dashboard.stats.sent_today'),
       value: creditsUsed,
-      subtitle: t('dashboard.stats.sent_today_subtitle', { dailyLimit }),
+      subtitle: t('dashboard.stats.sent_today_subtitle', { dailyLimit: formatNumber(dailyLimit) }),
       icon: Mail,
       color: 'text-primary',
     },
@@ -185,7 +186,7 @@ export default function Dashboard() {
                 <span className="text-muted-foreground ml-2">{t('dashboard.credits.remaining')}</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {t('dashboard.credits.used', { used: creditsUsed, dailyLimit })}
+                {t('dashboard.credits.used', { used: formatNumber(creditsUsed), dailyLimit: formatNumber(dailyLimit) })}
               </span>
             </div>
             <Progress value={usagePercent} className="h-3" />
@@ -201,7 +202,9 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
+                    {typeof stat.value === 'number' ? formatNumber(stat.value) : stat.value}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>
                 </div>
                 <div className={`p-3 rounded-xl bg-muted/50 ${stat.color}`}>
@@ -228,19 +231,19 @@ export default function Dashboard() {
                 <Card className="border-border/60">
                   <CardContent className="pt-6">
                     <p className="text-sm text-muted-foreground">{t('dashboard.market.visa_h2a')}</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">{jobMarketLoading ? '—' : visaCounts.h2a}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{jobMarketLoading ? '—' : formatNumber(visaCounts.h2a)}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/60">
                   <CardContent className="pt-6">
                     <p className="text-sm text-muted-foreground">{t('dashboard.market.visa_h2b')}</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">{jobMarketLoading ? '—' : visaCounts.h2b}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{jobMarketLoading ? '—' : formatNumber(visaCounts.h2b)}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/60">
                   <CardContent className="pt-6">
                     <p className="text-sm text-muted-foreground">{t('dashboard.market.hot_last_day')}</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">{jobMarketLoading ? '—' : hotCount}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{jobMarketLoading ? '—' : formatNumber(hotCount)}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/60">
@@ -261,7 +264,7 @@ export default function Dashboard() {
                       {(jobMarketLoading ? [] : topCategories).map((c) => (
                         <div key={c.name} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                           <span className="text-sm text-foreground truncate">{c.name}</span>
-                          <span className="text-sm font-semibold text-foreground">{c.count}</span>
+                          <span className="text-sm font-semibold text-foreground">{formatNumber(c.count)}</span>
                         </div>
                       ))}
                       {!jobMarketLoading && topCategories.length === 0 && (
@@ -280,7 +283,7 @@ export default function Dashboard() {
                       {(jobMarketLoading ? [] : topStates).map((s) => (
                         <div key={s.name} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                           <span className="text-sm text-foreground">{s.name}</span>
-                          <span className="text-sm font-semibold text-foreground">{s.count}</span>
+                          <span className="text-sm font-semibold text-foreground">{formatNumber(s.count)}</span>
                         </div>
                       ))}
                       {!jobMarketLoading && topStates.length === 0 && (

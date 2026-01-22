@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2, Send, Wand2, Lock, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatNumber } from '@/lib/number';
 
 interface QueueItem {
   id: string;
@@ -110,9 +111,11 @@ export default function Queue() {
 
     toast({
       title: t('queue.toasts.sent_title'),
-      description: t('queue.toasts.sent_desc', {
-        count: queue.filter((q) => q.status === 'pending').length,
-      }),
+      description: String(
+        t('queue.toasts.sent_desc', {
+          count: formatNumber(queue.filter((q) => q.status === 'pending').length),
+        } as any)
+      ),
     });
 
     // Update queue status
@@ -185,7 +188,7 @@ export default function Queue() {
             <CardTitle className="text-sm text-muted-foreground">{t('queue.stats.in_queue')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{pendingCount}</p>
+            <p className="text-3xl font-bold">{formatNumber(pendingCount)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -193,7 +196,7 @@ export default function Queue() {
             <CardTitle className="text-sm text-muted-foreground">{t('queue.stats.sent_today')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{sentCount}</p>
+            <p className="text-3xl font-bold">{formatNumber(sentCount)}</p>
           </CardContent>
         </Card>
         <Card>

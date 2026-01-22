@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { formatNumber } from "@/lib/number";
 
 type MappedJob = {
   job_id: string;
@@ -303,8 +304,8 @@ export function JobImportDialog() {
 
     toast({
       title: t("job_import.toasts.import_success_title", {
-        count: Number(json?.imported ?? preview.length),
-      }),
+        count: formatNumber(Number(json?.imported ?? preview.length)),
+      } as any) as string,
     });
     setPreview([]);
     setOpen(false);
@@ -343,8 +344,8 @@ export function JobImportDialog() {
           {preview.length > 0 && (
             <>
               <p className="text-sm text-muted-foreground">
-                {t("job_import.summary.valid_for_import", { count: preview.length })}
-                {skipped > 0 && ` ${t("job_import.summary.skipped", { count: skipped })}`}
+                {String(t("job_import.summary.valid_for_import", { count: formatNumber(preview.length) } as any))}
+                {skipped > 0 && ` ${String(t("job_import.summary.skipped", { count: formatNumber(skipped) } as any))}`}
               </p>
 
               <ScrollArea className="max-h-64 border rounded-md">
@@ -370,7 +371,7 @@ export function JobImportDialog() {
                         <TableCell>
                           {j.city}, {j.state}
                         </TableCell>
-                        <TableCell>{j.openings ?? "-"}</TableCell>
+                        <TableCell>{typeof j.openings === "number" ? formatNumber(j.openings) : "-"}</TableCell>
                         <TableCell>{j.salary ? `$${j.salary}/h` : "-"}</TableCell>
                       </TableRow>
                     ))}
