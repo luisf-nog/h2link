@@ -18,11 +18,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation();
   const options: LanguageOption[] = useMemo(
     () => [
-      { value: 'en', label: 'English' },
-      { value: 'pt', label: 'Português' },
-      { value: 'es', label: 'Español' },
+      { value: 'en', label: t('common.languages.en') },
+      { value: 'pt', label: t('common.languages.pt') },
+      { value: 'es', label: t('common.languages.es') },
     ],
-    []
+    [t]
   );
 
   const profileLang = isSupportedLanguage(profile?.preferred_language) ? (profile!.preferred_language as SupportedLanguage) : null;

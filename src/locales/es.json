@@ -9,6 +9,16 @@
     "language": "Idioma",
     "previous": "Anterior",
     "next": "Siguiente",
+    "more_pages": "Más páginas",
+    "pagination": {
+      "previous_aria": "Ir a la página anterior",
+      "next_aria": "Ir a la página siguiente"
+    },
+    "languages": {
+      "en": "English",
+      "pt": "Português",
+      "es": "Español"
+    },
     "yes": "Sí",
     "no": "No",
     "user": "Usuario"
@@ -149,6 +159,11 @@
     "recommended": "Recomendado",
     "free": "Gratis",
     "lifetime": "(de por vida)",
+    "tiers": {
+      "free": { "label": "Starter", "description": "Para probar y conocer" },
+      "gold": { "label": "Gold", "description": "Para mayor volumen" },
+      "diamond": { "label": "Diamond", "description": "La herramienta profesional completa" }
+    },
     "actions": {
       "current": "Plan actual",
       "start_free": "Empezar gratis",

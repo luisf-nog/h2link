@@ -50,14 +50,14 @@ export function AppSidebar() {
             <span className="text-primary-foreground font-bold text-lg">H2</span>
           </div>
           <div>
-            <h1 className="font-bold text-lg text-sidebar-foreground">H2B Sender</h1>
+            <h1 className="font-bold text-lg text-sidebar-foreground">{t('app.name')}</h1>
             <span
               className={cn(
                 'text-xs px-2 py-0.5 rounded-full border font-medium',
                 getPlanBadgeClasses()
               )}
             >
-              {planConfig.label}
+              {t(`plans.tiers.${planTier}.label`)}
             </span>
           </div>
         </div>

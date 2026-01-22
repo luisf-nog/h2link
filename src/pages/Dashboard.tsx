@@ -53,7 +53,7 @@ export default function Dashboard() {
           {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.user') })} 👋
         </h1>
         <p className="text-muted-foreground mt-1">
-          {t('dashboard.subtitle', { plan: planConfig.label })}
+          {t('dashboard.subtitle', { plan: t(`plans.tiers.${planTier}.label`) })}
         </p>
       </div>
 

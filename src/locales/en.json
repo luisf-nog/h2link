@@ -9,13 +9,23 @@
     "language": "Language",
     "previous": "Previous",
     "next": "Next",
+    "more_pages": "More pages",
+    "pagination": {
+      "previous_aria": "Go to previous page",
+      "next_aria": "Go to next page"
+    },
+    "languages": {
+      "en": "English",
+      "pt": "Português",
+      "es": "Español"
+    },
     "yes": "Yes",
     "no": "No",
     "user": "User"
   },
   "nav": {
     "dashboard": "Dashboard",
-    "jobs": "Find Jobs",
+    "jobs": "Hub Vagas",
     "queue": "My Queue",
     "plans": "Plans",
     "settings": "Settings"
@@ -131,7 +141,7 @@
       },
       "loading": "Loading queue...",
       "empty": "Your queue is empty",
-      "go_jobs": "Find jobs"
+      "go_jobs": "Open Hub Vagas"
     },
     "status": { "sent": "Sent", "pending": "Pending" },
     "toasts": {
@@ -148,8 +158,12 @@
     "subtitle": "Unlock H2B Sender and accelerate your applications",
     "recommended": "Recommended",
     "free": "Free",
-    "per_month": "/month",
-    "or_usd": "or ${{price}} USD",
+    "lifetime": "(lifetime)",
+    "tiers": {
+      "free": { "label": "Starter", "description": "To test and explore" },
+      "gold": { "label": "Gold", "description": "For higher volume" },
+      "diamond": { "label": "Diamond", "description": "The complete professional toolkit" }
+    },
     "actions": {
       "current": "Current plan",
       "start_free": "Start free",
@@ -176,7 +190,7 @@
       "updated_desc": "You are now {{plan}}! 🎉"
     },
     "footer": {
-      "line1": "Cancel anytime. No cancellation fee.",
+      "line1": "One-time payment. Lifetime access.",
       "line2": "Payments securely processed via Stripe."
     }
   },
@@ -229,8 +243,8 @@
     "upgrade": {
       "title": "Exclusive Content",
       "description": "Upgrade to unlock contact details and benefits.",
-      "gold_desc": "Unlock emails and companies for just R$ 19,90/month",
-      "diamond_desc": "Full access + AI + visual benefits for R$ 39,90/month",
+      "gold_desc": "Unlock emails and companies for {{price}} (lifetime)",
+      "diamond_desc": "Full access + AI + visual benefits for {{price}} (lifetime)",
       "cta": "View plans"
     },
     "pagination": {
