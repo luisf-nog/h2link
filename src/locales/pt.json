@@ -15,7 +15,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "jobs": "Buscar Vagas",
+    "jobs": "Hub Vagas",
     "queue": "Minha Fila",
     "plans": "Planos",
     "settings": "Configurações"
@@ -131,7 +131,7 @@
       },
       "loading": "Carregando fila...",
       "empty": "Sua fila está vazia",
-      "go_jobs": "Buscar Vagas"
+      "go_jobs": "Abrir Hub Vagas"
     },
     "status": { "sent": "Enviado", "pending": "Pendente" },
     "toasts": {
@@ -148,8 +148,7 @@
     "subtitle": "Desbloqueie todo o potencial do H2B Sender e acelere suas aplicações",
     "recommended": "Recomendado",
     "free": "Grátis",
-    "per_month": "/mês",
-    "or_usd": "ou ${{price}} USD",
+    "lifetime": "(vitalício)",
     "actions": {
       "current": "Plano Atual",
       "start_free": "Começar Grátis",
@@ -176,7 +175,7 @@
       "updated_desc": "Você agora é {{plan}}! 🎉"
     },
     "footer": {
-      "line1": "Cancele a qualquer momento. Sem taxa de cancelamento.",
+      "line1": "Pagamento único. Acesso vitalício.",
       "line2": "Pagamentos processados com segurança via Stripe."
     }
   },
@@ -229,8 +228,8 @@
     "upgrade": {
       "title": "Conteúdo Exclusivo",
       "description": "Faça upgrade para desbloquear informações de contato e benefícios das vagas.",
-      "gold_desc": "Desbloqueie emails e empresas por apenas R$ 19,90/mês",
-      "diamond_desc": "Acesso completo + IA + benefícios visuais por R$ 39,90/mês",
+      "gold_desc": "Desbloqueie emails e empresas por {{price}} (vitalício)",
+      "diamond_desc": "Acesso completo + IA + benefícios visuais por {{price}} (vitalício)",
       "cta": "Ver Planos"
     },
     "pagination": {
@@ -248,6 +247,13 @@
   "not_found": {
     "subtitle": "Ops! Página não encontrada",
     "cta": "Voltar para Home"
+  },
+  "plans": {
+    "tiers": {
+      "free": { "label": "Starter", "description": "Para testar e conhecer" },
+      "gold": { "label": "Gold", "description": "Para quem busca volume" },
+      "diamond": { "label": "Diamond", "description": "A ferramenta profissional completa" }
+    }
   },
   "job_details": {
     "sections": {
