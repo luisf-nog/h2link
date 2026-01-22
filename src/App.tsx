@@ -12,7 +12,6 @@ import Jobs from "./pages/Jobs";
 import Queue from "./pages/Queue";
 import Plans from "./pages/Plans";
 import Settings from "./pages/Settings";
-import SettingsEmail from "./pages/SettingsEmail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -113,7 +112,7 @@ const AppRoutes = () => (
       path="/settings/email"
       element={
         <ProtectedRoute>
-          <SettingsEmail />
+          <Settings defaultTab="email" />
         </ProtectedRoute>
       }
     />

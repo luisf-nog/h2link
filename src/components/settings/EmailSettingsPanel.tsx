@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { Loader2, Mail, Save } from "lucide-react";
 
 type Provider = "gmail" | "outlook";
 
-export default function SettingsEmail() {
+export function EmailSettingsPanel() {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -50,16 +50,16 @@ export default function SettingsEmail() {
         .eq("user_id", user!.id)
         .maybeSingle();
 
-      if (!cancelled) {
-        if (error) {
-          toast({ title: "Erro ao carregar", description: error.message, variant: "destructive" });
-        } else if (data) {
-          setProvider((data.provider as Provider) ?? "gmail");
-          setEmail(data.email ?? "");
-          setHasPassword(Boolean(data.has_password));
-        }
-        setLoading(false);
+      if (cancelled) return;
+
+      if (error) {
+        toast({ title: "Erro ao carregar", description: error.message, variant: "destructive" });
+      } else if (data) {
+        setProvider((data.provider as Provider) ?? "gmail");
+        setEmail(data.email ?? "");
+        setHasPassword(Boolean(data.has_password));
       }
+      setLoading(false);
     };
 
     run();
@@ -77,33 +77,17 @@ export default function SettingsEmail() {
 
     setSaving(true);
     try {
-      // upsert base row
       const { error: upsertError } = await supabase
         .from("smtp_credentials")
-        .upsert(
-          {
-            user_id: user.id,
-            provider,
-            email,
-          },
-          { onConflict: "user_id" },
-        );
-
+        .upsert({ user_id: user.id, provider, email }, { onConflict: "user_id" });
       if (upsertError) throw upsertError;
 
-      // store secret only if provided
       if (password.trim().length > 0) {
         const { error: secretError } = await supabase
           .from("smtp_credentials_secrets")
-          .upsert(
-            {
-              user_id: user.id,
-              password: password.trim(),
-            },
-            { onConflict: "user_id" },
-          );
-
+          .upsert({ user_id: user.id, password: password.trim() }, { onConflict: "user_id" });
         if (secretError) throw secretError;
+
         setHasPassword(true);
         setPassword("");
       }
@@ -137,17 +121,17 @@ export default function SettingsEmail() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // contract: we send email data; credentials are fetched securely in the backend
         body: JSON.stringify({ to, subject, body, provider }),
       });
 
       const text = await res.text();
-      let payload: any;
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        payload = { error: text };
-      }
+      const payload = (() => {
+        try {
+          return JSON.parse(text);
+        } catch {
+          return { error: text };
+        }
+      })();
 
       if (!res.ok || payload?.success === false) {
         throw new Error(payload?.error || `HTTP ${res.status}`);
@@ -164,7 +148,7 @@ export default function SettingsEmail() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[40vh] flex items-center justify-center">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Carregando…
@@ -174,19 +158,12 @@ export default function SettingsEmail() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-bold text-foreground">Email (Gmail/Outlook)</h1>
-        <p className="text-muted-foreground">
-          Suas credenciais ficam isoladas por usuário. A senha não é exibida depois de salva.
-        </p>
-      </header>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Credenciais
+            Configuração SMTP
           </CardTitle>
           <CardDescription>Use senha de app (Gmail/Outlook) — não use sua senha normal.</CardDescription>
         </CardHeader>
@@ -205,12 +182,12 @@ export default function SettingsEmail() {
           </div>
 
           <div className="space-y-2">
-            <Label>Email</Label>
+            <Label>Email SMTP</Label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
           </div>
 
           <div className="space-y-2">
-            <Label>Senha de app</Label>
+            <Label>Senha de Aplicativo</Label>
             <Input
               type="password"
               value={password}
@@ -247,7 +224,7 @@ export default function SettingsEmail() {
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Corpo</Label>
+            <Label>Corpo do Email</Label>
             <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} />
           </div>
 
