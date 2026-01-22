@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Bus, Calendar, Globe, Home, Mail, MapPin, Phone, Plus, Wrench } from "lucide-react";
+import { Bus, Calendar, Home, Mail, MapPin, Phone, Plus, Wrench } from "lucide-react";
 
 export type JobDetails = {
   id: string;
@@ -159,18 +159,6 @@ export function JobDetailsDialog({
                     </div>
                   )}
 
-                  {job?.source_url && (
-                    <a
-                      className="inline-flex items-center gap-2 text-sm underline underline-offset-4"
-                      href={job.source_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Globe className="h-4 w-4 text-muted-foreground" />
-                      Ver fonte
-                    </a>
-                  )}
-
                   <p className="text-xs text-muted-foreground">
                     Job ID: <span className="font-mono">{job?.job_id}</span>
                   </p>
@@ -246,11 +234,6 @@ export function JobDetailsDialog({
                               ? job?.housing_info || "Obrigatória (detalhes não informados)."
                               : job?.housing_info || "Não informado."}
                           </p>
-                          {isH2A && (
-                            <p className="text-xs text-muted-foreground">
-                              Argumento de venda: H-2A (agricultura) não tem cap anual.
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>
