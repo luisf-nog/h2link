@@ -1,7 +1,6 @@
 import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
-import { PLANS_CONFIG } from '@/config/plans.config';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,8 +23,6 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
-  const planTier = profile?.plan_tier || 'free';
-  const planConfig = PLANS_CONFIG[planTier];
 
   const menuItems = [
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard },
@@ -35,17 +32,6 @@ export function AppSidebar() {
     { title: t('nav.settings'), url: '/settings', icon: Settings },
   ];
 
-  const getPlanBadgeClasses = () => {
-    switch (planConfig.color) {
-      case 'blue':
-        return 'bg-plan-gold/10 text-plan-gold border-plan-gold/30';
-      case 'violet':
-        return 'bg-plan-diamond/10 text-plan-diamond border-plan-diamond/30';
-      default:
-        return 'bg-muted text-muted-foreground border-border';
-    }
-  };
-
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-3 border-b border-sidebar-border">
@@ -53,16 +39,6 @@ export function AppSidebar() {
           <div className={cn('min-w-0', collapsed && 'hidden')}>
             <div className="text-xs font-medium text-sidebar-foreground/70">{t('common.menu')}</div>
           </div>
-
-          <span
-            className={cn(
-              'text-xs px-2 py-0.5 rounded-full border font-medium',
-              getPlanBadgeClasses(),
-              collapsed && 'hidden'
-            )}
-          >
-            {t(`plans.tiers.${planTier}.label`)}
-          </span>
         </div>
       </SidebarHeader>
 
@@ -77,8 +53,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors',
-                        collapsed && 'justify-center px-0'
+                        'flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors',
+                        collapsed && 'justify-center px-2'
                       )}
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     >
