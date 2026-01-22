@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PLANS_CONFIG } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -21,13 +22,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Home, Bus, Wrench, Lock, Eye } from 'lucide-react';
+import { Info, Search, Plus, Home, Bus, Wrench, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Job {
   id: string;
   job_id: string;
+  visa_type: 'H-2B' | 'H-2A' | string | null;
   company: string;
   email: string;
   job_title: string;
@@ -46,24 +50,67 @@ interface Job {
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  const [visaType, setVisaType] = useState<'H-2B' | 'H-2A'>(() => {
+    const v = searchParams.get('visa');
+    return v === 'H-2A' ? 'H-2A' : 'H-2B';
+  });
+
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+  const [stateFilter, setStateFilter] = useState(() => searchParams.get('state') ?? '');
+  const [cityFilter, setCityFilter] = useState(() => searchParams.get('city') ?? '');
+  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') ?? '');
+  const [salaryMin, setSalaryMin] = useState(() => searchParams.get('min') ?? '');
+  const [salaryMax, setSalaryMax] = useState(() => searchParams.get('max') ?? '');
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get('page') ?? '1');
+    return Number.isFinite(p) && p > 0 ? p : 1;
+  });
+
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const planTier = profile?.plan_tier || 'free';
   const planSettings = PLANS_CONFIG[planTier].settings;
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const pageSize = 25;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
+
+  const buildOrSearch = (term: string) =>
+    `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
 
   const fetchJobs = async () => {
-    const { data, error } = await supabase
+    setLoading(true);
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
       .from('public_jobs')
-      .select('*')
-      .order('posted_date', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('posted_date', { ascending: false })
+      .range(from, to)
+      .eq('visa_type', visaType);
+
+    if (searchTerm.trim()) {
+      query = query.or(buildOrSearch(searchTerm.trim()));
+    }
+
+    if (stateFilter.trim()) query = query.ilike('state', `%${stateFilter.trim()}%`);
+    if (cityFilter.trim()) query = query.ilike('city', `%${cityFilter.trim()}%`);
+    if (categoryFilter.trim()) query = query.ilike('category', `%${categoryFilter.trim()}%`);
+
+    const min = salaryMin.trim() ? Number(salaryMin) : null;
+    const max = salaryMax.trim() ? Number(salaryMax) : null;
+    if (min !== null && Number.isFinite(min)) query = query.gte('salary', min);
+    if (max !== null && Number.isFinite(max)) query = query.lte('salary', max);
+
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('Error fetching jobs:', error);
@@ -72,11 +119,44 @@ export default function Jobs() {
         description: error.message,
         variant: 'destructive',
       });
+      setJobs([]);
+      setTotalCount(0);
     } else {
-      setJobs(data || []);
+      setJobs((data as Job[]) || []);
+      setTotalCount(count ?? 0);
     }
+
     setLoading(false);
   };
+
+  // Fetch on filter changes (server-side pagination)
+  useEffect(() => {
+    fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryMin, salaryMax, page]);
+
+  // Persist filters in URL (debounced)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const next = new URLSearchParams();
+      next.set('visa', visaType);
+      if (searchTerm.trim()) next.set('q', searchTerm.trim());
+      if (stateFilter.trim()) next.set('state', stateFilter.trim());
+      if (cityFilter.trim()) next.set('city', cityFilter.trim());
+      if (categoryFilter.trim()) next.set('category', categoryFilter.trim());
+      if (salaryMin.trim()) next.set('min', salaryMin.trim());
+      if (salaryMax.trim()) next.set('max', salaryMax.trim());
+      next.set('page', String(page));
+
+      // Only update if different (prevents churn)
+      const current = searchParams.toString();
+      const nextStr = next.toString();
+      if (current !== nextStr) setSearchParams(next, { replace: true });
+    }, 250);
+
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryMin, salaryMax, page]);
 
   const addToQueue = async (job: Job) => {
     if (planSettings.job_db_blur) {
@@ -118,39 +198,125 @@ export default function Jobs() {
     }
   };
 
-  const filteredJobs = jobs.filter(
-    (job) =>
-      job.job_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.state.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const formatSalary = (salary: number | null) => {
     if (!salary) return '-';
     return `$${salary.toFixed(2)}/h`;
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <TooltipProvider>
+      <div className="space-y-6">
+      <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Buscar Vagas</h1>
           <p className="text-muted-foreground mt-1">
-            {jobs.length} vagas H-2B disponíveis
+            {totalCount} vagas {visaType} disponíveis
           </p>
         </div>
-
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por cargo, empresa, cidade..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Tabs
+                value={visaType}
+                onValueChange={(v) => {
+                  const next = v === 'H-2A' ? 'H-2A' : 'H-2B';
+                  setVisaType(next);
+                  setPage(1);
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="H-2B">H-2B Jobs</TabsTrigger>
+                  <TabsTrigger value="H-2A" className="gap-2">
+                    H-2A Jobs
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center text-muted-foreground">
+                          <Info className="h-4 w-4" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>H-2A é agricultura: não tem cap anual e moradia é obrigatória.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {visaType === 'H-2B' && totalCount === 0 && (
+                <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                  <Info className="h-4 w-4" />
+                  <span>
+                    H-2B pode ficar escasso; experimente H-2A (sem cap anual).
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="relative w-full lg:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por cargo, empresa, cidade..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <Input
+              placeholder="Estado (ex: FL)"
+              value={stateFilter}
+              onChange={(e) => {
+                setStateFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              placeholder="Cidade"
+              value={cityFilter}
+              onChange={(e) => {
+                setCityFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              placeholder="Categoria"
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              inputMode="decimal"
+              placeholder="Salário mín ($/h)"
+              value={salaryMin}
+              onChange={(e) => {
+                setSalaryMin(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              inputMode="decimal"
+              placeholder="Salário máx ($/h)"
+              value={salaryMax}
+              onChange={(e) => {
+                setSalaryMax(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
@@ -175,14 +341,14 @@ export default function Jobs() {
                     Carregando vagas...
                   </TableCell>
                 </TableRow>
-              ) : filteredJobs.length === 0 ? (
+              ) : jobs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     Nenhuma vaga encontrada
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredJobs.map((job) => (
+                jobs.map((job) => (
                   <TableRow
                     key={job.id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -214,10 +380,30 @@ export default function Jobs() {
                     {planSettings.show_housing_icons && (
                       <TableCell>
                         <div className="flex justify-center gap-1">
-                          {job.housing_info && (
-                            <Badge variant="outline" className="text-xs">
-                              <Home className="h-3 w-3 mr-1" />
-                            </Badge>
+                          {/* H-2A: Moradia é mandatória, então destacamos o ícone */}
+                          {(job.housing_info || job.visa_type === 'H-2A') && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <Badge
+                                    variant={job.visa_type === 'H-2A' ? 'secondary' : 'outline'}
+                                    className={cn(
+                                      'text-xs',
+                                      job.visa_type === 'H-2A' && 'border-transparent'
+                                    )}
+                                  >
+                                    <Home className="h-3 w-3 mr-1" />
+                                  </Badge>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {job.visa_type === 'H-2A'
+                                    ? 'H-2A: moradia é obrigatória por regra do visto.'
+                                    : 'Moradia disponível.'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {job.transport_provided && (
                             <Badge variant="outline" className="text-xs">
@@ -361,6 +547,28 @@ export default function Jobs() {
           </div>
         </DialogContent>
       </Dialog>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Página {page} de {totalPages}
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={page <= 1 || loading}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            disabled={page >= totalPages || loading}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
     </div>
+    </TooltipProvider>
   );
 }
