@@ -105,6 +105,7 @@ export type Database = {
           state: string
           tools_provided: boolean | null
           transport_provided: boolean | null
+          visa_type: string | null
           weekly_hours: number | null
         }
         Insert: {
@@ -123,6 +124,7 @@ export type Database = {
           state: string
           tools_provided?: boolean | null
           transport_provided?: boolean | null
+          visa_type?: string | null
           weekly_hours?: number | null
         }
         Update: {
@@ -141,6 +143,7 @@ export type Database = {
           state?: string
           tools_provided?: boolean | null
           transport_provided?: boolean | null
+          visa_type?: string | null
           weekly_hours?: number | null
         }
         Relationships: []
