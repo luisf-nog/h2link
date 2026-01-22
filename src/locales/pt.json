@@ -5,7 +5,10 @@
   "common": {
     "loading": "Carregando...",
     "logout": "Sair",
-    "language": "Idioma"
+    "language": "Idioma",
+    "previous": "Anterior",
+    "next": "Próxima",
+    "user": "Usuário"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -13,5 +16,230 @@
     "queue": "Minha Fila",
     "plans": "Planos",
     "settings": "Configurações"
+  },
+  "auth": {
+    "hero_tagline": "Aplique para vagas H-2B de forma massiva e segura",
+    "tabs": { "signin": "Entrar", "signup": "Criar Conta" },
+    "signin": {
+      "title": "Bem-vindo de volta",
+      "description": "Entre com sua conta para continuar"
+    },
+    "signup": {
+      "title": "Crie sua conta",
+      "description": "Comece a aplicar para vagas H-2B hoje"
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Senha",
+      "full_name": "Nome Completo"
+    },
+    "placeholders": {
+      "email": "seu@email.com",
+      "full_name": "Seu nome"
+    },
+    "actions": {
+      "signin": "Entrar",
+      "signup": "Criar Conta"
+    },
+    "toasts": {
+      "signin_error_title": "Erro ao entrar",
+      "signup_error_title": "Erro ao criar conta",
+      "signup_success_title": "Conta criada!",
+      "signup_success_desc": "Você já pode fazer login."
+    }
+  },
+  "dashboard": {
+    "greeting": "Olá, {{name}}!",
+    "subtitle": "Aqui está o resumo da sua conta {{plan}}",
+    "credits": {
+      "title": "Créditos de Envio",
+      "description": "Seu limite diário de emails é resetado à meia-noite",
+      "remaining": "restantes",
+      "used": "{{used}} / {{dailyLimit}} usados"
+    },
+    "stats": {
+      "sent_today": "Envios Hoje",
+      "sent_today_subtitle": "de {{dailyLimit}} disponíveis",
+      "in_queue": "Na Fila",
+      "in_queue_subtitle": "vagas aguardando",
+      "success_rate": "Taxa de Sucesso",
+      "success_rate_subtitle": "emails entregues",
+      "this_month": "Este Mês",
+      "this_month_subtitle": "aplicações enviadas"
+    },
+    "next_steps": {
+      "title": "Próximos Passos",
+      "description": "Comece a aplicar para vagas H-2B agora",
+      "step1_title": "1. Buscar Vagas",
+      "step1_desc": "Explore vagas H-2B disponíveis",
+      "step2_title": "2. Montar Fila",
+      "step2_desc": "Adicione vagas à sua fila de envio",
+      "step3_title": "3. Enviar Emails",
+      "step3_desc": "Dispare suas aplicações em massa"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Gerencie sua conta e preferências",
+    "profile": {
+      "title": "Perfil",
+      "description": "Suas informações pessoais",
+      "fields": { "email": "Email", "full_name": "Nome Completo" },
+      "placeholders": { "full_name": "Seu nome" },
+      "email_note": "O email não pode ser alterado",
+      "actions": { "save": "Salvar Alterações" }
+    },
+    "account": {
+      "title": "Conta",
+      "description": "Informações da sua assinatura",
+      "current_plan": "Plano atual",
+      "credits_used_today": "Créditos usados hoje",
+      "member_since": "Membro desde",
+      "actions": { "manage_plan": "Gerenciar Plano" }
+    },
+    "toasts": {
+      "update_error_title": "Erro ao atualizar",
+      "update_success_title": "Perfil atualizado!",
+      "update_success_desc": "Suas informações foram salvas."
+    }
+  },
+  "queue": {
+    "title": "Minha Fila",
+    "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
+    "actions": {
+      "magic_paste": "Magic Paste (IA)",
+      "send": "Enviar ({{pendingCount}})"
+    },
+    "magic_paste_locked": "Exclusivo para plano Diamond",
+    "stats": {
+      "in_queue": "Na Fila",
+      "sent_today": "Enviados Hoje",
+      "daily_limit": "Limite Diário"
+    },
+    "table": {
+      "title": "Vagas na Fila",
+      "description": "Gerencie as vagas que você vai aplicar",
+      "headers": {
+        "job_title": "Cargo",
+        "company": "Empresa",
+        "email": "Email",
+        "status": "Status",
+        "action": "Ação"
+      },
+      "loading": "Carregando fila...",
+      "empty": "Sua fila está vazia",
+      "go_jobs": "Buscar Vagas"
+    },
+    "status": { "sent": "Enviado", "pending": "Pendente" },
+    "toasts": {
+      "load_error_title": "Erro ao carregar fila",
+      "remove_error_title": "Erro ao remover",
+      "remove_success_title": "Removido da fila",
+      "remove_success_desc": "A vaga foi removida da sua fila.",
+      "sent_title": "Emails enviados!",
+      "sent_desc": "{{count}} aplicações foram enviadas."
+    }
+  },
+  "plans": {
+    "title": "Escolha seu Plano",
+    "subtitle": "Desbloqueie todo o potencial do H2B Sender e acelere suas aplicações",
+    "recommended": "Recomendado",
+    "free": "Grátis",
+    "per_month": "/mês",
+    "or_usd": "ou ${{price}} USD",
+    "actions": {
+      "current": "Plano Atual",
+      "start_free": "Começar Grátis",
+      "subscribe_now": "Assinar Agora"
+    },
+    "features": {
+      "daily_emails": "{{count}} envios/dia",
+      "queue_size": "Fila de até {{size}} vagas",
+      "unlimited": "ilimitada",
+      "cloud_sending": "Envio pela nuvem",
+      "mask_user_agent": "Proteção anti-spam",
+      "dns_bounce_check": "Verificação DNS",
+      "magic_paste": "Magic Paste (IA)",
+      "ai_email_writer": "Escritor de Email IA",
+      "priority_support": "Suporte prioritário",
+      "housing_icons": "Ícones de benefícios",
+      "human_delay": "Delay humano (anti-spam)"
+    },
+    "toasts": {
+      "processing_title": "Processando...",
+      "processing_desc": "Atualizando seu plano...",
+      "error_title": "Erro",
+      "updated_title": "Plano atualizado!",
+      "updated_desc": "Você agora é {{plan}}! 🎉"
+    },
+    "footer": {
+      "line1": "Cancele a qualquer momento. Sem taxa de cancelamento.",
+      "line2": "Pagamentos processados com segurança via Stripe."
+    }
+  },
+  "jobs": {
+    "subtitle": "{{totalCount}} vagas {{visaLabel}} disponíveis",
+    "filters": {
+      "visa": {
+        "placeholder": "Filtrar visto",
+        "all": "Todos (H-2A + H-2B)",
+        "only_h2b": "Apenas H-2B",
+        "only_h2a": "Apenas H-2A",
+        "h2a_info": "H-2A é agricultura: não tem cap anual e moradia é obrigatória."
+      },
+      "state": "Estado (ex: FL)",
+      "city": "Cidade",
+      "category": "Categoria"
+    },
+    "search": { "placeholder": "Buscar por cargo, empresa, cidade..." },
+    "salary": {
+      "placeholder": "Faixa de salário",
+      "any": "Salário (qualquer)",
+      "lt15": "Até $14.99/h",
+      "15_18": "$15 – $18/h",
+      "18_22": "$18 – $22/h",
+      "22_26": "$22 – $26/h",
+      "26plus": "$26+/h"
+    },
+    "table": {
+      "headers": {
+        "job_title": "Cargo",
+        "company": "Empresa",
+        "location": "Local",
+        "openings": "Qtd. Vagas",
+        "salary": "Salário",
+        "visa": "Visto",
+        "posted": "Postada",
+        "start": "Início",
+        "end": "Fim",
+        "email": "Email",
+        "benefits": "Benefícios",
+        "action": "Ação"
+      },
+      "loading": "Carregando vagas...",
+      "empty": "Nenhuma vaga encontrada"
+    },
+    "benefits": {
+      "housing_h2a": "H-2A: moradia é obrigatória por regra do visto.",
+      "housing_available": "Moradia disponível."
+    },
+    "upgrade": {
+      "title": "Conteúdo Exclusivo",
+      "description": "Faça upgrade para desbloquear informações de contato e benefícios das vagas.",
+      "gold_desc": "Desbloqueie emails e empresas por apenas R$ 19,90/mês",
+      "diamond_desc": "Acesso completo + IA + benefícios visuais por R$ 39,90/mês",
+      "cta": "Ver Planos"
+    },
+    "pagination": {
+      "page_of": "Página {{page}} de {{totalPages}}"
+    },
+    "toasts": {
+      "load_error_title": "Erro ao carregar vagas",
+      "already_in_queue_title": "Já na fila",
+      "already_in_queue_desc": "Esta vaga já está na sua fila.",
+      "add_error_title": "Erro ao adicionar",
+      "add_success_title": "Adicionado à fila!",
+      "add_success_desc": "{{jobTitle}} foi adicionado à sua fila."
+    }
   }
 }
