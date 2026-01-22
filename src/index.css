@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary - Deep professional blue */
-    --primary: 221 83% 53%;
+    /* Primary - H2Link navy */
+    --primary: 215 78% 18%;
     --primary-foreground: 210 40% 98%;
 
     /* Secondary */
@@ -28,9 +28,9 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    /* Accent */
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    /* Accent - H2Link cyan tint */
+    --accent: 198 80% 94%;
+    --accent-foreground: 215 78% 18%;
 
     /* Destructive */
     --destructive: 0 84% 60%;
@@ -47,7 +47,7 @@
     /* Borders and inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --ring: 199 88% 48%;
 
     --radius: 0.625rem;
 
@@ -72,8 +72,8 @@
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 199 88% 48%;
+    --primary-foreground: 215 78% 10%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -81,7 +81,7 @@
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 33% 17%;
+    --accent: 215 60% 16%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 63% 31%;
@@ -95,7 +95,7 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --ring: 199 88% 48%;
 
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
