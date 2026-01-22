@@ -64,8 +64,9 @@ const COL_MAP: Record<keyof MappedJob, string[]> = {
   overtime_salary: ["overtime_salary", "OVERTIME_SALARY", "Hora extra", "Overtime"],
   source_url: ["source_url", "SOURCE_URL", "URL", "Fonte"],
   phone: ["phone", "PHONE", "Telefone"],
-  start_date: ["start_date", "START_DATE", "Data Início", "Data Inicio", "Início"],
-  end_date: ["end_date", "END_DATE", "Fim", "Data Fim"],
+  // Algumas bases vêm com underscore no início (ex: "_end_date")
+  start_date: ["start_date", "_start_date", "START_DATE", "Data Início", "Data Inicio", "Início"],
+  end_date: ["end_date", "_end_date", "END_DATE", "Fim", "Data Fim"],
   posted_date: ["posted_date", "POSTED_DATE", "Postado", "Data Postagem"],
   experience_months: ["experience_months", "EXPERIENCE_MONTHS", "Experiência", "Experience"],
   description: ["description", "DESCRIPTION", "Descrição", "Descricao"],
@@ -88,6 +89,10 @@ function pickValue(row: Record<string, unknown>, keys: string[]): unknown {
 
 function parseDate(v: unknown): string | null {
   if (!v) return null;
+  // Quando usamos sheet_to_json com { cellDates: true }, o XLSX pode devolver Date.
+  if (v instanceof Date) {
+    return Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10);
+  }
   if (typeof v === "number") {
     // Excel serial date
     const d = XLSX.SSF.parse_date_code(v);
