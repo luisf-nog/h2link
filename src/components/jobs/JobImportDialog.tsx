@@ -65,8 +65,29 @@ const COL_MAP: Record<keyof MappedJob, string[]> = {
   source_url: ["source_url", "SOURCE_URL", "URL", "Fonte"],
   phone: ["phone", "PHONE", "Telefone"],
   // Algumas bases vêm com underscore no início (ex: "_end_date")
-  start_date: ["start_date", "_start_date", "START_DATE", "Data Início", "Data Inicio", "Início"],
-  end_date: ["end_date", "_end_date", "END_DATE", "Fim", "Data Fim"],
+  // Também suportamos variações normalizadas (ex: "Start Date" -> "start_date", "Data Início" -> "data_inicio")
+  start_date: [
+    "start_date",
+    "_start_date",
+    "start date",
+    "Start Date",
+    "START_DATE",
+    "data_inicio",
+    "Data Início",
+    "Data Inicio",
+    "Início",
+    "Inicio",
+  ],
+  end_date: [
+    "end_date",
+    "_end_date",
+    "end date",
+    "End Date",
+    "END_DATE",
+    "data_fim",
+    "Fim",
+    "Data Fim",
+  ],
   posted_date: ["posted_date", "POSTED_DATE", "Postado", "Data Postagem"],
   experience_months: ["experience_months", "EXPERIENCE_MONTHS", "Experiência", "Experience"],
   description: ["description", "DESCRIPTION", "Descrição", "Descricao"],
@@ -80,9 +101,30 @@ const COL_MAP: Record<keyof MappedJob, string[]> = {
   worksite_zip: ["worksite_zip", "WORKSITE_ZIP", "CEP", "Zip"],
 };
 
+function normalizeHeaderKey(key: string): string {
+  return key
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\s+/g, '_');
+}
+
+function normalizeRowKeys(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
+    // Mantém o original + adiciona versão normalizada para matching mais robusto
+    out[k] = v;
+    out[normalizeHeaderKey(k)] = v;
+  }
+  return out;
+}
+
 function pickValue(row: Record<string, unknown>, keys: string[]): unknown {
   for (const k of keys) {
     if (k in row) return row[k];
+    const nk = normalizeHeaderKey(k);
+    if (nk in row) return row[nk];
   }
   return undefined;
 }
@@ -204,7 +246,8 @@ export function JobImportDialog() {
     const wb = XLSX.read(data, { type: "array", cellDates: true });
     const sheetName = wb.SheetNames[0];
     const sheet = wb.Sheets[sheetName];
-    const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
+    const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
+    const rows = rawRows.map(normalizeRowKeys);
 
     const mapped: MappedJob[] = [];
     let skip = 0;
