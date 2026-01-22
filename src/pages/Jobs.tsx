@@ -14,13 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { JobDetailsDialog, type JobDetails } from '@/components/jobs/JobDetailsDialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -28,23 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Info, Search, Plus, Home, Bus, Wrench, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Job {
+interface Job extends JobDetails {
   id: string;
-  job_id: string;
-  visa_type: 'H-2B' | 'H-2A' | string | null;
-  company: string;
-  email: string;
-  job_title: string;
-  category: string | null;
-  city: string;
-  state: string;
-  salary: number | null;
-  start_date: string | null;
-  posted_date: string;
-  housing_info: string | null;
-  transport_provided: boolean | null;
-  tools_provided: boolean | null;
-  weekly_hours: number | null;
 }
 
 export default function Jobs() {
@@ -442,76 +422,17 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      {/* Job Details Dialog */}
-      <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{selectedJob?.job_title}</DialogTitle>
-            <DialogDescription>{selectedJob?.company}</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Local</p>
-                <p className="font-medium">
-                  {selectedJob?.city}, {selectedJob?.state}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Salário</p>
-                <p className="font-medium">{formatSalary(selectedJob?.salary || null)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{selectedJob?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Início</p>
-                <p className="font-medium">
-                  {selectedJob?.start_date
-                    ? new Date(selectedJob.start_date).toLocaleDateString('pt-BR')
-                    : '-'}
-                </p>
-              </div>
-            </div>
-
-            {/* Premium info - text for Gold, icons for Diamond */}
-            {(planSettings.job_db_access === 'text_only' ||
-              planSettings.job_db_access === 'visual_premium') && (
-              <div className="border-t pt-4">
-                <p className="text-sm text-muted-foreground mb-2">Benefícios</p>
-                <div className="space-y-2">
-                  {selectedJob?.housing_info && (
-                    <div className="flex items-center gap-2">
-                      {planSettings.show_housing_icons && <Home className="h-4 w-4 text-primary" />}
-                      <span>Moradia: {selectedJob.housing_info}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    {planSettings.show_housing_icons && <Bus className="h-4 w-4 text-primary" />}
-                    <span>Transporte: {selectedJob?.transport_provided ? 'Sim' : 'Não'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {planSettings.show_housing_icons && <Wrench className="h-4 w-4 text-primary" />}
-                    <span>Ferramentas: {selectedJob?.tools_provided ? 'Sim' : 'Não'}</span>
-                  </div>
-                  {selectedJob?.weekly_hours && (
-                    <div>
-                      <span>Horas semanais: {selectedJob.weekly_hours}h</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <Button className="w-full" onClick={() => selectedJob && addToQueue(selectedJob)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar à Fila
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+       {/* Job Details Dialog (scroll + mais detalhes) */}
+       <JobDetailsDialog
+         open={!!selectedJob}
+         onOpenChange={(open) => {
+           if (!open) setSelectedJob(null);
+         }}
+         job={selectedJob}
+         planSettings={planSettings}
+         formatSalary={formatSalary}
+         onAddToQueue={(job) => addToQueue(job as Job)}
+       />
 
       {/* Upgrade Dialog */}
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
