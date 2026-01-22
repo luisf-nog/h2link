@@ -3,9 +3,11 @@ import { PLANS_CONFIG, getPlanLimit } from '@/config/plans.config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Mail, ListTodo, Zap, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
   const { profile } = useAuth();
+  const { t } = useTranslation();
   const planTier = profile?.plan_tier || 'free';
   const planConfig = PLANS_CONFIG[planTier];
   const creditsUsed = profile?.credits_used_today || 0;
@@ -15,30 +17,30 @@ export default function Dashboard() {
 
   const stats = [
     {
-      title: 'Envios Hoje',
+      title: t('dashboard.stats.sent_today'),
       value: creditsUsed,
-      subtitle: `de ${dailyLimit} disponíveis`,
+      subtitle: t('dashboard.stats.sent_today_subtitle', { dailyLimit }),
       icon: Mail,
       color: 'text-primary',
     },
     {
-      title: 'Na Fila',
+      title: t('dashboard.stats.in_queue'),
       value: 0,
-      subtitle: 'vagas aguardando',
+      subtitle: t('dashboard.stats.in_queue_subtitle'),
       icon: ListTodo,
       color: 'text-plan-gold',
     },
     {
-      title: 'Taxa de Sucesso',
+      title: t('dashboard.stats.success_rate'),
       value: '98%',
-      subtitle: 'emails entregues',
+      subtitle: t('dashboard.stats.success_rate_subtitle'),
       icon: Zap,
       color: 'text-success',
     },
     {
-      title: 'Este Mês',
+      title: t('dashboard.stats.this_month'),
       value: 0,
-      subtitle: 'aplicações enviadas',
+      subtitle: t('dashboard.stats.this_month_subtitle'),
       icon: TrendingUp,
       color: 'text-plan-diamond',
     },
@@ -48,10 +50,10 @@ export default function Dashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-foreground">
-          Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+          {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.user') })} 👋
         </h1>
         <p className="text-muted-foreground mt-1">
-          Aqui está o resumo da sua conta {planConfig.label}
+          {t('dashboard.subtitle', { plan: planConfig.label })}
         </p>
       </div>
 
@@ -60,10 +62,10 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
-            Créditos de Envio
+            {t('dashboard.credits.title')}
           </CardTitle>
           <CardDescription>
-            Seu limite diário de emails é resetado à meia-noite
+            {t('dashboard.credits.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -71,10 +73,10 @@ export default function Dashboard() {
             <div className="flex justify-between items-end">
               <div>
                 <span className="text-4xl font-bold text-foreground">{creditsRemaining}</span>
-                <span className="text-muted-foreground ml-2">restantes</span>
+                <span className="text-muted-foreground ml-2">{t('dashboard.credits.remaining')}</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {creditsUsed} / {dailyLimit} usados
+                {t('dashboard.credits.used', { used: creditsUsed, dailyLimit })}
               </span>
             </div>
             <Progress value={usagePercent} className="h-3" />
@@ -105,9 +107,9 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Próximos Passos</CardTitle>
+          <CardTitle>{t('dashboard.next_steps.title')}</CardTitle>
           <CardDescription>
-            Comece a aplicar para vagas H-2B agora
+            {t('dashboard.next_steps.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -117,10 +119,10 @@ export default function Dashboard() {
               className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
             >
               <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                1. Buscar Vagas
+                {t('dashboard.next_steps.step1_title')}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Explore vagas H-2B disponíveis
+                {t('dashboard.next_steps.step1_desc')}
               </p>
             </a>
             <a
@@ -128,10 +130,10 @@ export default function Dashboard() {
               className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
             >
               <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                2. Montar Fila
+                {t('dashboard.next_steps.step2_title')}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Adicione vagas à sua fila de envio
+                {t('dashboard.next_steps.step2_desc')}
               </p>
             </a>
             <a
@@ -139,10 +141,10 @@ export default function Dashboard() {
               className="p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
             >
               <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                3. Enviar Emails
+                {t('dashboard.next_steps.step3_title')}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Dispare suas aplicações em massa
+                {t('dashboard.next_steps.step3_desc')}
               </p>
             </a>
           </div>

@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface Job extends JobDetails {
   id: string;
@@ -38,6 +39,7 @@ interface Job extends JobDetails {
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const isAdmin = useIsAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -60,12 +62,12 @@ export default function Jobs() {
 
   type SalaryBand = 'any' | 'lt15' | '15-18' | '18-22' | '22-26' | '26plus';
   const SALARY_BANDS: Array<{ value: SalaryBand; label: string; min: number | null; max: number | null }> = [
-    { value: 'any', label: 'Salário (qualquer)', min: null, max: null },
-    { value: 'lt15', label: 'Até $14.99/h', min: null, max: 14.99 },
-    { value: '15-18', label: '$15 – $18/h', min: 15, max: 18 },
-    { value: '18-22', label: '$18 – $22/h', min: 18, max: 22 },
-    { value: '22-26', label: '$22 – $26/h', min: 22, max: 26 },
-    { value: '26plus', label: '$26+/h', min: 26, max: null },
+    { value: 'any', label: t('jobs.salary.any'), min: null, max: null },
+    { value: 'lt15', label: t('jobs.salary.lt15'), min: null, max: 14.99 },
+    { value: '15-18', label: t('jobs.salary.15_18'), min: 15, max: 18 },
+    { value: '18-22', label: t('jobs.salary.18_22'), min: 18, max: 22 },
+    { value: '22-26', label: t('jobs.salary.22_26'), min: 22, max: 26 },
+    { value: '26plus', label: t('jobs.salary.26plus'), min: 26, max: null },
   ];
 
   const deriveBandFromLegacyMinMax = (minRaw: string | null, maxRaw: string | null): SalaryBand => {
@@ -174,7 +176,7 @@ export default function Jobs() {
     if (error) {
       console.error('Error fetching jobs:', error);
       toast({
-        title: 'Erro ao carregar vagas',
+        title: t('jobs.toasts.load_error_title'),
         description: error.message,
         variant: 'destructive',
       });
@@ -283,12 +285,12 @@ export default function Jobs() {
       if (error.code === '23505') {
         setQueuedJobIds((prev) => new Set(prev).add(job.id));
         toast({
-          title: 'Já na fila',
-          description: 'Esta vaga já está na sua fila.',
+          title: t('jobs.toasts.already_in_queue_title'),
+          description: t('jobs.toasts.already_in_queue_desc'),
         });
       } else {
         toast({
-          title: 'Erro ao adicionar',
+          title: t('jobs.toasts.add_error_title'),
           description: error.message,
           variant: 'destructive',
         });
@@ -296,8 +298,8 @@ export default function Jobs() {
     } else {
       setQueuedJobIds((prev) => new Set(prev).add(job.id));
       toast({
-        title: 'Adicionado à fila!',
-        description: `${job.job_title} foi adicionado à sua fila.`,
+        title: t('jobs.toasts.add_success_title'),
+        description: t('jobs.toasts.add_success_desc', { jobTitle: job.job_title }),
       });
     }
   };
@@ -338,7 +340,7 @@ export default function Jobs() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Buscar Vagas</h1>
             <p className="text-muted-foreground mt-1">
-              {totalCount} vagas {visaLabel} disponíveis
+              {t('jobs.subtitle', { totalCount, visaLabel })}
             </p>
           </div>
           {isAdmin && <JobImportDialog />}
@@ -359,12 +361,12 @@ export default function Jobs() {
                   }}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filtrar visto" />
+                    <SelectValue placeholder={t('jobs.filters.visa.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos (H-2A + H-2B)</SelectItem>
-                    <SelectItem value="H-2B">Apenas H-2B</SelectItem>
-                    <SelectItem value="H-2A">Apenas H-2A</SelectItem>
+                    <SelectItem value="all">{t('jobs.filters.visa.all')}</SelectItem>
+                    <SelectItem value="H-2B">{t('jobs.filters.visa.only_h2b')}</SelectItem>
+                    <SelectItem value="H-2A">{t('jobs.filters.visa.only_h2a')}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -375,7 +377,7 @@ export default function Jobs() {
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>H-2A é agricultura: não tem cap anual e moradia é obrigatória.</p>
+                    <p>{t('jobs.filters.visa.h2a_info')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -384,7 +386,7 @@ export default function Jobs() {
             <div className="relative w-full lg:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cargo, empresa, cidade..."
+                placeholder={t('jobs.search.placeholder')}
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -399,7 +401,7 @@ export default function Jobs() {
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <Input
-              placeholder="Estado (ex: FL)"
+              placeholder={t('jobs.filters.state')}
               value={stateFilter}
               onChange={(e) => {
                 setStateFilter(e.target.value);
@@ -407,7 +409,7 @@ export default function Jobs() {
               }}
             />
             <Input
-              placeholder="Cidade"
+              placeholder={t('jobs.filters.city')}
               value={cityFilter}
               onChange={(e) => {
                 setCityFilter(e.target.value);
@@ -415,7 +417,7 @@ export default function Jobs() {
               }}
             />
             <Input
-              placeholder="Categoria"
+              placeholder={t('jobs.filters.category')}
               value={categoryFilter}
               onChange={(e) => {
                 setCategoryFilter(e.target.value);
@@ -431,7 +433,7 @@ export default function Jobs() {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Faixa de salário" />
+                <SelectValue placeholder={t('jobs.salary.placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {SALARY_BANDS.map((b) => (
@@ -456,7 +458,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('job_title', 'asc')}
                   >
-                    Cargo <SortIcon active={sortKey === 'job_title'} dir={sortDir} />
+                    {t('jobs.table.headers.job_title')} <SortIcon active={sortKey === 'job_title'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -465,7 +467,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('company', 'asc')}
                   >
-                    Empresa <SortIcon active={sortKey === 'company'} dir={sortDir} />
+                    {t('jobs.table.headers.company')} <SortIcon active={sortKey === 'company'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -474,7 +476,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('city', 'asc')}
                   >
-                    Local <SortIcon active={sortKey === 'city'} dir={sortDir} />
+                    {t('jobs.table.headers.location')} <SortIcon active={sortKey === 'city'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -483,7 +485,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('openings', 'desc')}
                   >
-                    Qtd. Vagas <SortIcon active={sortKey === 'openings'} dir={sortDir} />
+                    {t('jobs.table.headers.openings')} <SortIcon active={sortKey === 'openings'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -492,7 +494,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('salary', 'desc')}
                   >
-                    Salário <SortIcon active={sortKey === 'salary'} dir={sortDir} />
+                    {t('jobs.table.headers.salary')} <SortIcon active={sortKey === 'salary'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -501,7 +503,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('visa_type', 'asc')}
                   >
-                    Visto <SortIcon active={sortKey === 'visa_type'} dir={sortDir} />
+                    {t('jobs.table.headers.visa')} <SortIcon active={sortKey === 'visa_type'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -510,7 +512,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('posted_date', 'desc')}
                   >
-                    Postada <SortIcon active={sortKey === 'posted_date'} dir={sortDir} />
+                    {t('jobs.table.headers.posted')} <SortIcon active={sortKey === 'posted_date'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -519,7 +521,7 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('start_date', 'asc')}
                   >
-                    Início <SortIcon active={sortKey === 'start_date'} dir={sortDir} />
+                    {t('jobs.table.headers.start')} <SortIcon active={sortKey === 'start_date'} dir={sortDir} />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -528,27 +530,27 @@ export default function Jobs() {
                     className="inline-flex items-center gap-2 hover:underline"
                     onClick={() => toggleSort('end_date', 'asc')}
                   >
-                    Fim <SortIcon active={sortKey === 'end_date'} dir={sortDir} />
+                    {t('jobs.table.headers.end')} <SortIcon active={sortKey === 'end_date'} dir={sortDir} />
                   </button>
                 </TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>{t('jobs.table.headers.email')}</TableHead>
                 {planSettings.show_housing_icons && (
-                  <TableHead className="text-center">Benefícios</TableHead>
+                  <TableHead className="text-center">{t('jobs.table.headers.benefits')}</TableHead>
                 )}
-                <TableHead className="text-right">Ação</TableHead>
+                <TableHead className="text-right">{t('jobs.table.headers.action')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={tableColSpan} className="text-center py-8">
-                    Carregando vagas...
+                    {t('jobs.table.loading')}
                   </TableCell>
                 </TableRow>
               ) : jobs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={tableColSpan} className="text-center py-8">
-                    Nenhuma vaga encontrada
+                    {t('jobs.table.empty')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -612,8 +614,8 @@ export default function Jobs() {
                               <TooltipContent>
                                 <p>
                                   {job.visa_type === 'H-2A'
-                                    ? 'H-2A: moradia é obrigatória por regra do visto.'
-                                    : 'Moradia disponível.'}
+                                    ? t('jobs.benefits.housing_h2a')
+                                    : t('jobs.benefits.housing_available')}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -676,10 +678,10 @@ export default function Jobs() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              Conteúdo Exclusivo
+              {t('jobs.upgrade.title')}
             </DialogTitle>
             <DialogDescription>
-              Faça upgrade para desbloquear informações de contato e benefícios das vagas.
+              {t('jobs.upgrade.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -687,26 +689,26 @@ export default function Jobs() {
             <div className="p-4 rounded-lg bg-plan-gold/10 border border-plan-gold/30">
               <h4 className="font-semibold text-plan-gold">Plano Gold</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Desbloqueie emails e empresas por apenas R$ 19,90/mês
+                {t('jobs.upgrade.gold_desc')}
               </p>
             </div>
 
             <div className="p-4 rounded-lg bg-plan-diamond/10 border border-plan-diamond/30">
               <h4 className="font-semibold text-plan-diamond">Plano Diamond</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Acesso completo + IA + benefícios visuais por R$ 39,90/mês
+                {t('jobs.upgrade.diamond_desc')}
               </p>
             </div>
 
             <Button className="w-full" onClick={() => (window.location.href = '/plans')}>
-              Ver Planos
+              {t('jobs.upgrade.cta')}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Página {page} de {totalPages}
+          {t('jobs.pagination.page_of', { page, totalPages })}
         </p>
         <div className="flex gap-2">
           <Button
@@ -714,14 +716,14 @@ export default function Jobs() {
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Anterior
+            {t('common.previous')}
           </Button>
           <Button
             variant="outline"
             disabled={page >= totalPages || loading}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           >
-            Próxima
+            {t('common.next')}
           </Button>
         </div>
       </div>
