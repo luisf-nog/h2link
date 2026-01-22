@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type MappedJob = {
   job_id: string;
@@ -231,6 +232,7 @@ function mapRow(row: Record<string, unknown>): MappedJob | null {
 
 export function JobImportDialog() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
@@ -263,7 +265,7 @@ export function JobImportDialog() {
 
   const handleImport = async () => {
     if (preview.length === 0) {
-      toast({ title: "Nenhuma vaga válida", variant: "destructive" });
+      toast({ title: t("job_import.toasts.no_valid_title"), variant: "destructive" });
       return;
     }
 
@@ -273,7 +275,7 @@ export function JobImportDialog() {
     const token = sessionData?.session?.access_token;
 
     if (!token) {
-      toast({ title: "Você precisa estar logado", variant: "destructive" });
+      toast({ title: t("job_import.toasts.need_login_title"), variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -291,11 +293,19 @@ export function JobImportDialog() {
     setLoading(false);
 
     if (!res.ok) {
-      toast({ title: json.error || "Erro ao importar", variant: "destructive" });
+      toast({
+        title: t("job_import.toasts.import_error_title"),
+        description: json?.error || t("job_import.toasts.import_error_fallback"),
+        variant: "destructive",
+      });
       return;
     }
 
-    toast({ title: `${json.imported} vagas importadas com sucesso!` });
+    toast({
+      title: t("job_import.toasts.import_success_title", {
+        count: Number(json?.imported ?? preview.length),
+      }),
+    });
     setPreview([]);
     setOpen(false);
   };
@@ -305,15 +315,15 @@ export function JobImportDialog() {
       <DialogTrigger asChild>
         <Button variant="outline">
           <Upload className="h-4 w-4 mr-2" />
-          Importar
+          {t("job_import.trigger")}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Importar Vagas</DialogTitle>
+          <DialogTitle>{t("job_import.title")}</DialogTitle>
           <DialogDescription>
-            Faça upload de um arquivo .xlsx seguindo o padrão de importação.
+            {t("job_import.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -327,26 +337,27 @@ export function JobImportDialog() {
 
         <div className="space-y-4">
           <Button variant="secondary" onClick={() => fileRef.current?.click()}>
-            Selecionar Arquivo
+            {t("job_import.actions.select_file")}
           </Button>
 
           {preview.length > 0 && (
             <>
               <p className="text-sm text-muted-foreground">
-                {preview.length} vagas válidas para importação{skipped > 0 && ` (${skipped} ignoradas)`}
+                {t("job_import.summary.valid_for_import", { count: preview.length })}
+                {skipped > 0 && ` ${t("job_import.summary.skipped", { count: skipped })}`}
               </p>
 
               <ScrollArea className="max-h-64 border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Job ID</TableHead>
-                      <TableHead>Visa</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Local</TableHead>
-                      <TableHead>Aberturas</TableHead>
-                      <TableHead>Salário</TableHead>
+                      <TableHead>{t("job_import.table.headers.job_id")}</TableHead>
+                      <TableHead>{t("job_import.table.headers.visa")}</TableHead>
+                      <TableHead>{t("job_import.table.headers.role")}</TableHead>
+                      <TableHead>{t("job_import.table.headers.company")}</TableHead>
+                      <TableHead>{t("job_import.table.headers.location")}</TableHead>
+                      <TableHead>{t("job_import.table.headers.openings")}</TableHead>
+                      <TableHead>{t("job_import.table.headers.salary")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -372,10 +383,10 @@ export function JobImportDialog() {
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleImport} disabled={loading || preview.length === 0}>
-            {loading ? "Importando..." : "Importar"}
+            {loading ? t("job_import.actions.importing") : t("job_import.actions.import")}
           </Button>
         </DialogFooter>
       </DialogContent>
