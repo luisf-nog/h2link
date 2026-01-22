@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import h2linkLogo from "@/assets/h2link-logo.jpg";
 
 type BrandLogoProps = {
   /**
@@ -15,7 +16,7 @@ type BrandLogoProps = {
 export function BrandLogo({ height = 40, className, alt = "H2Link", src }: BrandLogoProps) {
   return (
     <img
-      src={src ?? "/placeholder.svg"}
+      src={src ?? h2linkLogo}
       alt={alt}
       loading="eager"
       decoding="async"
