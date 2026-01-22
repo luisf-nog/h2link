@@ -184,6 +184,65 @@ export type Database = {
         }
         Relationships: []
       }
+      smtp_credentials: {
+        Row: {
+          created_at: string
+          email: string
+          has_password: boolean
+          id: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          has_password?: boolean
+          id?: string
+          provider: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          has_password?: boolean
+          id?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      smtp_credentials_secrets: {
+        Row: {
+          created_at: string
+          password: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          password: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          password?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smtp_credentials_secrets_user_id_fk"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "smtp_credentials"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

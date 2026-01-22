@@ -12,6 +12,7 @@ import Jobs from "./pages/Jobs";
 import Queue from "./pages/Queue";
 import Plans from "./pages/Plans";
 import Settings from "./pages/Settings";
+import SettingsEmail from "./pages/SettingsEmail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <Settings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings/email"
+      element={
+        <ProtectedRoute>
+          <SettingsEmail />
         </ProtectedRoute>
       }
     />

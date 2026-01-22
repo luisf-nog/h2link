@@ -1,1 +1,4 @@
 project_id = "dalarhopratsgzmmzhxx"
+
+[functions.send-email-custom]
+verify_jwt = false
