@@ -18,7 +18,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { JobDetailsDialog, type JobDetails } from '@/components/jobs/JobDetailsDialog';
 import { JobImportDialog } from '@/components/jobs/JobImportDialog';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -39,9 +45,11 @@ export default function Jobs() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const [visaType, setVisaType] = useState<'H-2B' | 'H-2A'>(() => {
+  const [visaType, setVisaType] = useState<'all' | 'H-2B' | 'H-2A'>(() => {
     const v = searchParams.get('visa');
-    return v === 'H-2A' ? 'H-2A' : 'H-2B';
+    if (v === 'H-2A') return 'H-2A';
+    if (v === 'H-2B') return 'H-2B';
+    return 'all';
   });
 
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
@@ -77,8 +85,9 @@ export default function Jobs() {
       .from('public_jobs')
       .select('*', { count: 'exact' })
       .order('posted_date', { ascending: false })
-      .range(from, to)
-      .eq('visa_type', visaType);
+      .range(from, to);
+
+    if (visaType !== 'all') query = query.eq('visa_type', visaType);
 
     if (searchTerm.trim()) {
       query = query.or(buildOrSearch(searchTerm.trim()));
@@ -122,7 +131,7 @@ export default function Jobs() {
   useEffect(() => {
     const t = window.setTimeout(() => {
       const next = new URLSearchParams();
-      next.set('visa', visaType);
+      if (visaType !== 'all') next.set('visa', visaType);
       if (searchTerm.trim()) next.set('q', searchTerm.trim());
       if (stateFilter.trim()) next.set('state', stateFilter.trim());
       if (cityFilter.trim()) next.set('city', cityFilter.trim());
@@ -140,6 +149,13 @@ export default function Jobs() {
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryMin, salaryMax, page]);
+
+  const visaLabel = useMemo(() => {
+    if (visaType === 'all') return 'H-2A + H-2B';
+    return visaType;
+  }, [visaType]);
+
+  const tableColSpan = planSettings.show_housing_icons ? 8 : 7;
 
   const addToQueue = async (job: Job) => {
     if (planSettings.job_db_blur) {
@@ -194,7 +210,7 @@ export default function Jobs() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Buscar Vagas</h1>
             <p className="text-muted-foreground mt-1">
-              {totalCount} vagas {visaType} disponíveis
+              {totalCount} vagas {visaLabel} disponíveis
             </p>
           </div>
           {isAdmin && <JobImportDialog />}
@@ -205,40 +221,36 @@ export default function Jobs() {
         <CardHeader className="pb-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Tabs
-                value={visaType}
-                onValueChange={(v) => {
-                  const next = v === 'H-2A' ? 'H-2A' : 'H-2B';
-                  setVisaType(next);
-                  setPage(1);
-                }}
-              >
-                <TabsList>
-                  <TabsTrigger value="H-2B">H-2B Jobs</TabsTrigger>
-                  <TabsTrigger value="H-2A" className="gap-2">
-                    H-2A Jobs
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex items-center text-muted-foreground">
-                          <Info className="h-4 w-4" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>H-2A é agricultura: não tem cap anual e moradia é obrigatória.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={visaType}
+                  onValueChange={(v) => {
+                    const next = (v === 'H-2A' || v === 'H-2B' || v === 'all') ? v : 'all';
+                    setVisaType(next);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar visto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos (H-2A + H-2B)</SelectItem>
+                    <SelectItem value="H-2B">Apenas H-2B</SelectItem>
+                    <SelectItem value="H-2A">Apenas H-2A</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {visaType === 'H-2B' && totalCount === 0 && (
-                <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-                  <Info className="h-4 w-4" />
-                  <span>
-                    H-2B pode ficar escasso; experimente H-2A (sem cap anual).
-                  </span>
-                </div>
-              )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center text-muted-foreground">
+                      <Info className="h-4 w-4" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>H-2A é agricultura: não tem cap anual e moradia é obrigatória.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
 
             <div className="relative w-full lg:w-80">
@@ -313,6 +325,7 @@ export default function Jobs() {
                 <TableHead>Empresa</TableHead>
                 <TableHead>Local</TableHead>
                 <TableHead>Salário</TableHead>
+                <TableHead>Visto</TableHead>
                 <TableHead>Email</TableHead>
                 {planSettings.show_housing_icons && (
                   <TableHead className="text-center">Benefícios</TableHead>
@@ -323,13 +336,13 @@ export default function Jobs() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={tableColSpan} className="text-center py-8">
                     Carregando vagas...
                   </TableCell>
                 </TableRow>
               ) : jobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={tableColSpan} className="text-center py-8">
                     Nenhuma vaga encontrada
                   </TableCell>
                 </TableRow>
@@ -354,6 +367,11 @@ export default function Jobs() {
                       {job.city}, {job.state}
                     </TableCell>
                     <TableCell>{formatSalary(job.salary)}</TableCell>
+                    <TableCell>
+                      <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
+                        {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <span
                         className={cn(
