@@ -4,10 +4,13 @@
   },
   "common": {
     "loading": "Cargando...",
+    "cancel": "Cancelar",
     "logout": "Cerrar sesión",
     "language": "Idioma",
     "previous": "Anterior",
     "next": "Siguiente",
+    "yes": "Sí",
+    "no": "No",
     "user": "Usuario"
   },
   "nav": {
@@ -240,6 +243,75 @@
       "add_error_title": "Error al agregar",
       "add_success_title": "¡Agregado a la cola!",
       "add_success_desc": "{{jobTitle}} fue agregado a tu cola."
+    }
+  },
+  "not_found": {
+    "subtitle": "Ups! Página no encontrada",
+    "cta": "Volver al inicio"
+  },
+  "job_details": {
+    "sections": {
+      "contact": "Contacto",
+      "worksite": "Lugar de trabajo",
+      "details": "Detalles",
+      "benefits": "Beneficios"
+    },
+    "fields": {
+      "openings": "Vacantes",
+      "salary": "Salario",
+      "overtime": "Horas extra",
+      "weekly_hours": "Horas semanales",
+      "posted_date": "Fecha de publicación",
+      "start_date": "Inicio",
+      "end_date": "Fin",
+      "experience": "Experiencia",
+      "job_id": "Job ID",
+      "education": "Educación",
+      "requirements": "Requisitos",
+      "description": "Descripción",
+      "housing": "Vivienda",
+      "transport": "Transporte",
+      "tools": "Herramientas"
+    },
+    "values": {
+      "months": "{{count}} meses",
+      "housing_required_h2a": "Obligatoria (detalles no informados).",
+      "not_provided": "No informado."
+    },
+    "actions": {
+      "add_to_queue": "Agregar a la cola"
+    }
+  },
+  "job_import": {
+    "trigger": "Importar",
+    "title": "Importar empleos",
+    "description": "Sube un archivo .xlsx siguiendo la plantilla de importación.",
+    "actions": {
+      "select_file": "Seleccionar archivo",
+      "import": "Importar",
+      "importing": "Importando..."
+    },
+    "summary": {
+      "valid_for_import": "{{count}} empleos válidos para importar",
+      "skipped": "({{count}} omitidos)"
+    },
+    "table": {
+      "headers": {
+        "job_id": "Job ID",
+        "visa": "Visa",
+        "role": "Puesto",
+        "company": "Empresa",
+        "location": "Ubicación",
+        "openings": "Vacantes",
+        "salary": "Salario"
+      }
+    },
+    "toasts": {
+      "no_valid_title": "No hay empleos válidos",
+      "need_login_title": "Debes iniciar sesión",
+      "import_error_title": "Error al importar",
+      "import_error_fallback": "Error al importar empleos",
+      "import_success_title": "¡{{count}} empleos importados con éxito!"
     }
   }
 }

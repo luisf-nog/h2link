@@ -4,10 +4,13 @@
   },
   "common": {
     "loading": "Carregando...",
+    "cancel": "Cancelar",
     "logout": "Sair",
     "language": "Idioma",
     "previous": "Anterior",
     "next": "Próxima",
+    "yes": "Sim",
+    "no": "Não",
     "user": "Usuário"
   },
   "nav": {
@@ -240,6 +243,75 @@
       "add_error_title": "Erro ao adicionar",
       "add_success_title": "Adicionado à fila!",
       "add_success_desc": "{{jobTitle}} foi adicionado à sua fila."
+    }
+  },
+  "not_found": {
+    "subtitle": "Ops! Página não encontrada",
+    "cta": "Voltar para Home"
+  },
+  "job_details": {
+    "sections": {
+      "contact": "Contato",
+      "worksite": "Local de trabalho",
+      "details": "Detalhes",
+      "benefits": "Benefícios"
+    },
+    "fields": {
+      "openings": "Aberturas",
+      "salary": "Salário",
+      "overtime": "Hora extra",
+      "weekly_hours": "Horas semanais",
+      "posted_date": "Data de postagem",
+      "start_date": "Início",
+      "end_date": "Fim",
+      "experience": "Experiência",
+      "job_id": "Job ID",
+      "education": "Educação",
+      "requirements": "Requisitos",
+      "description": "Descrição",
+      "housing": "Moradia",
+      "transport": "Transporte",
+      "tools": "Ferramentas"
+    },
+    "values": {
+      "months": "{{count}} meses",
+      "housing_required_h2a": "Obrigatória (detalhes não informados).",
+      "not_provided": "Não informado."
+    },
+    "actions": {
+      "add_to_queue": "Adicionar à Fila"
+    }
+  },
+  "job_import": {
+    "trigger": "Importar",
+    "title": "Importar vagas",
+    "description": "Faça upload de um arquivo .xlsx seguindo o padrão de importação.",
+    "actions": {
+      "select_file": "Selecionar arquivo",
+      "import": "Importar",
+      "importing": "Importando..."
+    },
+    "summary": {
+      "valid_for_import": "{{count}} vagas válidas para importação",
+      "skipped": "({{count}} ignoradas)"
+    },
+    "table": {
+      "headers": {
+        "job_id": "Job ID",
+        "visa": "Visto",
+        "role": "Cargo",
+        "company": "Empresa",
+        "location": "Local",
+        "openings": "Aberturas",
+        "salary": "Salário"
+      }
+    },
+    "toasts": {
+      "no_valid_title": "Nenhuma vaga válida",
+      "need_login_title": "Você precisa estar logado",
+      "import_error_title": "Erro ao importar",
+      "import_error_fallback": "Erro ao importar vagas",
+      "import_success_title": "{{count}} vagas importadas com sucesso!"
     }
   }
 }

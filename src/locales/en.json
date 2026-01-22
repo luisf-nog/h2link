@@ -4,10 +4,13 @@
   },
   "common": {
     "loading": "Loading...",
+    "cancel": "Cancel",
     "logout": "Sign out",
     "language": "Language",
     "previous": "Previous",
     "next": "Next",
+    "yes": "Yes",
+    "no": "No",
     "user": "User"
   },
   "nav": {
@@ -240,6 +243,75 @@
       "add_error_title": "Add error",
       "add_success_title": "Added to queue!",
       "add_success_desc": "{{jobTitle}} was added to your queue."
+    }
+  },
+  "not_found": {
+    "subtitle": "Oops! Page not found",
+    "cta": "Return to Home"
+  },
+  "job_details": {
+    "sections": {
+      "contact": "Contact",
+      "worksite": "Worksite",
+      "details": "Details",
+      "benefits": "Benefits"
+    },
+    "fields": {
+      "openings": "Openings",
+      "salary": "Salary",
+      "overtime": "Overtime",
+      "weekly_hours": "Weekly hours",
+      "posted_date": "Posted",
+      "start_date": "Start",
+      "end_date": "End",
+      "experience": "Experience",
+      "job_id": "Job ID",
+      "education": "Education",
+      "requirements": "Requirements",
+      "description": "Description",
+      "housing": "Housing",
+      "transport": "Transport",
+      "tools": "Tools"
+    },
+    "values": {
+      "months": "{{count}} months",
+      "housing_required_h2a": "Required (details not provided).",
+      "not_provided": "Not provided."
+    },
+    "actions": {
+      "add_to_queue": "Add to Queue"
+    }
+  },
+  "job_import": {
+    "trigger": "Import",
+    "title": "Import jobs",
+    "description": "Upload an .xlsx file following the import template.",
+    "actions": {
+      "select_file": "Select file",
+      "import": "Import",
+      "importing": "Importing..."
+    },
+    "summary": {
+      "valid_for_import": "{{count}} valid jobs for import",
+      "skipped": "({{count}} skipped)"
+    },
+    "table": {
+      "headers": {
+        "job_id": "Job ID",
+        "visa": "Visa",
+        "role": "Role",
+        "company": "Company",
+        "location": "Location",
+        "openings": "Openings",
+        "salary": "Salary"
+      }
+    },
+    "toasts": {
+      "no_valid_title": "No valid jobs",
+      "need_login_title": "You must be signed in",
+      "import_error_title": "Import failed",
+      "import_error_fallback": "Error importing jobs",
+      "import_success_title": "{{count}} jobs imported successfully!"
     }
   }
 }

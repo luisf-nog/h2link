@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Bus, Calendar, Home, Mail, MapPin, Phone, Plus, Wrench } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export type JobDetails = {
   id: string;
@@ -61,7 +62,22 @@ export function JobDetailsDialog({
   formatSalary: (salary: number | null) => string;
   onAddToQueue: (job: JobDetails) => void;
 }) {
+  const { t, i18n } = useTranslation();
   const isH2A = job?.visa_type === "H-2A";
+
+  const formatDate = (v: string | null | undefined) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    return Number.isNaN(d.getTime())
+      ? "-"
+      : d.toLocaleDateString(i18n.language, { timeZone: "UTC" });
+  };
+
+  const yesNo = (v: boolean | null | undefined) => {
+    if (v === true) return t("common.yes");
+    if (v === false) return t("common.no");
+    return "-";
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,61 +106,65 @@ export function JobDetailsDialog({
           <div className="space-y-5">
             <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Aberturas</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.openings")}</p>
                 <p className="font-medium">{job?.openings ?? "-"}</p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Salário</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.salary")}</p>
                 <p className="font-medium">{formatSalary(job?.salary ?? null)}</p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Hora extra</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.overtime")}</p>
                 <p className="font-medium">
                   {job?.overtime_salary ? `$${Number(job.overtime_salary).toFixed(2)}/h` : "-"}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Horas semanais</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.weekly_hours")}</p>
                 <p className="font-medium">{job?.weekly_hours ? `${job.weekly_hours}h` : "-"}</p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Data de postagem</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.posted_date")}</p>
                 <p className="font-medium inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  {job?.posted_date ? new Date(job.posted_date).toLocaleDateString("pt-BR") : "-"}
+                  {formatDate(job?.posted_date)}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Início</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.start_date")}</p>
                 <p className="font-medium inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  {job?.start_date ? new Date(job.start_date).toLocaleDateString("pt-BR") : "-"}
+                  {formatDate(job?.start_date)}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Fim</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.end_date")}</p>
                 <p className="font-medium inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  {job?.end_date ? new Date(job.end_date).toLocaleDateString("pt-BR") : "-"}
+                  {formatDate(job?.end_date)}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Experiência</p>
-                <p className="font-medium">{job?.experience_months != null ? `${job.experience_months} meses` : "-"}</p>
+                <p className="text-sm text-muted-foreground">{t("job_details.fields.experience")}</p>
+                <p className="font-medium">
+                  {job?.experience_months != null
+                    ? t("job_details.values.months", { count: job.experience_months })
+                    : "-"}
+                </p>
               </div>
             </section>
 
             <Separator />
 
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold">Contato</h3>
+              <h3 className="text-sm font-semibold">{t("job_details.sections.contact")}</h3>
               <div className="rounded-md border p-3">
                 <div className="flex flex-col gap-2">
                   <div className="inline-flex items-center gap-2">
@@ -160,7 +180,7 @@ export function JobDetailsDialog({
                   )}
 
                   <p className="text-xs text-muted-foreground">
-                    Job ID: <span className="font-mono">{job?.job_id}</span>
+                    {t("job_details.fields.job_id")}: <span className="font-mono">{job?.job_id}</span>
                   </p>
                 </div>
               </div>
@@ -170,7 +190,7 @@ export function JobDetailsDialog({
               <>
                 <Separator />
                 <section className="space-y-2">
-                  <h3 className="text-sm font-semibold">Local de trabalho</h3>
+                  <h3 className="text-sm font-semibold">{t("job_details.sections.worksite")}</h3>
                   <p className="text-sm text-muted-foreground">
                     {job.worksite_address}
                     {job.worksite_zip ? ` — ${job.worksite_zip}` : ""}
@@ -183,25 +203,25 @@ export function JobDetailsDialog({
               <>
                 <Separator />
                 <section className="space-y-4">
-                  <h3 className="text-sm font-semibold">Detalhes</h3>
+                  <h3 className="text-sm font-semibold">{t("job_details.sections.details")}</h3>
 
                   {job?.education_required && (
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Educação</p>
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.education")}</p>
                       <p className="text-sm">{job.education_required}</p>
                     </div>
                   )}
 
                   {job?.requirements && (
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Requisitos</p>
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.requirements")}</p>
                       <p className="text-sm whitespace-pre-wrap">{job.requirements}</p>
                     </div>
                   )}
 
                   {job?.description && (
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Descrição</p>
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.description")}</p>
                       <p className="text-sm whitespace-pre-wrap">{job.description}</p>
                     </div>
                   )}
@@ -214,7 +234,7 @@ export function JobDetailsDialog({
               <>
                 <Separator />
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">Benefícios</h3>
+                  <h3 className="text-sm font-semibold">{t("job_details.sections.benefits")}</h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="rounded-md border p-3">
@@ -228,11 +248,11 @@ export function JobDetailsDialog({
                           />
                         )}
                         <div className="space-y-1">
-                          <p className="text-sm font-medium">Moradia</p>
+                          <p className="text-sm font-medium">{t("job_details.fields.housing")}</p>
                           <p className="text-sm text-muted-foreground">
                             {isH2A
-                              ? job?.housing_info || "Obrigatória (detalhes não informados)."
-                              : job?.housing_info || "Não informado."}
+                              ? job?.housing_info || t("job_details.values.housing_required_h2a")
+                              : job?.housing_info || t("job_details.values.not_provided")}
                           </p>
                         </div>
                       </div>
@@ -242,9 +262,9 @@ export function JobDetailsDialog({
                       <div className="flex items-start gap-2">
                         {planSettings.show_housing_icons && <Bus className="h-4 w-4 mt-0.5 text-muted-foreground" />}
                         <div className="space-y-1">
-                          <p className="text-sm font-medium">Transporte</p>
+                          <p className="text-sm font-medium">{t("job_details.fields.transport")}</p>
                           <p className="text-sm text-muted-foreground">
-                            {job?.transport_provided ? "Sim" : "Não"}
+                            {yesNo(job?.transport_provided)}
                           </p>
                         </div>
                       </div>
@@ -256,8 +276,8 @@ export function JobDetailsDialog({
                           <Wrench className="h-4 w-4 mt-0.5 text-muted-foreground" />
                         )}
                         <div className="space-y-1">
-                          <p className="text-sm font-medium">Ferramentas</p>
-                          <p className="text-sm text-muted-foreground">{job?.tools_provided ? "Sim" : "Não"}</p>
+                          <p className="text-sm font-medium">{t("job_details.fields.tools")}</p>
+                          <p className="text-sm text-muted-foreground">{yesNo(job?.tools_provided)}</p>
                         </div>
                       </div>
                     </div>
@@ -271,7 +291,7 @@ export function JobDetailsDialog({
         <div className="pt-2">
           <Button className="w-full" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-4 w-4 mr-2" />
-            Adicionar à Fila
+            {t("job_details.actions.add_to_queue")}
           </Button>
         </div>
       </DialogContent>
