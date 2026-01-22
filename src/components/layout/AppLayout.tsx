@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
 import i18n, { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
-import { BrandLogo } from '@/components/brand/BrandLogo';
 
 type LanguageOption = { value: SupportedLanguage; label: string };
 
@@ -73,7 +72,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             <SidebarTrigger className="mr-4" />
 
             <div className="flex items-center gap-3 min-w-0">
-              <BrandLogo height={28} className="max-w-[180px]" />
+              <div className="min-w-0">
+                <div className="text-lg font-semibold leading-none tracking-tight truncate">H2 Link</div>
+              </div>
             </div>
 
             <div className="ml-auto flex items-center gap-2">
