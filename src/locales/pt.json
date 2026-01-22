@@ -206,7 +206,8 @@
       },
       "state": "Estado (ex: FL)",
       "city": "Cidade",
-      "category": "Categoria"
+      "category": "Categoria",
+      "category_all": "Todas as categorias"
     },
     "search": { "placeholder": "Buscar por cargo, empresa, cidade..." },
     "salary": {

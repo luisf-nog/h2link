@@ -25,7 +25,7 @@
   },
   "nav": {
     "dashboard": "Panel",
-    "jobs": "Hub Vagas",
+    "jobs": "Hub de Empleos",
     "queue": "Mi cola",
     "plans": "Planes",
     "settings": "Configuración"
@@ -141,7 +141,7 @@
       },
       "loading": "Cargando cola...",
       "empty": "Tu cola está vacía",
-      "go_jobs": "Abrir Hub Vagas"
+      "go_jobs": "Abrir Hub de Empleos"
     },
     "status": { "sent": "Enviado", "pending": "Pendiente" },
     "toasts": {
@@ -206,7 +206,8 @@
       },
       "state": "Estado (ej: FL)",
       "city": "Ciudad",
-      "category": "Categoría"
+      "category": "Categoría",
+      "category_all": "Todas las categorías"
     },
     "search": { "placeholder": "Buscar por puesto, empresa, ciudad..." },
     "salary": {
