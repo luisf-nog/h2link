@@ -31,6 +31,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
 
 interface Job extends JobDetails {
   id: string;
@@ -39,8 +40,14 @@ interface Job extends JobDetails {
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isAdmin = useIsAdmin();
+  const locale = i18n.resolvedLanguage || i18n.language;
+  const currency = getCurrencyForLanguage(locale);
+  const formatPlanPrice = (tier: 'gold' | 'diamond') => {
+    const amount = getPlanAmountForCurrency(PLANS_CONFIG[tier], currency);
+    return formatCurrency(amount, currency, locale);
+  };
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -338,7 +345,7 @@ export default function Jobs() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Buscar Vagas</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t('nav.jobs')}</h1>
             <p className="text-muted-foreground mt-1">
               {t('jobs.subtitle', { totalCount, visaLabel })}
             </p>
@@ -687,16 +694,16 @@ export default function Jobs() {
 
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-plan-gold/10 border border-plan-gold/30">
-              <h4 className="font-semibold text-plan-gold">Plano Gold</h4>
+              <h4 className="font-semibold text-plan-gold">{t('plans.tiers.gold.label')}</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                {t('jobs.upgrade.gold_desc')}
+                {t('jobs.upgrade.gold_desc', { price: formatPlanPrice('gold') })}
               </p>
             </div>
 
             <div className="p-4 rounded-lg bg-plan-diamond/10 border border-plan-diamond/30">
-              <h4 className="font-semibold text-plan-diamond">Plano Diamond</h4>
+              <h4 className="font-semibold text-plan-diamond">{t('plans.tiers.diamond.label')}</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                {t('jobs.upgrade.diamond_desc')}
+                {t('jobs.upgrade.diamond_desc', { price: formatPlanPrice('diamond') })}
               </p>
             </div>
 

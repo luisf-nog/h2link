@@ -15,7 +15,7 @@
   },
   "nav": {
     "dashboard": "Panel",
-    "jobs": "Buscar empleos",
+    "jobs": "Hub Vagas",
     "queue": "Mi cola",
     "plans": "Planes",
     "settings": "Configuración"
@@ -131,7 +131,7 @@
       },
       "loading": "Cargando cola...",
       "empty": "Tu cola está vacía",
-      "go_jobs": "Buscar empleos"
+      "go_jobs": "Abrir Hub Vagas"
     },
     "status": { "sent": "Enviado", "pending": "Pendiente" },
     "toasts": {
@@ -148,8 +148,7 @@
     "subtitle": "Desbloquea todo el potencial de H2B Sender y acelera tus solicitudes",
     "recommended": "Recomendado",
     "free": "Gratis",
-    "per_month": "/mes",
-    "or_usd": "o ${{price}} USD",
+    "lifetime": "(de por vida)",
     "actions": {
       "current": "Plan actual",
       "start_free": "Empezar gratis",
@@ -176,7 +175,7 @@
       "updated_desc": "Ahora eres {{plan}}! 🎉"
     },
     "footer": {
-      "line1": "Cancela en cualquier momento. Sin tarifa de cancelación.",
+      "line1": "Pago único. Acceso de por vida.",
       "line2": "Pagos procesados de forma segura vía Stripe."
     }
   },
@@ -229,8 +228,8 @@
     "upgrade": {
       "title": "Contenido exclusivo",
       "description": "Mejora tu plan para desbloquear datos de contacto y beneficios.",
-      "gold_desc": "Desbloquea emails y empresas por solo R$ 19,90/mes",
-      "diamond_desc": "Acceso completo + IA + beneficios visuales por R$ 39,90/mes",
+      "gold_desc": "Desbloquea emails y empresas por {{price}} (de por vida)",
+      "diamond_desc": "Acceso completo + IA + beneficios visuales por {{price}} (de por vida)",
       "cta": "Ver planes"
     },
     "pagination": {
@@ -248,6 +247,13 @@
   "not_found": {
     "subtitle": "Ups! Página no encontrada",
     "cta": "Volver al inicio"
+  },
+  "plans": {
+    "tiers": {
+      "free": { "label": "Starter", "description": "Para probar y conocer" },
+      "gold": { "label": "Gold", "description": "Para mayor volumen" },
+      "diamond": { "label": "Diamond", "description": "La herramienta profesional completa" }
+    }
   },
   "job_details": {
     "sections": {

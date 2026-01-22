@@ -8,12 +8,24 @@ import { useToast } from '@/hooks/use-toast';
 import { Check, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
 
 export default function Plans() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentPlan = profile?.plan_tier || 'free';
+
+  const locale = i18n.resolvedLanguage || i18n.language;
+  const currency = getCurrencyForLanguage(locale);
+
+  const renderPlanPrice = (planId: PlanTier) => {
+    const plan = PLANS_CONFIG[planId];
+    const amount = getPlanAmountForCurrency(plan, currency);
+
+    if (amount === 0) return t('plans.free');
+    return formatCurrency(amount, currency, locale);
+  };
 
   const handleCheckout = async (planId: PlanTier) => {
     if (planId === 'free') return;
@@ -111,25 +123,18 @@ export default function Plans() {
                       plan.color === 'violet' && 'text-plan-diamond'
                     )}
                   >
-                    {plan.label}
+                    {t(`plans.tiers.${plan.id}.label`)}
                   </CardTitle>
                 </div>
-                <CardDescription>{plan.description}</CardDescription>
+                <CardDescription>{t(`plans.tiers.${plan.id}.description`)}</CardDescription>
 
                 <div className="pt-4">
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold text-foreground">
-                      {plan.price.brl === 0 ? t('plans.free') : `R$ ${plan.price.brl.toFixed(2)}`}
+                      {renderPlanPrice(plan.id)}
                     </span>
-                    {plan.price.brl > 0 && (
-                      <span className="text-muted-foreground">{t('plans.per_month')}</span>
-                    )}
+                    {plan.id !== 'free' && <span className="text-muted-foreground">{t('plans.lifetime')}</span>}
                   </div>
-                  {plan.price.usd > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {t('plans.or_usd', { price: plan.price.usd.toFixed(2) })}
-                    </p>
-                  )}
                 </div>
               </CardHeader>
 
@@ -181,8 +186,12 @@ export default function Plans() {
       <div className="max-w-2xl mx-auto text-center pt-8">
         <p className="text-sm text-muted-foreground">
           {t('plans.footer.line1')}
-          <br />
-          {t('plans.footer.line2')}
+           {t('plans.footer.line2') ? (
+             <>
+               <br />
+               {t('plans.footer.line2')}
+             </>
+           ) : null}
         </p>
       </div>
     </div>
