@@ -4,6 +4,7 @@
   },
   "common": {
     "loading": "Cargando...",
+    "menu": "Menú",
     "cancel": "Cancelar",
     "logout": "Cerrar sesión",
     "language": "Idioma",

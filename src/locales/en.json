@@ -4,6 +4,7 @@
   },
   "common": {
     "loading": "Loading...",
+    "menu": "Menu",
     "cancel": "Cancel",
     "logout": "Sign out",
     "language": "Language",
