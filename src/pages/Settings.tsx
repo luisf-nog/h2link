@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, User, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatNumber } from '@/lib/number';
 
 export default function Settings() {
   const { profile, refreshProfile } = useAuth();
@@ -113,7 +114,7 @@ export default function Settings() {
           </div>
           <div className="flex justify-between items-center py-2 border-b">
             <span className="text-muted-foreground">{t('settings.account.credits_used_today')}</span>
-            <span className="font-medium">{profile?.credits_used_today || 0}</span>
+            <span className="font-medium">{formatNumber(profile?.credits_used_today || 0)}</span>
           </div>
           <div className="flex justify-between items-center py-2">
             <span className="text-muted-foreground">{t('settings.account.member_since')}</span>
