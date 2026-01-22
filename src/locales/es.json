@@ -263,13 +263,6 @@
     "subtitle": "Ups! Página no encontrada",
     "cta": "Volver al inicio"
   },
-  "plans": {
-    "tiers": {
-      "free": { "label": "Starter", "description": "Para probar y conocer" },
-      "gold": { "label": "Gold", "description": "Para mayor volumen" },
-      "diamond": { "label": "Diamond", "description": "La herramienta profesional completa" }
-    }
-  },
   "job_details": {
     "sections": {
       "contact": "Contacto",
