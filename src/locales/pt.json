@@ -9,6 +9,16 @@
     "language": "Idioma",
     "previous": "Anterior",
     "next": "Próxima",
+    "more_pages": "Mais páginas",
+    "pagination": {
+      "previous_aria": "Ir para a página anterior",
+      "next_aria": "Ir para a próxima página"
+    },
+    "languages": {
+      "en": "English",
+      "pt": "Português",
+      "es": "Español"
+    },
     "yes": "Sim",
     "no": "Não",
     "user": "Usuário"
@@ -149,6 +159,11 @@
     "recommended": "Recomendado",
     "free": "Grátis",
     "lifetime": "(vitalício)",
+    "tiers": {
+      "free": { "label": "Starter", "description": "Para testar e conhecer" },
+      "gold": { "label": "Gold", "description": "Para quem busca volume" },
+      "diamond": { "label": "Diamond", "description": "A ferramenta profissional completa" }
+    },
     "actions": {
       "current": "Plano Atual",
       "start_free": "Começar Grátis",

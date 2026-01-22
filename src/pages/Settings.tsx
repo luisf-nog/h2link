@@ -13,7 +13,7 @@ export default function Settings() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -109,7 +109,7 @@ export default function Settings() {
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center py-2 border-b">
             <span className="text-muted-foreground">{t('settings.account.current_plan')}</span>
-            <span className="font-medium capitalize">{profile?.plan_tier || 'free'}</span>
+            <span className="font-medium">{t(`plans.tiers.${profile?.plan_tier || 'free'}.label`)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b">
             <span className="text-muted-foreground">{t('settings.account.credits_used_today')}</span>
@@ -119,7 +119,7 @@ export default function Settings() {
             <span className="text-muted-foreground">{t('settings.account.member_since')}</span>
             <span className="font-medium">
               {profile?.created_at
-                ? new Date(profile.created_at as unknown as string).toLocaleDateString('pt-BR')
+                ? new Date(profile.created_at as unknown as string).toLocaleDateString(i18n.language)
                 : '-'}
             </span>
           </div>
