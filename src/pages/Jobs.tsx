@@ -28,7 +28,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { Info, Search, Plus, Home, Bus, Wrench, Lock } from 'lucide-react';
+import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Job extends JobDetails {
@@ -44,6 +44,7 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
 
   const [visaType, setVisaType] = useState<'all' | 'H-2B' | 'H-2A'>(() => {
     const v = searchParams.get('visa');
@@ -113,9 +114,31 @@ export default function Jobs() {
       });
       setJobs([]);
       setTotalCount(0);
+      setQueuedJobIds(new Set());
     } else {
-      setJobs((data as Job[]) || []);
+      const nextJobs = (data as Job[]) || [];
+      setJobs(nextJobs);
       setTotalCount(count ?? 0);
+
+      // Marca vagas já adicionadas pelo usuário (para trocar + por ✓)
+      // (não aplicamos isso quando o plano blur está ativo)
+      if (profile?.id && !planSettings.job_db_blur && nextJobs.length) {
+        const ids = nextJobs.map((j) => j.id);
+        const { data: queueRows, error: queueErr } = await supabase
+          .from('my_queue')
+          .select('job_id')
+          .eq('user_id', profile.id)
+          .in('job_id', ids);
+
+        if (queueErr) {
+          console.warn('Error fetching queue marks:', queueErr);
+          setQueuedJobIds(new Set());
+        } else {
+          setQueuedJobIds(new Set((queueRows ?? []).map((r) => r.job_id)));
+        }
+      } else {
+        setQueuedJobIds(new Set());
+      }
     }
 
     setLoading(false);
@@ -174,6 +197,8 @@ export default function Jobs() {
       return;
     }
 
+    if (queuedJobIds.has(job.id)) return;
+
     const { error } = await supabase.from('my_queue').insert({
       user_id: profile?.id,
       job_id: job.id,
@@ -181,6 +206,7 @@ export default function Jobs() {
 
     if (error) {
       if (error.code === '23505') {
+        setQueuedJobIds((prev) => new Set(prev).add(job.id));
         toast({
           title: 'Já na fila',
           description: 'Esta vaga já está na sua fila.',
@@ -193,6 +219,7 @@ export default function Jobs() {
         });
       }
     } else {
+      setQueuedJobIds((prev) => new Set(prev).add(job.id));
       toast({
         title: 'Adicionado à fila!',
         description: `${job.job_title} foi adicionado à sua fila.`,
@@ -445,6 +472,7 @@ export default function Jobs() {
                       <Button
                         size="sm"
                         variant="outline"
+                        disabled={!planSettings.job_db_blur && queuedJobIds.has(job.id)}
                         onClick={(e) => {
                           e.stopPropagation();
                           addToQueue(job);
@@ -452,6 +480,8 @@ export default function Jobs() {
                       >
                         {planSettings.job_db_blur ? (
                           <Lock className="h-4 w-4" />
+                        ) : queuedJobIds.has(job.id) ? (
+                          <Check className="h-4 w-4" />
                         ) : (
                           <Plus className="h-4 w-4" />
                         )}
