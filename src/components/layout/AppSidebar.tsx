@@ -16,6 +16,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
@@ -46,9 +47,7 @@ export function AppSidebar() {
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">H2</span>
-          </div>
+          <BrandLogo height={40} className="shrink-0" />
           <div>
             <h1 className="font-bold text-lg text-sidebar-foreground">{t('app.name')}</h1>
             <span
