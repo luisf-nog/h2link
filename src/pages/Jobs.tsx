@@ -28,7 +28,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock } from 'lucide-react';
+import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Job extends JobDetails {
@@ -57,8 +57,70 @@ export default function Jobs() {
   const [stateFilter, setStateFilter] = useState(() => searchParams.get('state') ?? '');
   const [cityFilter, setCityFilter] = useState(() => searchParams.get('city') ?? '');
   const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') ?? '');
-  const [salaryMin, setSalaryMin] = useState(() => searchParams.get('min') ?? '');
-  const [salaryMax, setSalaryMax] = useState(() => searchParams.get('max') ?? '');
+
+  type SalaryBand = 'any' | 'lt15' | '15-18' | '18-22' | '22-26' | '26plus';
+  const SALARY_BANDS: Array<{ value: SalaryBand; label: string; min: number | null; max: number | null }> = [
+    { value: 'any', label: 'Salário (qualquer)', min: null, max: null },
+    { value: 'lt15', label: 'Até $14.99/h', min: null, max: 14.99 },
+    { value: '15-18', label: '$15 – $18/h', min: 15, max: 18 },
+    { value: '18-22', label: '$18 – $22/h', min: 18, max: 22 },
+    { value: '22-26', label: '$22 – $26/h', min: 22, max: 26 },
+    { value: '26plus', label: '$26+/h', min: 26, max: null },
+  ];
+
+  const deriveBandFromLegacyMinMax = (minRaw: string | null, maxRaw: string | null): SalaryBand => {
+    const parse = (v: string | null) => {
+      if (!v) return null;
+      const n = Number(String(v).trim().replace(',', '.'));
+      return Number.isFinite(n) ? n : null;
+    };
+    const min = parse(minRaw);
+    const max = parse(maxRaw);
+    const match = SALARY_BANDS.find((b) => b.min === min && b.max === max);
+    return match?.value ?? 'any';
+  };
+
+  const [salaryBand, setSalaryBand] = useState<SalaryBand>(() => {
+    const v = (searchParams.get('salary') as SalaryBand | null) ?? null;
+    if (v && SALARY_BANDS.some((b) => b.value === v)) return v;
+    // backward-compat: old min/max params
+    return deriveBandFromLegacyMinMax(searchParams.get('min'), searchParams.get('max'));
+  });
+
+  type SortKey =
+    | 'job_title'
+    | 'company'
+    | 'state'
+    | 'city'
+    | 'openings'
+    | 'salary'
+    | 'visa_type'
+    | 'posted_date'
+    | 'start_date'
+    | 'end_date';
+
+  type SortDir = 'asc' | 'desc';
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    const v = searchParams.get('sort') as SortKey | null;
+    const allowed: SortKey[] = [
+      'job_title',
+      'company',
+      'state',
+      'city',
+      'openings',
+      'salary',
+      'visa_type',
+      'posted_date',
+      'start_date',
+      'end_date',
+    ];
+    return v && allowed.includes(v) ? v : 'posted_date';
+  });
+  const [sortDir, setSortDir] = useState<SortDir>(() => {
+    const v = searchParams.get('dir');
+    return v === 'asc' || v === 'desc' ? v : 'desc';
+  });
+
   const [page, setPage] = useState(() => {
     const p = Number(searchParams.get('page') ?? '1');
     return Number.isFinite(p) && p > 0 ? p : 1;
@@ -85,8 +147,13 @@ export default function Jobs() {
     let query = supabase
       .from('public_jobs')
       .select('*', { count: 'exact' })
-      .order('posted_date', { ascending: false })
+      .order(sortKey, { ascending: sortDir === 'asc', nullsFirst: false })
       .range(from, to);
+
+    // desempate estável
+    if (sortKey !== 'posted_date') {
+      query = query.order('posted_date', { ascending: false, nullsFirst: false });
+    }
 
     if (visaType !== 'all') query = query.eq('visa_type', visaType);
 
@@ -98,10 +165,9 @@ export default function Jobs() {
     if (cityFilter.trim()) query = query.ilike('city', `%${cityFilter.trim()}%`);
     if (categoryFilter.trim()) query = query.ilike('category', `%${categoryFilter.trim()}%`);
 
-    const min = salaryMin.trim() ? Number(salaryMin) : null;
-    const max = salaryMax.trim() ? Number(salaryMax) : null;
-    if (min !== null && Number.isFinite(min)) query = query.gte('salary', min);
-    if (max !== null && Number.isFinite(max)) query = query.lte('salary', max);
+    const band = SALARY_BANDS.find((b) => b.value === salaryBand) ?? SALARY_BANDS[0];
+    if (band.min !== null) query = query.gte('salary', band.min);
+    if (band.max !== null) query = query.lte('salary', band.max);
 
     const { data, error, count } = await query;
 
@@ -148,7 +214,7 @@ export default function Jobs() {
   useEffect(() => {
     fetchJobs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryMin, salaryMax, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
 
   // Persist filters in URL (debounced)
   useEffect(() => {
@@ -159,8 +225,17 @@ export default function Jobs() {
       if (stateFilter.trim()) next.set('state', stateFilter.trim());
       if (cityFilter.trim()) next.set('city', cityFilter.trim());
       if (categoryFilter.trim()) next.set('category', categoryFilter.trim());
-      if (salaryMin.trim()) next.set('min', salaryMin.trim());
-      if (salaryMax.trim()) next.set('max', salaryMax.trim());
+
+      if (salaryBand !== 'any') next.set('salary', salaryBand);
+      // mantém compatibilidade se alguém tiver link antigo
+      const legacy = SALARY_BANDS.find((b) => b.value === salaryBand);
+      if (legacy?.min !== null) next.set('min', String(legacy.min));
+      if (legacy?.max !== null) next.set('max', String(legacy.max));
+
+      if (!(sortKey === 'posted_date' && sortDir === 'desc')) {
+        next.set('sort', sortKey);
+        next.set('dir', sortDir);
+      }
       next.set('page', String(page));
 
       // Only update if different (prevents churn)
@@ -171,7 +246,7 @@ export default function Jobs() {
 
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryMin, salaryMax, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
 
   const visaLabel = useMemo(() => {
     if (visaType === 'all') return 'H-2A + H-2B';
@@ -238,6 +313,21 @@ export default function Jobs() {
   const formatSalary = (salary: number | null) => {
     if (!salary) return '-';
     return `$${salary.toFixed(2)}/h`;
+  };
+
+  const toggleSort = (key: SortKey, defaultDir: SortDir = 'asc') => {
+    setPage(1);
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortDir(defaultDir);
+  };
+
+  const SortIcon = ({ active, dir }: { active: boolean; dir: SortDir }) => {
+    if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />;
+    return dir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
   return (
@@ -332,24 +422,25 @@ export default function Jobs() {
                 setPage(1);
               }}
             />
-            <Input
-              inputMode="decimal"
-              placeholder="Salário mín ($/h)"
-              value={salaryMin}
-              onChange={(e) => {
-                setSalaryMin(e.target.value);
+            <Select
+              value={salaryBand}
+              onValueChange={(v) => {
+                const next = (v as SalaryBand) ?? 'any';
+                setSalaryBand(next);
                 setPage(1);
               }}
-            />
-            <Input
-              inputMode="decimal"
-              placeholder="Salário máx ($/h)"
-              value={salaryMax}
-              onChange={(e) => {
-                setSalaryMax(e.target.value);
-                setPage(1);
-              }}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Faixa de salário" />
+              </SelectTrigger>
+              <SelectContent>
+                {SALARY_BANDS.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>
+                    {b.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -359,15 +450,87 @@ export default function Jobs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Local</TableHead>
-                <TableHead>Qtd. Vagas</TableHead>
-                <TableHead>Salário</TableHead>
-                <TableHead>Visto</TableHead>
-                <TableHead>Postada</TableHead>
-                <TableHead>Início</TableHead>
-                <TableHead>Fim</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('job_title', 'asc')}
+                  >
+                    Cargo <SortIcon active={sortKey === 'job_title'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('company', 'asc')}
+                  >
+                    Empresa <SortIcon active={sortKey === 'company'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('city', 'asc')}
+                  >
+                    Local <SortIcon active={sortKey === 'city'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('openings', 'desc')}
+                  >
+                    Qtd. Vagas <SortIcon active={sortKey === 'openings'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('salary', 'desc')}
+                  >
+                    Salário <SortIcon active={sortKey === 'salary'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('visa_type', 'asc')}
+                  >
+                    Visto <SortIcon active={sortKey === 'visa_type'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('posted_date', 'desc')}
+                  >
+                    Postada <SortIcon active={sortKey === 'posted_date'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('start_date', 'asc')}
+                  >
+                    Início <SortIcon active={sortKey === 'start_date'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 hover:underline"
+                    onClick={() => toggleSort('end_date', 'asc')}
+                  >
+                    Fim <SortIcon active={sortKey === 'end_date'} dir={sortDir} />
+                  </button>
+                </TableHead>
                 <TableHead>Email</TableHead>
                 {planSettings.show_housing_icons && (
                   <TableHead className="text-center">Benefícios</TableHead>
