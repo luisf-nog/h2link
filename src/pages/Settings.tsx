@@ -7,11 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, User, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Settings() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -27,15 +29,15 @@ export default function Settings() {
 
     if (error) {
       toast({
-        title: 'Erro ao atualizar',
+        title: t('settings.toasts.update_error_title'),
         description: error.message,
         variant: 'destructive',
       });
     } else {
       await refreshProfile();
       toast({
-        title: 'Perfil atualizado!',
-        description: 'Suas informações foram salvas.',
+        title: t('settings.toasts.update_success_title'),
+        description: t('settings.toasts.update_success_desc'),
       });
     }
 
@@ -45,9 +47,9 @@ export default function Settings() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t('settings.title')}</h1>
         <p className="text-muted-foreground mt-1">
-          Gerencie sua conta e preferências
+          {t('settings.subtitle')}
         </p>
       </div>
 
@@ -56,14 +58,14 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Perfil
+            {t('settings.profile.title')}
           </CardTitle>
-          <CardDescription>Suas informações pessoais</CardDescription>
+          <CardDescription>{t('settings.profile.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('settings.profile.fields.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -72,24 +74,24 @@ export default function Settings() {
                 className="bg-muted"
               />
               <p className="text-xs text-muted-foreground">
-                O email não pode ser alterado
+                {t('settings.profile.email_note')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullName">Nome Completo</Label>
+              <Label htmlFor="fullName">{t('settings.profile.fields.full_name')}</Label>
               <Input
                 id="fullName"
                 name="fullName"
                 type="text"
                 defaultValue={profile?.full_name || ''}
-                placeholder="Seu nome"
+                placeholder={t('settings.profile.placeholders.full_name')}
               />
             </div>
 
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar Alterações
+              {t('settings.profile.actions.save')}
             </Button>
           </form>
         </CardContent>
@@ -100,21 +102,21 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Conta
+            {t('settings.account.title')}
           </CardTitle>
-          <CardDescription>Informações da sua assinatura</CardDescription>
+          <CardDescription>{t('settings.account.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center py-2 border-b">
-            <span className="text-muted-foreground">Plano atual</span>
+            <span className="text-muted-foreground">{t('settings.account.current_plan')}</span>
             <span className="font-medium capitalize">{profile?.plan_tier || 'free'}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b">
-            <span className="text-muted-foreground">Créditos usados hoje</span>
+            <span className="text-muted-foreground">{t('settings.account.credits_used_today')}</span>
             <span className="font-medium">{profile?.credits_used_today || 0}</span>
           </div>
           <div className="flex justify-between items-center py-2">
-            <span className="text-muted-foreground">Membro desde</span>
+            <span className="text-muted-foreground">{t('settings.account.member_since')}</span>
             <span className="font-medium">
               {profile?.created_at
                 ? new Date(profile.created_at as unknown as string).toLocaleDateString('pt-BR')
@@ -123,7 +125,7 @@ export default function Settings() {
           </div>
 
           <Button variant="outline" onClick={() => (window.location.href = '/plans')}>
-            Gerenciar Plano
+            {t('settings.account.actions.manage_plan')}
           </Button>
         </CardContent>
       </Card>

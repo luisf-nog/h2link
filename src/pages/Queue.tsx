@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2, Send, Wand2, Lock, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface QueueItem {
   id: string;
@@ -39,6 +40,7 @@ interface QueueItem {
 export default function Queue() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -72,7 +74,7 @@ export default function Queue() {
     if (error) {
       console.error('Error fetching queue:', error);
       toast({
-        title: 'Erro ao carregar fila',
+        title: t('queue.toasts.load_error_title'),
         description: error.message,
         variant: 'destructive',
       });
@@ -87,15 +89,15 @@ export default function Queue() {
 
     if (error) {
       toast({
-        title: 'Erro ao remover',
+        title: t('queue.toasts.remove_error_title'),
         description: error.message,
         variant: 'destructive',
       });
     } else {
       setQueue(queue.filter((item) => item.id !== id));
       toast({
-        title: 'Removido da fila',
-        description: 'A vaga foi removida da sua fila.',
+        title: t('queue.toasts.remove_success_title'),
+        description: t('queue.toasts.remove_success_desc'),
       });
     }
   };
@@ -107,8 +109,10 @@ export default function Queue() {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     toast({
-      title: 'Emails enviados!',
-      description: `${queue.filter((q) => q.status === 'pending').length} aplicações foram enviadas.`,
+      title: t('queue.toasts.sent_title'),
+      description: t('queue.toasts.sent_desc', {
+        count: queue.filter((q) => q.status === 'pending').length,
+      }),
     });
 
     // Update queue status
@@ -131,9 +135,9 @@ export default function Queue() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Minha Fila</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('queue.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            {pendingCount} vagas pendentes • {sentCount} enviadas
+            {t('queue.subtitle', { pendingCount, sentCount })}
           </p>
         </div>
 
@@ -150,12 +154,12 @@ export default function Queue() {
                 ) : (
                   <Lock className="h-4 w-4 mr-2" />
                 )}
-                Magic Paste (IA)
+                {t('queue.actions.magic_paste')}
               </Button>
             </TooltipTrigger>
             {!hasMagicPaste && (
               <TooltipContent>
-                <p>Exclusivo para plano Diamond</p>
+                <p>{t('queue.magic_paste_locked')}</p>
               </TooltipContent>
             )}
           </Tooltip>
@@ -169,7 +173,7 @@ export default function Queue() {
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}
-            Enviar ({pendingCount})
+            {t('queue.actions.send', { pendingCount })}
           </Button>
         </div>
       </div>
@@ -178,7 +182,7 @@ export default function Queue() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Na Fila</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t('queue.stats.in_queue')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{pendingCount}</p>
@@ -186,7 +190,7 @@ export default function Queue() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Enviados Hoje</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t('queue.stats.sent_today')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{sentCount}</p>
@@ -194,7 +198,7 @@ export default function Queue() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Limite Diário</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t('queue.stats.daily_limit')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{PLANS_CONFIG[planTier].limits.daily_emails}</p>
@@ -205,36 +209,36 @@ export default function Queue() {
       {/* Queue Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Vagas na Fila</CardTitle>
+          <CardTitle>{t('queue.table.title')}</CardTitle>
           <CardDescription>
-            Gerencie as vagas que você vai aplicar
+            {t('queue.table.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
+                  <TableHead>{t('queue.table.headers.job_title')}</TableHead>
+                  <TableHead>{t('queue.table.headers.company')}</TableHead>
+                  <TableHead>{t('queue.table.headers.email')}</TableHead>
+                  <TableHead>{t('queue.table.headers.status')}</TableHead>
+                  <TableHead className="text-right">{t('queue.table.headers.action')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
-                    Carregando fila...
+                      {t('queue.table.loading')}
                   </TableCell>
                 </TableRow>
               ) : queue.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     <div className="space-y-2">
-                      <p className="text-muted-foreground">Sua fila está vazia</p>
+                        <p className="text-muted-foreground">{t('queue.table.empty')}</p>
                       <Button variant="outline" onClick={() => (window.location.href = '/jobs')}>
-                        Buscar Vagas
+                          {t('queue.table.go_jobs')}
                       </Button>
                     </div>
                   </TableCell>
@@ -256,7 +260,7 @@ export default function Queue() {
                             : ''
                         }
                       >
-                        {item.status === 'sent' ? 'Enviado' : 'Pendente'}
+                        {item.status === 'sent' ? t('queue.status.sent') : t('queue.status.pending')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

@@ -7,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export default function Plans() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const currentPlan = profile?.plan_tier || 'free';
 
   const handleCheckout = async (planId: PlanTier) => {
@@ -18,8 +20,8 @@ export default function Plans() {
 
     // For demo: Simulate checkout and upgrade
     toast({
-      title: 'Processando...',
-      description: 'Atualizando seu plano...',
+      title: t('plans.toasts.processing_title'),
+      description: t('plans.toasts.processing_desc'),
     });
 
     // Mock: Update plan directly for testing
@@ -30,15 +32,15 @@ export default function Plans() {
 
     if (error) {
       toast({
-        title: 'Erro',
+        title: t('plans.toasts.error_title'),
         description: error.message,
         variant: 'destructive',
       });
     } else {
       await refreshProfile();
       toast({
-        title: 'Plano atualizado!',
-        description: `Você agora é ${PLANS_CONFIG[planId].label}! 🎉`,
+        title: t('plans.toasts.updated_title'),
+        description: t('plans.toasts.updated_desc', { plan: PLANS_CONFIG[planId].label }),
       });
     }
   };
@@ -47,18 +49,22 @@ export default function Plans() {
     const config = PLANS_CONFIG[planId];
     const features = [];
 
-    features.push(`${config.limits.daily_emails} envios/dia`);
-    features.push(`Fila de até ${config.limits.max_queue_size === 9999 ? 'ilimitada' : config.limits.max_queue_size} vagas`);
+    features.push(t('plans.features.daily_emails', { count: config.limits.daily_emails }));
+    features.push(
+      t('plans.features.queue_size', {
+        size: config.limits.max_queue_size === 9999 ? t('plans.features.unlimited') : config.limits.max_queue_size,
+      })
+    );
 
-    if (config.features.cloud_sending) features.push('Envio pela nuvem');
-    if (config.features.mask_user_agent) features.push('Proteção anti-spam');
-    if (config.features.dns_bounce_check) features.push('Verificação DNS');
-    if (config.features.magic_paste) features.push('Magic Paste (IA)');
-    if (config.features.ai_email_writer) features.push('Escritor de Email IA');
-    if (config.features.priority_support) features.push('Suporte prioritário');
+    if (config.features.cloud_sending) features.push(t('plans.features.cloud_sending'));
+    if (config.features.mask_user_agent) features.push(t('plans.features.mask_user_agent'));
+    if (config.features.dns_bounce_check) features.push(t('plans.features.dns_bounce_check'));
+    if (config.features.magic_paste) features.push(t('plans.features.magic_paste'));
+    if (config.features.ai_email_writer) features.push(t('plans.features.ai_email_writer'));
+    if (config.features.priority_support) features.push(t('plans.features.priority_support'));
 
-    if (config.settings.show_housing_icons) features.push('Ícones de benefícios');
-    if (config.settings.delay_strategy === 'human') features.push('Delay humano (anti-spam)');
+    if (config.settings.show_housing_icons) features.push(t('plans.features.housing_icons'));
+    if (config.settings.delay_strategy === 'human') features.push(t('plans.features.human_delay'));
 
     return features;
   };
@@ -68,9 +74,9 @@ export default function Plans() {
   return (
     <div className="space-y-8">
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground">Escolha seu Plano</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t('plans.title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Desbloqueie todo o potencial do H2B Sender e acelere suas aplicações
+          {t('plans.subtitle')}
         </p>
       </div>
 
@@ -91,7 +97,7 @@ export default function Plans() {
               {isRecommended && (
                 <div className="absolute top-0 right-0 bg-plan-diamond text-white text-xs px-3 py-1 rounded-bl-lg font-medium">
                   <Sparkles className="h-3 w-3 inline mr-1" />
-                  Recomendado
+                  {t('plans.recommended')}
                 </div>
               )}
 
@@ -113,15 +119,15 @@ export default function Plans() {
                 <div className="pt-4">
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold text-foreground">
-                      {plan.price.brl === 0 ? 'Grátis' : `R$ ${plan.price.brl.toFixed(2)}`}
+                      {plan.price.brl === 0 ? t('plans.free') : `R$ ${plan.price.brl.toFixed(2)}`}
                     </span>
                     {plan.price.brl > 0 && (
-                      <span className="text-muted-foreground">/mês</span>
+                      <span className="text-muted-foreground">{t('plans.per_month')}</span>
                     )}
                   </div>
                   {plan.price.usd > 0 && (
                     <p className="text-sm text-muted-foreground">
-                      ou ${plan.price.usd.toFixed(2)} USD
+                      {t('plans.or_usd', { price: plan.price.usd.toFixed(2) })}
                     </p>
                   )}
                 </div>
@@ -157,12 +163,12 @@ export default function Plans() {
                   {isCurrentPlan ? (
                     <>
                       <Check className="h-4 w-4 mr-2" />
-                      Plano Atual
+                      {t('plans.actions.current')}
                     </>
                   ) : plan.id === 'free' ? (
-                    'Começar Grátis'
+                    t('plans.actions.start_free')
                   ) : (
-                    'Assinar Agora'
+                    t('plans.actions.subscribe_now')
                   )}
                 </Button>
               </CardContent>
@@ -174,9 +180,9 @@ export default function Plans() {
       {/* FAQ or Additional Info */}
       <div className="max-w-2xl mx-auto text-center pt-8">
         <p className="text-sm text-muted-foreground">
-          Cancele a qualquer momento. Sem taxa de cancelamento.
+          {t('plans.footer.line1')}
           <br />
-          Pagamentos processados com segurança via Stripe.
+          {t('plans.footer.line2')}
         </p>
       </div>
     </div>
