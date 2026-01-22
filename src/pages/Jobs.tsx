@@ -155,8 +155,18 @@ export default function Jobs() {
     return visaType;
   }, [visaType]);
 
-  // Cargo, Empresa, Local, Aberturas, Salário, Visto, Email, (Benefícios?), Ação
-  const tableColSpan = planSettings.show_housing_icons ? 9 : 8;
+  // Cargo, Empresa, Local, Qtd. Vagas, Salário, Visto, Postada, Início, Fim, Email, (Benefícios?), Ação
+  const tableColSpan = planSettings.show_housing_icons ? 12 : 11;
+
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return '-';
+    const s = String(date).trim();
+    if (!s) return '-';
+
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T00:00:00Z`) : new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+  };
 
   const addToQueue = async (job: Job) => {
     if (planSettings.job_db_blur) {
@@ -325,9 +335,12 @@ export default function Jobs() {
                 <TableHead>Cargo</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Local</TableHead>
-                <TableHead>Aberturas</TableHead>
+                <TableHead>Qtd. Vagas</TableHead>
                 <TableHead>Salário</TableHead>
                 <TableHead>Visto</TableHead>
+                <TableHead>Postada</TableHead>
+                <TableHead>Início</TableHead>
+                <TableHead>Fim</TableHead>
                 <TableHead>Email</TableHead>
                 {planSettings.show_housing_icons && (
                   <TableHead className="text-center">Benefícios</TableHead>
@@ -375,6 +388,9 @@ export default function Jobs() {
                         {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
                       </Badge>
                     </TableCell>
+                    <TableCell>{formatDate(job.posted_date)}</TableCell>
+                    <TableCell>{formatDate(job.start_date)}</TableCell>
+                    <TableCell>{formatDate(job.end_date)}</TableCell>
                     <TableCell>
                       <span
                         className={cn(
