@@ -338,6 +338,45 @@ export default function Jobs() {
 
     if (queuedJobIds.has(job.id)) return;
 
+    const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check;
+    if (requiresDnsCheck) {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          toast({ title: t('common.errors.no_session'), variant: 'destructive' });
+          return;
+        }
+
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-dns-mx`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ email: job.email }),
+        });
+
+        const payload = await res.json().catch(() => null);
+        const ok = Boolean(payload?.ok);
+        if (!ok) {
+          toast({
+            title: t('queue.toasts.mx_invalid_title'),
+            description: t('queue.toasts.mx_invalid_desc', { domain: String(payload?.domain ?? '') }),
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch (_e) {
+        toast({
+          title: t('queue.toasts.mx_invalid_title'),
+          description: t('queue.toasts.mx_invalid_desc', { domain: '' }),
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     const { error } = await supabase.from('my_queue').insert({
       user_id: profile?.id,
       job_id: job.id,

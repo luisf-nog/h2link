@@ -111,6 +111,11 @@
       "best_paid_state": "Estado mejor pagado (prom.)",
       "no_data": "Sin datos",
       "error": "No se pudieron cargar las estadísticas de empleos."
+    },
+    "free_warning": {
+      "title": "Aviso: envío a máxima velocidad",
+      "description": "Enviar sin delay puede causar bloqueos temporales en Gmail. Para activar el Modo de Envío Seguro (Anti-Spam), considera el plan Diamond.",
+      "cta": "Ver planes"
     }
   },
   "settings": {
@@ -317,6 +322,8 @@
     },
     "status": { "sent": "Enviado", "pending": "Pendiente" },
     "toasts": {
+      "mx_invalid_title": "Email inválido (sin MX)",
+      "mx_invalid_desc": "El dominio {{domain}} no tiene registros MX válidos. Para proteger tu reputación, el envío fue bloqueado.",
       "load_error_title": "Error al cargar la cola",
       "remove_error_title": "Error al eliminar",
       "remove_success_title": "Eliminado de la cola",

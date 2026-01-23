@@ -3,10 +3,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getPlanLimit } from '@/config/plans.config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Mail, ListTodo, Zap, TrendingUp } from 'lucide-react';
+import { Mail, ListTodo, Zap, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/number';
+import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -193,6 +194,24 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Free warning (kamikaze mode) */}
+      {planTier === 'free' && usagePercent >= 60 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              {t('dashboard.free_warning.title')}
+            </CardTitle>
+            <CardDescription>{t('dashboard.free_warning.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Button variant="outline" asChild>
+              <a href="/plans">{t('dashboard.free_warning.cta')}</a>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -14,6 +14,10 @@ interface EmailRequest {
   to: string;
   subject: string;
   body: string;
+  // Optional anti-spam knobs controlled by tier logic (frontend)
+  xMailer?: string;
+  userAgent?: string;
+  dedupeId?: string;
   // optional override; if omitted we use saved values
   provider?: EmailProvider;
   smtpEmail?: string;
@@ -63,9 +67,10 @@ function createMimeMessage(params: {
   to: string;
   subject: string;
   htmlBody: string;
+  extraHeaders?: string[];
   attachment?: { name: string; content: Uint8Array; mimeType: string };
 }): string {
-  const { from, to, subject, htmlBody, attachment } = params;
+  const { from, to, subject, htmlBody, attachment, extraHeaders } = params;
 
   const boundary = `----=_Part_${crypto.randomUUID()}`;
   const subjectEncoded = `=?UTF-8?B?${utf8ToBase64(subject)}?=`;
@@ -77,6 +82,8 @@ function createMimeMessage(params: {
     `Date: ${nowRfc2822()}`,
     `MIME-Version: 1.0`,
   ];
+
+  const safeExtraHeaders = (extraHeaders ?? []).filter(Boolean);
 
   const htmlPart = [
     `Content-Type: text/html; charset=UTF-8`,
@@ -90,6 +97,7 @@ function createMimeMessage(params: {
   if (!attachment) {
     return [
       ...baseHeaders,
+      ...safeExtraHeaders,
       `Content-Type: text/html; charset=UTF-8`,
       `Content-Transfer-Encoding: base64`,
       ``,
@@ -116,6 +124,7 @@ function createMimeMessage(params: {
 
   return [
     ...baseHeaders,
+    ...safeExtraHeaders,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     ``,
     `--${boundary}`,
@@ -376,7 +385,18 @@ const handler = async (req: Request): Promise<Response> => {
     const normalizedProvider: EmailProvider = provider === "outlook" ? "outlook" : "gmail";
     const smtpConfig = SMTP_CONFIGS[normalizedProvider];
 
-    const htmlBody = String(body.body).replace(/\n/g, "<br>");
+    let htmlBody = String(body.body).replace(/\n/g, "<br>");
+    if (body.dedupeId) {
+      const id = String(body.dedupeId).slice(0, 128);
+      htmlBody +=
+        `<div style="display:none; opacity:0; height:0; width:0; overflow:hidden;">` +
+        `${id}` +
+        `</div>`;
+    }
+
+    const extraHeaders: string[] = [];
+    if (body.xMailer) extraHeaders.push(`X-Mailer: ${String(body.xMailer).slice(0, 128)}`);
+    if (body.userAgent) extraHeaders.push(`User-Agent: ${String(body.userAgent).slice(0, 128)}`);
 
     let attachment:
       | { name: string; content: Uint8Array; mimeType: string }
@@ -403,6 +423,7 @@ const handler = async (req: Request): Promise<Response> => {
       to: body.to,
       subject: body.subject,
       htmlBody,
+      extraHeaders,
       attachment,
     });
 

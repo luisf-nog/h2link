@@ -64,6 +64,32 @@ export default function Queue() {
 
   const planTier = profile?.plan_tier || 'free';
 
+  const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
+  const pickSendProfile = () => {
+    if (planTier === 'gold') {
+      return { xMailer: 'Microsoft Outlook 16.0', userAgent: 'Microsoft Outlook 16.0' };
+    }
+
+    if (planTier === 'diamond') {
+      const pool = [
+        { xMailer: 'iPhone Mail (20A362)', userAgent: 'iPhone Mail (20A362)' },
+        { xMailer: 'Android Mail', userAgent: 'Android Mail' },
+        { xMailer: 'Mozilla Thunderbird', userAgent: 'Mozilla Thunderbird' },
+        { xMailer: 'Microsoft Outlook 16.0', userAgent: 'Microsoft Outlook 16.0' },
+      ];
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    return {};
+  };
+
+  const getDelayMs = () => {
+    if (planTier === 'gold') return 15_000;
+    if (planTier === 'diamond') return 15_000 + Math.floor(Math.random() * 30_001); // 15s..45s
+    return 0;
+  };
+
   useEffect(() => {
     fetchQueue();
   }, []);
@@ -192,7 +218,8 @@ export default function Queue() {
     const { tpl, token } = guard;
     const sentIds: string[] = [];
 
-    for (const item of items) {
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx];
       const job = item.public_jobs ?? item.manual_jobs;
       if (!job?.email) continue;
 
@@ -215,13 +242,22 @@ export default function Queue() {
       const finalSubject = applyTemplate(tpl.subject, vars);
       const finalBody = applyTemplate(tpl.body, vars);
 
+      const sendProfile = pickSendProfile();
+      const dedupeId = planTier === 'diamond' ? crypto.randomUUID() : undefined;
+
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ to, subject: finalSubject, body: finalBody }),
+        body: JSON.stringify({
+          to,
+          subject: finalSubject,
+          body: finalBody,
+          ...sendProfile,
+          dedupeId,
+        }),
       });
 
       const text = await res.text();
@@ -238,6 +274,12 @@ export default function Queue() {
       }
 
       sentIds.push(item.id);
+
+      // Throttling by tier (FREE = 0s, GOLD = 15s fixed, DIAMOND = jitter 15-45s)
+      if (idx < items.length - 1) {
+        const ms = getDelayMs();
+        if (ms > 0) await sleep(ms);
+      }
     }
 
     if (sentIds.length > 0) {
