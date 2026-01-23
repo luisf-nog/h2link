@@ -270,7 +270,7 @@ export default function Auth() {
                               id="signup-phone"
                               name="phone"
                               required
-                              placeholder={t('auth.placeholders.phone')}
+                              // placeholder comes from PhoneE164Input (smart by country)
                               invalidHint={t('auth.validation.invalid_phone')}
                               triggerClassName="h-11 rounded-lg"
                               inputClassName="h-11 rounded-lg"
