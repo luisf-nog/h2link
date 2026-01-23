@@ -88,6 +88,32 @@ export function PhoneE164Input({
     return `${opt.code} ${opt.dial}`;
   }, [country]);
 
+  const smartPlaceholder = useMemo(() => {
+    // Visual guidance only (doesn't affect E.164 value)
+    switch (country) {
+      case "BR":
+        return "+55 11 9XXXX-XXXX";
+      case "US":
+        return "+1 (201) 555-0123";
+      case "MX":
+        return "+52 55 1234-5678";
+      case "CO":
+        return "+57 300 123 4567";
+      case "AR":
+        return "+54 11 1234-5678";
+      case "CL":
+        return "+56 9 1234 5678";
+      case "ES":
+        return "+34 612 34 56 78";
+      case "PT":
+        return "+351 912 345 678";
+      default: {
+        const opt = COUNTRIES.find((c) => c.code === country);
+        return opt ? `${opt.dial} …` : "+…";
+      }
+    }
+  }, [country]);
+
   useEffect(() => {
     if (!defaultValue) return;
     // Try to infer country from the E.164 number; if not, keep initial.
@@ -112,7 +138,7 @@ export function PhoneE164Input({
 
   return (
     <div className={"space-y-2 " + (className ?? "")}>
-      <div className="grid min-w-0 grid-cols-[minmax(0,132px)_minmax(0,1fr)] gap-2">
+      <div className="grid min-w-0 grid-cols-[minmax(0,92px)_minmax(0,1fr)] gap-2">
         <Select
           value={country}
           onValueChange={(v) => {
@@ -125,7 +151,7 @@ export function PhoneE164Input({
             });
           }}
         >
-          <SelectTrigger className={"w-full min-w-0 " + (triggerClassName ?? "bg-background/30")}>
+          <SelectTrigger className={"w-full min-w-0 px-2 " + (triggerClassName ?? "bg-background/30")}>
             <SelectValue aria-label={triggerLabel}>{triggerLabel}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -144,7 +170,7 @@ export function PhoneE164Input({
           className={"w-full min-w-0 " + (inputClassName ?? "")}
           value={display}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? smartPlaceholder}
           aria-invalid={!isValid}
         />
       </div>
