@@ -11,25 +11,26 @@ import {
 
 type CountryOption = {
   code: string;
-  label: string;
+  name: string;
+  dial: string;
 };
 
 const COUNTRIES: CountryOption[] = [
-  { code: "US", label: "United States (+1)" },
-  { code: "BR", label: "Brasil (+55)" },
-  { code: "MX", label: "México (+52)" },
-  { code: "CO", label: "Colombia (+57)" },
-  { code: "DO", label: "República Dominicana (+1)" },
-  { code: "GT", label: "Guatemala (+502)" },
-  { code: "HN", label: "Honduras (+504)" },
-  { code: "SV", label: "El Salvador (+503)" },
-  { code: "NI", label: "Nicaragua (+505)" },
-  { code: "PA", label: "Panamá (+507)" },
-  { code: "PE", label: "Perú (+51)" },
-  { code: "AR", label: "Argentina (+54)" },
-  { code: "CL", label: "Chile (+56)" },
-  { code: "ES", label: "España (+34)" },
-  { code: "PT", label: "Portugal (+351)" },
+  { code: "US", name: "United States", dial: "+1" },
+  { code: "BR", name: "Brasil", dial: "+55" },
+  { code: "MX", name: "México", dial: "+52" },
+  { code: "CO", name: "Colombia", dial: "+57" },
+  { code: "DO", name: "República Dominicana", dial: "+1" },
+  { code: "GT", name: "Guatemala", dial: "+502" },
+  { code: "HN", name: "Honduras", dial: "+504" },
+  { code: "SV", name: "El Salvador", dial: "+503" },
+  { code: "NI", name: "Nicaragua", dial: "+505" },
+  { code: "PA", name: "Panamá", dial: "+507" },
+  { code: "PE", name: "Perú", dial: "+51" },
+  { code: "AR", name: "Argentina", dial: "+54" },
+  { code: "CL", name: "Chile", dial: "+56" },
+  { code: "ES", name: "España", dial: "+34" },
+  { code: "PT", name: "Portugal", dial: "+351" },
 ];
 
 function bestEffortToE164(input: string, country: string): string {
@@ -80,6 +81,13 @@ export function PhoneE164Input({
   const [display, setDisplay] = useState<string>("");
   const [e164, setE164] = useState<string>(defaultValue ?? "");
 
+  const triggerLabel = useMemo(() => {
+    const opt = COUNTRIES.find((c) => c.code === country);
+    if (!opt) return country;
+    // keep the trigger compact so the phone input has enough room
+    return `${opt.code} ${opt.dial}`;
+  }, [country]);
+
   useEffect(() => {
     if (!defaultValue) return;
     // Try to infer country from the E.164 number; if not, keep initial.
@@ -104,7 +112,7 @@ export function PhoneE164Input({
 
   return (
     <div className={"space-y-2 " + (className ?? "")}>
-      <div className="grid min-w-0 grid-cols-[minmax(0,160px)_minmax(0,1fr)] gap-2">
+      <div className="grid min-w-0 grid-cols-[minmax(0,132px)_minmax(0,1fr)] gap-2">
         <Select
           value={country}
           onValueChange={(v) => {
@@ -117,13 +125,13 @@ export function PhoneE164Input({
             });
           }}
         >
-          <SelectTrigger className={"min-w-0 " + (triggerClassName ?? "bg-background/30")}>
-            <SelectValue />
+          <SelectTrigger className={"w-full min-w-0 " + (triggerClassName ?? "bg-background/30")}>
+            <SelectValue aria-label={triggerLabel}>{triggerLabel}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {COUNTRIES.map((c) => (
               <SelectItem key={c.code} value={c.code}>
-                {c.label}
+                {c.name} ({c.dial})
               </SelectItem>
             ))}
           </SelectContent>
@@ -133,7 +141,7 @@ export function PhoneE164Input({
           id={id}
           type="tel"
           inputMode="tel"
-          className={"min-w-0 " + (inputClassName ?? "")}
+          className={"w-full min-w-0 " + (inputClassName ?? "")}
           value={display}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
