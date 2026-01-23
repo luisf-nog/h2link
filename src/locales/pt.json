@@ -285,6 +285,23 @@
       "saved": "Já existe uma senha salva para sua conta.",
       "empty": "Dica: use uma senha de app (recomendado) em vez da sua senha principal."
     },
+    "help": {
+      "title": "Como gerar sua Senha de Aplicativo (App Password)",
+      "intro_title": "Por que preciso disso?",
+      "intro_body": "Para conectar seu e-mail ao nosso sistema com segurança, você não deve usar sua senha normal de login.",
+      "security_body": "Google e Microsoft exigem uma Senha de Aplicativo: um código usado para permitir envios sem revelar sua senha principal.",
+      "gmail_title": "Gmail (Google)",
+      "gmail_warning": "Atenção: para a opção aparecer, você precisa estar com a Verificação em duas etapas (2FA) ativada.",
+      "gmail_steps": "Acesse sua conta Google (myaccount.google.com) e clique em Segurança.\nVerifique se a Verificação em duas etapas está ATIVADA (ative se necessário).\nUse a busca e digite: Senhas de app.\nAbra Senhas de app (o Google pode pedir sua senha novamente).\nEm Selecionar app, escolha Outro (Nome personalizado).\nDigite o nome: H2Link.\nClique em Gerar e copie a senha de 16 caracteres.",
+      "gmail_tip": "Dica: você pode colar a senha toda junta, sem espaços.",
+      "outlook_title": "Outlook / Hotmail (Microsoft)",
+      "outlook_steps": "Acesse sua conta Microsoft (account.microsoft.com) e vá em Segurança.\nAbra Opções de segurança avançadas.\nAtive a Verificação em duas etapas (2FA), se estiver desligada.\nProcure por Senhas de aplicativos.\nClique em Criar uma nova senha de aplicativo.\nCopie a senha gerada e cole no sistema.",
+      "faq_title": "Perguntas comuns",
+      "faq_q_safe": "Isso é seguro?",
+      "faq_a_safe": "Sim. Essa senha serve apenas para enviar e-mails. Se quiser revogar, basta excluir a senha de app sem mudar sua senha principal.",
+      "faq_q_where": "Onde eu colo essa senha?",
+      "faq_a_where": "Aqui em Configurações → SMTP, no campo “Senha de app”."
+    },
     "toasts": {
       "load_error_title": "Não foi possível carregar as configurações SMTP",
       "load_templates_error_title": "Não foi possível carregar os templates",

@@ -285,6 +285,23 @@
       "saved": "Ya hay una contraseña guardada para tu cuenta.",
       "empty": "Consejo: usa una contraseña de app (recomendado) en lugar de tu contraseña principal."
     },
+    "help": {
+      "title": "Cómo generar tu contraseña de aplicación (App Password)",
+      "intro_title": "¿Por qué la necesito?",
+      "intro_body": "Para conectar tu email de forma segura, no debes usar tu contraseña normal de inicio de sesión.",
+      "security_body": "Google y Microsoft requieren una contraseña de aplicación: un código especial para permitir envíos sin revelar tu contraseña principal.",
+      "gmail_title": "Gmail (Google)",
+      "gmail_warning": "Atención: para que aparezca esta opción, debes tener activada la verificación en dos pasos (2FA).",
+      "gmail_steps": "Abre tu cuenta de Google (myaccount.google.com) y ve a Seguridad.\nVerifica que la verificación en dos pasos esté ACTIVADA (actívala si es necesario).\nUsa la búsqueda y escribe: Contraseñas de aplicaciones.\nAbre Contraseñas de aplicaciones (Google puede pedir tu contraseña nuevamente).\nEn Seleccionar app, elige Otra (Nombre personalizado).\nEscribe: H2Link.\nHaz clic en Generar y copia la contraseña de 16 caracteres.",
+      "gmail_tip": "Consejo: puedes pegarla sin espacios.",
+      "outlook_title": "Outlook / Hotmail (Microsoft)",
+      "outlook_steps": "Abre tu cuenta Microsoft (account.microsoft.com) y ve a Seguridad.\nEntra en Opciones de seguridad avanzadas.\nActiva la verificación en dos pasos (2FA) si está desactivada.\nBusca Contraseñas de aplicaciones.\nHaz clic en Crear una nueva contraseña de aplicación.\nCopia la contraseña generada y pégala en el sistema.",
+      "faq_title": "Preguntas frecuentes",
+      "faq_q_safe": "¿Esto es seguro?",
+      "faq_a_safe": "Sí. Esta contraseña solo sirve para enviar emails. Si quieres revocar el acceso, elimina la contraseña de app sin cambiar tu contraseña principal.",
+      "faq_q_where": "¿Dónde la pego?",
+      "faq_a_where": "Aquí en Configuración → SMTP, en el campo “Contraseña de app”."
+    },
     "toasts": {
       "load_error_title": "No se pudo cargar la configuración SMTP",
       "load_templates_error_title": "No se pudieron cargar las plantillas",
