@@ -488,6 +488,84 @@
     "footer": {
       "line1": "One-time payment. Lifetime access.",
       "line2": "Payments securely processed via Stripe."
+    },
+    "payment_success": {
+      "title": "Payment confirmed",
+      "subtitle": "You now have access to your plan features. Here’s what was unlocked.",
+      "your_plan": "Your plan",
+      "refreshing": "Syncing your plan…",
+      "ready": "All set — enjoy your new features.",
+      "free_note": "We couldn’t detect an active premium plan for this account. If you just paid, wait a few seconds and refresh.",
+      "highlights": {
+        "daily": "Sends per day",
+        "queue": "Queue size",
+        "templates": "Templates"
+      },
+      "whats_unlocked": "What’s unlocked",
+      "whats_unlocked_desc": "Click to see details and shortcuts to use each feature.",
+      "ctas": {
+        "start_now": "Start now",
+        "setup_templates": "Set up templates",
+        "open_queue": "Open queue",
+        "open_jobs": "Open Jobs Hub",
+        "open_templates": "Open templates",
+        "go_settings": "Open settings",
+        "back_plans": "View plans"
+      },
+      "sections": {
+        "limits": {
+          "title": "Your plan limits",
+          "summary": "{{daily}} sends/day • queue {{queue}} • {{templates}} template(s)",
+          "detail_daily": "You can send up to {{daily}} emails per day.",
+          "detail_queue": "Your queue supports up to {{queue}} jobs.",
+          "detail_templates": "You can create up to {{templates}} template(s)."
+        },
+        "sending": {
+          "title": "Premium sending",
+          "summary": "Send with premium capabilities and higher operational safety.",
+          "detail_1": "Bulk sending and premium workflows to speed up operations.",
+          "detail_2": "Use templates to standardize and stay consistent."
+        },
+        "dns": {
+          "title": "DNS check (anti-bounce)",
+          "summary": "Blocks sending to domains without valid MX records to protect your reputation.",
+          "detail_1": "Before sending, we validate the domain’s MX record.",
+          "detail_2": "This reduces bounces and helps deliverability."
+        },
+        "privacy": {
+          "title": "Anti-spam protection",
+          "summary": "Extra layers to reduce suspicious signals and protect your account.",
+          "detail_1": "Protection features can help reduce temporary blocks and deliverability drops."
+        },
+        "magic_paste": {
+          "title": "Magic Paste (AI)",
+          "summary": "Paste data and let the system fill the rest quickly.",
+          "detail_1": "Speeds up repetitive workflows.",
+          "detail_2": "Great for high-volume routines."
+        },
+        "ai": {
+          "title": "AI Email Writer",
+          "summary": "Generate professional templates in a few clicks (when available on your plan).",
+          "detail_1": "H-2A/H-2B-oriented generation with professional tone.",
+          "detail_2": "Use as a base and customize for your strategy."
+        },
+        "support": {
+          "title": "Priority support",
+          "summary": "Preferred support routing to unblock you faster.",
+          "detail_1": "Your requests are prioritized in support triage."
+        },
+        "visual": {
+          "title": "Jobs Hub premium details",
+          "summary": "More visual context and benefits to decide faster.",
+          "detail_1": "Access premium and visual information in the Jobs Hub."
+        },
+        "delay": {
+          "title": "Human-like delay (anti-spam)",
+          "summary": "More natural sending patterns to protect reputation.",
+          "detail_1": "Interleaves sends with pauses to look more human.",
+          "detail_2": "Helps reduce temporary blocks from providers."
+        }
+      }
     }
   },
   "jobs": {
