@@ -35,6 +35,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          created_at: string
+          cron_token: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cron_token?: string
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cron_token?: string
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body: string
