@@ -95,6 +95,20 @@
       "signup_error_title": "Sign-up error",
       "signup_success_title": "Account created!",
       "signup_success_desc": "You can now sign in."
+    },
+    "confirmation": {
+      "processing_title": "Confirming your email…",
+      "processing_desc": "We’re validating your confirmation and preparing your session.",
+      "success_title": "Email confirmed!",
+      "success_desc": "All set. We’ll take you to the dashboard.",
+      "error_title": "Could not confirm",
+      "error_desc": "Something went wrong while validating your confirmation. Please try again.",
+      "finalizing": "Finalizing authentication…",
+      "redirecting": "Redirecting…",
+      "session_timeout": "Your confirmation was received, but the session took too long to start. Please go back and sign in again.",
+      "brand_tagline": "Secure confirmation",
+      "brand_title": "Access granted",
+      "brand_desc": "You’re one step away from H2Link — we’re syncing your session."
     }
   },
   "dashboard": {
