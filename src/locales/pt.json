@@ -5,6 +5,7 @@
   "common": {
     "loading": "Carregando...",
     "menu": "Menu",
+    "ok": "OK",
     "cancel": "Cancelar",
     "save": "Salvar",
     "select": "Selecionar...",

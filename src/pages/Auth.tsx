@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle2, Loader2, Zap } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { z } from 'zod';
@@ -17,15 +17,39 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
 import authWordmark from '@/assets/h2link-logo-wordmark.png';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; description: string }>(() => ({
+    open: false,
+    title: '',
+    description: '',
+  }));
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+
+  const openError = (title: string, description: string) => {
+    setErrorDialog({ open: true, title, description });
+  };
+
+  const okLabel = useMemo(() => {
+    // fallback safety: don't ever render an empty button label
+    const label = t('common.ok');
+    return label === 'common.ok' ? 'OK' : label;
+  }, [t]);
 
   const handleChangeLanguage = (next: SupportedLanguage) => {
     i18n.changeLanguage(next);
@@ -71,11 +95,7 @@ export default function Auth() {
     const { error } = await signIn(email, password);
 
     if (error) {
-      toast({
-        title: t('auth.toasts.signin_error_title'),
-        description: error.message,
-        variant: 'destructive',
-      });
+      openError(t('auth.toasts.signin_error_title'), error.message);
     } else {
       navigate('/dashboard');
     }
@@ -104,20 +124,18 @@ export default function Auth() {
       const first = parsed.error.issues[0];
       const field = String(first?.path?.[0] ?? '');
       const code = typeof first?.message === 'string' ? first.message : '';
-      toast({
-        title: t('common.errors.invalid_data'),
-        description:
-          field === 'age' || code === 'invalid_age'
-            ? t('auth.validation.invalid_age')
-            : field === 'phone' || code === 'invalid_phone'
-              ? t('auth.validation.invalid_phone')
-              : field === 'confirmPassword' || code === 'password_mismatch'
-                ? t('auth.validation.password_mismatch')
-                : field === 'acceptTerms' || code === 'accept_required'
-                  ? t('auth.validation.accept_required')
-                  : t('auth.validation.invalid_contact_email'),
-        variant: 'destructive',
-      });
+      const description =
+        field === 'age' || code === 'invalid_age'
+          ? t('auth.validation.invalid_age')
+          : field === 'phone' || code === 'invalid_phone'
+            ? t('auth.validation.invalid_phone')
+            : field === 'confirmPassword' || code === 'password_mismatch'
+              ? t('auth.validation.password_mismatch')
+              : field === 'acceptTerms' || code === 'accept_required'
+                ? t('auth.validation.accept_required')
+                : t('auth.validation.invalid_contact_email');
+
+      openError(t('auth.toasts.signup_error_title'), description);
       setIsLoading(false);
       return;
     }
@@ -130,11 +148,7 @@ export default function Auth() {
     });
 
     if (error) {
-      toast({
-        title: t('auth.toasts.signup_error_title'),
-        description: error.message,
-        variant: 'destructive',
-      });
+      openError(t('auth.toasts.signup_error_title'), error.message);
     } else {
       toast({
         title: t('auth.toasts.signup_success_title'),
@@ -148,6 +162,36 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen">
+      <AlertDialog
+        open={errorDialog.open}
+        onOpenChange={(open) => setErrorDialog((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent className="border-destructive/30 bg-destructive/10">
+          <AlertDialogHeader className="space-y-0 text-left">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/20 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0">
+                <AlertDialogTitle className="text-base font-semibold text-destructive">
+                  {errorDialog.title}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="mt-1 text-sm text-foreground">
+                  {errorDialog.description}
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {okLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <header className="fixed right-4 top-4 z-20 md:right-6 md:top-6">
         <LanguageSwitcher
           value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
