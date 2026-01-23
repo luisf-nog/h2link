@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AsYouType, parsePhoneNumberFromString } from "libphonenumber-js";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type CountryOption = {
   code: string;
@@ -54,39 +47,34 @@ export function PhoneE164Input({
   id,
   name,
   defaultValue,
+  defaultCountry,
   required,
   placeholder,
   invalidHint,
   className,
   inputClassName,
-  triggerClassName,
 }: {
   id: string;
   name: string;
   defaultValue?: string;
+  /** Forces the country context used for formatting/placeholder. Example: "BR". */
+  defaultCountry?: string;
   required?: boolean;
   placeholder?: string;
   invalidHint?: string;
   className?: string;
   inputClassName?: string;
-  triggerClassName?: string;
 }) {
   const initialCountry = useMemo(() => {
+    if (defaultCountry && COUNTRIES.some((c) => c.code === defaultCountry)) return defaultCountry;
     const locale = navigator.language || "en-US";
     const maybeCountry = locale.split("-")[1]?.toUpperCase();
     return COUNTRIES.some((c) => c.code === maybeCountry) ? maybeCountry : "US";
-  }, []);
+  }, [defaultCountry]);
 
   const [country, setCountry] = useState<string>(initialCountry);
   const [display, setDisplay] = useState<string>("");
   const [e164, setE164] = useState<string>(defaultValue ?? "");
-
-  const triggerLabel = useMemo(() => {
-    const opt = COUNTRIES.find((c) => c.code === country);
-    if (!opt) return country;
-    // keep the trigger compact so the phone input has enough room
-    return `${opt.code} ${opt.dial}`;
-  }, [country]);
 
   const smartPlaceholder = useMemo(() => {
     // Visual guidance only (doesn't affect E.164 value)
@@ -118,7 +106,7 @@ export function PhoneE164Input({
     if (!defaultValue) return;
     // Try to infer country from the E.164 number; if not, keep initial.
     const pn = parsePhoneNumberFromString(defaultValue);
-    if (pn?.country) setCountry(String(pn.country));
+    if (pn?.country && !defaultCountry) setCountry(String(pn.country));
     setDisplay(defaultValue);
     setE164(defaultValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,49 +126,16 @@ export function PhoneE164Input({
 
   return (
     <div className={"space-y-2 " + (className ?? "")}>
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
-        <Select
-          value={country}
-          onValueChange={(v) => {
-            setCountry(v);
-            // Reformat with new country context
-            setDisplay((prev) => {
-              const next = new AsYouType(v as any).input(prev);
-              setE164(bestEffortToE164(next, v));
-              return next;
-            });
-          }}
-        >
-          <SelectTrigger
-            className={
-              "w-full min-w-0 overflow-hidden px-2 sm:w-[104px] sm:shrink-0 " +
-              (triggerClassName ?? "bg-background/30")
-            }
-          >
-            <SelectValue aria-label={triggerLabel}>
-              <span className="block truncate whitespace-nowrap">{triggerLabel}</span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {COUNTRIES.map((c) => (
-              <SelectItem key={c.code} value={c.code}>
-                {c.name} ({c.dial})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Input
-          id={id}
-          type="tel"
-          inputMode="tel"
-          className={"w-full min-w-0 flex-1 " + (inputClassName ?? "")}
-          value={display}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? smartPlaceholder}
-          aria-invalid={!isValid}
-        />
-      </div>
+      <Input
+        id={id}
+        type="tel"
+        inputMode="tel"
+        className={"w-full min-w-0 " + (inputClassName ?? "")}
+        value={display}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? smartPlaceholder}
+        aria-invalid={!isValid}
+      />
 
       {/* hidden field used by FormData (always E.164) */}
       <input type="hidden" name={name} value={e164} />
