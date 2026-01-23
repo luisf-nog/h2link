@@ -13,30 +13,50 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 import { z } from 'zod';
 import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { Checkbox } from '@/components/ui/checkbox';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
-  const signupSchema = z.object({
-    fullName: z.string().trim().min(1).max(120),
-    email: z.string().trim().email().max(255),
-    password: z.string().min(6).max(200),
-    age: z
-      .string()
-      .trim()
-      .transform((v) => Number(v))
-      .refine((n) => Number.isInteger(n) && n >= 14 && n <= 90, { message: 'invalid_age' }),
-    phone: z
-      .string()
-      .trim()
-      .min(1)
-      .refine((v) => Boolean(parsePhoneNumberFromString(v)?.isValid()), { message: 'invalid_phone' }),
-    contactEmail: z.string().trim().email().max(255),
-  });
+  const handleChangeLanguage = (next: SupportedLanguage) => {
+    i18n.changeLanguage(next);
+    localStorage.setItem('app_language', next);
+  };
+
+  const signupSchema = z
+    .object({
+      fullName: z.string().trim().min(1).max(120),
+      email: z.string().trim().email().max(255),
+      password: z.string().min(6).max(200),
+      confirmPassword: z.string().min(6).max(200),
+      age: z
+        .string()
+        .trim()
+        .transform((v) => Number(v))
+        .refine((n) => Number.isInteger(n) && n >= 14 && n <= 90, { message: 'invalid_age' }),
+      phone: z
+        .string()
+        .trim()
+        .min(1)
+        .refine((v) => Boolean(parsePhoneNumberFromString(v)?.isValid()), { message: 'invalid_phone' }),
+      contactEmail: z.string().trim().email().max(255),
+      acceptTerms: z.preprocess(
+        (v) => v === 'on' || v === true,
+        z.boolean().refine((v) => v === true, { message: 'accept_required' })
+      ),
+    })
+    .superRefine(({ password, confirmPassword }, ctx) => {
+      if (password !== confirmPassword) {
+        ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'password_mismatch' });
+      }
+    });
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -70,9 +90,11 @@ export default function Auth() {
       fullName: String(formData.get('fullName') ?? ''),
       email: String(formData.get('email') ?? ''),
       password: String(formData.get('password') ?? ''),
+      confirmPassword: String(formData.get('confirmPassword') ?? ''),
       age: String(formData.get('age') ?? ''),
       phone: String(formData.get('phone') ?? ''),
       contactEmail: String(formData.get('contactEmail') ?? ''),
+      acceptTerms: formData.get('acceptTerms') ?? undefined,
     };
 
     const parsed = signupSchema.safeParse(raw);
@@ -87,7 +109,11 @@ export default function Auth() {
             ? t('auth.validation.invalid_age')
             : field === 'phone' || code === 'invalid_phone'
               ? t('auth.validation.invalid_phone')
-              : t('auth.validation.invalid_contact_email'),
+              : field === 'confirmPassword' || code === 'password_mismatch'
+                ? t('auth.validation.password_mismatch')
+                : field === 'acceptTerms' || code === 'accept_required'
+                  ? t('auth.validation.accept_required')
+                  : t('auth.validation.invalid_contact_email'),
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -126,7 +152,15 @@ export default function Auth() {
         <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 items-stretch gap-6 p-4 md:grid-cols-2 md:gap-10 md:p-8">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-end px-4 pt-4 md:px-8 md:pt-6">
+        <LanguageSwitcher
+          value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
+          onChange={handleChangeLanguage}
+          className="h-9 w-[160px] bg-background/40 backdrop-blur"
+        />
+      </header>
+
+      <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-stretch gap-6 p-4 pt-6 md:min-h-[calc(100vh-72px)] md:grid-cols-2 md:gap-10 md:p-8 md:pt-8">
         {/* Left marketing */}
         <section className="hidden md:flex">
           <div className="relative flex w-full flex-col justify-between overflow-hidden rounded-2xl border border-border/40 bg-background/20 p-10 shadow-2xl backdrop-blur-xl">
@@ -184,7 +218,7 @@ export default function Auth() {
                   </TabsList>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="max-h-[calc(100vh-220px)] overflow-auto pr-1">
                   <TabsContent value="signin" className="mt-0">
                     <CardTitle className="text-xl mb-1">{t('auth.signin.title')}</CardTitle>
                     <CardDescription className="mb-6">{t('auth.signin.description')}</CardDescription>
@@ -233,8 +267,8 @@ export default function Auth() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
+                      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="min-w-0 space-y-2">
                           <Label htmlFor="signup-age">{t('auth.fields.age')}</Label>
                           <Input
                             id="signup-age"
@@ -247,7 +281,7 @@ export default function Auth() {
                             required
                           />
                         </div>
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <Label htmlFor="signup-phone">{t('auth.fields.phone')}</Label>
                           <PhoneE164Input
                             id="signup-phone"
@@ -293,6 +327,33 @@ export default function Auth() {
                         />
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-confirm-password">{t('auth.fields.confirm_password')}</Label>
+                        <Input
+                          id="signup-confirm-password"
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          minLength={6}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">{t('auth.disclaimer')}</p>
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="signup-accept"
+                            checked={acceptTerms}
+                            onCheckedChange={(v) => setAcceptTerms(v === true)}
+                          />
+                          <input type="hidden" name="acceptTerms" value={acceptTerms ? 'on' : ''} />
+                          <Label htmlFor="signup-accept" className="text-sm leading-snug">
+                            {t('auth.accept_terms')}
+                          </Label>
+                        </div>
+                      </div>
+
                       <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {t('auth.actions.signup')}
@@ -308,3 +369,4 @@ export default function Auth() {
     </div>
   );
 }
+

@@ -54,6 +54,7 @@
     "fields": {
       "email": "Email",
       "password": "Senha",
+      "confirm_password": "Confirmar senha",
       "full_name": "Nome Completo",
       "age": "Idade",
       "phone": "Telefone (E.164)",
@@ -69,8 +70,12 @@
     "validation": {
       "invalid_age": "A idade deve estar entre 14 e 90.",
       "invalid_phone": "O telefone deve estar no formato internacional (E.164), por exemplo +5511999999999.",
-      "invalid_contact_email": "Informe um email de contato válido."
+      "invalid_contact_email": "Informe um email de contato válido.",
+      "password_mismatch": "As senhas não conferem.",
+      "accept_required": "Você precisa aceitar os termos para criar a conta."
     },
+    "disclaimer": "Aviso: o H2Link ajuda a enviar aplicações com eficiência, mas não garante nenhuma vaga ou aprovação de visto.",
+    "accept_terms": "Li e concordo com os termos e entendo que o sistema não garante nenhuma vaga.",
     "marketing": {
       "q1": "Quantas horas você gasta procurando por vagas no seu perfil?",
       "q2": "Quantas horas você perde montando e-mail por e-mail?",

@@ -98,7 +98,7 @@ export function PhoneE164Input({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-[140px_1fr] gap-2">
+      <div className="grid min-w-0 grid-cols-[minmax(0,160px)_minmax(0,1fr)] gap-2">
         <Select
           value={country}
           onValueChange={(v) => {
@@ -111,7 +111,7 @@ export function PhoneE164Input({
             });
           }}
         >
-          <SelectTrigger className="bg-background/30">
+          <SelectTrigger className="min-w-0 bg-background/30">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -127,6 +127,7 @@ export function PhoneE164Input({
           id={id}
           type="tel"
           inputMode="tel"
+          className="min-w-0"
           value={display}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -143,3 +144,4 @@ export function PhoneE164Input({
     </div>
   );
 }
+

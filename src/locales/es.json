@@ -54,11 +54,36 @@
     "fields": {
       "email": "Email",
       "password": "Contraseña",
-      "full_name": "Nombre completo"
+      "confirm_password": "Confirmar contraseña",
+      "full_name": "Nombre completo",
+      "age": "Edad",
+      "phone": "Teléfono (E.164)",
+      "contact_email": "Email de contacto"
     },
     "placeholders": {
       "email": "tu@email.com",
-      "full_name": "Tu nombre"
+      "full_name": "Tu nombre",
+      "age": "Ej: 28",
+      "phone": "+15551234567",
+      "contact_email": "tu@email.com"
+    },
+    "validation": {
+      "invalid_age": "La edad debe estar entre 14 y 90.",
+      "invalid_phone": "El teléfono debe estar en formato internacional (E.164), por ejemplo +15551234567.",
+      "invalid_contact_email": "Ingresa un email de contacto válido.",
+      "password_mismatch": "Las contraseñas no coinciden.",
+      "accept_required": "Debes aceptar los términos para crear una cuenta."
+    },
+    "disclaimer": "Aviso: H2Link te ayuda a enviar solicitudes con eficiencia, pero no garantiza ninguna oferta de empleo ni aprobación de visa.",
+    "accept_terms": "Acepto los términos y entiendo que el sistema no garantiza ninguna oferta de empleo.",
+    "marketing": {
+      "q1": "¿Cuántas horas dedicas a buscar empleos que encajan con tu perfil?",
+      "q2": "¿Cuántas horas pierdes escribiendo un email a la vez?",
+      "solution_prefix": "Haz todo eso en",
+      "solution_emphasis": "3 clics",
+      "solution_suffix": "con nuestro sistema.",
+      "subline": "Menos trabajo manual. Más solicitudes enviadas.",
+      "footer": "Eficiencia, solidez corporativa y modernidad — desde el primer inicio de sesión hasta el último envío."
     },
     "actions": {
       "signin": "Iniciar sesión",

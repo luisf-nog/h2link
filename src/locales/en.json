@@ -54,6 +54,7 @@
     "fields": {
       "email": "Email",
       "password": "Password",
+      "confirm_password": "Confirm password",
       "full_name": "Full name",
       "age": "Age",
       "phone": "Phone (E.164)",
@@ -69,8 +70,12 @@
     "validation": {
       "invalid_age": "Age must be between 14 and 90.",
       "invalid_phone": "Phone must be in international format (E.164), e.g. +15551234567.",
-      "invalid_contact_email": "Please enter a valid contact email."
+      "invalid_contact_email": "Please enter a valid contact email.",
+      "password_mismatch": "Passwords do not match.",
+      "accept_required": "You must accept the terms to create an account."
     },
+    "disclaimer": "Notice: H2Link helps you send applications efficiently, but does not guarantee any job offer or visa approval.",
+    "accept_terms": "I agree to the terms and understand the system does not guarantee any job offer.",
     "marketing": {
       "q1": "How many hours do you spend searching for jobs that match your profile?",
       "q2": "How many hours do you lose writing one email at a time?",
