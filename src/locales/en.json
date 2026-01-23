@@ -42,7 +42,7 @@
     "settings": "Settings"
   },
   "auth": {
-    "hero_tagline": "Apply to H-2B jobs at scale, safely",
+    "hero_tagline": "Apply to H-2A & H-2B jobs at scale, safely",
     "tabs": { "signin": "Sign in", "signup": "Create account" },
     "signin": {
       "title": "Welcome back",
@@ -50,7 +50,11 @@
     },
     "signup": {
       "title": "Create your account",
-      "description": "Start applying to H-2B jobs today"
+      "description": "Start applying to H-2A/H-2B jobs today"
+    },
+    "errors": {
+      "email_rate_limit_title": "Too many confirmation emails",
+      "email_rate_limit_desc": "Please wait a few minutes and try again. We temporarily limited new confirmation emails to protect deliverability."
     },
     "fields": {
       "email": "Email",
