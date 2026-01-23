@@ -6,6 +6,8 @@
     "loading": "Carregando...",
     "menu": "Menu",
     "cancel": "Cancelar",
+    "save": "Salvar",
+    "select": "Selecionar...",
     "logout": "Sair",
     "language": "Idioma",
     "previous": "Anterior",
@@ -22,7 +24,14 @@
     },
     "yes": "Sim",
     "no": "Não",
-    "user": "Usuário"
+    "user": "Usuário",
+    "errors": {
+      "no_session": "Sem sessão autenticada.",
+      "invalid_data": "Dados inválidos.",
+      "save_failed": "Falha ao salvar.",
+      "send_failed": "Falha ao enviar.",
+      "delete_failed": "Falha ao remover."
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -110,10 +119,26 @@
     "profile": {
       "title": "Perfil",
       "description": "Suas informações pessoais",
-      "fields": { "email": "Email", "full_name": "Nome Completo" },
-      "placeholders": { "full_name": "Seu nome" },
+      "fields": {
+        "email": "Email",
+        "full_name": "Nome Completo",
+        "age": "Idade",
+        "phone": "Telefone",
+        "contact_email": "Email de contato"
+      },
+      "placeholders": {
+        "full_name": "Seu nome",
+        "age": "Sua idade",
+        "phone": "+5511999999999",
+        "contact_email": "seu@email.com"
+      },
       "email_note": "O email não pode ser alterado",
-      "actions": { "save": "Salvar Alterações" }
+      "contact_email_note": "Este email será usado na assinatura do seu template.",
+      "actions": { "save": "Salvar Alterações" },
+      "validation": {
+        "invalid_age": "A idade deve estar entre 14 e 90.",
+        "invalid_phone": "O telefone deve estar no formato internacional (E.164), por exemplo +5511999999999."
+      }
     },
     "account": {
       "title": "Conta",
@@ -127,6 +152,105 @@
       "update_error_title": "Erro ao atualizar",
       "update_success_title": "Perfil atualizado!",
       "update_success_desc": "Suas informações foram salvas."
+    }
+  },
+  "smtp": {
+    "title": "SMTP",
+    "subtitle": "Configure seu provedor de email para enviar aplicações.",
+    "fields": {
+      "provider": "Provedor",
+      "email": "Email",
+      "password": "Senha de app"
+    },
+    "placeholders": {
+      "email": "seu@email.com",
+      "password": "Digite sua senha de app",
+      "password_saved": "Senha já salva (deixe em branco para manter)"
+    },
+    "password_note": {
+      "saved": "Já existe uma senha salva para sua conta.",
+      "empty": "Dica: use uma senha de app (recomendado) em vez da sua senha principal."
+    },
+    "toasts": {
+      "load_error_title": "Não foi possível carregar as configurações SMTP",
+      "load_templates_error_title": "Não foi possível carregar os templates",
+      "email_required": "Email é obrigatório.",
+      "saved": "Configurações SMTP salvas.",
+      "save_error_title": "Erro ao salvar",
+      "send_error_title": "Erro ao enviar",
+      "test_sent": "Email de teste enviado.",
+      "test_required_fields": "Preencha Para, Assunto e Corpo.",
+      "profile_incomplete_title": "Complete seu perfil",
+      "profile_incomplete_desc": "Preencha nome, idade, telefone e email de contato antes de enviar."
+    },
+    "test": {
+      "title": "Enviar email de teste",
+      "subtitle": "Pré-visualize o template selecionado enviando para um destinatário.",
+      "fields": {
+        "template": "Template",
+        "visa_type": "Tipo de visto",
+        "company": "Empresa",
+        "position": "Cargo",
+        "to": "Para",
+        "subject": "Assunto",
+        "body": "Corpo"
+      },
+      "placeholders": {
+        "company": "Acme Farms",
+        "position": "Trabalhador rural",
+        "to": "destinatario@email.com"
+      },
+      "template_none": "Sem template",
+      "template_hint": "Se você selecionar um template, Assunto e Corpo serão preenchidos automaticamente.",
+      "actions": { "send": "Enviar teste" },
+      "defaults": {
+        "subject": "Aplicação H-2B - {{position}} ({{visa_type}})",
+        "body": "Olá {{company}},\n\nMeu nome é {{name}} e gostaria de me candidatar para a vaga de {{position}} sob o visto {{visa_type}}.\n\nAtenciosamente,\n{{name}}\n{{phone}}\n{{contact_email}}"
+      }
+    }
+  },
+  "templates": {
+    "title": "Templates de email",
+    "subtitle": "Crie e gerencie templates para acelerar suas aplicações.",
+    "actions": {
+      "new": "Novo template",
+      "generate_ai": "Gerar com IA"
+    },
+    "editor": {
+      "new_title": "Novo template",
+      "edit_title": "Editar template",
+      "placeholders_help": "Você pode usar placeholders como"
+    },
+    "fields": {
+      "visa_type": "Tipo de visto",
+      "name": "Nome",
+      "subject": "Assunto",
+      "body": "Corpo"
+    },
+    "placeholders": {
+      "name": "Nome do template",
+      "subject": "Assunto do email",
+      "body": "Corpo do email"
+    },
+    "table": {
+      "name": "Nome",
+      "subject": "Assunto",
+      "actions": "Ações"
+    },
+    "empty": "Nenhum template ainda.",
+    "confirm_delete": "Remover este template?",
+    "toasts": {
+      "load_error_title": "Não foi possível carregar os templates",
+      "required_fields": "Preencha nome, assunto e corpo.",
+      "created": "Template criado.",
+      "updated": "Template atualizado.",
+      "deleted": "Template removido.",
+      "save_error_title": "Erro ao salvar",
+      "delete_error_title": "Erro ao remover",
+      "generated_title": "Template gerado",
+      "remaining_today": "{{count}} gerações de IA restantes hoje",
+      "generate_error_title": "Erro na geração por IA",
+      "generate_error_fallback": "Não foi possível gerar o template."
     }
   },
   "queue": {

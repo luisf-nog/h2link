@@ -162,7 +162,7 @@ export function EmailSettingsPanel() {
 
       toast({ title: t("smtp.toasts.saved") });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Falha ao salvar";
+      const message = e instanceof Error ? e.message : t("common.errors.save_failed");
       toast({ title: t("smtp.toasts.save_error_title"), description: message, variant: "destructive" });
     } finally {
       setSaving(false);
@@ -229,7 +229,7 @@ export function EmailSettingsPanel() {
 
       toast({ title: t("smtp.toasts.test_sent") });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Falha ao enviar";
+      const message = e instanceof Error ? e.message : t("common.errors.send_failed");
       toast({ title: t("smtp.toasts.send_error_title"), description: message, variant: "destructive" });
     } finally {
       setSending(false);

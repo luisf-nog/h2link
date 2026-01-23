@@ -6,6 +6,8 @@
     "loading": "Loading...",
     "menu": "Menu",
     "cancel": "Cancel",
+    "save": "Save",
+    "select": "Select...",
     "logout": "Sign out",
     "language": "Language",
     "previous": "Previous",
@@ -22,7 +24,14 @@
     },
     "yes": "Yes",
     "no": "No",
-    "user": "User"
+    "user": "User",
+    "errors": {
+      "no_session": "No authenticated session.",
+      "invalid_data": "Invalid data.",
+      "save_failed": "Failed to save.",
+      "send_failed": "Failed to send.",
+      "delete_failed": "Failed to delete."
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -110,10 +119,26 @@
     "profile": {
       "title": "Profile",
       "description": "Your personal information",
-      "fields": { "email": "Email", "full_name": "Full name" },
-      "placeholders": { "full_name": "Your name" },
+      "fields": {
+        "email": "Email",
+        "full_name": "Full name",
+        "age": "Age",
+        "phone": "Phone",
+        "contact_email": "Contact email"
+      },
+      "placeholders": {
+        "full_name": "Your name",
+        "age": "Your age",
+        "phone": "+15551234567",
+        "contact_email": "you@email.com"
+      },
       "email_note": "Email cannot be changed",
-      "actions": { "save": "Save changes" }
+      "contact_email_note": "This email will be used in your template signature.",
+      "actions": { "save": "Save changes" },
+      "validation": {
+        "invalid_age": "Age must be between 14 and 90.",
+        "invalid_phone": "Phone must be in international format (E.164), e.g. +15551234567."
+      }
     },
     "account": {
       "title": "Account",
@@ -127,6 +152,105 @@
       "update_error_title": "Update error",
       "update_success_title": "Profile updated!",
       "update_success_desc": "Your information has been saved."
+    }
+  },
+  "smtp": {
+    "title": "SMTP",
+    "subtitle": "Configure your email provider to send applications.",
+    "fields": {
+      "provider": "Provider",
+      "email": "Email",
+      "password": "App password"
+    },
+    "placeholders": {
+      "email": "you@email.com",
+      "password": "Enter your app password",
+      "password_saved": "Password already saved (leave blank to keep)"
+    },
+    "password_note": {
+      "saved": "A password is already saved for your account.",
+      "empty": "Tip: Use an app password (recommended) instead of your main account password."
+    },
+    "toasts": {
+      "load_error_title": "Could not load SMTP settings",
+      "load_templates_error_title": "Could not load templates",
+      "email_required": "Email is required.",
+      "saved": "SMTP settings saved.",
+      "save_error_title": "Save error",
+      "send_error_title": "Send error",
+      "test_sent": "Test email sent.",
+      "test_required_fields": "Please fill To, Subject, and Body.",
+      "profile_incomplete_title": "Complete your profile",
+      "profile_incomplete_desc": "Please fill name, age, phone, and contact email before sending."
+    },
+    "test": {
+      "title": "Send a test email",
+      "subtitle": "Preview the selected template by sending it to a recipient.",
+      "fields": {
+        "template": "Template",
+        "visa_type": "Visa type",
+        "company": "Company",
+        "position": "Position",
+        "to": "To",
+        "subject": "Subject",
+        "body": "Body"
+      },
+      "placeholders": {
+        "company": "Acme Farms",
+        "position": "Farm worker",
+        "to": "recipient@email.com"
+      },
+      "template_none": "No template",
+      "template_hint": "If you select a template, Subject and Body will be filled automatically.",
+      "actions": { "send": "Send test" },
+      "defaults": {
+        "subject": "H-2B application - {{position}} ({{visa_type}})",
+        "body": "Hello {{company}},\n\nMy name is {{name}} and I would like to apply for the {{position}} position under {{visa_type}}.\n\nBest regards,\n{{name}}\n{{phone}}\n{{contact_email}}"
+      }
+    }
+  },
+  "templates": {
+    "title": "Email templates",
+    "subtitle": "Create and manage templates to speed up your applications.",
+    "actions": {
+      "new": "New template",
+      "generate_ai": "Generate with AI"
+    },
+    "editor": {
+      "new_title": "New template",
+      "edit_title": "Edit template",
+      "placeholders_help": "You can use placeholders like"
+    },
+    "fields": {
+      "visa_type": "Visa type",
+      "name": "Name",
+      "subject": "Subject",
+      "body": "Body"
+    },
+    "placeholders": {
+      "name": "Template name",
+      "subject": "Email subject",
+      "body": "Email body"
+    },
+    "table": {
+      "name": "Name",
+      "subject": "Subject",
+      "actions": "Actions"
+    },
+    "empty": "No templates yet.",
+    "confirm_delete": "Delete this template?",
+    "toasts": {
+      "load_error_title": "Could not load templates",
+      "required_fields": "Please fill name, subject, and body.",
+      "created": "Template created.",
+      "updated": "Template updated.",
+      "deleted": "Template deleted.",
+      "save_error_title": "Save error",
+      "delete_error_title": "Delete error",
+      "generated_title": "Template generated",
+      "remaining_today": "{{count}} AI generations remaining today",
+      "generate_error_title": "AI generation error",
+      "generate_error_fallback": "Could not generate template."
     }
   },
   "queue": {

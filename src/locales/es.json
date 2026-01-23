@@ -6,6 +6,8 @@
     "loading": "Cargando...",
     "menu": "Menú",
     "cancel": "Cancelar",
+    "save": "Guardar",
+    "select": "Seleccionar...",
     "logout": "Cerrar sesión",
     "language": "Idioma",
     "previous": "Anterior",
@@ -22,7 +24,14 @@
     },
     "yes": "Sí",
     "no": "No",
-    "user": "Usuario"
+    "user": "Usuario",
+    "errors": {
+      "no_session": "No hay sesión autenticada.",
+      "invalid_data": "Datos inválidos.",
+      "save_failed": "Error al guardar.",
+      "send_failed": "Error al enviar.",
+      "delete_failed": "Error al eliminar."
+    }
   },
   "nav": {
     "dashboard": "Panel",
@@ -110,10 +119,26 @@
     "profile": {
       "title": "Perfil",
       "description": "Tu información personal",
-      "fields": { "email": "Email", "full_name": "Nombre completo" },
-      "placeholders": { "full_name": "Tu nombre" },
+      "fields": {
+        "email": "Email",
+        "full_name": "Nombre completo",
+        "age": "Edad",
+        "phone": "Teléfono",
+        "contact_email": "Email de contacto"
+      },
+      "placeholders": {
+        "full_name": "Tu nombre",
+        "age": "Tu edad",
+        "phone": "+15551234567",
+        "contact_email": "tu@email.com"
+      },
       "email_note": "El email no se puede cambiar",
-      "actions": { "save": "Guardar cambios" }
+      "contact_email_note": "Este email se usará en la firma de tu plantilla.",
+      "actions": { "save": "Guardar cambios" },
+      "validation": {
+        "invalid_age": "La edad debe estar entre 14 y 90.",
+        "invalid_phone": "El teléfono debe estar en formato internacional (E.164), por ejemplo +15551234567."
+      }
     },
     "account": {
       "title": "Cuenta",
@@ -127,6 +152,105 @@
       "update_error_title": "Error al actualizar",
       "update_success_title": "¡Perfil actualizado!",
       "update_success_desc": "Tu información fue guardada."
+    }
+  },
+  "smtp": {
+    "title": "SMTP",
+    "subtitle": "Configura tu proveedor de email para enviar solicitudes.",
+    "fields": {
+      "provider": "Proveedor",
+      "email": "Email",
+      "password": "Contraseña de app"
+    },
+    "placeholders": {
+      "email": "tu@email.com",
+      "password": "Ingresa tu contraseña de app",
+      "password_saved": "Contraseña ya guardada (deja vacío para mantener)"
+    },
+    "password_note": {
+      "saved": "Ya hay una contraseña guardada para tu cuenta.",
+      "empty": "Consejo: usa una contraseña de app (recomendado) en lugar de tu contraseña principal."
+    },
+    "toasts": {
+      "load_error_title": "No se pudo cargar la configuración SMTP",
+      "load_templates_error_title": "No se pudieron cargar las plantillas",
+      "email_required": "El email es obligatorio.",
+      "saved": "Configuración SMTP guardada.",
+      "save_error_title": "Error al guardar",
+      "send_error_title": "Error al enviar",
+      "test_sent": "Email de prueba enviado.",
+      "test_required_fields": "Completa Para, Asunto y Cuerpo.",
+      "profile_incomplete_title": "Completa tu perfil",
+      "profile_incomplete_desc": "Completa nombre, edad, teléfono y email de contacto antes de enviar."
+    },
+    "test": {
+      "title": "Enviar email de prueba",
+      "subtitle": "Previsualiza la plantilla seleccionada enviándola a un destinatario.",
+      "fields": {
+        "template": "Plantilla",
+        "visa_type": "Tipo de visa",
+        "company": "Empresa",
+        "position": "Puesto",
+        "to": "Para",
+        "subject": "Asunto",
+        "body": "Cuerpo"
+      },
+      "placeholders": {
+        "company": "Acme Farms",
+        "position": "Trabajador agrícola",
+        "to": "destinatario@email.com"
+      },
+      "template_none": "Sin plantilla",
+      "template_hint": "Si seleccionas una plantilla, el Asunto y el Cuerpo se completarán automáticamente.",
+      "actions": { "send": "Enviar prueba" },
+      "defaults": {
+        "subject": "Solicitud H-2B - {{position}} ({{visa_type}})",
+        "body": "Hola {{company}},\n\nMi nombre es {{name}} y me gustaría postularme para el puesto de {{position}} bajo la visa {{visa_type}}.\n\nSaludos cordiales,\n{{name}}\n{{phone}}\n{{contact_email}}"
+      }
+    }
+  },
+  "templates": {
+    "title": "Plantillas de email",
+    "subtitle": "Crea y administra plantillas para acelerar tus solicitudes.",
+    "actions": {
+      "new": "Nueva plantilla",
+      "generate_ai": "Generar con IA"
+    },
+    "editor": {
+      "new_title": "Nueva plantilla",
+      "edit_title": "Editar plantilla",
+      "placeholders_help": "Puedes usar placeholders como"
+    },
+    "fields": {
+      "visa_type": "Tipo de visa",
+      "name": "Nombre",
+      "subject": "Asunto",
+      "body": "Cuerpo"
+    },
+    "placeholders": {
+      "name": "Nombre de la plantilla",
+      "subject": "Asunto del email",
+      "body": "Cuerpo del email"
+    },
+    "table": {
+      "name": "Nombre",
+      "subject": "Asunto",
+      "actions": "Acciones"
+    },
+    "empty": "Aún no hay plantillas.",
+    "confirm_delete": "¿Eliminar esta plantilla?",
+    "toasts": {
+      "load_error_title": "No se pudieron cargar las plantillas",
+      "required_fields": "Completa nombre, asunto y cuerpo.",
+      "created": "Plantilla creada.",
+      "updated": "Plantilla actualizada.",
+      "deleted": "Plantilla eliminada.",
+      "save_error_title": "Error al guardar",
+      "delete_error_title": "Error al eliminar",
+      "generated_title": "Plantilla generada",
+      "remaining_today": "{{count}} generaciones de IA restantes hoy",
+      "generate_error_title": "Error de generación con IA",
+      "generate_error_fallback": "No se pudo generar la plantilla."
     }
   },
   "queue": {

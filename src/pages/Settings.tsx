@@ -61,7 +61,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
     if (!parsed.success) {
       toast({
         title: t('settings.toasts.update_error_title'),
-        description: parsed.error.issues?.[0]?.message ?? 'Dados inválidos',
+        description: parsed.error.issues?.[0]?.message ?? t('common.errors.invalid_data'),
         variant: 'destructive',
       });
       setIsLoading(false);

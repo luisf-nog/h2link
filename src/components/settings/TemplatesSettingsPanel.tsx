@@ -126,7 +126,7 @@ export function TemplatesSettingsPanel() {
       closeEditor();
       await loadTemplates();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Falha ao salvar";
+      const message = e instanceof Error ? e.message : t("common.errors.save_failed");
       toast({ title: t("templates.toasts.save_error_title"), description: message, variant: "destructive" });
     } finally {
       setSaving(false);
@@ -140,7 +140,7 @@ export function TemplatesSettingsPanel() {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sem sessão autenticada");
+      if (!token) throw new Error(t("common.errors.no_session"));
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-email-template`, {
         method: "POST",
@@ -185,7 +185,7 @@ export function TemplatesSettingsPanel() {
       setTemplates((prev) => prev.filter((t) => t.id !== id));
       toast({ title: t("templates.toasts.deleted") });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Falha ao remover";
+      const message = e instanceof Error ? e.message : t("common.errors.delete_failed");
       toast({ title: t("templates.toasts.delete_error_title"), description: message, variant: "destructive" });
     }
   };
