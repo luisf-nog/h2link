@@ -102,6 +102,12 @@ export default function Auth() {
 
       const isRecovery = type === 'recovery';
 
+      // New dedicated flow: move recovery callbacks to /reset-password to avoid any route guards.
+      if (isRecovery && window.location.pathname === '/auth') {
+        navigate(`/reset-password${window.location.search}`, { replace: true });
+        return;
+      }
+
       // If auth provider redirected with an error (common for expired recovery links), show a friendly message.
       if (authError) {
         setTab('signin');
@@ -273,7 +279,7 @@ export default function Auth() {
       return;
     }
 
-    const redirectTo = `${window.location.origin}/auth?type=recovery`;
+     const redirectTo = `${window.location.origin}/reset-password?type=recovery`;
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo });
 
     if (error) {

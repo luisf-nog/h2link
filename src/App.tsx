@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useTranslation } from "react-i18next";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Jobs from "./pages/Jobs";
 import Queue from "./pages/Queue";
@@ -81,6 +82,7 @@ const AppRoutes = () => (
         </PublicRoute>
       }
     />
+    <Route path="/reset-password" element={<ResetPassword />} />
     <Route
       path="/"
       element={<Navigate to="/dashboard" replace />}
