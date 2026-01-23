@@ -227,6 +227,11 @@ export default function Auth() {
         .min(1)
         .refine((v) => Boolean(parsePhoneNumberFromString(v)?.isValid()), { message: 'invalid_phone' }),
       contactEmail: z.string().trim().email().max(255),
+      referralCode: z
+        .string()
+        .trim()
+        .transform((v) => v.toUpperCase())
+        .refine((v) => v === '' || /^[A-Z0-9]{6}$/.test(v), { message: 'invalid_referral_code' }),
       acceptTerms: z.preprocess(
         (v) => v === 'on' || v === true,
         z.boolean().refine((v) => v === true, { message: 'accept_required' })
@@ -360,6 +365,7 @@ export default function Auth() {
       age: String(formData.get('age') ?? ''),
       phone: String(formData.get('phone') ?? ''),
       contactEmail: String(formData.get('contactEmail') ?? ''),
+      referralCode: String(formData.get('referralCode') ?? ''),
       acceptTerms: formData.get('acceptTerms') ?? undefined,
     };
 
@@ -373,6 +379,8 @@ export default function Auth() {
           ? t('auth.validation.invalid_age')
           : field === 'phone' || code === 'invalid_phone'
             ? t('auth.validation.invalid_phone')
+              : field === 'referralCode' || code === 'invalid_referral_code'
+                ? t('auth.validation.invalid_referral_code')
             : field === 'confirmPassword' || code === 'password_mismatch'
               ? t('auth.validation.password_mismatch')
               : field === 'acceptTerms' || code === 'accept_required'
@@ -384,7 +392,10 @@ export default function Auth() {
       return;
     }
 
-    const { fullName, email, password, age, phone, contactEmail } = parsed.data;
+    const { fullName, email, password, age, phone, contactEmail, referralCode } = parsed.data;
+
+    const normalizedReferral = String(referralCode ?? '').trim();
+    if (normalizedReferral) localStorage.setItem('pending_referral_code', normalizedReferral);
     const { error } = await signUp(email, password, fullName, {
       age,
       phone_e164: phone,
@@ -409,6 +420,20 @@ export default function Auth() {
       const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
 
       if (sessionData.session && isConfirmed) {
+        if (normalizedReferral) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/apply-referral-code`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${sessionData.session.access_token}`,
+              },
+              body: JSON.stringify({ code: normalizedReferral }),
+            });
+          } catch {
+            // ignore (will retry on next session load)
+          }
+        }
         navigate('/dashboard');
       } else {
         setTab('signin');
@@ -856,6 +881,20 @@ export default function Auth() {
                             required
                             className="h-11 rounded-lg"
                           />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-referral">{t('auth.fields.referral_code')}</Label>
+                          <Input
+                            id="signup-referral"
+                            name="referralCode"
+                            type="text"
+                            placeholder={t('auth.placeholders.referral_code')}
+                            className="h-11 rounded-lg"
+                            maxLength={12}
+                            autoCapitalize="characters"
+                          />
+                          <p className="text-xs text-muted-foreground">{t('referrals.signup_hint')}</p>
                         </div>
 
                         <div className="space-y-2">

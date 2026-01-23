@@ -65,6 +65,8 @@ export default function Queue() {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
   const planTier = profile?.plan_tier || 'free';
+  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
 
   const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
@@ -504,7 +506,7 @@ export default function Queue() {
             <CardTitle className="text-sm text-muted-foreground">{t('queue.stats.daily_limit')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{PLANS_CONFIG[planTier].limits.daily_emails}</p>
+            <p className="text-3xl font-bold">{dailyLimitTotal}</p>
           </CardContent>
         </Card>
       </div>

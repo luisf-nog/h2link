@@ -8,15 +8,17 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/number';
 import { Button } from '@/components/ui/button';
+import { ReferralWidget } from '@/components/referrals/ReferralWidget';
 
 export default function Dashboard() {
   const { profile } = useAuth();
   const { t } = useTranslation();
   const planTier = profile?.plan_tier || 'free';
   const creditsUsed = profile?.credits_used_today || 0;
-  const dailyLimit = getPlanLimit(planTier, 'daily_emails');
+  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  const dailyLimit = getPlanLimit(planTier, 'daily_emails') + referralBonus;
   const creditsRemaining = dailyLimit - creditsUsed;
-  const usagePercent = (creditsUsed / dailyLimit) * 100;
+  const usagePercent = dailyLimit > 0 ? (creditsUsed / dailyLimit) * 100 : 0;
 
   const [jobMarketLoading, setJobMarketLoading] = useState(false);
   const [jobMarketError, setJobMarketError] = useState<string | null>(null);
@@ -183,6 +185,8 @@ export default function Dashboard() {
           {t('dashboard.subtitle', { plan: t(`plans.tiers.${planTier}.label`) })}
         </p>
       </div>
+
+      {profile?.id ? <ReferralWidget /> : null}
 
       {/* Credits Card */}
       <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">

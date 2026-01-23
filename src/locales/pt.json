@@ -113,19 +113,22 @@
       "full_name": "Nome Completo",
       "age": "Idade",
       "phone": "Telefone (E.164)",
-      "contact_email": "Email de contato"
+      "contact_email": "Email de contato",
+      "referral_code": "Código de indicação (opcional)"
     },
     "placeholders": {
       "email": "seu@email.com",
       "full_name": "Seu nome",
       "age": "Ex: 28",
       "phone": "+5511999999999",
-      "contact_email": "seu@email.com"
+      "contact_email": "seu@email.com",
+      "referral_code": "EX: A1B2C3"
     },
     "validation": {
       "invalid_age": "A idade deve estar entre 14 e 90.",
       "invalid_phone": "O telefone deve estar no formato internacional (E.164), por exemplo +5511999999999.",
       "invalid_contact_email": "Informe um email de contato válido.",
+      "invalid_referral_code": "O código de indicação deve ter 6 caracteres (A-Z, 0-9).",
       "password_mismatch": "As senhas não conferem.",
       "accept_required": "Você precisa aceitar os termos para criar a conta."
     },
@@ -700,5 +703,21 @@
       "import_error_fallback": "Erro ao importar vagas",
       "import_success_title": "{{count}} vagas importadas com sucesso!"
     }
+  },
+  "referrals": {
+    "title": "Indicações",
+    "subtitle": "Bônus só ativa quando o indicado envia o 1º e-mail.",
+    "active_label": "Indicações ativas",
+    "bonus_label": "Seu bônus atual (+envios/dia)",
+    "explainer": "Convide um amigo. Assim que ele enviar o primeiro e-mail, vocês dois ganham +5 no limite diário.",
+    "your_code": "Seu código",
+    "copy": "Copiar código",
+    "copied": "Copiado!",
+    "list_title": "Seus indicados",
+    "list_empty": "Você ainda não indicou ninguém.",
+    "unknown": "Usuário",
+    "status_pending": "Pendente",
+    "status_active": "Ativo",
+    "signup_hint": "Se você tem um código de indicação, cole aqui (opcional)."
   }
 }
