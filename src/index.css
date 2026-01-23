@@ -61,6 +61,14 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 215 44% 22%;
     --sidebar-ring: 199 88% 48%;
+
+    /* Auth (split layout) */
+    --auth-left-background: 0 0% 100%;
+    --auth-left-foreground: 222 47% 11%;
+    --auth-right-background: 215 78% 12%;
+    --auth-right-foreground: 210 40% 98%;
+    --auth-right-card: 0 0% 100% / 0.10;
+    --auth-right-border: 0 0% 100% / 0.20;
   }
 
   .dark {
@@ -106,6 +114,14 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Auth (split layout) */
+    --auth-left-background: 0 0% 100%;
+    --auth-left-foreground: 222 47% 11%;
+    --auth-right-background: 215 78% 12%;
+    --auth-right-foreground: 210 40% 98%;
+    --auth-right-card: 0 0% 100% / 0.10;
+    --auth-right-border: 0 0% 100% / 0.20;
   }
 }
 

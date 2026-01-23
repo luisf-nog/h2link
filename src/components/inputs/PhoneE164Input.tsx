@@ -56,6 +56,9 @@ export function PhoneE164Input({
   required,
   placeholder,
   invalidHint,
+  className,
+  inputClassName,
+  triggerClassName,
 }: {
   id: string;
   name: string;
@@ -63,6 +66,9 @@ export function PhoneE164Input({
   required?: boolean;
   placeholder?: string;
   invalidHint?: string;
+  className?: string;
+  inputClassName?: string;
+  triggerClassName?: string;
 }) {
   const initialCountry = useMemo(() => {
     const locale = navigator.language || "en-US";
@@ -97,7 +103,7 @@ export function PhoneE164Input({
   };
 
   return (
-    <div className="space-y-2">
+    <div className={"space-y-2 " + (className ?? "")}>
       <div className="grid min-w-0 grid-cols-[minmax(0,160px)_minmax(0,1fr)] gap-2">
         <Select
           value={country}
@@ -111,7 +117,7 @@ export function PhoneE164Input({
             });
           }}
         >
-          <SelectTrigger className="min-w-0 bg-background/30">
+          <SelectTrigger className={"min-w-0 " + (triggerClassName ?? "bg-background/30")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -127,7 +133,7 @@ export function PhoneE164Input({
           id={id}
           type="tel"
           inputMode="tel"
-          className="min-w-0"
+          className={"min-w-0 " + (inputClassName ?? "")}
           value={display}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

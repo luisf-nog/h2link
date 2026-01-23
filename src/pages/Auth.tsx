@@ -20,6 +20,7 @@ import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [tab, setTab] = useState<'signin' | 'signup'>('signin');
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -145,45 +146,245 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10">
-      {/* soft glass blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-primary/15 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
-      </div>
-
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-end px-4 pt-4 md:px-8 md:pt-6">
+    <div className="min-h-screen">
+      <header className="fixed right-4 top-4 z-20 md:right-6 md:top-6">
         <LanguageSwitcher
           value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
           onChange={handleChangeLanguage}
-          className="h-9 w-[160px] bg-background/40 backdrop-blur"
+          className="h-9 w-[168px] border border-auth-right-border bg-auth-right-card text-auth-right-foreground backdrop-blur-md"
         />
       </header>
 
-      <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-stretch gap-6 p-4 pt-6 md:min-h-[calc(100vh-72px)] md:grid-cols-2 md:gap-10 md:p-8 md:pt-8">
-        {/* Left marketing */}
-        <section className="hidden md:flex">
-          <div className="relative flex w-full flex-col justify-between overflow-hidden rounded-2xl border border-border/40 bg-background/20 p-10 shadow-2xl backdrop-blur-xl">
-            <div>
-              <BrandLogo height={72} className="drop-shadow-sm max-w-[280px]" />
-              <p className="mt-4 text-sm text-muted-foreground">{t('auth.hero_tagline')}</p>
+      <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
+        {/* Left: Form */}
+        <section className="flex items-center justify-center bg-auth-left px-6 py-16 text-auth-left-foreground md:px-14">
+          <div className="w-full max-w-md">
+            <div className="mb-10">
+              <BrandLogo height={56} className="max-w-[240px]" />
+            </div>
 
-              <div className="mt-10 space-y-6">
-                <p className="text-2xl font-semibold leading-snug text-foreground">{t('auth.marketing.q1')}</p>
-                <p className="text-xl leading-snug text-foreground/70">{t('auth.marketing.q2')}</p>
+            <Tabs value={tab} onValueChange={(v) => setTab(v === 'signup' ? 'signup' : 'signin')} className="w-full">
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {tab === 'signup' ? t('auth.signup.title') : t('auth.signin.title')}
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {tab === 'signup' ? t('auth.signup.description') : t('auth.signin.description')}
+                </p>
+              </div>
 
-                <div className="mt-6 rounded-xl border border-border/40 bg-background/25 p-5 backdrop-blur">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border/40 bg-background/30">
-                      <Zap className="h-5 w-5 text-primary" />
+              <TabsList className="grid h-11 w-full grid-cols-2 rounded-lg bg-secondary">
+                <TabsTrigger value="signin" className="rounded-md">
+                  {t('auth.tabs.signin')}
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-md">
+                  {t('auth.tabs.signup')}
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="mt-8">
+                <TabsContent value="signin" className="mt-0">
+                  <Card className="border-0 bg-transparent shadow-none">
+                    <CardHeader className="px-0 pb-6">
+                      <CardTitle className="text-lg">{t('auth.signin.description')}</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="px-0">
+                      <form onSubmit={handleSignIn} className="space-y-5">
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
+                          <Input
+                            id="signin-email"
+                            name="email"
+                            type="email"
+                            placeholder={t('auth.placeholders.email')}
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-password">{t('auth.fields.password')}</Label>
+                          <Input
+                            id="signin-password"
+                            name="password"
+                            type="password"
+                            placeholder="••••••••"
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
+                          disabled={isLoading}
+                        >
+                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {t('auth.actions.signin')}
+                        </Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="signup" className="mt-0">
+                  <Card className="border-0 bg-transparent shadow-none">
+                    <CardHeader className="px-0 pb-6">
+                      <CardTitle className="text-lg">{t('auth.signup.description')}</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="px-0">
+                      <form onSubmit={handleSignUp} className="space-y-5">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-name">{t('auth.fields.full_name')}</Label>
+                          <Input
+                            id="signup-name"
+                            name="fullName"
+                            type="text"
+                            placeholder={t('auth.placeholders.full_name')}
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">
+                          <div className="min-w-0 space-y-2">
+                            <Label htmlFor="signup-age">{t('auth.fields.age')}</Label>
+                            <Input
+                              id="signup-age"
+                              name="age"
+                              type="number"
+                              inputMode="numeric"
+                              min={14}
+                              max={90}
+                              placeholder={t('auth.placeholders.age')}
+                              required
+                              className="h-11 rounded-lg"
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-2">
+                            <Label htmlFor="signup-phone">{t('auth.fields.phone')}</Label>
+                            <PhoneE164Input
+                              id="signup-phone"
+                              name="phone"
+                              required
+                              placeholder={t('auth.placeholders.phone')}
+                              invalidHint={t('auth.validation.invalid_phone')}
+                              triggerClassName="h-11 rounded-lg"
+                              inputClassName="h-11 rounded-lg"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-email">{t('auth.fields.email')}</Label>
+                          <Input
+                            id="signup-email"
+                            name="email"
+                            type="email"
+                            placeholder={t('auth.placeholders.email')}
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-contact-email">{t('auth.fields.contact_email')}</Label>
+                          <Input
+                            id="signup-contact-email"
+                            name="contactEmail"
+                            type="email"
+                            placeholder={t('auth.placeholders.contact_email')}
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-password">{t('auth.fields.password')}</Label>
+                          <Input
+                            id="signup-password"
+                            name="password"
+                            type="password"
+                            placeholder="••••••••"
+                            minLength={6}
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-confirm-password">{t('auth.fields.confirm_password')}</Label>
+                          <Input
+                            id="signup-confirm-password"
+                            name="confirmPassword"
+                            type="password"
+                            placeholder="••••••••"
+                            minLength={6}
+                            required
+                            className="h-11 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground">{t('auth.disclaimer')}</p>
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              id="signup-accept"
+                              checked={acceptTerms}
+                              onCheckedChange={(v) => setAcceptTerms(v === true)}
+                            />
+                            <input type="hidden" name="acceptTerms" value={acceptTerms ? 'on' : ''} />
+                            <Label htmlFor="signup-accept" className="text-sm leading-snug">
+                              {t('auth.accept_terms')}
+                            </Label>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
+                          disabled={isLoading}
+                        >
+                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {t('auth.actions.signup')}
+                        </Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </section>
+
+        {/* Right: Marketing */}
+        <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
+          <div className="absolute inset-0" aria-hidden="true" />
+
+          <div className="relative w-full max-w-lg">
+            <div className="relative overflow-hidden rounded-2xl border border-auth-right-border bg-auth-right-card p-10 shadow-2xl backdrop-blur-md">
+              <Zap className="pointer-events-none absolute -right-10 -bottom-10 h-56 w-56 opacity-10" />
+
+              <p className="text-sm text-auth-right-foreground/80">{t('auth.hero_tagline')}</p>
+
+              <div className="mt-10 space-y-7">
+                <p className="text-3xl font-semibold leading-tight">{t('auth.marketing.q1')}</p>
+                <p className="text-xl leading-relaxed text-auth-right-foreground/85">{t('auth.marketing.q2')}</p>
+
+                <div className="mt-6 rounded-xl border border-auth-right-border bg-auth-right-card p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-auth-right-border bg-auth-right-card">
+                      <Zap className="h-5 w-5" />
                     </div>
-                    <div className="leading-snug">
-                      <p className="text-base text-foreground">
+                    <div>
+                      <p className="text-base leading-snug">
                         {t('auth.marketing.solution_prefix')}{' '}
-                        <span className="font-semibold text-primary">{t('auth.marketing.solution_emphasis')}</span>{' '}
+                        <span className="font-semibold">{t('auth.marketing.solution_emphasis')}</span>{' '}
                         {t('auth.marketing.solution_suffix')}
                       </p>
-                      <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="mt-4 flex items-center gap-2 text-sm text-auth-right-foreground/80">
                         <CheckCircle2 className="h-4 w-4" />
                         <span>{t('auth.marketing.subline')}</span>
                       </div>
@@ -191,178 +392,9 @@ export default function Auth() {
                   </div>
                 </div>
               </div>
+
+              <div className="mt-10 text-sm text-auth-right-foreground/70">{t('auth.marketing.footer')}</div>
             </div>
-
-            <div className="mt-10 text-sm text-muted-foreground">
-              {t('auth.marketing.footer')}
-            </div>
-          </div>
-        </section>
-
-        {/* Right auth */}
-        <section className="flex items-center justify-center">
-          <div className="w-full max-w-md">
-            <div className="mb-6 text-center md:hidden">
-              <div className="inline-flex items-center justify-center">
-                <BrandLogo height={72} className="drop-shadow-sm max-w-[280px]" />
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{t('auth.hero_tagline')}</p>
-            </div>
-
-            <Card className="border-border/40 bg-background/25 shadow-2xl backdrop-blur-xl">
-              <Tabs defaultValue="signin" className="w-full">
-                <CardHeader className="pb-4">
-                  <TabsList className="grid w-full grid-cols-2 bg-background/30">
-                    <TabsTrigger value="signin">{t('auth.tabs.signin')}</TabsTrigger>
-                    <TabsTrigger value="signup">{t('auth.tabs.signup')}</TabsTrigger>
-                  </TabsList>
-                </CardHeader>
-
-                <CardContent className="max-h-[calc(100vh-220px)] overflow-auto pr-1">
-                  <TabsContent value="signin" className="mt-0">
-                    <CardTitle className="text-xl mb-1">{t('auth.signin.title')}</CardTitle>
-                    <CardDescription className="mb-6">{t('auth.signin.description')}</CardDescription>
-
-                    <form onSubmit={handleSignIn} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
-                        <Input
-                          id="signin-email"
-                          name="email"
-                          type="email"
-                          placeholder={t('auth.placeholders.email')}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signin-password">{t('auth.fields.password')}</Label>
-                        <Input
-                          id="signin-password"
-                          name="password"
-                          type="password"
-                          placeholder="••••••••"
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {t('auth.actions.signin')}
-                      </Button>
-                    </form>
-                  </TabsContent>
-
-                  <TabsContent value="signup" className="mt-0">
-                    <CardTitle className="text-xl mb-1">{t('auth.signup.title')}</CardTitle>
-                    <CardDescription className="mb-6">{t('auth.signup.description')}</CardDescription>
-
-                    <form onSubmit={handleSignUp} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-name">{t('auth.fields.full_name')}</Label>
-                        <Input
-                          id="signup-name"
-                          name="fullName"
-                          type="text"
-                          placeholder={t('auth.placeholders.full_name')}
-                          required
-                        />
-                      </div>
-
-                      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="min-w-0 space-y-2">
-                          <Label htmlFor="signup-age">{t('auth.fields.age')}</Label>
-                          <Input
-                            id="signup-age"
-                            name="age"
-                            type="number"
-                            inputMode="numeric"
-                            min={14}
-                            max={90}
-                            placeholder={t('auth.placeholders.age')}
-                            required
-                          />
-                        </div>
-                        <div className="min-w-0 space-y-2">
-                          <Label htmlFor="signup-phone">{t('auth.fields.phone')}</Label>
-                          <PhoneE164Input
-                            id="signup-phone"
-                            name="phone"
-                            required
-                            placeholder={t('auth.placeholders.phone')}
-                            invalidHint={t('auth.validation.invalid_phone')}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-email">{t('auth.fields.email')}</Label>
-                        <Input
-                          id="signup-email"
-                          name="email"
-                          type="email"
-                          placeholder={t('auth.placeholders.email')}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-contact-email">{t('auth.fields.contact_email')}</Label>
-                        <Input
-                          id="signup-contact-email"
-                          name="contactEmail"
-                          type="email"
-                          placeholder={t('auth.placeholders.contact_email')}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-password">{t('auth.fields.password')}</Label>
-                        <Input
-                          id="signup-password"
-                          name="password"
-                          type="password"
-                          placeholder="••••••••"
-                          minLength={6}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-confirm-password">{t('auth.fields.confirm_password')}</Label>
-                        <Input
-                          id="signup-confirm-password"
-                          name="confirmPassword"
-                          type="password"
-                          placeholder="••••••••"
-                          minLength={6}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">{t('auth.disclaimer')}</p>
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            id="signup-accept"
-                            checked={acceptTerms}
-                            onCheckedChange={(v) => setAcceptTerms(v === true)}
-                          />
-                          <input type="hidden" name="acceptTerms" value={acceptTerms ? 'on' : ''} />
-                          <Label htmlFor="signup-accept" className="text-sm leading-snug">
-                            {t('auth.accept_terms')}
-                          </Label>
-                        </div>
-                      </div>
-
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {t('auth.actions.signup')}
-                      </Button>
-                    </form>
-                  </TabsContent>
-                </CardContent>
-              </Tabs>
-            </Card>
           </div>
         </section>
       </div>
