@@ -178,6 +178,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_referrals_count: number
           age: number | null
           consecutive_errors: number
           contact_email: string | null
@@ -187,15 +188,20 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_referral_activated: boolean
           phone_e164: string | null
           plan_tier: Database["public"]["Enums"]["plan_tier"]
           preferred_language: string
+          referral_bonus_limit: number
+          referral_code: string | null
+          referred_by: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           timezone: string
           updated_at: string
         }
         Insert: {
+          active_referrals_count?: number
           age?: number | null
           consecutive_errors?: number
           contact_email?: string | null
@@ -205,15 +211,20 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          is_referral_activated?: boolean
           phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
           preferred_language?: string
+          referral_bonus_limit?: number
+          referral_code?: string | null
+          referred_by?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           timezone?: string
           updated_at?: string
         }
         Update: {
+          active_referrals_count?: number
           age?: number | null
           consecutive_errors?: number
           contact_email?: string | null
@@ -223,15 +234,27 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_referral_activated?: boolean
           phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
           preferred_language?: string
+          referral_bonus_limit?: number
+          referral_code?: string | null
+          referred_by?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           timezone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       public_jobs: {
         Row: {
@@ -326,6 +349,30 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_links: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: []
+      }
       smtp_credentials: {
         Row: {
           created_at: string
@@ -411,6 +458,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
