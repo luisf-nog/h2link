@@ -309,9 +309,32 @@ export default function Queue() {
       return;
     }
 
+    // Premium: start background processing in backend (doesn't require keeping browser open)
     setSending(true);
     try {
-      await sendQueueItems(pendingItems);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error(t('common.errors.no_session'));
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || payload?.ok === false) {
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
+
+      toast({
+        title: t('queue.toasts.bg_started_title'),
+        description: t('queue.toasts.bg_started_desc'),
+      });
+      fetchQueue();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t('common.errors.send_failed');
       toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });

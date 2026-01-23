@@ -106,7 +106,10 @@ export type Database = {
           created_at: string
           id: string
           job_id: string | null
+          last_attempt_at: string | null
+          last_error: string | null
           manual_job_id: string | null
+          processing_started_at: string | null
           sent_at: string | null
           status: string
           user_id: string
@@ -115,7 +118,10 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
           manual_job_id?: string | null
+          processing_started_at?: string | null
           sent_at?: string | null
           status?: string
           user_id: string
@@ -124,7 +130,10 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
           manual_job_id?: string | null
+          processing_started_at?: string | null
           sent_at?: string | null
           status?: string
           user_id?: string

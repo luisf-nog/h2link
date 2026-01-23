@@ -318,6 +318,8 @@
     },
     "status": { "sent": "Enviado", "pending": "Pendente" },
     "toasts": {
+      "bg_started_title": "Envio iniciado",
+      "bg_started_desc": "Seu envio está rodando em background. Você pode fechar esta página.",
       "mx_invalid_title": "Email inválido (sem MX)",
       "mx_invalid_desc": "O domínio {{domain}} não possui MX válido. Para proteger sua reputação, o envio foi bloqueado.",
       "no_template_title": "Nenhum template encontrado",
