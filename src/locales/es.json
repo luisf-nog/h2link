@@ -257,7 +257,9 @@
       "generated_title": "Plantilla generada",
       "remaining_today": "{{count}} generaciones de IA restantes hoy",
       "generate_error_title": "Error de generación con IA",
-      "generate_error_fallback": "No se pudo generar la plantilla."
+      "generate_error_fallback": "No se pudo generar la plantilla.",
+      "limit_reached_title": "Límite de plantillas alcanzado",
+      "limit_reached_desc": "Tu plan permite hasta {{max}} plantilla(s). Actualiza para crear más."
     }
   },
   "queue": {
@@ -268,6 +270,10 @@
       "send": "Enviar ({{pendingCount}})"
     },
     "magic_paste_locked": "Exclusivo del plan Diamond",
+    "toasts": {
+      "no_template_title": "No se encontraron plantillas",
+      "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar."
+    },
     "stats": {
       "in_queue": "En cola",
       "sent_today": "Enviadas hoy",

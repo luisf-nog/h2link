@@ -22,13 +22,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Trash2, Send, Wand2, Lock, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface QueueItem {
   id: string;
@@ -60,28 +53,13 @@ export default function Queue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
 
   const planTier = profile?.plan_tier || 'free';
   const hasMagicPaste = canAccessFeature(planTier, 'magic_paste');
 
   useEffect(() => {
     fetchQueue();
-    fetchTemplates();
   }, []);
-
-  const fetchTemplates = async () => {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('id,name,subject,body')
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('Error fetching templates:', error);
-      return;
-    }
-    setTemplates(((data as EmailTemplate[]) ?? []).filter(Boolean));
-  };
 
   const fetchQueue = async () => {
     const { data, error } = await supabase
@@ -159,15 +137,27 @@ export default function Queue() {
         return;
       }
 
-      const tpl = templates.find((x) => x.id === selectedTemplateId);
-      if (!tpl) {
+      // Fetch user's templates and pick automatically based on plan
+      const { data: tplData, error: tplError } = await supabase
+        .from('email_templates')
+        .select('id,name,subject,body')
+        .order('created_at', { ascending: false });
+      if (tplError) throw tplError;
+      const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
+
+      if (templates.length === 0) {
         toast({
-          title: 'Selecione um template',
-          description: 'Escolha um template para enviar sua fila.',
+          title: t('queue.toasts.no_template_title'),
+          description: t('queue.toasts.no_template_desc'),
           variant: 'destructive',
         });
         return;
       }
+
+      // Gold: use the only template; Diamond: random among all templates (up to 5)
+      const tpl = planTier === 'diamond' 
+        ? templates[Math.floor(Math.random() * templates.length)]
+        : templates[0];
 
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
@@ -257,22 +247,7 @@ export default function Queue() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <div className="min-w-[220px]">
-            <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Template" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem template</SelectItem>
-                {templates.map((tpl) => (
-                  <SelectItem key={tpl.id} value={tpl.id}>
-                    {tpl.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
