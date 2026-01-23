@@ -49,12 +49,12 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title} className={cn(collapsed && 'mx-auto')}>
                     <NavLink
                       to={item.url}
                       className={cn(
-                        'flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors',
-                        collapsed && 'justify-center px-2'
+                        'flex items-center gap-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors',
+                        collapsed ? 'h-8 w-8 justify-center' : 'w-full px-3 py-2.5'
                       )}
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     >
