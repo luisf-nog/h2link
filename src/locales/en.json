@@ -111,6 +111,11 @@
       "best_paid_state": "Best paid state (avg)",
       "no_data": "No data",
       "error": "Could not load job market stats."
+    },
+    "free_warning": {
+      "title": "Warning: max-speed sending",
+      "description": "Sending with zero delay may cause temporary Gmail blocks. To enable Safe Sending Mode (Anti-Spam), consider the Diamond plan.",
+      "cta": "View plans"
     }
   },
   "settings": {
@@ -317,6 +322,8 @@
     },
     "status": { "sent": "Sent", "pending": "Pending" },
     "toasts": {
+      "mx_invalid_title": "Invalid email (no MX)",
+      "mx_invalid_desc": "The domain {{domain}} has no valid MX records. To protect your reputation, sending was blocked.",
       "load_error_title": "Queue load error",
       "remove_error_title": "Remove error",
       "remove_success_title": "Removed from queue",

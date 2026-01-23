@@ -111,6 +111,11 @@
       "best_paid_state": "Estado com melhor salário (média)",
       "no_data": "Sem dados",
       "error": "Não foi possível carregar as estatísticas de vagas."
+    },
+    "free_warning": {
+      "title": "Aviso: envio em velocidade máxima",
+      "description": "O envio sem delay pode causar bloqueios temporários no seu Gmail. Para ativar o Modo de Envio Seguro (Anti-Spam), considere o plano Diamond.",
+      "cta": "Ver planos"
     }
   },
   "settings": {
@@ -313,6 +318,8 @@
     },
     "status": { "sent": "Enviado", "pending": "Pendente" },
     "toasts": {
+      "mx_invalid_title": "Email inválido (sem MX)",
+      "mx_invalid_desc": "O domínio {{domain}} não possui MX válido. Para proteger sua reputação, o envio foi bloqueado.",
       "no_template_title": "Nenhum template encontrado",
       "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar.",
       "bulk_premium_title": "Recurso Premium",
