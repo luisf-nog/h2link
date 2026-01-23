@@ -322,6 +322,8 @@
     },
     "status": { "sent": "Sent", "pending": "Pending" },
     "toasts": {
+      "bg_started_title": "Sending started",
+      "bg_started_desc": "Your sending is running in the background. You can close this page.",
       "mx_invalid_title": "Invalid email (no MX)",
       "mx_invalid_desc": "The domain {{domain}} has no valid MX records. To protect your reputation, sending was blocked.",
       "load_error_title": "Queue load error",

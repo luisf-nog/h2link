@@ -2,3 +2,9 @@ project_id = "dalarhopratsgzmmzhxx"
 
 [functions.send-email-custom]
 verify_jwt = false
+
+[functions.check-dns-mx]
+verify_jwt = false
+
+[functions.process-queue]
+verify_jwt = false

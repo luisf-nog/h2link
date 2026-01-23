@@ -322,6 +322,8 @@
     },
     "status": { "sent": "Enviado", "pending": "Pendiente" },
     "toasts": {
+      "bg_started_title": "Envío iniciado",
+      "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
       "mx_invalid_title": "Email inválido (sin MX)",
       "mx_invalid_desc": "El dominio {{domain}} no tiene registros MX válidos. Para proteger tu reputación, el envío fue bloqueado.",
       "load_error_title": "Error al cargar la cola",
