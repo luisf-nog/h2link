@@ -267,7 +267,7 @@
     "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
     "actions": {
       "add_manual": "Adicionar Empresa",
-      "send": "Enviar ({{pendingCount}})"
+      "send": "Enviar todos ({{pendingCount}})"
     },
     "manual_dialog": {
       "title": "Adicionar Empresa",
@@ -315,6 +315,9 @@
     "toasts": {
       "no_template_title": "Nenhum template encontrado",
       "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar.",
+      "bulk_premium_title": "Recurso Premium",
+      "bulk_premium_desc": "O envio em massa (Enviar todos) é exclusivo para planos Premium. Faça upgrade para enviar tudo de uma vez.",
+      "bulk_premium_cta": "Ver planos",
       "load_error_title": "Erro ao carregar fila",
       "remove_error_title": "Erro ao remover",
       "remove_success_title": "Removido da fila",

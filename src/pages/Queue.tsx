@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PLANS_CONFIG } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,10 +14,12 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2 } from 'lucide-react';
+import { Trash2, Send, Loader2, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
+import { ToastAction } from '@/components/ui/toast';
+import { useNavigate } from 'react-router-dom';
 
 interface QueueItem {
   id: string;
@@ -54,9 +56,11 @@ export default function Queue() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendingOneId, setSendingOneId] = useState<string | null>(null);
 
   const planTier = profile?.plan_tier || 'free';
 
@@ -132,126 +136,162 @@ export default function Queue() {
     return out;
   };
 
-  const sendEmails = async () => {
-    setSending(true);
+  const requirePremiumForBulk = planTier === 'free';
+  const pendingItems = useMemo(() => queue.filter((q) => q.status === 'pending'), [queue]);
 
-    try {
-      const pendingItems = queue.filter((q) => q.status === 'pending');
-      if (pendingItems.length === 0) return;
-
-      if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
-        toast({
-          title: 'Complete seu Perfil',
-          description: 'Preencha nome, idade, telefone e email de contato antes de enviar.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Fetch user's templates and pick automatically based on plan
-      const { data: tplData, error: tplError } = await supabase
-        .from('email_templates')
-        .select('id,name,subject,body')
-        .order('created_at', { ascending: false });
-      if (tplError) throw tplError;
-      const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
-
-      if (templates.length === 0) {
-        toast({
-          title: t('queue.toasts.no_template_title'),
-          description: t('queue.toasts.no_template_desc'),
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Gold: use the only template; Diamond: random among all templates (up to 5)
-      const tpl = planTier === 'diamond' 
-        ? templates[Math.floor(Math.random() * templates.length)]
-        : templates[0];
-
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Sem sessão autenticada');
-
-      const sentIds: string[] = [];
-
-      for (const item of pendingItems) {
-        const job = item.public_jobs ?? item.manual_jobs;
-        if (!job?.email) continue;
-
-        const to = job.email;
-        const visaType =
-          item.public_jobs?.visa_type === 'H-2A' ? ('H-2A' as const) : ('H-2B' as const);
-
-        const vars: Record<string, string> = {
-          name: profile.full_name ?? '',
-          age: String(profile.age ?? ''),
-          phone: profile.phone_e164 ?? '',
-          contact_email: profile.contact_email ?? '',
-          company: job.company ?? '',
-          position: job.job_title ?? '',
-          visa_type: visaType,
-          eta_number: item.manual_jobs?.eta_number ?? '',
-          company_phone: item.manual_jobs?.phone ?? '',
-          job_phone: item.manual_jobs?.phone ?? '',
-        };
-
-        const finalSubject = applyTemplate(tpl.subject, vars);
-        const finalBody = applyTemplate(tpl.body, vars);
-
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ to, subject: finalSubject, body: finalBody }),
-        });
-
-        const text = await res.text();
-        const payload = (() => {
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { error: text };
-          }
-        })();
-
-        if (!res.ok || payload?.success === false) {
-          throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
-        }
-
-        sentIds.push(item.id);
-      }
-
-      if (sentIds.length > 0) {
-        await supabase
-          .from('my_queue')
-          .update({ status: 'sent', sent_at: new Date().toISOString() })
-          .in('id', sentIds);
-      }
-
+  const ensureCanSend = async () => {
+    if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
       toast({
-        title: t('queue.toasts.sent_title'),
-        description: String(
-          t('queue.toasts.sent_desc', {
-            count: formatNumber(sentIds.length),
-          } as any)
-        ),
+        title: t('smtp.toasts.profile_incomplete_title'),
+        description: t('smtp.toasts.profile_incomplete_desc'),
+        variant: 'destructive',
+      });
+      return { ok: false as const };
+    }
+
+    const { data: tplData, error: tplError } = await supabase
+      .from('email_templates')
+      .select('id,name,subject,body')
+      .order('created_at', { ascending: false });
+    if (tplError) {
+      toast({ title: t('common.errors.save_failed'), description: tplError.message, variant: 'destructive' });
+      return { ok: false as const };
+    }
+
+    const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
+    if (templates.length === 0) {
+      toast({
+        title: t('queue.toasts.no_template_title'),
+        description: t('queue.toasts.no_template_desc'),
+        variant: 'destructive',
+      });
+      return { ok: false as const };
+    }
+
+    // Gold: use the only template; Diamond: random among all templates (up to 5)
+    const tpl = planTier === 'diamond' ? templates[Math.floor(Math.random() * templates.length)] : templates[0];
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      toast({ title: t('common.errors.no_session'), description: sessionError.message, variant: 'destructive' });
+      return { ok: false as const };
+    }
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      toast({ title: t('common.errors.no_session'), description: t('common.errors.no_session'), variant: 'destructive' });
+      return { ok: false as const };
+    }
+
+    return { ok: true as const, tpl, token };
+  };
+
+  const sendQueueItems = async (items: QueueItem[]) => {
+    const guard = await ensureCanSend();
+    if (!guard.ok) return;
+
+    const { tpl, token } = guard;
+    const sentIds: string[] = [];
+
+    for (const item of items) {
+      const job = item.public_jobs ?? item.manual_jobs;
+      if (!job?.email) continue;
+
+      const to = job.email;
+      const visaType = item.public_jobs?.visa_type === 'H-2A' ? ('H-2A' as const) : ('H-2B' as const);
+
+      const vars: Record<string, string> = {
+        name: profile?.full_name ?? '',
+        age: String(profile?.age ?? ''),
+        phone: profile?.phone_e164 ?? '',
+        contact_email: profile?.contact_email ?? '',
+        company: job.company ?? '',
+        position: job.job_title ?? '',
+        visa_type: visaType,
+        eta_number: item.manual_jobs?.eta_number ?? '',
+        company_phone: item.manual_jobs?.phone ?? '',
+        job_phone: item.manual_jobs?.phone ?? '',
+      };
+
+      const finalSubject = applyTemplate(tpl.subject, vars);
+      const finalBody = applyTemplate(tpl.body, vars);
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ to, subject: finalSubject, body: finalBody }),
       });
 
-      fetchQueue();
+      const text = await res.text();
+      const payload = (() => {
+        try {
+          return JSON.parse(text);
+        } catch {
+          return { error: text };
+        }
+      })();
+
+      if (!res.ok || payload?.success === false) {
+        throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
+      }
+
+      sentIds.push(item.id);
+    }
+
+    if (sentIds.length > 0) {
+      await supabase.from('my_queue').update({ status: 'sent', sent_at: new Date().toISOString() }).in('id', sentIds);
+    }
+
+    toast({
+      title: t('queue.toasts.sent_title'),
+      description: String(t('queue.toasts.sent_desc', { count: formatNumber(sentIds.length) } as any)),
+    });
+
+    fetchQueue();
+  };
+
+  const handleSendAll = async () => {
+    if (pendingItems.length === 0) return;
+    if (requirePremiumForBulk) {
+      toast({
+        title: t('queue.toasts.bulk_premium_title'),
+        description: t('queue.toasts.bulk_premium_desc'),
+        action: (
+          <ToastAction altText={t('queue.toasts.bulk_premium_cta')} onClick={() => navigate('/plans')}>
+            {t('queue.toasts.bulk_premium_cta')}
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
+    setSending(true);
+    try {
+      await sendQueueItems(pendingItems);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Falha ao enviar';
-      toast({ title: 'Erro ao enviar', description: message, variant: 'destructive' });
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
     } finally {
       setSending(false);
     }
   };
 
-  const pendingCount = queue.filter((q) => q.status === 'pending').length;
+  const handleSendOne = async (item: QueueItem) => {
+    if (item.status !== 'pending') return;
+    setSendingOneId(item.id);
+    try {
+      await sendQueueItems([item]);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+    } finally {
+      setSendingOneId(null);
+    }
+  };
+
+  const pendingCount = pendingItems.length;
   const sentCount = queue.filter((q) => q.status === 'sent').length;
 
   return (
@@ -268,11 +308,13 @@ export default function Queue() {
           <AddManualJobDialog onAdded={fetchQueue} />
 
           <Button
-            onClick={sendEmails}
+            onClick={handleSendAll}
             disabled={pendingCount === 0 || sending}
           >
             {sending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : requirePremiumForBulk ? (
+              <Lock className="h-4 w-4 mr-2" />
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}
@@ -367,14 +409,29 @@ export default function Queue() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => removeFromQueue(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={item.status !== 'pending' || sending || sendingOneId != null}
+                          onClick={() => handleSendOne(item)}
+                        >
+                          {sendingOneId === item.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeFromQueue(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

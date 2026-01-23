@@ -267,7 +267,7 @@
     "subtitle": "{{pendingCount}} pendientes • {{sentCount}} enviadas",
     "actions": {
       "add_manual": "Agregar empresa",
-      "send": "Enviar ({{pendingCount}})"
+      "send": "Enviar todas ({{pendingCount}})"
     },
     "manual_dialog": {
       "title": "Agregar empresa",
@@ -321,6 +321,9 @@
       "remove_error_title": "Error al eliminar",
       "remove_success_title": "Eliminado de la cola",
       "remove_success_desc": "El empleo fue eliminado de tu cola.",
+      "bulk_premium_title": "Función Premium",
+      "bulk_premium_desc": "El envío masivo (Enviar todas) es exclusivo de planes Premium. Actualiza para enviar todo con un clic.",
+      "bulk_premium_cta": "Ver planes",
       "sent_title": "¡Emails enviados!",
       "sent_desc": "{{count}} solicitudes fueron enviadas."
     }
