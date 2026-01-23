@@ -44,7 +44,7 @@ type EditorState =
 export function TemplatesSettingsPanel() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +69,7 @@ export function TemplatesSettingsPanel() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      toast({ title: "Erro ao carregar templates", description: error.message, variant: "destructive" });
+      toast({ title: t("templates.toasts.load_error_title"), description: error.message, variant: "destructive" });
     }
     setTemplates(((data as EmailTemplate[]) ?? []).filter(Boolean));
     setLoading(false);
@@ -100,7 +100,7 @@ export function TemplatesSettingsPanel() {
   const upsertTemplate = async () => {
     if (!user?.id) return;
     if (!name.trim() || !subject.trim() || !body.trim()) {
-      toast({ title: "Preencha nome, assunto e corpo", variant: "destructive" });
+      toast({ title: t("templates.toasts.required_fields"), variant: "destructive" });
       return;
     }
 
@@ -116,18 +116,18 @@ export function TemplatesSettingsPanel() {
       if (editor.open && editor.mode === "edit") {
         const { error } = await supabase.from("email_templates").update(payload).eq("id", editor.template.id);
         if (error) throw error;
-        toast({ title: "Template atualizado" });
+        toast({ title: t("templates.toasts.updated") });
       } else {
         const { error } = await supabase.from("email_templates").insert(payload);
         if (error) throw error;
-        toast({ title: "Template criado" });
+        toast({ title: t("templates.toasts.created") });
       }
 
       closeEditor();
       await loadTemplates();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Falha ao salvar";
-      toast({ title: "Erro ao salvar", description: message, variant: "destructive" });
+      toast({ title: t("templates.toasts.save_error_title"), description: message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -142,19 +142,14 @@ export function TemplatesSettingsPanel() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Sem sessão autenticada");
 
-      const lang = (i18n.language || "en").startsWith("pt")
-        ? "pt"
-        : (i18n.language || "en").startsWith("es")
-          ? "es"
-          : "en";
-
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-email-template`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ language: lang, visa_type: visaType }),
+        // language is intentionally omitted: AI generation must always be in English
+        body: JSON.stringify({ visa_type: visaType }),
       });
 
       const payload = await res.json().catch(() => ({}));
@@ -166,32 +161,32 @@ export function TemplatesSettingsPanel() {
       setBody(String(payload.body ?? ""));
 
       toast({
-        title: "Template gerado",
+        title: t("templates.toasts.generated_title"),
         description:
           typeof payload.remaining_today === "number"
-            ? `Restam ${payload.remaining_today} geração(ões) hoje.`
+            ? t("templates.toasts.remaining_today", { count: payload.remaining_today })
             : undefined,
       });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Falha ao gerar";
-      toast({ title: "Erro ao gerar com IA", description: message, variant: "destructive" });
+      const message = e instanceof Error ? e.message : t("templates.toasts.generate_error_fallback");
+      toast({ title: t("templates.toasts.generate_error_title"), description: message, variant: "destructive" });
     } finally {
       setGenerating(false);
     }
   };
 
   const deleteTemplate = async (id: string) => {
-    const ok = window.confirm("Excluir este template?");
+    const ok = window.confirm(t("templates.confirm_delete"));
     if (!ok) return;
 
     try {
       const { error } = await supabase.from("email_templates").delete().eq("id", id);
       if (error) throw error;
       setTemplates((prev) => prev.filter((t) => t.id !== id));
-      toast({ title: "Template removido" });
+      toast({ title: t("templates.toasts.deleted") });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Falha ao remover";
-      toast({ title: "Erro", description: message, variant: "destructive" });
+      toast({ title: t("templates.toasts.delete_error_title"), description: message, variant: "destructive" });
     }
   };
 
@@ -200,32 +195,33 @@ export function TemplatesSettingsPanel() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div>
-            <CardTitle>Templates</CardTitle>
-            <CardDescription>Crie modelos de email para reutilizar no teste e na fila.</CardDescription>
+            <CardTitle>{t("templates.title")}</CardTitle>
+            <CardDescription>{t("templates.subtitle")}</CardDescription>
           </div>
           <Dialog open={editor.open} onOpenChange={(open) => (!open ? closeEditor() : undefined)}>
             <DialogTrigger asChild>
               <Button onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-2" />
-                Novo template
+                {t("templates.actions.new")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[640px]">
               <DialogHeader>
-                <DialogTitle>{editor.open && editor.mode === "edit" ? "Editar template" : "Novo template"}</DialogTitle>
+                <DialogTitle>
+                  {editor.open && editor.mode === "edit" ? t("templates.editor.edit_title") : t("templates.editor.new_title")}
+                </DialogTitle>
                 <DialogDescription>
-                  Use texto simples. Placeholders disponíveis:{" "}
-                  {"{{name}}"}, {"{{age}}"}, {"{{phone}}"}, {"{{contact_email}}"}, {"{{company}}"}, {"{{position}}"}, {"{{visa_type}}"}.
+                  {t("templates.editor.placeholders_help")} {"{{name}}"}, {"{{age}}"}, {"{{phone}}"}, {"{{contact_email}}"}, {"{{company}}"}, {"{{position}}"}, {"{{visa_type}}"}.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Visto</Label>
+                    <Label>{t("templates.fields.visa_type")}</Label>
                     <Select value={visaType} onValueChange={(v) => setVisaType(v as any)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
+                        <SelectValue placeholder={t("common.select")} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="H-2B">H-2B</SelectItem>
@@ -236,31 +232,31 @@ export function TemplatesSettingsPanel() {
                   <div className="flex items-end">
                     <Button type="button" variant="secondary" onClick={handleGenerateWithAI} disabled={generating} className="w-full">
                       {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Gerar com IA
+                      {t("templates.actions.generate_ai")}
                     </Button>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Nome</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Primeira abordagem" />
+                  <Label>{t("templates.fields.name")}</Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("templates.placeholders.name")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Assunto</Label>
-                  <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex: Candidatura" />
+                  <Label>{t("templates.fields.subject")}</Label>
+                  <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("templates.placeholders.subject")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Corpo</Label>
-                  <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} placeholder="Olá..." />
+                  <Label>{t("templates.fields.body")}</Label>
+                  <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} placeholder={t("templates.placeholders.body")} />
                 </div>
               </div>
 
               <DialogFooter>
                 <Button variant="outline" onClick={closeEditor} disabled={saving}>
-                  Cancelar
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={upsertTemplate} disabled={saving}>
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar
+                  {t("common.save")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -271,22 +267,22 @@ export function TemplatesSettingsPanel() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Assunto</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead>{t("templates.table.name")}</TableHead>
+              <TableHead>{t("templates.table.subject")}</TableHead>
+              <TableHead className="text-right">{t("templates.table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
-                    Carregando…
+                      {t("common.loading")}
                   </TableCell>
                 </TableRow>
               ) : templates.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
-                    Nenhum template ainda.
+                      {t("templates.empty")}
                   </TableCell>
                 </TableRow>
               ) : (

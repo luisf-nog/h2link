@@ -42,12 +42,12 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
         .trim()
         .transform((v) => (v === '' ? null : Number(v)))
         .refine((v) => v === null || (Number.isFinite(v) && v >= 14 && v <= 90), {
-          message: 'Idade inválida',
+          message: t('settings.profile.validation.invalid_age'),
         }),
       phone: z
         .string()
         .trim()
-        .regex(/^\+\d{8,15}$/, { message: 'Telefone deve estar em formato internacional (+...)' }),
+        .regex(/^\+\d{8,15}$/, { message: t('settings.profile.validation.invalid_phone') }),
       contactEmail: z.string().trim().email().max(255),
     });
 
@@ -108,19 +108,19 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
         <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
-            Perfil
+            {t('settings.tabs.profile')}
           </TabsTrigger>
           <TabsTrigger value="account" className="gap-2">
             <Shield className="h-4 w-4" />
-            Conta
+            {t('settings.tabs.account')}
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
-            SMTP
+            {t('settings.tabs.smtp')}
           </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <Mail className="h-4 w-4" />
-            Template
+            {t('settings.tabs.templates')}
           </TabsTrigger>
         </TabsList>
 
@@ -154,25 +154,39 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="age">Idade</Label>
-                    <Input id="age" name="age" type="number" min={14} max={90} defaultValue={profile?.age ?? ''} placeholder="Ex: 28" />
+                    <Label htmlFor="age">{t('settings.profile.fields.age')}</Label>
+                    <Input
+                      id="age"
+                      name="age"
+                      type="number"
+                      min={14}
+                      max={90}
+                      defaultValue={profile?.age ?? ''}
+                      placeholder={t('settings.profile.placeholders.age')}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone (internacional)</Label>
-                    <Input id="phone" name="phone" type="tel" defaultValue={profile?.phone_e164 ?? ''} placeholder="+5511999999999" />
+                    <Label htmlFor="phone">{t('settings.profile.fields.phone')}</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      defaultValue={profile?.phone_e164 ?? ''}
+                      placeholder={t('settings.profile.placeholders.phone')}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contactEmail">Email de contato</Label>
+                  <Label htmlFor="contactEmail">{t('settings.profile.fields.contact_email')}</Label>
                   <Input
                     id="contactEmail"
                     name="contactEmail"
                     type="email"
                     defaultValue={profile?.contact_email ?? profile?.email ?? ''}
-                    placeholder="contato@exemplo.com"
+                    placeholder={t('settings.profile.placeholders.contact_email')}
                   />
-                  <p className="text-xs text-muted-foreground">Este email pode ser diferente do seu login.</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.profile.contact_email_note')}</p>
                 </div>
 
                 <Button type="submit" disabled={isLoading}>
