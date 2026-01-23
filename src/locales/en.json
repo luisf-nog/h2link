@@ -99,7 +99,11 @@
         "email_rate_limit_title": "Too many reset emails",
         "email_rate_limit_desc": "Please wait a few minutes and try again.",
         "cooldown_title": "Please wait",
-        "cooldown_desc": "You recently requested a reset link. Try again in a minute."
+        "cooldown_desc": "You recently requested a reset link. Try again in a minute.",
+        "link_expired_title": "Reset link expired",
+        "link_expired_desc": "This link is no longer valid. Please request a new reset link.",
+        "link_invalid_title": "Invalid reset link",
+        "link_invalid_desc": "We could not validate this link. Please request a new reset link."
       }
     },
     "fields": {
