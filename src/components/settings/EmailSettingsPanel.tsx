@@ -18,6 +18,13 @@ import { Loader2, Mail, Save } from "lucide-react";
 
 type Provider = "gmail" | "outlook";
 
+type EmailTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+};
+
 export function EmailSettingsPanel() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -30,6 +37,9 @@ export function EmailSettingsPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
+
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("none");
 
   // test email
   const [to, setTo] = useState("");
@@ -68,6 +78,40 @@ export function EmailSettingsPanel() {
     };
   }, [canLoad, toast, user]);
 
+  useEffect(() => {
+    if (!canLoad) return;
+
+    let cancelled = false;
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("email_templates")
+        .select("id,name,subject,body")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        toast({ title: "Erro ao carregar templates", description: error.message, variant: "destructive" });
+      } else {
+        setTemplates((data as EmailTemplate[]) ?? []);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [canLoad, toast, user]);
+
+  useEffect(() => {
+    if (selectedTemplateId === "none") return;
+    const t = templates.find((x) => x.id === selectedTemplateId);
+    if (!t) return;
+    setSubject(t.subject);
+    setBody(t.body);
+  }, [selectedTemplateId, templates]);
+
   const handleSave = async () => {
     if (!user?.id) return;
     if (!email) {
@@ -77,17 +121,26 @@ export function EmailSettingsPanel() {
 
     setSaving(true);
     try {
-      const { error: upsertError } = await supabase
-        .from("smtp_credentials")
-        .upsert({ user_id: user.id, provider, email }, { onConflict: "user_id" });
-      if (upsertError) throw upsertError;
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sem sessão autenticada");
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ provider, email, password: password.trim() || undefined }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.success === false) {
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
 
       if (password.trim().length > 0) {
-        const { error: secretError } = await supabase
-          .from("smtp_credentials_secrets")
-          .upsert({ user_id: user.id, password: password.trim() }, { onConflict: "user_id" });
-        if (secretError) throw secretError;
-
         setHasPassword(true);
         setPassword("");
       }
@@ -215,6 +268,23 @@ export function EmailSettingsPanel() {
           <CardDescription>Envia um email usando as credenciais salvas.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Template (opcional)</Label>
+            <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem template</SelectItem>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Para criar/editar templates, vá em Configurações → Template.</p>
+          </div>
           <div className="space-y-2">
             <Label>Para</Label>
             <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="destino@email.com" />
