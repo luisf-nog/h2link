@@ -63,6 +63,18 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        auth: {
+          left: {
+            DEFAULT: "hsl(var(--auth-left-background))",
+            foreground: "hsl(var(--auth-left-foreground))",
+          },
+          right: {
+            DEFAULT: "hsl(var(--auth-right-background))",
+            foreground: "hsl(var(--auth-right-foreground))",
+            card: "hsl(var(--auth-right-card))",
+            border: "hsl(var(--auth-right-border))",
+          },
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
