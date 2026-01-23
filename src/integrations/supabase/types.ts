@@ -105,7 +105,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          job_id: string
+          job_id: string | null
           manual_job_id: string | null
           sent_at: string | null
           status: string
@@ -114,7 +114,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          job_id: string
+          job_id?: string | null
           manual_job_id?: string | null
           sent_at?: string | null
           status?: string
@@ -123,7 +123,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          job_id?: string
+          job_id?: string | null
           manual_job_id?: string | null
           sent_at?: string | null
           status?: string

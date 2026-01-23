@@ -266,10 +266,32 @@
     "title": "My Queue",
     "subtitle": "{{pendingCount}} pending • {{sentCount}} sent",
     "actions": {
-      "magic_paste": "Magic Paste (AI)",
+      "add_manual": "Add Company",
       "send": "Send ({{pendingCount}})"
     },
-    "magic_paste_locked": "Exclusive to Diamond plan",
+    "manual_dialog": {
+      "title": "Add Company",
+      "fields": {
+        "company": "Name *",
+        "email": "Email *",
+        "job_title": "Role",
+        "eta_number": "ETA Number",
+        "phone": "Phone"
+      },
+      "placeholders": {
+        "company": "Company name",
+        "email": "email@company.com",
+        "job_title": "e.g. Landscaper",
+        "eta_number": "e.g. H-300-12345",
+        "phone": "e.g. +1 (555) 123-4567"
+      },
+      "actions": { "add": "Add" },
+      "toasts": {
+        "add_success_title": "Added to queue!",
+        "add_success_desc": "The company was added to your queue.",
+        "add_error_title": "Add error"
+      }
+    },
     "toasts": {
       "no_template_title": "No templates found",
       "no_template_desc": "Create at least one template in Settings before sending."
