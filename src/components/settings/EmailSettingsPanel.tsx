@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Save } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type Provider = "gmail" | "outlook";
 
@@ -28,6 +29,7 @@ type EmailTemplate = {
 export function EmailSettingsPanel() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,8 +45,8 @@ export function EmailSettingsPanel() {
 
   // test email
   const [to, setTo] = useState("");
-  const [subject, setSubject] = useState("Teste de envio");
-  const [body, setBody] = useState("Olá! Este é um teste.\n\nAtenciosamente,");
+  const [subject, setSubject] = useState(() => t("smtp.test.defaults.subject"));
+  const [body, setBody] = useState(() => t("smtp.test.defaults.body"));
 
   const [testCompany, setTestCompany] = useState("");
   const [testPosition, setTestPosition] = useState("");
@@ -76,7 +78,7 @@ export function EmailSettingsPanel() {
       if (cancelled) return;
 
       if (error) {
-        toast({ title: "Erro ao carregar", description: error.message, variant: "destructive" });
+        toast({ title: t("smtp.toasts.load_error_title"), description: error.message, variant: "destructive" });
       } else if (data) {
         setProvider((data.provider as Provider) ?? "gmail");
         setEmail(data.email ?? "");
@@ -105,7 +107,7 @@ export function EmailSettingsPanel() {
       if (cancelled) return;
 
       if (error) {
-        toast({ title: "Erro ao carregar templates", description: error.message, variant: "destructive" });
+        toast({ title: t("smtp.toasts.load_templates_error_title"), description: error.message, variant: "destructive" });
       } else {
         setTemplates((data as EmailTemplate[]) ?? []);
       }
@@ -128,7 +130,7 @@ export function EmailSettingsPanel() {
   const handleSave = async () => {
     if (!user?.id) return;
     if (!email) {
-      toast({ title: "Email é obrigatório", variant: "destructive" });
+      toast({ title: t("smtp.toasts.email_required"), variant: "destructive" });
       return;
     }
 
@@ -137,7 +139,7 @@ export function EmailSettingsPanel() {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sem sessão autenticada");
+      if (!token) throw new Error(t("common.errors.no_session"));
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
@@ -158,10 +160,10 @@ export function EmailSettingsPanel() {
         setPassword("");
       }
 
-      toast({ title: "Credenciais salvas" });
+      toast({ title: t("smtp.toasts.saved") });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Falha ao salvar";
-      toast({ title: "Erro ao salvar", description: message, variant: "destructive" });
+      toast({ title: t("smtp.toasts.save_error_title"), description: message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -170,14 +172,14 @@ export function EmailSettingsPanel() {
   const handleSendTest = async () => {
     if (!user?.id) return;
     if (!to || !subject || !body) {
-      toast({ title: "Preencha To/Assunto/Corpo", variant: "destructive" });
+      toast({ title: t("smtp.toasts.test_required_fields"), variant: "destructive" });
       return;
     }
 
     if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
       toast({
-        title: "Complete seu Perfil",
-        description: "Preencha nome, idade, telefone e email de contato antes de enviar.",
+        title: t("smtp.toasts.profile_incomplete_title"),
+        description: t("smtp.toasts.profile_incomplete_desc"),
         variant: "destructive",
       });
       return;
@@ -188,7 +190,7 @@ export function EmailSettingsPanel() {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sem sessão autenticada");
+      if (!token) throw new Error(t("common.errors.no_session"));
 
       const vars: Record<string, string> = {
         name: profile.full_name ?? "",
@@ -225,10 +227,10 @@ export function EmailSettingsPanel() {
         throw new Error(payload?.error || `HTTP ${res.status}`);
       }
 
-      toast({ title: "Email enviado (teste)" });
+      toast({ title: t("smtp.toasts.test_sent") });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Falha ao enviar";
-      toast({ title: "Erro ao enviar", description: message, variant: "destructive" });
+      toast({ title: t("smtp.toasts.send_error_title"), description: message, variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -239,7 +241,7 @@ export function EmailSettingsPanel() {
       <div className="min-h-[40vh] flex items-center justify-center">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Carregando…
+          {t("common.loading")}
         </div>
       </div>
     );
@@ -251,16 +253,16 @@ export function EmailSettingsPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Configuração SMTP
+            {t("smtp.title")}
           </CardTitle>
-          <CardDescription>Use senha de app (Gmail/Outlook) — não use sua senha normal.</CardDescription>
+          <CardDescription>{t("smtp.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Provedor</Label>
+            <Label>{t("smtp.fields.provider")}</Label>
             <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
+                <SelectValue placeholder={t("common.select")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="gmail">Gmail</SelectItem>
@@ -270,47 +272,45 @@ export function EmailSettingsPanel() {
           </div>
 
           <div className="space-y-2">
-            <Label>Email SMTP</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
+            <Label>{t("smtp.fields.email")}</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("smtp.placeholders.email")} />
           </div>
 
           <div className="space-y-2">
-            <Label>Senha de Aplicativo</Label>
+            <Label>{t("smtp.fields.password")}</Label>
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={hasPassword ? "******** (já salva)" : "Cole aqui"}
+              placeholder={hasPassword ? t("smtp.placeholders.password_saved") : t("smtp.placeholders.password")}
             />
             <p className="text-xs text-muted-foreground">
-              {hasPassword
-                ? "Uma senha já está salva. Para trocar, cole uma nova e clique em Salvar."
-                : "Nenhuma senha salva ainda."}
+              {hasPassword ? t("smtp.password_note.saved") : t("smtp.password_note.empty")}
             </p>
           </div>
 
           <Button onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Save className="mr-2 h-4 w-4" />
-            Salvar
+            {t("common.save")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Teste rápido</CardTitle>
-          <CardDescription>Envia um email usando as credenciais salvas.</CardDescription>
+          <CardTitle>{t("smtp.test.title")}</CardTitle>
+          <CardDescription>{t("smtp.test.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Template (opcional)</Label>
+            <Label>{t("smtp.test.fields.template")}</Label>
             <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
+                <SelectValue placeholder={t("common.select")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sem template</SelectItem>
+                <SelectItem value="none">{t("smtp.test.template_none")}</SelectItem>
                 {templates.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
@@ -318,15 +318,15 @@ export function EmailSettingsPanel() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Para criar/editar templates, vá em Configurações → Template.</p>
+            <p className="text-xs text-muted-foreground">{t("smtp.test.template_hint")}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Visto</Label>
+              <Label>{t("smtp.test.fields.visa_type")}</Label>
               <Select value={testVisaType} onValueChange={(v) => setTestVisaType(v as any)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder={t("common.select")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="H-2B">H-2B</SelectItem>
@@ -335,31 +335,31 @@ export function EmailSettingsPanel() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Empresa (opcional)</Label>
-              <Input value={testCompany} onChange={(e) => setTestCompany(e.target.value)} placeholder="Ex: ACME Farms" />
+              <Label>{t("smtp.test.fields.company")}</Label>
+              <Input value={testCompany} onChange={(e) => setTestCompany(e.target.value)} placeholder={t("smtp.test.placeholders.company")} />
             </div>
             <div className="space-y-2">
-              <Label>Cargo (opcional)</Label>
-              <Input value={testPosition} onChange={(e) => setTestPosition(e.target.value)} placeholder="Ex: Farm Worker" />
+              <Label>{t("smtp.test.fields.position")}</Label>
+              <Input value={testPosition} onChange={(e) => setTestPosition(e.target.value)} placeholder={t("smtp.test.placeholders.position")} />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Para</Label>
-            <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="destino@email.com" />
+            <Label>{t("smtp.test.fields.to")}</Label>
+            <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t("smtp.test.placeholders.to")} />
           </div>
           <div className="space-y-2">
-            <Label>Assunto</Label>
+            <Label>{t("smtp.test.fields.subject")}</Label>
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Corpo do Email</Label>
+            <Label>{t("smtp.test.fields.body")}</Label>
             <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} />
           </div>
 
           <Button onClick={handleSendTest} disabled={sending}>
             {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar teste
+            {t("smtp.test.actions.send")}
           </Button>
         </CardContent>
       </Card>

@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 const requestSchema = z.object({
-  language: z.enum(["pt", "en", "es"]).default("en"),
   visa_type: z.enum(["H-2A", "H-2B"]).default("H-2B"),
 });
 
@@ -63,7 +62,9 @@ const handler = async (req: Request): Promise<Response> => {
     if (!parsedReq.success) {
       return json(400, { success: false, error: "Invalid request", issues: parsedReq.error.issues });
     }
-    const { language, visa_type } = parsedReq.data;
+    const { visa_type } = parsedReq.data;
+    // IMPORTANT: Email template generation must always be in English.
+    const language = "en" as const;
 
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -81,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const current = usage?.template_generations ?? 0;
     if (current >= 3) {
-      return json(429, { success: false, error: "Limite diário atingido (3 gerações/dia). Tente amanhã." });
+      return json(429, { success: false, error: "Daily limit reached (3 generations/day). Try again tomorrow." });
     }
 
     // Load profile fields needed for the template placeholders
@@ -100,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (missing.length) {
       return json(400, {
         success: false,
-        error: "Complete seu Perfil antes de gerar o template.",
+        error: "Please complete your Profile before generating a template.",
         missing,
       });
     }
@@ -161,8 +162,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!aiResp.ok) {
       const text = await aiResp.text();
-      if (aiResp.status === 429) return json(429, { success: false, error: "IA: muitas requisições. Tente novamente." });
-      if (aiResp.status === 402) return json(402, { success: false, error: "IA: limite de uso atingido. Tente mais tarde." });
+      if (aiResp.status === 429) return json(429, { success: false, error: "AI rate limited. Please try again." });
+      if (aiResp.status === 402) return json(402, { success: false, error: "AI usage limit reached. Please try later." });
       console.error("AI gateway error", aiResp.status, text);
       return json(500, { success: false, error: "AI gateway error" });
     }
@@ -174,12 +175,12 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       parsedJson = JSON.parse(content);
     } catch {
-      return json(500, { success: false, error: "IA retornou um formato inválido. Tente novamente." });
+      return json(500, { success: false, error: "AI returned invalid JSON. Please try again." });
     }
 
     const parsedOut = responseSchema.safeParse(parsedJson);
     if (!parsedOut.success) {
-      return json(500, { success: false, error: "IA retornou um conteúdo fora do esperado." });
+      return json(500, { success: false, error: "AI returned an unexpected output. Please try again." });
     }
 
     // Increment usage after successful generation
