@@ -266,10 +266,32 @@
     "title": "Mi cola",
     "subtitle": "{{pendingCount}} pendientes • {{sentCount}} enviadas",
     "actions": {
-      "magic_paste": "Magic Paste (IA)",
+      "add_manual": "Agregar empresa",
       "send": "Enviar ({{pendingCount}})"
     },
-    "magic_paste_locked": "Exclusivo del plan Diamond",
+    "manual_dialog": {
+      "title": "Agregar empresa",
+      "fields": {
+        "company": "Nombre *",
+        "email": "Email *",
+        "job_title": "Puesto",
+        "eta_number": "Número ETA",
+        "phone": "Teléfono"
+      },
+      "placeholders": {
+        "company": "Nombre de la empresa",
+        "email": "email@empresa.com",
+        "job_title": "Ej: Landscaper",
+        "eta_number": "Ej: H-300-12345",
+        "phone": "Ej: +1 (555) 123-4567"
+      },
+      "actions": { "add": "Agregar" },
+      "toasts": {
+        "add_success_title": "¡Agregado a la cola!",
+        "add_success_desc": "La empresa fue agregada a tu cola.",
+        "add_error_title": "Error al agregar"
+      }
+    },
     "toasts": {
       "no_template_title": "No se encontraron plantillas",
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar."

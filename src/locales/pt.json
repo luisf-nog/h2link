@@ -266,13 +266,31 @@
     "title": "Minha Fila",
     "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
     "actions": {
-      "magic_paste": "Magic Paste (IA)",
+      "add_manual": "Adicionar Empresa",
       "send": "Enviar ({{pendingCount}})"
     },
-    "magic_paste_locked": "Exclusivo para plano Diamond",
-    "toasts": {
-      "no_template_title": "Nenhum template encontrado",
-      "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar."
+    "manual_dialog": {
+      "title": "Adicionar Empresa",
+      "fields": {
+        "company": "Nome *",
+        "email": "Email *",
+        "job_title": "Vaga",
+        "eta_number": "ETA Number",
+        "phone": "Telefone"
+      },
+      "placeholders": {
+        "company": "Nome da empresa",
+        "email": "email@empresa.com",
+        "job_title": "Ex: Landscaper",
+        "eta_number": "Ex: H-300-12345",
+        "phone": "Ex: +1 (555) 123-4567"
+      },
+      "actions": { "add": "Adicionar" },
+      "toasts": {
+        "add_success_title": "Adicionado à fila!",
+        "add_success_desc": "A empresa foi adicionada à sua fila.",
+        "add_error_title": "Erro ao adicionar"
+      }
     },
     "stats": {
       "in_queue": "Na Fila",
@@ -295,6 +313,8 @@
     },
     "status": { "sent": "Enviado", "pending": "Pendente" },
     "toasts": {
+      "no_template_title": "Nenhum template encontrado",
+      "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar.",
       "load_error_title": "Erro ao carregar fila",
       "remove_error_title": "Erro ao remover",
       "remove_success_title": "Removido da fila",

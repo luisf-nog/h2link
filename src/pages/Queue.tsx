@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { PLANS_CONFIG, canAccessFeature } from '@/config/plans.config';
+import { PLANS_CONFIG } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,16 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Wand2, Lock, Loader2 } from 'lucide-react';
+import { Trash2, Send, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
+import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
 
 interface QueueItem {
   id: string;
@@ -36,7 +32,15 @@ interface QueueItem {
     city: string;
     state: string;
     visa_type?: string | null;
-  };
+  } | null;
+  manual_jobs: {
+    id: string;
+    company: string;
+    job_title: string;
+    email: string;
+    eta_number: string | null;
+    phone: string | null;
+  } | null;
 }
 
 type EmailTemplate = {
@@ -55,7 +59,6 @@ export default function Queue() {
   const [sending, setSending] = useState(false);
 
   const planTier = profile?.plan_tier || 'free';
-  const hasMagicPaste = canAccessFeature(planTier, 'magic_paste');
 
   useEffect(() => {
     fetchQueue();
@@ -77,6 +80,14 @@ export default function Queue() {
           city,
           state,
           visa_type
+        ),
+        manual_jobs (
+          id,
+          company,
+          job_title,
+          email,
+          eta_number,
+          phone
         )
       `)
       .order('created_at', { ascending: false });
@@ -167,9 +178,12 @@ export default function Queue() {
       const sentIds: string[] = [];
 
       for (const item of pendingItems) {
-        const job = item.public_jobs;
+        const job = item.public_jobs ?? item.manual_jobs;
+        if (!job?.email) continue;
+
         const to = job.email;
-        const visaType = (job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B') as 'H-2A' | 'H-2B';
+        const visaType =
+          item.public_jobs?.visa_type === 'H-2A' ? ('H-2A' as const) : ('H-2B' as const);
 
         const vars: Record<string, string> = {
           name: profile.full_name ?? '',
@@ -179,6 +193,9 @@ export default function Queue() {
           company: job.company ?? '',
           position: job.job_title ?? '',
           visa_type: visaType,
+          eta_number: item.manual_jobs?.eta_number ?? '',
+          company_phone: item.manual_jobs?.phone ?? '',
+          job_phone: item.manual_jobs?.phone ?? '',
         };
 
         const finalSubject = applyTemplate(tpl.subject, vars);
@@ -248,27 +265,7 @@ export default function Queue() {
         </div>
 
         <div className="flex gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                disabled={!hasMagicPaste}
-                className={!hasMagicPaste ? 'opacity-50' : ''}
-              >
-                {hasMagicPaste ? (
-                  <Wand2 className="h-4 w-4 mr-2" />
-                ) : (
-                  <Lock className="h-4 w-4 mr-2" />
-                )}
-                {t('queue.actions.magic_paste')}
-              </Button>
-            </TooltipTrigger>
-            {!hasMagicPaste && (
-              <TooltipContent>
-                <p>{t('queue.magic_paste_locked')}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+          <AddManualJobDialog onAdded={fetchQueue} />
 
           <Button
             onClick={sendEmails}
@@ -353,10 +350,10 @@ export default function Queue() {
                 queue.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
-                      {item.public_jobs.job_title}
+                      {(item.public_jobs ?? item.manual_jobs)?.job_title}
                     </TableCell>
-                    <TableCell>{item.public_jobs.company}</TableCell>
-                    <TableCell>{item.public_jobs.email}</TableCell>
+                    <TableCell>{(item.public_jobs ?? item.manual_jobs)?.company}</TableCell>
+                    <TableCell>{(item.public_jobs ?? item.manual_jobs)?.email}</TableCell>
                     <TableCell>
                       <Badge
                         variant={item.status === 'sent' ? 'default' : 'secondary'}
@@ -389,3 +386,4 @@ export default function Queue() {
     </div>
   );
 }
+
