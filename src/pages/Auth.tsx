@@ -32,6 +32,10 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
+  const [confirmFlow, setConfirmFlow] = useState<{ active: boolean; state: 'processing' | 'success' | 'error' }>(() => ({
+    active: false,
+    state: 'processing',
+  }));
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; description: string }>(() => ({
     open: false,
     title: '',
@@ -66,11 +70,13 @@ export default function Auth() {
       if (!code && !(type && tokenHash)) return;
 
       setIsLoading(true);
+      setConfirmFlow({ active: true, state: 'processing' });
       try {
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
             if (!cancelled) openError(t('auth.toasts.signin_error_title'), error.message);
+            if (!cancelled) setConfirmFlow({ active: true, state: 'error' });
             return;
           }
         } else if (type && tokenHash) {
@@ -81,12 +87,38 @@ export default function Auth() {
 
           if (error) {
             if (!cancelled) openError(t('auth.toasts.signin_error_title'), error.message);
+            if (!cancelled) setConfirmFlow({ active: true, state: 'error' });
             return;
           }
         }
 
+        // Wait a bit for the session to become available (fallback for slower auth propagation).
+        const maxAttempts = 20; // ~6s
+        for (let i = 0; i < maxAttempts; i++) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) break;
+          await new Promise((r) => setTimeout(r, 300));
+        }
+
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          if (!cancelled) {
+            setConfirmFlow({ active: true, state: 'error' });
+            openError(
+              t('auth.toasts.signin_error_title'),
+              t('auth.confirmation.session_timeout')
+            );
+          }
+          return;
+        }
+
         // Clean the URL to avoid re-processing on refresh.
         window.history.replaceState({}, document.title, window.location.pathname);
+
+        if (!cancelled) setConfirmFlow({ active: true, state: 'success' });
+
+        // Small branded confirmation moment (~2s)
+        await new Promise((r) => setTimeout(r, 2000));
         if (!cancelled) navigate('/dashboard', { replace: true });
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -247,6 +279,83 @@ export default function Auth() {
           className="h-9 w-[168px] border border-auth-right-border bg-auth-right-card text-auth-right-foreground backdrop-blur-md"
         />
       </header>
+
+      {confirmFlow.active && (
+        <main className="fixed inset-0 z-30 grid grid-cols-1 md:grid-cols-2">
+          <section className="flex items-center justify-center bg-auth-left px-6 py-16 text-auth-left-foreground md:px-14">
+            <div className="w-full max-w-md">
+              <Card className="border border-border bg-card/95 shadow-2xl backdrop-blur">
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4">
+                    <BrandLogo src={authWordmark} height={44} className="max-w-[220px]" />
+
+                    {confirmFlow.state === 'processing' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+                    ) : confirmFlow.state === 'success' ? (
+                      <CheckCircle2 className="h-6 w-6 text-primary" aria-hidden="true" />
+                    ) : (
+                      <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
+                    )}
+                  </div>
+
+                  <CardTitle className="mt-6 text-2xl">
+                    {confirmFlow.state === 'success'
+                      ? t('auth.confirmation.success_title')
+                      : confirmFlow.state === 'processing'
+                        ? t('auth.confirmation.processing_title')
+                        : t('auth.confirmation.error_title')}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    {confirmFlow.state === 'success'
+                      ? t('auth.confirmation.success_desc')
+                      : confirmFlow.state === 'processing'
+                        ? t('auth.confirmation.processing_desc')
+                        : t('auth.confirmation.error_desc')}
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent>
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-sm text-muted-foreground">
+                      {confirmFlow.state === 'success'
+                        ? t('auth.confirmation.redirecting')
+                        : t('auth.confirmation.finalizing')}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                      <span className="inline-flex h-2 w-2 rounded-full bg-primary/60" aria-hidden="true" />
+                      <span className="inline-flex h-2 w-2 rounded-full bg-primary/30" aria-hidden="true" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
+            <div className="absolute inset-0" aria-hidden="true" />
+            <div className="relative w-full max-w-lg">
+              <div className="relative overflow-hidden rounded-2xl border border-auth-right-border bg-auth-right-card p-10 shadow-2xl backdrop-blur-md">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="inline-flex items-center gap-2">
+                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                      <Zap className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium tracking-wide text-auth-right-foreground">{t('app.name')}</p>
+                      <p className="text-xs text-auth-right-foreground/70">{t('auth.confirmation.brand_tagline')}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-8 space-y-2">
+                  <h2 className="text-2xl font-semibold tracking-tight">{t('auth.confirmation.brand_title')}</h2>
+                  <p className="text-sm text-auth-right-foreground/70">{t('auth.confirmation.brand_desc')}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      )}
 
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
         {/* Left: Form */}

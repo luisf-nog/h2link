@@ -95,6 +95,20 @@
       "signup_error_title": "Erro ao criar conta",
       "signup_success_title": "Conta criada!",
       "signup_success_desc": "Você já pode fazer login."
+    },
+    "confirmation": {
+      "processing_title": "Confirmando seu e-mail…",
+      "processing_desc": "Estamos validando sua confirmação e preparando sua sessão.",
+      "success_title": "E-mail confirmado!",
+      "success_desc": "Tudo certo. Vamos te levar para o dashboard.",
+      "error_title": "Não foi possível confirmar",
+      "error_desc": "Algo deu errado ao validar sua confirmação. Tente novamente.",
+      "finalizing": "Finalizando autenticação…",
+      "redirecting": "Redirecionando…",
+      "session_timeout": "Sua confirmação foi recebida, mas a sessão demorou para iniciar. Volte e tente entrar novamente.",
+      "brand_tagline": "Confirmação segura",
+      "brand_title": "Acesso liberado",
+      "brand_desc": "Você está a um passo de voltar ao H2Link — estamos sincronizando sua sessão."
     }
   },
   "dashboard": {
