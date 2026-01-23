@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
 import authWordmark from '@/assets/h2link-logo-wordmark.png';
+import { supabase } from '@/integrations/supabase/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,53 @@ export default function Auth() {
     const label = t('common.ok');
     return label === 'common.ok' ? 'OK' : label;
   }, [t]);
+
+  // Handle email-confirmation redirect (OTP / PKCE) and send user straight to dashboard.
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const type = url.searchParams.get('type');
+      const tokenHash = url.searchParams.get('token_hash') ?? url.searchParams.get('token');
+
+      // Nothing to handle
+      if (!code && !(type && tokenHash)) return;
+
+      setIsLoading(true);
+      try {
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            if (!cancelled) openError(t('auth.toasts.signin_error_title'), error.message);
+            return;
+          }
+        } else if (type && tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({
+            type: type as any,
+            token_hash: tokenHash,
+          });
+
+          if (error) {
+            if (!cancelled) openError(t('auth.toasts.signin_error_title'), error.message);
+            return;
+          }
+        }
+
+        // Clean the URL to avoid re-processing on refresh.
+        window.history.replaceState({}, document.title, window.location.pathname);
+        if (!cancelled) navigate('/dashboard', { replace: true });
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, t]);
 
   const handleChangeLanguage = (next: SupportedLanguage) => {
     i18n.changeLanguage(next);
