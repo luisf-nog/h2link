@@ -56,6 +56,52 @@
       "email_rate_limit_title": "Muitos e-mails de confirmação",
       "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente. Limitamos temporariamente novos e-mails de confirmação para proteger a entrega."
     },
+    "recovery": {
+      "link": "Esqueci minha senha",
+      "request_title": "Redefinir senha",
+      "request_desc": "Informe seu e-mail e enviaremos um link seguro para redefinir sua senha.",
+      "sent_title": "Link enviado",
+      "sent_desc": "Se {{email}} existir no sistema, você receberá um link de redefinição em alguns minutos.",
+      "reset_title": "Criar nova senha",
+      "reset_desc": "Defina uma nova senha para sua conta.",
+      "fields": {
+        "new_password": "Nova senha",
+        "confirm_new_password": "Confirmar nova senha"
+      },
+      "actions": {
+        "send_link": "Enviar link",
+        "back_to_login": "Voltar para login",
+        "save_new_password": "Salvar nova senha",
+        "cancel": "Cancelar"
+      },
+      "toasts": {
+        "sent_title": "Verifique seu e-mail",
+        "sent_desc": "Enviamos um link de redefinição se o e-mail existir.",
+        "reset_success_title": "Senha atualizada",
+        "reset_success_desc": "Agora você pode entrar com sua nova senha."
+      },
+      "confirmation": {
+        "processing_title": "Preparando redefinição…",
+        "processing_desc": "Estamos validando seu link e iniciando uma sessão segura.",
+        "success_title": "Pronto para redefinir",
+        "success_desc": "Tudo certo. Agora você pode criar uma nova senha.",
+        "error_title": "Não foi possível iniciar",
+        "error_desc": "Algo deu errado ao preparar sua redefinição. Tente novamente.",
+        "finalizing": "Finalizando…",
+        "redirecting": "Abrindo redefinição…"
+      },
+      "errors": {
+        "invalid_email_title": "E-mail inválido",
+        "invalid_email_desc": "Informe um e-mail válido.",
+        "request_error_title": "Erro na redefinição",
+        "reset_error_title": "Erro ao atualizar senha",
+        "no_session_title": "Sessão necessária",
+        "email_rate_limit_title": "Muitos e-mails de redefinição",
+        "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente.",
+        "cooldown_title": "Aguarde",
+        "cooldown_desc": "Você solicitou um link recentemente. Tente novamente em 1 minuto."
+      }
+    },
     "fields": {
       "email": "Email",
       "password": "Senha",

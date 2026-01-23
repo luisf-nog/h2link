@@ -56,6 +56,52 @@
       "email_rate_limit_title": "Demasiados emails de confirmación",
       "email_rate_limit_desc": "Espera unos minutos y vuelve a intentarlo. Limitamos temporalmente nuevos emails de confirmación para proteger la entregabilidad."
     },
+    "recovery": {
+      "link": "¿Olvidaste tu contraseña?",
+      "request_title": "Restablecer contraseña",
+      "request_desc": "Ingresa tu email y te enviaremos un enlace seguro para restablecerla.",
+      "sent_title": "Enlace enviado",
+      "sent_desc": "Si {{email}} existe en el sistema, recibirás un enlace de restablecimiento en unos minutos.",
+      "reset_title": "Crear nueva contraseña",
+      "reset_desc": "Define una nueva contraseña para tu cuenta.",
+      "fields": {
+        "new_password": "Nueva contraseña",
+        "confirm_new_password": "Confirmar nueva contraseña"
+      },
+      "actions": {
+        "send_link": "Enviar enlace",
+        "back_to_login": "Volver al login",
+        "save_new_password": "Guardar nueva contraseña",
+        "cancel": "Cancelar"
+      },
+      "toasts": {
+        "sent_title": "Revisa tu email",
+        "sent_desc": "Enviamos un enlace de restablecimiento si el email existe.",
+        "reset_success_title": "Contraseña actualizada",
+        "reset_success_desc": "Ahora puedes iniciar sesión con tu nueva contraseña."
+      },
+      "confirmation": {
+        "processing_title": "Preparando restablecimiento…",
+        "processing_desc": "Estamos validando tu enlace e iniciando una sesión segura.",
+        "success_title": "Listo para restablecer",
+        "success_desc": "Todo listo. Ahora puedes crear una nueva contraseña.",
+        "error_title": "No se pudo iniciar",
+        "error_desc": "Algo salió mal al preparar tu restablecimiento. Inténtalo de nuevo.",
+        "finalizing": "Finalizando…",
+        "redirecting": "Abriendo restablecimiento…"
+      },
+      "errors": {
+        "invalid_email_title": "Email inválido",
+        "invalid_email_desc": "Ingresa un email válido.",
+        "request_error_title": "Error de restablecimiento",
+        "reset_error_title": "Error al actualizar contraseña",
+        "no_session_title": "Sesión requerida",
+        "email_rate_limit_title": "Demasiados emails de restablecimiento",
+        "email_rate_limit_desc": "Espera unos minutos y vuelve a intentarlo.",
+        "cooldown_title": "Espera",
+        "cooldown_desc": "Solicitaste un enlace recientemente. Inténtalo de nuevo en 1 minuto."
+      }
+    },
     "fields": {
       "email": "Email",
       "password": "Contraseña",
