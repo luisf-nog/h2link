@@ -14,6 +14,7 @@ export interface PlanConfig {
   limits: {
     daily_emails: number;
     max_queue_size: number;
+    max_templates: number;
   };
   features: {
     cloud_sending: boolean;
@@ -38,7 +39,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: 'slate',
     description: 'Para testar e conhecer',
     price: { brl: 0, usd: 0, stripe_id_brl: null, stripe_id_usd: null },
-    limits: { daily_emails: 5, max_queue_size: 10 },
+    limits: { daily_emails: 5, max_queue_size: 10, max_templates: 0 },
     features: {
       cloud_sending: false,
       mask_user_agent: false,
@@ -60,7 +61,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: 'blue',
     description: 'Para quem busca volume',
     price: { brl: 19.90, usd: 4.90, stripe_id_brl: 'price_gold_test', stripe_id_usd: 'price_gold_usd_test' },
-    limits: { daily_emails: 150, max_queue_size: 500 },
+    limits: { daily_emails: 150, max_queue_size: 500, max_templates: 1 },
     features: {
       cloud_sending: true,
       mask_user_agent: true,
@@ -82,7 +83,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: 'violet',
     description: 'A ferramenta profissional completa',
     price: { brl: 39.90, usd: 9.90, stripe_id_brl: 'price_diamond_test', stripe_id_usd: 'price_diamond_usd_test' },
-    limits: { daily_emails: 350, max_queue_size: 9999 },
+    limits: { daily_emails: 350, max_queue_size: 9999, max_templates: 5 },
     features: {
       cloud_sending: true,
       mask_user_agent: true,

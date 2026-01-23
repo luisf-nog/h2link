@@ -257,7 +257,9 @@
       "generated_title": "Template gerado",
       "remaining_today": "{{count}} gerações de IA restantes hoje",
       "generate_error_title": "Erro na geração por IA",
-      "generate_error_fallback": "Não foi possível gerar o template."
+      "generate_error_fallback": "Não foi possível gerar o template.",
+      "limit_reached_title": "Limite de templates atingido",
+      "limit_reached_desc": "Seu plano permite até {{max}} template(s). Faça upgrade para criar mais."
     }
   },
   "queue": {
@@ -268,6 +270,10 @@
       "send": "Enviar ({{pendingCount}})"
     },
     "magic_paste_locked": "Exclusivo para plano Diamond",
+    "toasts": {
+      "no_template_title": "Nenhum template encontrado",
+      "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar."
+    },
     "stats": {
       "in_queue": "Na Fila",
       "sent_today": "Enviados Hoje",

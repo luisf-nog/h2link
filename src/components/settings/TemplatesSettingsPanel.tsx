@@ -19,13 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PLANS_CONFIG } from "@/config/plans.config";
 
 type EmailTemplate = {
   id: string;
@@ -49,7 +43,6 @@ export function TemplatesSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [visaType, setVisaType] = useState<"H-2A" | "H-2B">("H-2B");
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [editor, setEditor] = useState<EditorState>({ open: false });
 
@@ -104,6 +97,21 @@ export function TemplatesSettingsPanel() {
       return;
     }
 
+    // Check plan limits
+    if (editor.open && editor.mode === "create") {
+      const { data: profile } = await supabase.from("profiles").select("plan_tier").eq("id", user.id).single();
+      const planTier = profile?.plan_tier || "free";
+      const maxTemplates = PLANS_CONFIG[planTier].limits.max_templates;
+      if (templates.length >= maxTemplates) {
+        toast({
+          title: t("templates.toasts.limit_reached_title"),
+          description: t("templates.toasts.limit_reached_desc", { max: maxTemplates }),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -149,7 +157,7 @@ export function TemplatesSettingsPanel() {
           Authorization: `Bearer ${token}`,
         },
         // language is intentionally omitted: AI generation must always be in English
-        body: JSON.stringify({ visa_type: visaType }),
+        body: JSON.stringify({}),
       });
 
       const payload = await res.json().catch(() => ({}));
@@ -216,26 +224,11 @@ export function TemplatesSettingsPanel() {
               </DialogHeader>
 
               <div className="grid gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t("templates.fields.visa_type")}</Label>
-                    <Select value={visaType} onValueChange={(v) => setVisaType(v as any)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("common.select")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="H-2B">H-2B</SelectItem>
-                        <SelectItem value="H-2A">H-2A</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">{t("templates.fields.visa_type_hint")}</p>
-                  </div>
-                  <div className="flex items-end">
-                    <Button type="button" variant="secondary" onClick={handleGenerateWithAI} disabled={generating} className="w-full">
-                      {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {t("templates.actions.generate_ai")}
-                    </Button>
-                  </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="secondary" onClick={handleGenerateWithAI} disabled={generating}>
+                    {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {t("templates.actions.generate_ai")}
+                  </Button>
                 </div>
                 <div className="space-y-2">
                   <Label>{t("templates.fields.name")}</Label>

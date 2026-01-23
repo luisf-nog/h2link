@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const requestSchema = z.object({
-  visa_type: z.enum(["H-2A", "H-2B"]).default("H-2B"),
+  // Empty schema - no parameters needed for generic template generation
 });
 
 const responseSchema = z.object({
@@ -62,9 +62,6 @@ const handler = async (req: Request): Promise<Response> => {
     if (!parsedReq.success) {
       return json(400, { success: false, error: "Invalid request", issues: parsedReq.error.issues });
     }
-    const { visa_type } = parsedReq.data;
-    // IMPORTANT: Email template generation must always be in English.
-    const language = "en" as const;
 
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -122,9 +119,9 @@ const handler = async (req: Request): Promise<Response> => {
     ];
 
     const system = [
-      `You generate email application templates for US seasonal visa jobs (${visa_type}).`,
+      `You generate email application templates for US seasonal visa jobs (H-2A/H-2B).`,
       `Output must be valid JSON ONLY with keys: subject, body.`,
-      `Write in ${languageName(language)}.`,
+      `Write in English.`,
       `The template MUST contain MUSTACHE placeholders (do not replace values): ${placeholders.join(", ")}.`,
       `Use a professional but friendly tone suitable for contacting employers about H-2A/H-2B positions.`,
       `Subject should include {{visa_type}} and {{position}} when reasonable.`,

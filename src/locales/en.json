@@ -257,7 +257,9 @@
       "generated_title": "Template generated",
       "remaining_today": "{{count}} AI generations remaining today",
       "generate_error_title": "AI generation error",
-      "generate_error_fallback": "Could not generate template."
+      "generate_error_fallback": "Could not generate template.",
+      "limit_reached_title": "Template limit reached",
+      "limit_reached_desc": "Your plan allows up to {{max}} template(s). Upgrade to create more."
     }
   },
   "queue": {
@@ -268,6 +270,10 @@
       "send": "Send ({{pendingCount}})"
     },
     "magic_paste_locked": "Exclusive to Diamond plan",
+    "toasts": {
+      "no_template_title": "No templates found",
+      "no_template_desc": "Create at least one template in Settings before sending."
+    },
     "stats": {
       "in_queue": "In Queue",
       "sent_today": "Sent Today",
