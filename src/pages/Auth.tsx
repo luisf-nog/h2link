@@ -32,6 +32,17 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
+  const [signinPanel, setSigninPanel] = useState<'signin' | 'forgot' | 'reset'>(() => 'signin');
+  const [forgotState, setForgotState] = useState<{ email: string; sent: boolean; cooldownUntilMs: number }>(() => ({
+    email: '',
+    sent: false,
+    cooldownUntilMs: 0,
+  }));
+  const [resetState, setResetState] = useState<{ password: string; confirmPassword: string }>(() => ({
+    password: '',
+    confirmPassword: '',
+  }));
+  const [confirmKind, setConfirmKind] = useState<'email' | 'recovery'>(() => 'email');
   const [confirmFlow, setConfirmFlow] = useState<{ active: boolean; state: 'processing' | 'success' | 'error' }>(() => ({
     active: false,
     state: 'processing',
@@ -60,6 +71,22 @@ export default function Auth() {
     return label === 'common.ok' ? 'OK' : label;
   }, [t]);
 
+  const forgotEmailSchema = useMemo(() => z.string().trim().email().max(255), []);
+  const resetPasswordSchema = useMemo(
+    () =>
+      z
+        .object({
+          password: z.string().min(6).max(200),
+          confirmPassword: z.string().min(6).max(200),
+        })
+        .superRefine(({ password, confirmPassword }, ctx) => {
+          if (password !== confirmPassword) {
+            ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'password_mismatch' });
+          }
+        }),
+    []
+  );
+
   // Handle email-confirmation redirect (OTP / PKCE) and send user straight to dashboard.
   useEffect(() => {
     let cancelled = false;
@@ -70,10 +97,13 @@ export default function Auth() {
       const type = url.searchParams.get('type');
       const tokenHash = url.searchParams.get('token_hash') ?? url.searchParams.get('token');
 
+      const isRecovery = type === 'recovery';
+
       // Nothing to handle
       if (!code && !(type && tokenHash)) return;
 
       setIsLoading(true);
+      setConfirmKind(isRecovery ? 'recovery' : 'email');
       setConfirmFlow({ active: true, state: 'processing' });
       try {
         if (code) {
@@ -120,6 +150,17 @@ export default function Auth() {
         window.history.replaceState({}, document.title, window.location.pathname);
 
         if (!cancelled) setConfirmFlow({ active: true, state: 'success' });
+
+        if (isRecovery) {
+          // Small branded moment, then show the reset password panel (stay on /auth).
+          await new Promise((r) => setTimeout(r, 900));
+          if (!cancelled) {
+            setTab('signin');
+            setSigninPanel('reset');
+            setConfirmFlow({ active: false, state: 'processing' });
+          }
+          return;
+        }
 
         // Small branded confirmation moment (~2s)
         await new Promise((r) => setTimeout(r, 2000));
@@ -184,6 +225,95 @@ export default function Auth() {
     } else {
       navigate('/dashboard');
     }
+
+    setIsLoading(false);
+  };
+
+  const handleRequestPasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const now = Date.now();
+    if (forgotState.cooldownUntilMs && now < forgotState.cooldownUntilMs) {
+      openError(t('auth.recovery.errors.cooldown_title'), t('auth.recovery.errors.cooldown_desc'));
+      setIsLoading(false);
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get('recoveryEmail') ?? '').trim();
+    const parsed = forgotEmailSchema.safeParse(email);
+
+    if (!parsed.success) {
+      openError(t('auth.recovery.errors.invalid_email_title'), t('auth.recovery.errors.invalid_email_desc'));
+      setIsLoading(false);
+      return;
+    }
+
+    const redirectTo = `${window.location.origin}/auth?type=recovery`;
+    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo });
+
+    if (error) {
+      const anyErr = error as any;
+      const code = String(anyErr?.code ?? '');
+      const msg = String(error.message ?? '');
+      const isRateLimit = code === 'over_email_send_rate_limit' || /rate limit/i.test(msg);
+
+      if (isRateLimit) {
+        openError(t('auth.recovery.errors.email_rate_limit_title'), t('auth.recovery.errors.email_rate_limit_desc'));
+      } else {
+        openError(t('auth.recovery.errors.request_error_title'), error.message);
+      }
+    } else {
+      setForgotState((prev) => ({
+        ...prev,
+        email: parsed.data,
+        sent: true,
+        cooldownUntilMs: Date.now() + 60_000,
+      }));
+      toast({
+        title: t('auth.recovery.toasts.sent_title'),
+        description: t('auth.recovery.toasts.sent_desc'),
+      });
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const parsed = resetPasswordSchema.safeParse(resetState);
+    if (!parsed.success) {
+      // We only surface a single friendly message (consistent w/ rest of page)
+      openError(t('auth.recovery.errors.reset_error_title'), t('auth.validation.password_mismatch'));
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      openError(t('auth.recovery.errors.no_session_title'), t('common.errors.no_session'));
+      setIsLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    if (error) {
+      openError(t('auth.recovery.errors.reset_error_title'), error.message);
+      setIsLoading(false);
+      return;
+    }
+
+    // Force a clean return-to-login flow (user preference)
+    await supabase.auth.signOut();
+    setResetState({ password: '', confirmPassword: '' });
+    setSigninPanel('signin');
+    toast({
+      title: t('auth.recovery.toasts.reset_success_title'),
+      description: t('auth.recovery.toasts.reset_success_desc'),
+    });
 
     setIsLoading(false);
   };
@@ -323,27 +453,43 @@ export default function Auth() {
                   </div>
 
                   <CardTitle className="mt-6 text-2xl">
-                    {confirmFlow.state === 'success'
-                      ? t('auth.confirmation.success_title')
-                      : confirmFlow.state === 'processing'
-                        ? t('auth.confirmation.processing_title')
-                        : t('auth.confirmation.error_title')}
+                    {confirmKind === 'recovery'
+                      ? confirmFlow.state === 'success'
+                        ? t('auth.recovery.confirmation.success_title')
+                        : confirmFlow.state === 'processing'
+                          ? t('auth.recovery.confirmation.processing_title')
+                          : t('auth.recovery.confirmation.error_title')
+                      : confirmFlow.state === 'success'
+                        ? t('auth.confirmation.success_title')
+                        : confirmFlow.state === 'processing'
+                          ? t('auth.confirmation.processing_title')
+                          : t('auth.confirmation.error_title')}
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    {confirmFlow.state === 'success'
-                      ? t('auth.confirmation.success_desc')
-                      : confirmFlow.state === 'processing'
-                        ? t('auth.confirmation.processing_desc')
-                        : t('auth.confirmation.error_desc')}
+                    {confirmKind === 'recovery'
+                      ? confirmFlow.state === 'success'
+                        ? t('auth.recovery.confirmation.success_desc')
+                        : confirmFlow.state === 'processing'
+                          ? t('auth.recovery.confirmation.processing_desc')
+                          : t('auth.recovery.confirmation.error_desc')
+                      : confirmFlow.state === 'success'
+                        ? t('auth.confirmation.success_desc')
+                        : confirmFlow.state === 'processing'
+                          ? t('auth.confirmation.processing_desc')
+                          : t('auth.confirmation.error_desc')}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent>
                   <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
                     <p className="text-sm text-muted-foreground">
-                      {confirmFlow.state === 'success'
-                        ? t('auth.confirmation.redirecting')
-                        : t('auth.confirmation.finalizing')}
+                      {confirmKind === 'recovery'
+                        ? confirmFlow.state === 'success'
+                          ? t('auth.recovery.confirmation.redirecting')
+                          : t('auth.recovery.confirmation.finalizing')
+                        : confirmFlow.state === 'success'
+                          ? t('auth.confirmation.redirecting')
+                          : t('auth.confirmation.finalizing')}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
@@ -433,40 +579,179 @@ export default function Auth() {
                           </div>
                         </div>
                       )}
-                      <form onSubmit={handleSignIn} className="space-y-5">
-                        <div className="space-y-2">
-                          <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
-                          <Input
-                            id="signin-email"
-                            name="email"
-                            type="email"
-                            placeholder={t('auth.placeholders.email')}
-                            required
-                            className="h-11 rounded-lg"
-                          />
-                        </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="signin-password">{t('auth.fields.password')}</Label>
-                          <Input
-                            id="signin-password"
-                            name="password"
-                            type="password"
-                            placeholder="••••••••"
-                            required
-                            className="h-11 rounded-lg"
-                          />
-                        </div>
+                      {signinPanel === 'signin' && (
+                        <form onSubmit={handleSignIn} className="space-y-5">
+                          <div className="space-y-2">
+                            <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
+                            <Input
+                              id="signin-email"
+                              name="email"
+                              type="email"
+                              placeholder={t('auth.placeholders.email')}
+                              defaultValue={forgotState.email}
+                              required
+                              className="h-11 rounded-lg"
+                            />
+                          </div>
 
-                        <Button
-                          type="submit"
-                          className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
-                          disabled={isLoading}
-                        >
-                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          {t('auth.actions.signin')}
-                        </Button>
-                      </form>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <Label htmlFor="signin-password">{t('auth.fields.password')}</Label>
+                              <button
+                                type="button"
+                                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                                onClick={() => {
+                                  setSigninPanel('forgot');
+                                  setForgotState((prev) => ({ ...prev, sent: false }));
+                                }}
+                              >
+                                {t('auth.recovery.link')}
+                              </button>
+                            </div>
+                            <Input
+                              id="signin-password"
+                              name="password"
+                              type="password"
+                              placeholder="••••••••"
+                              required
+                              className="h-11 rounded-lg"
+                            />
+                          </div>
+
+                          <Button
+                            type="submit"
+                            className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
+                            disabled={isLoading}
+                          >
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('auth.actions.signin')}
+                          </Button>
+                        </form>
+                      )}
+
+                      {signinPanel === 'forgot' && (
+                        <div className="space-y-5">
+                          <div>
+                            <p className="text-base font-semibold text-foreground">{t('auth.recovery.request_title')}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{t('auth.recovery.request_desc')}</p>
+                          </div>
+
+                          {forgotState.sent && (
+                            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                                  <CheckCircle2 className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-foreground">{t('auth.recovery.sent_title')}</p>
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    {t('auth.recovery.sent_desc', { email: forgotState.email })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <form onSubmit={handleRequestPasswordReset} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="recovery-email">{t('auth.fields.email')}</Label>
+                              <Input
+                                id="recovery-email"
+                                name="recoveryEmail"
+                                type="email"
+                                placeholder={t('auth.placeholders.email')}
+                                value={forgotState.email}
+                                onChange={(e) => setForgotState((prev) => ({ ...prev, email: e.target.value }))}
+                                required
+                                className="h-11 rounded-lg"
+                              />
+                            </div>
+
+                            <Button
+                              type="submit"
+                              className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
+                              disabled={isLoading}
+                            >
+                              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              {t('auth.recovery.actions.send_link')}
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-11 w-full rounded-lg"
+                              onClick={() => setSigninPanel('signin')}
+                              disabled={isLoading}
+                            >
+                              {t('auth.recovery.actions.back_to_login')}
+                            </Button>
+                          </form>
+                        </div>
+                      )}
+
+                      {signinPanel === 'reset' && (
+                        <div className="space-y-5">
+                          <div>
+                            <p className="text-base font-semibold text-foreground">{t('auth.recovery.reset_title')}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{t('auth.recovery.reset_desc')}</p>
+                          </div>
+
+                          <form onSubmit={handleUpdatePassword} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-password">{t('auth.recovery.fields.new_password')}</Label>
+                              <Input
+                                id="reset-password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={resetState.password}
+                                onChange={(e) => setResetState((prev) => ({ ...prev, password: e.target.value }))}
+                                minLength={6}
+                                required
+                                className="h-11 rounded-lg"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-confirm">{t('auth.recovery.fields.confirm_new_password')}</Label>
+                              <Input
+                                id="reset-confirm"
+                                type="password"
+                                placeholder="••••••••"
+                                value={resetState.confirmPassword}
+                                onChange={(e) => setResetState((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                                minLength={6}
+                                required
+                                className="h-11 rounded-lg"
+                              />
+                            </div>
+
+                            <Button
+                              type="submit"
+                              className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
+                              disabled={isLoading}
+                            >
+                              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              {t('auth.recovery.actions.save_new_password')}
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-11 w-full rounded-lg"
+                              onClick={async () => {
+                                setIsLoading(true);
+                                await supabase.auth.signOut();
+                                setSigninPanel('signin');
+                                setIsLoading(false);
+                              }}
+                              disabled={isLoading}
+                            >
+                              {t('auth.recovery.actions.cancel')}
+                            </Button>
+                          </form>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

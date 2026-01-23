@@ -56,6 +56,52 @@
       "email_rate_limit_title": "Too many confirmation emails",
       "email_rate_limit_desc": "Please wait a few minutes and try again. We temporarily limited new confirmation emails to protect deliverability."
     },
+    "recovery": {
+      "link": "Forgot password?",
+      "request_title": "Reset your password",
+      "request_desc": "Enter your email and we’ll send a secure reset link.",
+      "sent_title": "Reset link sent",
+      "sent_desc": "If {{email}} exists in our system, you’ll receive a reset link in a few minutes.",
+      "reset_title": "Set a new password",
+      "reset_desc": "Choose a new password for your account.",
+      "fields": {
+        "new_password": "New password",
+        "confirm_new_password": "Confirm new password"
+      },
+      "actions": {
+        "send_link": "Send reset link",
+        "back_to_login": "Back to login",
+        "save_new_password": "Save new password",
+        "cancel": "Cancel"
+      },
+      "toasts": {
+        "sent_title": "Check your email",
+        "sent_desc": "We sent a password reset link if the email exists.",
+        "reset_success_title": "Password updated",
+        "reset_success_desc": "You can now sign in with your new password."
+      },
+      "confirmation": {
+        "processing_title": "Preparing password reset…",
+        "processing_desc": "We’re validating your link and starting a secure session.",
+        "success_title": "Ready to reset",
+        "success_desc": "All set. You can now create a new password.",
+        "error_title": "Could not start reset",
+        "error_desc": "Something went wrong while preparing your reset. Please try again.",
+        "finalizing": "Finalizing…",
+        "redirecting": "Opening reset…"
+      },
+      "errors": {
+        "invalid_email_title": "Invalid email",
+        "invalid_email_desc": "Please enter a valid email address.",
+        "request_error_title": "Reset error",
+        "reset_error_title": "Password update error",
+        "no_session_title": "Session required",
+        "email_rate_limit_title": "Too many reset emails",
+        "email_rate_limit_desc": "Please wait a few minutes and try again.",
+        "cooldown_title": "Please wait",
+        "cooldown_desc": "You recently requested a reset link. Try again in a minute."
+      }
+    },
     "fields": {
       "email": "Email",
       "password": "Password",
