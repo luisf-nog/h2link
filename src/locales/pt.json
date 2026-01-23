@@ -116,6 +116,12 @@
   "settings": {
     "title": "Configurações",
     "subtitle": "Gerencie sua conta e preferências",
+    "tabs": {
+      "profile": "Perfil",
+      "account": "Conta",
+      "smtp": "SMTP",
+      "templates": "Templates"
+    },
     "profile": {
       "title": "Perfil",
       "description": "Suas informações pessoais",
@@ -223,6 +229,7 @@
     },
     "fields": {
       "visa_type": "Tipo de visto",
+      "visa_type_hint": "Usado apenas para gerar com IA. No envio, o sistema usa o visto de cada vaga.",
       "name": "Nome",
       "subject": "Assunto",
       "body": "Corpo"
