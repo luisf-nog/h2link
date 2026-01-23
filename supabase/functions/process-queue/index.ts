@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+    "authorization, x-client-info, apikey, content-type, x-cron-token",
 };
 
 type PlanTier = "free" | "gold" | "diamond";
@@ -614,11 +614,22 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const cronSecret = req.headers.get("x-cron-secret");
-    const expectedCronSecret = Deno.env.get("CRON_SECRET") ?? "";
+    const cronToken = req.headers.get("x-cron-token");
 
     // Mode A: cron calls without user session -> process multiple premium users
-    if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
+    if (cronToken) {
+      const { data: settings, error: settingsErr } = await serviceClient
+        .from("app_settings")
+        .select("cron_token")
+        .eq("id", 1)
+        .single();
+      if (settingsErr) throw settingsErr;
+
+      const expected = String((settings as { cron_token: string }).cron_token);
+      if (String(cronToken) !== expected) {
+        return json(401, { ok: false, error: "Unauthorized" });
+      }
+
       const { data: users, error: uErr } = await serviceClient
         .from("profiles")
         .select("id,plan_tier")
