@@ -272,7 +272,8 @@
     "subtitle": "{{pendingCount}} pendientes • {{sentCount}} enviadas",
     "actions": {
       "add_manual": "Agregar empresa",
-      "send": "Enviar todas ({{pendingCount}})"
+      "send": "Enviar todas ({{pendingCount}})",
+      "send_selected": "Enviar seleccionados ({{count}})"
     },
     "manual_dialog": {
       "title": "Agregar empresa",
@@ -310,6 +311,8 @@
       "title": "Empleos en cola",
       "description": "Administra los empleos a los que vas a aplicar",
       "headers": {
+        "select_all": "Seleccionar todas las pendientes",
+        "select_row": "Seleccionar elemento",
         "job_title": "Puesto",
         "company": "Empresa",
         "email": "Email",
@@ -324,6 +327,8 @@
     "toasts": {
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
+      "bg_started_selected_title": "Envío iniciado",
+      "bg_started_selected_desc": "{{count}} elementos seleccionados se están ejecutando en segundo plano. Puedes cerrar esta página.",
       "mx_invalid_title": "Email inválido (sin MX)",
       "mx_invalid_desc": "El dominio {{domain}} no tiene registros MX válidos. Para proteger tu reputación, el envío fue bloqueado.",
       "load_error_title": "Error al cargar la cola",

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2, Send, Loader2, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -61,6 +62,7 @@ export default function Queue() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendingOneId, setSendingOneId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
   const planTier = profile?.plan_tier || 'free';
 
@@ -164,6 +166,12 @@ export default function Queue() {
 
   const requirePremiumForBulk = planTier === 'free';
   const pendingItems = useMemo(() => queue.filter((q) => q.status === 'pending'), [queue]);
+  const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
+  const selectedPendingIds = useMemo(
+    () => Object.keys(selectedIds).filter((id) => selectedIds[id] && pendingIds.has(id)),
+    [selectedIds, pendingIds],
+  );
+  const allPendingSelected = pendingItems.length > 0 && selectedPendingIds.length === pendingItems.length;
 
   const ensureCanSend = async () => {
     if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
@@ -210,6 +218,17 @@ export default function Queue() {
 
     return { ok: true as const, tpl, token };
   };
+
+  useEffect(() => {
+    // Keep selection in sync: only keep ids that are still pending
+    setSelectedIds((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const [id, checked] of Object.entries(prev)) {
+        if (checked && pendingIds.has(id)) next[id] = true;
+      }
+      return next;
+    });
+  }, [pendingIds]);
 
   const sendQueueItems = async (items: QueueItem[]) => {
     const guard = await ensureCanSend();
@@ -343,6 +362,57 @@ export default function Queue() {
     }
   };
 
+  const handleSendSelected = async () => {
+    if (selectedPendingIds.length === 0) return;
+    if (requirePremiumForBulk) {
+      toast({
+        title: t('queue.toasts.bulk_premium_title'),
+        description: t('queue.toasts.bulk_premium_desc'),
+        action: (
+          <ToastAction altText={t('queue.toasts.bulk_premium_cta')} onClick={() => navigate('/plans')}>
+            {t('queue.toasts.bulk_premium_cta')}
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
+    setSending(true);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error(t('common.errors.no_session'));
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids: selectedPendingIds }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || payload?.ok === false) {
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
+
+      toast({
+        title: t('queue.toasts.bg_started_selected_title'),
+        description: t('queue.toasts.bg_started_selected_desc', { count: selectedPendingIds.length }),
+      });
+
+      setSelectedIds({});
+      fetchQueue();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleSendOne = async (item: QueueItem) => {
     if (item.status !== 'pending') return;
     setSendingOneId(item.id);
@@ -361,7 +431,7 @@ export default function Queue() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">{t('queue.title')}</h1>
           <p className="text-muted-foreground mt-1">
@@ -369,8 +439,23 @@ export default function Queue() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
+
+          {!requirePremiumForBulk && (
+            <Button
+              variant="secondary"
+              onClick={handleSendSelected}
+              disabled={selectedPendingIds.length === 0 || sending}
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {t('queue.actions.send_selected', { count: selectedPendingIds.length })}
+            </Button>
+          )}
 
           <Button
             onClick={handleSendAll}
@@ -428,6 +513,22 @@ export default function Queue() {
           <Table>
             <TableHeader>
               <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allPendingSelected}
+                      onCheckedChange={(v) => {
+                        const checked = v === true;
+                        if (!checked) {
+                          setSelectedIds({});
+                          return;
+                        }
+                        const next: Record<string, boolean> = {};
+                        for (const it of pendingItems) next[it.id] = true;
+                        setSelectedIds(next);
+                      }}
+                      aria-label={t('queue.table.headers.select_all')}
+                    />
+                  </TableHead>
                   <TableHead>{t('queue.table.headers.job_title')}</TableHead>
                   <TableHead>{t('queue.table.headers.company')}</TableHead>
                   <TableHead>{t('queue.table.headers.email')}</TableHead>
@@ -438,13 +539,13 @@ export default function Queue() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                       {t('queue.table.loading')}
                   </TableCell>
                 </TableRow>
               ) : queue.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <div className="space-y-2">
                         <p className="text-muted-foreground">{t('queue.table.empty')}</p>
                       <Button variant="outline" onClick={() => (window.location.href = '/jobs')}>
@@ -456,6 +557,17 @@ export default function Queue() {
               ) : (
                 queue.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell className="w-10">
+                      <Checkbox
+                        checked={!!selectedIds[item.id]}
+                        disabled={item.status !== 'pending' || requirePremiumForBulk}
+                        onCheckedChange={(v) => {
+                          const checked = v === true;
+                          setSelectedIds((prev) => ({ ...prev, [item.id]: checked }));
+                        }}
+                        aria-label={t('queue.table.headers.select_row')}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {(item.public_jobs ?? item.manual_jobs)?.job_title}
                     </TableCell>

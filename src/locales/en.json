@@ -272,7 +272,8 @@
     "subtitle": "{{pendingCount}} pending • {{sentCount}} sent",
     "actions": {
       "add_manual": "Add Company",
-      "send": "Send all ({{pendingCount}})"
+      "send": "Send all ({{pendingCount}})",
+      "send_selected": "Send selected ({{count}})"
     },
     "manual_dialog": {
       "title": "Add Company",
@@ -310,6 +311,8 @@
       "title": "Jobs in Queue",
       "description": "Manage the jobs you will apply to",
       "headers": {
+        "select_all": "Select all pending",
+        "select_row": "Select item",
         "job_title": "Role",
         "company": "Company",
         "email": "Email",
@@ -324,6 +327,8 @@
     "toasts": {
       "bg_started_title": "Sending started",
       "bg_started_desc": "Your sending is running in the background. You can close this page.",
+      "bg_started_selected_title": "Sending started",
+      "bg_started_selected_desc": "{{count}} selected items are running in the background. You can close this page.",
       "mx_invalid_title": "Invalid email (no MX)",
       "mx_invalid_desc": "The domain {{domain}} has no valid MX records. To protect your reputation, sending was blocked.",
       "load_error_title": "Queue load error",
