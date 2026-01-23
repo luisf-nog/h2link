@@ -478,6 +478,9 @@
     "toasts": {
       "processing_title": "Procesando...",
       "processing_desc": "Actualizando tu plan...",
+      "payment_success_title": "¡Pago aprobado!",
+      "payment_success_desc": "Tu plan se actualizó correctamente.",
+      "payment_canceled_title": "Pago cancelado",
       "error_title": "Error",
       "updated_title": "¡Plan actualizado!",
       "updated_desc": "Ahora eres {{plan}}! 🎉"

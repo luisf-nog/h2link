@@ -9,15 +9,38 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
 import { formatNumber } from '@/lib/number';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 export default function Plans() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
   const currentPlan = profile?.plan_tier || 'free';
 
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
+
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      toast({ 
+        title: t('plans.toasts.payment_success_title'),
+        description: t('plans.toasts.payment_success_desc')
+      });
+      setSearchParams({});
+      refreshProfile();
+    } else if (paymentStatus === 'canceled') {
+      toast({ 
+        title: t('plans.toasts.payment_canceled_title'),
+        variant: 'destructive'
+      });
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, toast, t, refreshProfile]);
 
   const renderPlanPrice = (planId: PlanTier) => {
     const plan = PLANS_CONFIG[planId];
@@ -30,30 +53,40 @@ export default function Plans() {
   const handleCheckout = async (planId: PlanTier) => {
     if (planId === 'free') return;
 
-    // For demo: Simulate checkout and upgrade
-    toast({
-      title: t('plans.toasts.processing_title'),
-      description: t('plans.toasts.processing_desc'),
-    });
+    setLoadingPlan(planId);
+    const plan = PLANS_CONFIG[planId];
+    const priceId = currency === 'BRL' ? plan.price.stripe_id_brl : plan.price.stripe_id_usd;
 
-    // Mock: Update plan directly for testing
-    const { error } = await supabase
-      .from('profiles')
-      .update({ plan_tier: planId })
-      .eq('id', profile?.id);
+    if (!priceId) {
+      toast({ 
+        title: t('plans.toasts.error_title'),
+        description: 'Price ID not configured',
+        variant: 'destructive'
+      });
+      setLoadingPlan(null);
+      return;
+    }
 
-    if (error) {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { priceId },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
       toast({
         title: t('plans.toasts.error_title'),
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to create checkout',
         variant: 'destructive',
       });
-    } else {
-      await refreshProfile();
-      toast({
-        title: t('plans.toasts.updated_title'),
-        description: t('plans.toasts.updated_desc', { plan: PLANS_CONFIG[planId].label }),
-      });
+    } finally {
+      setLoadingPlan(null);
     }
   };
 
@@ -165,14 +198,17 @@ export default function Plans() {
                     plan.id === 'gold' && 'bg-plan-gold hover:bg-plan-gold/90'
                   )}
                   variant={plan.id === 'free' ? 'outline' : 'default'}
-                  disabled={isCurrentPlan}
+                  disabled={isCurrentPlan || loadingPlan !== null}
                   onClick={() => handleCheckout(plan.id)}
                 >
+                  {loadingPlan === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isCurrentPlan ? (
                     <>
                       <Check className="h-4 w-4 mr-2" />
                       {t('plans.actions.current')}
                     </>
+                  ) : loadingPlan === plan.id ? (
+                    t('plans.toasts.processing_title')
                   ) : plan.id === 'free' ? (
                     t('plans.actions.start_free')
                   ) : (

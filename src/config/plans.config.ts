@@ -60,7 +60,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     label: 'Gold',
     color: 'blue',
     description: 'Para quem busca volume',
-    price: { brl: 19.90, usd: 4.90, stripe_id_brl: 'price_gold_test', stripe_id_usd: 'price_gold_usd_test' },
+    price: { brl: 19.90, usd: 4.90, stripe_id_brl: 'price_1SsohfKliiuLyRPm2t81CuGj', stripe_id_usd: 'price_1SsovLKliiuLyRPmIqN11GXC' },
     limits: { daily_emails: 150, max_queue_size: 500, max_templates: 1 },
     features: {
       cloud_sending: true,
@@ -82,7 +82,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     label: 'Diamond',
     color: 'violet',
     description: 'A ferramenta profissional completa',
-    price: { brl: 39.90, usd: 9.90, stripe_id_brl: 'price_diamond_test', stripe_id_usd: 'price_diamond_usd_test' },
+    price: { brl: 39.90, usd: 9.90, stripe_id_brl: 'price_1SsojDKliiuLyRPmyXXkAI9o', stripe_id_usd: 'price_1SsovqKliiuLyRPmqNZclNky' },
     limits: { daily_emails: 350, max_queue_size: 9999, max_templates: 5 },
     features: {
       cloud_sending: true,
