@@ -29,7 +29,8 @@ serve(async (req) => {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    // In Deno (Lovable Cloud Functions runtime), webhook signature verification must be async.
+    event = await stripe.webhooks.constructEventAsync(
       body,
       signature,
       Deno.env.get("STRIPE_WEBHOOK_SECRET") || ""
@@ -43,7 +44,20 @@ serve(async (req) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
-    const priceId = session.line_items?.data?.[0]?.price?.id;
+
+    // checkout.session.completed does NOT include line_items by default.
+    // We must retrieve the session with expanded line items.
+    let priceId: string | undefined;
+    try {
+      const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ["line_items.data.price"],
+      });
+      priceId = fullSession.line_items?.data?.[0]?.price?.id ?? undefined;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Failed to retrieve checkout session line_items:", msg);
+      return new Response("Failed to retrieve session", { status: 500 });
+    }
 
     if (!userId || !priceId) {
       console.error("Missing user_id or priceId in session metadata/line_items");
