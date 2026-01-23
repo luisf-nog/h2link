@@ -10,6 +10,13 @@ const corsHeaders = {
 
 type PlanTier = "free" | "gold" | "diamond";
 
+function getDailyEmailLimit(planTier: PlanTier): number {
+  // Keep in sync with src/config/plans.config.ts
+  if (planTier === "gold") return 150;
+  if (planTier === "diamond") return 350;
+  return 5;
+}
+
 type EmailProvider = "gmail" | "outlook";
 
 interface QueueRow {
@@ -27,6 +34,8 @@ interface ProfileRow {
   age: number | null;
   phone_e164: string | null;
   contact_email: string | null;
+  credits_used_today?: number | null;
+  credits_reset_date?: string | null;
 }
 
 interface PublicJobRow {
@@ -335,19 +344,33 @@ async function processOneUser(params: {
   serviceClient: any;
   userId: string;
   maxItems: number;
+  queueIds?: string[];
 }): Promise<{ processed: number; sent: number; failed: number }>
 {
-  const { serviceClient, userId, maxItems } = params;
+  const { serviceClient, userId, maxItems, queueIds } = params;
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
-    .select("id,plan_tier,full_name,age,phone_e164,contact_email")
+    .select("id,plan_tier,full_name,age,phone_e164,contact_email,credits_used_today,credits_reset_date")
     .eq("id", userId)
     .single();
 
   if (profileErr) throw profileErr;
   const p = profile as ProfileRow;
   if (p.plan_tier === "free") return { processed: 0, sent: 0, failed: 0 };
+
+  // Daily limit enforcement (backend)
+  const today = new Date().toISOString().slice(0, 10);
+  let creditsUsed = Number(p.credits_used_today ?? 0);
+  const resetDate = String(p.credits_reset_date ?? "");
+  if (resetDate !== today) {
+    creditsUsed = 0;
+    await (serviceClient
+      .from("profiles")
+      .update({ credits_used_today: 0, credits_reset_date: today } as any)
+      .eq("id", userId)) as any;
+  }
+  const dailyLimit = getDailyEmailLimit(p.plan_tier);
 
   // No retry: if profile is incomplete, mark first pending as failed and stop
   if (!p.full_name || p.age == null || !p.phone_e164 || !p.contact_email) {
@@ -450,13 +473,18 @@ async function processOneUser(params: {
   const smtpPassword = s.password;
   const smtpConfig = SMTP_CONFIGS[provider];
 
-  const { data: pending, error: qErr } = await serviceClient
+  let q = serviceClient
     .from("my_queue")
     .select("id,user_id,status,job_id,manual_job_id")
     .eq("user_id", userId)
     .eq("status", "pending")
-    .order("created_at", { ascending: true })
-    .limit(maxItems);
+    .order("created_at", { ascending: true });
+
+  if (queueIds && Array.isArray(queueIds) && queueIds.length > 0) {
+    q = q.in("id", queueIds);
+  }
+
+  const { data: pending, error: qErr } = await q.limit(maxItems);
   if (qErr) throw qErr;
   const rows = (pending ?? []) as QueueRow[];
 
@@ -466,6 +494,22 @@ async function processOneUser(params: {
 
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
+
+    if (creditsUsed >= dailyLimit) {
+      // Mark the current row as failed and stop processing further rows
+      await (serviceClient
+        .from("my_queue")
+        .update({
+          status: "failed",
+          processing_started_at: null,
+          last_error: `Limite diário atingido (${dailyLimit}/dia)`,
+          last_attempt_at: new Date().toISOString(),
+        } as any)
+        .eq("id", row.id)) as any;
+      processed += 1;
+      failed += 1;
+      break;
+    }
 
     // lock row
     const { data: locked, error: lockErr } = await serviceClient
@@ -582,6 +626,11 @@ async function processOneUser(params: {
         .eq("id", row.id)) as any;
 
       sent += 1;
+      creditsUsed += 1;
+      await (serviceClient
+        .from("profiles")
+        .update({ credits_used_today: creditsUsed, credits_reset_date: today } as any)
+        .eq("id", userId)) as any;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Falha ao enviar";
       await (serviceClient
@@ -681,7 +730,20 @@ const handler = async (req: Request): Promise<Response> => {
       return json(403, { ok: false, error: "Free plan must keep the browser open" });
     }
 
-    const r = await processOneUser({ serviceClient, userId, maxItems: 5 });
+    let body: any = null;
+    try {
+      body = await req.json();
+    } catch {
+      body = null;
+    }
+
+    const ids = Array.isArray(body?.ids)
+      ? (body.ids as unknown[]).filter((x) => typeof x === "string")
+      : null;
+    const safeIds = ids ? (ids as string[]).slice(0, 50) : undefined;
+    const maxItems = safeIds ? safeIds.length : 5;
+
+    const r = await processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
     return json(200, { ok: true, mode: "user", ...r });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

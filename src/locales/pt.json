@@ -272,7 +272,8 @@
     "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
     "actions": {
       "add_manual": "Adicionar Empresa",
-      "send": "Enviar todos ({{pendingCount}})"
+      "send": "Enviar todos ({{pendingCount}})",
+      "send_selected": "Enviar selecionados ({{count}})"
     },
     "manual_dialog": {
       "title": "Adicionar Empresa",
@@ -306,6 +307,8 @@
       "title": "Vagas na Fila",
       "description": "Gerencie as vagas que você vai aplicar",
       "headers": {
+        "select_all": "Selecionar todas as pendentes",
+        "select_row": "Selecionar item",
         "job_title": "Cargo",
         "company": "Empresa",
         "email": "Email",
@@ -320,6 +323,8 @@
     "toasts": {
       "bg_started_title": "Envio iniciado",
       "bg_started_desc": "Seu envio está rodando em background. Você pode fechar esta página.",
+      "bg_started_selected_title": "Envio iniciado",
+      "bg_started_selected_desc": "{{count}} itens selecionados estão rodando em background. Você pode fechar esta página.",
       "mx_invalid_title": "Email inválido (sem MX)",
       "mx_invalid_desc": "O domínio {{domain}} não possui MX válido. Para proteger sua reputação, o envio foi bloqueado.",
       "no_template_title": "Nenhum template encontrado",
