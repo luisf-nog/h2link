@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Shield, User } from 'lucide-react';
+import { Loader2, Mail, Shield, User, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { TemplatesSettingsPanel } from '@/components/settings/TemplatesSettingsPanel';
 import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 type SettingsTab = 'profile' | 'account' | 'email' | 'templates';
 
@@ -24,6 +25,10 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { t, i18n } = useTranslation();
+  const isAdmin = useIsAdmin();
+
+  const [adminTargetEmail, setAdminTargetEmail] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
 
   const initialTab = useMemo<SettingsTab>(() => defaultTab ?? 'profile', [defaultTab]);
 
@@ -234,6 +239,77 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
               </Button>
             </CardContent>
           </Card>
+
+          {isAdmin ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  Admin: Suporte de Pagamento
+                </CardTitle>
+                <CardDescription>
+                  Reprocessa o upgrade do usuário buscando o último Checkout pago e ajustando o plano no banco.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="adminTargetEmail">Email do usuário</Label>
+                  <Input
+                    id="adminTargetEmail"
+                    value={adminTargetEmail}
+                    onChange={(e) => setAdminTargetEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                </div>
+
+                <Button
+                  onClick={async () => {
+                    const email = adminTargetEmail.trim().toLowerCase();
+                    if (!email) {
+                      toast({
+                        title: 'Informe um email',
+                        description: 'Digite o email do usuário para reprocessar o upgrade.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    setAdminLoading(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke('reprocess-upgrade', {
+                        body: { email },
+                      });
+
+                      if (error) throw error;
+
+                      toast({
+                        title: 'Upgrade reprocessado',
+                        description: `Plano atualizado para ${data?.plan_tier ?? '—'} (session ${data?.checkout_session_id ?? '—'}).`,
+                      });
+
+                      // If the admin reprocessed their own account, refresh locally.
+                      await refreshProfile();
+                    } catch (e: any) {
+                      toast({
+                        title: 'Falha ao reprocessar',
+                        description: e?.message ?? 'Erro desconhecido',
+                        variant: 'destructive',
+                      });
+                    } finally {
+                      setAdminLoading(false);
+                    }
+                  }}
+                  disabled={adminLoading}
+                >
+                  {adminLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Reprocessar upgrade
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="email" className="space-y-6">
