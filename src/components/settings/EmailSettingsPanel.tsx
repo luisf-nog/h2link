@@ -16,6 +16,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 type Provider = "gmail" | "outlook";
 
@@ -287,6 +293,53 @@ export function EmailSettingsPanel() {
             <p className="text-xs text-muted-foreground">
               {hasPassword ? t("smtp.password_note.saved") : t("smtp.password_note.empty")}
             </p>
+
+            <Accordion type="single" collapsible className="pt-2">
+              <AccordionItem value="help">
+                <AccordionTrigger className="text-sm">
+                  {t("smtp.help.title")}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4 text-sm text-muted-foreground">
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">{t("smtp.help.intro_title")}</p>
+                      <p>{t("smtp.help.intro_body")}</p>
+                      <p>{t("smtp.help.security_body")}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">{t("smtp.help.gmail_title")}</p>
+                      <p className="text-xs">{t("smtp.help.gmail_warning")}</p>
+                      <ol className="list-decimal pl-5 space-y-1">
+                        {String(t("smtp.help.gmail_steps")).split("\n").map((line, idx) => (
+                          <li key={idx}>{line}</li>
+                        ))}
+                      </ol>
+                      <p className="text-xs">{t("smtp.help.gmail_tip")}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">{t("smtp.help.outlook_title")}</p>
+                      <ol className="list-decimal pl-5 space-y-1">
+                        {String(t("smtp.help.outlook_steps")).split("\n").map((line, idx) => (
+                          <li key={idx}>{line}</li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">{t("smtp.help.faq_title")}</p>
+                      <p>
+                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_safe")}</span> {t("smtp.help.faq_a_safe")}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_where")}</span> {t("smtp.help.faq_a_where")}
+                      </p>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           <Button onClick={handleSave} disabled={saving}>

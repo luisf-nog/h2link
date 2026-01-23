@@ -285,6 +285,23 @@
       "saved": "A password is already saved for your account.",
       "empty": "Tip: Use an app password (recommended) instead of your main account password."
     },
+    "help": {
+      "title": "How to generate an App Password",
+      "intro_title": "Why do I need this?",
+      "intro_body": "To connect your email safely, you should not use your normal login password.",
+      "security_body": "Google and Microsoft require an App Password: a special code that allows sending emails without exposing your main password.",
+      "gmail_title": "Gmail (Google)",
+      "gmail_warning": "Note: to see this option, you must have 2-Step Verification (2FA) enabled.",
+      "gmail_steps": "Open your Google Account (myaccount.google.com) and go to Security.\nMake sure 2-Step Verification is ON (turn it on if needed).\nUse the search bar and type: App passwords.\nOpen App passwords (Google may ask for your password again).\nIn Select app, choose Other (Custom name).\nType: H2Link.\nClick Generate and copy the 16-character password.",
+      "gmail_tip": "Tip: you can paste it without spaces.",
+      "outlook_title": "Outlook / Hotmail (Microsoft)",
+      "outlook_steps": "Open your Microsoft account (account.microsoft.com) and go to Security.\nOpen Advanced security options.\nEnable 2-step verification (2FA) if it’s off.\nFind App passwords.\nClick Create a new app password.\nCopy the generated password and paste it into the app.",
+      "faq_title": "FAQ",
+      "faq_q_safe": "Is this safe?",
+      "faq_a_safe": "Yes. This password is only for sending email. You can revoke access by deleting the app password without changing your main password.",
+      "faq_q_where": "Where do I paste it?",
+      "faq_a_where": "Here in Settings → SMTP, in the “App password” field."
+    },
     "toasts": {
       "load_error_title": "Could not load SMTP settings",
       "load_templates_error_title": "Could not load templates",
