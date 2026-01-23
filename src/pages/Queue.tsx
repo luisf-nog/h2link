@@ -42,6 +42,7 @@ interface QueueItem {
     email: string;
     city: string;
     state: string;
+    visa_type?: string | null;
   };
 }
 
@@ -96,7 +97,8 @@ export default function Queue() {
           company,
           email,
           city,
-          state
+          state,
+          visa_type
         )
       `)
       .order('created_at', { ascending: false });
@@ -132,33 +134,114 @@ export default function Queue() {
     }
   };
 
+  const applyTemplate = (text: string, vars: Record<string, string>) => {
+    let out = text;
+    for (const [k, v] of Object.entries(vars)) {
+      const re = new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, 'g');
+      out = out.replace(re, v);
+    }
+    return out;
+  };
+
   const sendEmails = async () => {
     setSending(true);
 
-    // Simulate sending for demo purposes
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const pendingItems = queue.filter((q) => q.status === 'pending');
+      if (pendingItems.length === 0) return;
 
-    toast({
-      title: t('queue.toasts.sent_title'),
-      description: String(
-        t('queue.toasts.sent_desc', {
-          count: formatNumber(queue.filter((q) => q.status === 'pending').length),
-          template: selectedTemplateId === 'none' ? '' : ' (template aplicado)',
-        } as any)
-      ),
-    });
+      if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
+        toast({
+          title: 'Complete seu Perfil',
+          description: 'Preencha nome, idade, telefone e email de contato antes de enviar.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    // Update queue status
-    const pendingIds = queue.filter((q) => q.status === 'pending').map((q) => q.id);
-    if (pendingIds.length > 0) {
-      await supabase
-        .from('my_queue')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .in('id', pendingIds);
+      const tpl = templates.find((x) => x.id === selectedTemplateId);
+      if (!tpl) {
+        toast({
+          title: 'Selecione um template',
+          description: 'Escolha um template para enviar sua fila.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sem sessão autenticada');
+
+      const sentIds: string[] = [];
+
+      for (const item of pendingItems) {
+        const job = item.public_jobs;
+        const to = job.email;
+        const visaType = (job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B') as 'H-2A' | 'H-2B';
+
+        const vars: Record<string, string> = {
+          name: profile.full_name ?? '',
+          age: String(profile.age ?? ''),
+          phone: profile.phone_e164 ?? '',
+          contact_email: profile.contact_email ?? '',
+          company: job.company ?? '',
+          position: job.job_title ?? '',
+          visa_type: visaType,
+        };
+
+        const finalSubject = applyTemplate(tpl.subject, vars);
+        const finalBody = applyTemplate(tpl.body, vars);
+
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ to, subject: finalSubject, body: finalBody }),
+        });
+
+        const text = await res.text();
+        const payload = (() => {
+          try {
+            return JSON.parse(text);
+          } catch {
+            return { error: text };
+          }
+        })();
+
+        if (!res.ok || payload?.success === false) {
+          throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
+        }
+
+        sentIds.push(item.id);
+      }
+
+      if (sentIds.length > 0) {
+        await supabase
+          .from('my_queue')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .in('id', sentIds);
+      }
+
+      toast({
+        title: t('queue.toasts.sent_title'),
+        description: String(
+          t('queue.toasts.sent_desc', {
+            count: formatNumber(sentIds.length),
+          } as any)
+        ),
+      });
+
+      fetchQueue();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Falha ao enviar';
+      toast({ title: 'Erro ao enviar', description: message, variant: 'destructive' });
+    } finally {
+      setSending(false);
     }
-
-    fetchQueue();
-    setSending(false);
   };
 
   const pendingCount = queue.filter((q) => q.status === 'pending').length;

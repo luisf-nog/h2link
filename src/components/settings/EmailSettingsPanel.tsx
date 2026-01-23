@@ -26,7 +26,7 @@ type EmailTemplate = {
 };
 
 export function EmailSettingsPanel() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -45,6 +45,19 @@ export function EmailSettingsPanel() {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("Teste de envio");
   const [body, setBody] = useState("Olá! Este é um teste.\n\nAtenciosamente,");
+
+  const [testCompany, setTestCompany] = useState("");
+  const [testPosition, setTestPosition] = useState("");
+  const [testVisaType, setTestVisaType] = useState<"H-2A" | "H-2B">("H-2B");
+
+  const applyTemplate = (text: string, vars: Record<string, string>) => {
+    let out = text;
+    for (const [k, v] of Object.entries(vars)) {
+      const re = new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, "g");
+      out = out.replace(re, v);
+    }
+    return out;
+  };
 
   const canLoad = useMemo(() => Boolean(user?.id), [user?.id]);
 
@@ -161,6 +174,15 @@ export function EmailSettingsPanel() {
       return;
     }
 
+    if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
+      toast({
+        title: "Complete seu Perfil",
+        description: "Preencha nome, idade, telefone e email de contato antes de enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSending(true);
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -168,13 +190,26 @@ export function EmailSettingsPanel() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Sem sessão autenticada");
 
+      const vars: Record<string, string> = {
+        name: profile.full_name ?? "",
+        age: String(profile.age ?? ""),
+        phone: profile.phone_e164 ?? "",
+        contact_email: profile.contact_email ?? "",
+        company: testCompany.trim(),
+        position: testPosition.trim(),
+        visa_type: testVisaType,
+      };
+
+      const finalSubject = applyTemplate(subject, vars);
+      const finalBody = applyTemplate(body, vars);
+
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ to, subject, body, provider }),
+        body: JSON.stringify({ to, subject: finalSubject, body: finalBody, provider }),
       });
 
       const text = await res.text();
@@ -285,6 +320,30 @@ export function EmailSettingsPanel() {
             </Select>
             <p className="text-xs text-muted-foreground">Para criar/editar templates, vá em Configurações → Template.</p>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Visto</Label>
+              <Select value={testVisaType} onValueChange={(v) => setTestVisaType(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="H-2B">H-2B</SelectItem>
+                  <SelectItem value="H-2A">H-2A</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Empresa (opcional)</Label>
+              <Input value={testCompany} onChange={(e) => setTestCompany(e.target.value)} placeholder="Ex: ACME Farms" />
+            </div>
+            <div className="space-y-2">
+              <Label>Cargo (opcional)</Label>
+              <Input value={testPosition} onChange={(e) => setTestPosition(e.target.value)} placeholder="Ex: Farm Worker" />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Para</Label>
             <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="destino@email.com" />
