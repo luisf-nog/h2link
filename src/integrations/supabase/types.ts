@@ -354,21 +354,27 @@ export type Database = {
           activated_at: string | null
           created_at: string
           id: string
+          referred_email: string | null
           referred_id: string
+          referred_name: string | null
           referrer_id: string
         }
         Insert: {
           activated_at?: string | null
           created_at?: string
           id?: string
+          referred_email?: string | null
           referred_id: string
+          referred_name?: string | null
           referrer_id: string
         }
         Update: {
           activated_at?: string | null
           created_at?: string
           id?: string
+          referred_email?: string | null
           referred_id?: string
+          referred_name?: string | null
           referrer_id?: string
         }
         Relationships: []

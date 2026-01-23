@@ -113,19 +113,22 @@
       "full_name": "Full name",
       "age": "Age",
       "phone": "Phone (E.164)",
-      "contact_email": "Contact email"
+      "contact_email": "Contact email",
+      "referral_code": "Referral code (optional)"
     },
     "placeholders": {
       "email": "you@email.com",
       "full_name": "Your name",
       "age": "e.g. 28",
       "phone": "+15551234567",
-      "contact_email": "you@email.com"
+      "contact_email": "you@email.com",
+      "referral_code": "EX: A1B2C3"
     },
     "validation": {
       "invalid_age": "Age must be between 14 and 90.",
       "invalid_phone": "Phone must be in international format (E.164), e.g. +15551234567.",
       "invalid_contact_email": "Please enter a valid contact email.",
+      "invalid_referral_code": "Referral code must be 6 characters (A-Z, 0-9).",
       "password_mismatch": "Passwords do not match.",
       "accept_required": "You must accept the terms to create an account."
     },
@@ -702,5 +705,21 @@
       "import_error_fallback": "Error importing jobs",
       "import_success_title": "{{count}} jobs imported successfully!"
     }
+  },
+  "referrals": {
+    "title": "Referrals",
+    "subtitle": "Bonus activates only when your friend sends their first email.",
+    "active_label": "Active referrals",
+    "bonus_label": "Your current bonus (+emails/day)",
+    "explainer": "Invite a friend. As soon as they send their first email, you both gain +5 on the daily limit.",
+    "your_code": "Your code",
+    "copy": "Copy code",
+    "copied": "Copied!",
+    "list_title": "Your referred users",
+    "list_empty": "No referrals yet.",
+    "unknown": "User",
+    "status_pending": "Pending",
+    "status_active": "Active",
+    "signup_hint": "If you have a referral code, paste it here (optional)."
   }
 }

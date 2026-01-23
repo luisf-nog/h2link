@@ -38,6 +38,7 @@ interface ProfileRow {
   credits_reset_date?: string | null;
   timezone?: string | null;
   consecutive_errors?: number | null;
+  referral_bonus_limit?: number | null;
 }
 
 function getLocalHour(params: { timeZone: string; now?: Date }): number {
@@ -377,7 +378,7 @@ async function processOneUser(params: {
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
-    .select("id,plan_tier,full_name,age,phone_e164,contact_email,credits_used_today,credits_reset_date")
+    .select("id,plan_tier,full_name,age,phone_e164,contact_email,credits_used_today,credits_reset_date,referral_bonus_limit")
     .eq("id", userId)
     .single();
 
@@ -396,7 +397,7 @@ async function processOneUser(params: {
       .update({ credits_used_today: 0, credits_reset_date: today } as any)
       .eq("id", userId)) as any;
   }
-  const dailyLimit = getDailyEmailLimit(p.plan_tier);
+  const dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
 
   // Diamond: timezone awareness (send only during daytime)
   if (p.plan_tier === "diamond") {

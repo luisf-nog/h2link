@@ -18,6 +18,11 @@ interface Profile {
   preferred_language?: string;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  referral_code?: string | null;
+  referred_by?: string | null;
+  is_referral_activated?: boolean;
+  referral_bonus_limit?: number;
+  active_referrals_count?: number;
   created_at: string;
 }
 
@@ -66,6 +71,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const tryApplyPendingReferral = async (session: Session, profileData: Profile) => {
+    const code = String(localStorage.getItem('pending_referral_code') ?? '').trim();
+    if (!code) return;
+    if (profileData.referred_by) {
+      localStorage.removeItem('pending_referral_code');
+      return;
+    }
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/apply-referral-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ code }),
+      });
+      if (res.ok) {
+        localStorage.removeItem('pending_referral_code');
+        refreshProfile().catch(() => undefined);
+      }
+    } catch {
+      // keep for later
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -78,6 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(async () => {
             const profileData = await fetchProfile(session.user.id);
             setProfile(profileData);
+            if (session && profileData) {
+              tryApplyPendingReferral(session, profileData).catch(() => undefined);
+            }
             setLoading(false);
           }, 0);
         } else {
@@ -95,6 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id).then((profileData) => {
           setProfile(profileData);
+          if (session && profileData) {
+            tryApplyPendingReferral(session, profileData).catch(() => undefined);
+          }
           setLoading(false);
         });
       } else {

@@ -113,19 +113,22 @@
       "full_name": "Nombre completo",
       "age": "Edad",
       "phone": "Teléfono (E.164)",
-      "contact_email": "Email de contacto"
+      "contact_email": "Email de contacto",
+      "referral_code": "Código de referido (opcional)"
     },
     "placeholders": {
       "email": "tu@email.com",
       "full_name": "Tu nombre",
       "age": "Ej: 28",
       "phone": "+15551234567",
-      "contact_email": "tu@email.com"
+      "contact_email": "tu@email.com",
+      "referral_code": "EJ: A1B2C3"
     },
     "validation": {
       "invalid_age": "La edad debe estar entre 14 y 90.",
       "invalid_phone": "El teléfono debe estar en formato internacional (E.164), por ejemplo +15551234567.",
       "invalid_contact_email": "Ingresa un email de contacto válido.",
+      "invalid_referral_code": "El código de referido debe tener 6 caracteres (A-Z, 0-9).",
       "password_mismatch": "Las contraseñas no coinciden.",
       "accept_required": "Debes aceptar los términos para crear una cuenta."
     },
@@ -702,5 +705,21 @@
       "import_error_fallback": "Error al importar empleos",
       "import_success_title": "¡{{count}} empleos importados con éxito!"
     }
+  },
+  "referrals": {
+    "title": "Referidos",
+    "subtitle": "El bono se activa solo cuando tu amigo envía su primer email.",
+    "active_label": "Referidos activos",
+    "bonus_label": "Tu bono actual (+emails/día)",
+    "explainer": "Invita a un amigo. En cuanto envíe su primer email, ambos ganan +5 en el límite diario.",
+    "your_code": "Tu código",
+    "copy": "Copiar código",
+    "copied": "¡Copiado!",
+    "list_title": "Tus referidos",
+    "list_empty": "Aún no tienes referidos.",
+    "unknown": "Usuario",
+    "status_pending": "Pendiente",
+    "status_active": "Activo",
+    "signup_hint": "Si tienes un código de referido, pégalo aquí (opcional)."
   }
 }
