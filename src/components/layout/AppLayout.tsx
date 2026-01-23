@@ -73,9 +73,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
             <div className="flex items-center gap-3 min-w-0">
               <div className="min-w-0">
-                <div className="text-xl md:text-2xl leading-none tracking-tight truncate font-brand">
-                  <span className="font-bold">H2</span>
-                  <span className="font-medium"> Link</span>
+                <div className="text-xl md:text-2xl leading-none truncate font-brand tracking-[-0.03em]">
+                  <span className="font-bold brand-title-mark">H2</span>
+                  <span className="font-medium tracking-[-0.02em]"> Link</span>
                 </div>
               </div>
             </div>

@@ -10,6 +10,10 @@
   :root {
     --font-brand: 'Space Grotesk';
 
+    /* Brand title effects (use theme tokens only) */
+    --brand-title-gradient: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--ring)));
+    --brand-title-shadow: drop-shadow(0 1px 0 hsl(var(--primary) / 0.20)) drop-shadow(0 10px 22px hsl(var(--ring) / 0.14));
+
     /* Core colors - Clean, professional blue */
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
@@ -126,6 +130,10 @@
     --auth-right-foreground: 210 40% 98%;
     --auth-right-card: 0 0% 100% / 0.10;
     --auth-right-border: 0 0% 100% / 0.20;
+
+    /* Brand title effects (use theme tokens only) */
+    --brand-title-gradient: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--ring)));
+    --brand-title-shadow: drop-shadow(0 1px 0 hsl(var(--primary) / 0.22)) drop-shadow(0 12px 26px hsl(var(--ring) / 0.18));
   }
 }
 
@@ -143,5 +151,14 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Header brand mark: subtle presence without breaking theme */
+  .brand-title-mark {
+    background-image: var(--brand-title-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: var(--brand-title-shadow);
   }
 }
