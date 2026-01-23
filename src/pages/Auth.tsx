@@ -249,7 +249,7 @@ export default function Auth() {
                           />
                         </div>
 
-                        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-[minmax(0,140px)_minmax(0,1fr)]">
+                        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-[minmax(0,120px)_minmax(0,1fr)]">
                           <div className="min-w-0 space-y-2">
                             <Label htmlFor="signup-age">{t('auth.fields.age')}</Label>
                             <Input
