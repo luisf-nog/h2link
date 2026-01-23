@@ -116,6 +116,12 @@
   "settings": {
     "title": "Configuración",
     "subtitle": "Administra tu cuenta y preferencias",
+    "tabs": {
+      "profile": "Perfil",
+      "account": "Cuenta",
+      "smtp": "SMTP",
+      "templates": "Plantillas"
+    },
     "profile": {
       "title": "Perfil",
       "description": "Tu información personal",
@@ -223,6 +229,7 @@
     },
     "fields": {
       "visa_type": "Tipo de visa",
+      "visa_type_hint": "Se usa solo para generar con IA. Al enviar, el sistema usa la visa de cada empleo.",
       "name": "Nombre",
       "subject": "Asunto",
       "body": "Cuerpo"

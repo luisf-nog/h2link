@@ -116,6 +116,12 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Manage your account and preferences",
+    "tabs": {
+      "profile": "Profile",
+      "account": "Account",
+      "smtp": "SMTP",
+      "templates": "Templates"
+    },
     "profile": {
       "title": "Profile",
       "description": "Your personal information",
@@ -223,6 +229,7 @@
     },
     "fields": {
       "visa_type": "Visa type",
+      "visa_type_hint": "Used only for AI generation. Sending uses each job’s visa type.",
       "name": "Name",
       "subject": "Subject",
       "body": "Body"

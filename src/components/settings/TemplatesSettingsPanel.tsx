@@ -228,6 +228,7 @@ export function TemplatesSettingsPanel() {
                         <SelectItem value="H-2A">H-2A</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">{t("templates.fields.visa_type_hint")}</p>
                   </div>
                   <div className="flex items-end">
                     <Button type="button" variant="secondary" onClick={handleGenerateWithAI} disabled={generating} className="w-full">
