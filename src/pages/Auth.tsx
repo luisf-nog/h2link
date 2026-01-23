@@ -166,18 +166,18 @@ export default function Auth() {
         open={errorDialog.open}
         onOpenChange={(open) => setErrorDialog((prev) => ({ ...prev, open }))}
       >
-        <AlertDialogContent className="border-destructive/30 bg-destructive/10">
+        <AlertDialogContent className="border-destructive/40 bg-background shadow-2xl">
           <AlertDialogHeader className="space-y-0 text-left">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/20 text-destructive">
+              <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
               </div>
 
               <div className="min-w-0">
-                <AlertDialogTitle className="text-base font-semibold text-destructive">
+                <AlertDialogTitle className="text-base font-semibold text-foreground">
                   {errorDialog.title}
                 </AlertDialogTitle>
-                <AlertDialogDescription className="mt-1 text-sm text-foreground">
+                <AlertDialogDescription className="mt-1 text-sm text-muted-foreground">
                   {errorDialog.description}
                 </AlertDialogDescription>
               </div>
