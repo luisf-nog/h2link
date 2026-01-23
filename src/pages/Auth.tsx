@@ -233,7 +233,16 @@ export default function Auth() {
     });
 
     if (error) {
-      openError(t('auth.toasts.signup_error_title'), error.message);
+      const anyErr = error as any;
+      const code = String(anyErr?.code ?? '');
+      const msg = String(error.message ?? '');
+      const isRateLimit = code === 'over_email_send_rate_limit' || /rate limit/i.test(msg);
+
+      if (isRateLimit) {
+        openError(t('auth.errors.email_rate_limit_title'), t('auth.errors.email_rate_limit_desc'));
+      } else {
+        openError(t('auth.toasts.signup_error_title'), error.message);
+      }
     } else {
       // If auto-confirm is enabled (or user already has a session), go to dashboard.
       // Otherwise show a clear confirmation-needed message.

@@ -42,7 +42,7 @@
     "settings": "Configurações"
   },
   "auth": {
-    "hero_tagline": "Aplique para vagas H-2B de forma massiva e segura",
+    "hero_tagline": "Aplique para vagas H-2A e H-2B de forma massiva e segura",
     "tabs": { "signin": "Entrar", "signup": "Criar Conta" },
     "signin": {
       "title": "Bem-vindo de volta",
@@ -50,7 +50,11 @@
     },
     "signup": {
       "title": "Crie sua conta",
-      "description": "Comece a aplicar para vagas H-2B hoje"
+      "description": "Comece a aplicar para vagas H-2A/H-2B hoje"
+    },
+    "errors": {
+      "email_rate_limit_title": "Muitos e-mails de confirmação",
+      "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente. Limitamos temporariamente novos e-mails de confirmação para proteger a entrega."
     },
     "fields": {
       "email": "Email",

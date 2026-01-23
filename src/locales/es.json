@@ -42,7 +42,7 @@
     "settings": "Configuración"
   },
   "auth": {
-    "hero_tagline": "Aplica a empleos H-2B a escala y con seguridad",
+    "hero_tagline": "Aplica a empleos H-2A y H-2B a escala y con seguridad",
     "tabs": { "signin": "Iniciar sesión", "signup": "Crear cuenta" },
     "signin": {
       "title": "Bienvenido de nuevo",
@@ -50,7 +50,11 @@
     },
     "signup": {
       "title": "Crea tu cuenta",
-      "description": "Empieza a aplicar a empleos H-2B hoy"
+      "description": "Empieza a aplicar a empleos H-2A/H-2B hoy"
+    },
+    "errors": {
+      "email_rate_limit_title": "Demasiados emails de confirmación",
+      "email_rate_limit_desc": "Espera unos minutos y vuelve a intentarlo. Limitamos temporalmente nuevos emails de confirmación para proteger la entregabilidad."
     },
     "fields": {
       "email": "Email",
