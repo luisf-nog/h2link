@@ -96,6 +96,12 @@
       "signup_success_title": "Conta criada!",
       "signup_success_desc": "Você já pode fazer login."
     },
+    "signup_notice": {
+      "title": "Conta criada — confirme seu e-mail",
+      "desc": "Enviamos um link de confirmação{{email, select,  { } other { para }}} {{email}}. Abra o e-mail e confirme para liberar o acesso.",
+      "toast_title": "Confirme seu e-mail",
+      "toast_desc": "Antes de entrar, confirme o link enviado para seu e-mail."
+    },
     "confirmation": {
       "processing_title": "Confirmando seu e-mail…",
       "processing_desc": "Estamos validando sua confirmação e preparando sua sessão.",
