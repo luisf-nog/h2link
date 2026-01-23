@@ -138,7 +138,7 @@ export function PhoneE164Input({
 
   return (
     <div className={"space-y-2 " + (className ?? "")}>
-      <div className="grid min-w-0 grid-cols-[minmax(0,92px)_minmax(0,1fr)] gap-2">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
         <Select
           value={country}
           onValueChange={(v) => {
@@ -151,8 +151,15 @@ export function PhoneE164Input({
             });
           }}
         >
-          <SelectTrigger className={"w-full min-w-0 px-2 " + (triggerClassName ?? "bg-background/30")}>
-            <SelectValue aria-label={triggerLabel}>{triggerLabel}</SelectValue>
+          <SelectTrigger
+            className={
+              "w-full min-w-0 overflow-hidden px-2 sm:w-[104px] sm:shrink-0 " +
+              (triggerClassName ?? "bg-background/30")
+            }
+          >
+            <SelectValue aria-label={triggerLabel}>
+              <span className="block truncate whitespace-nowrap">{triggerLabel}</span>
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {COUNTRIES.map((c) => (
@@ -167,7 +174,7 @@ export function PhoneE164Input({
           id={id}
           type="tel"
           inputMode="tel"
-          className={"w-full min-w-0 " + (inputClassName ?? "")}
+          className={"w-full min-w-0 flex-1 " + (inputClassName ?? "")}
           value={display}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder ?? smartPlaceholder}
