@@ -80,13 +80,18 @@ export default function ResetPassword() {
     const run = async () => {
       const url = new URL(window.location.href);
 
-      const code = url.searchParams.get('code');
-      const type = url.searchParams.get('type');
-      const tokenHash = url.searchParams.get('token_hash') ?? url.searchParams.get('token');
+      // Recovery links may arrive either via query params (?code=...) or via hash params (#access_token=...).
+      // We merge both so the flow works in all auth configurations.
+      const hashParams = new URLSearchParams((url.hash || '').replace(/^#/, ''));
+      const getParam = (key: string) => url.searchParams.get(key) ?? hashParams.get(key);
 
-      const authError = url.searchParams.get('error');
-      const authErrorCode = url.searchParams.get('error_code');
-      const authErrorDesc = url.searchParams.get('error_description');
+      const code = getParam('code');
+      const type = getParam('type');
+      const tokenHash = getParam('token_hash') ?? getParam('token');
+
+      const authError = getParam('error');
+      const authErrorCode = getParam('error_code');
+      const authErrorDesc = getParam('error_description');
 
       const isRecovery = type === 'recovery';
 
@@ -155,7 +160,8 @@ export default function ResetPassword() {
           return;
         }
 
-        window.history.replaceState({}, document.title, window.location.pathname);
+         // Clear query/hash so refresh doesn't re-process.
+         window.history.replaceState({}, document.title, window.location.pathname);
         if (!cancelled) setFlowState('ready');
       } catch (e: any) {
         if (!cancelled) {
