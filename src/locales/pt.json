@@ -486,6 +486,84 @@
     "footer": {
       "line1": "Pagamento único. Acesso vitalício.",
       "line2": "Pagamentos processados com segurança via Stripe."
+    },
+    "payment_success": {
+      "title": "Pagamento confirmado",
+      "subtitle": "Agora você tem acesso às funcionalidades do seu plano. Veja tudo o que foi desbloqueado.",
+      "your_plan": "Seu plano",
+      "refreshing": "Sincronizando seu plano…",
+      "ready": "Tudo certo — aproveite as novas funcionalidades.",
+      "free_note": "Não identificamos um plano premium ativo nesta conta. Se você acabou de pagar, aguarde alguns segundos e tente recarregar.",
+      "highlights": {
+        "daily": "Envios por dia",
+        "queue": "Tamanho da fila",
+        "templates": "Templates"
+      },
+      "whats_unlocked": "O que foi desbloqueado",
+      "whats_unlocked_desc": "Clique para ver detalhes e atalhos para usar cada recurso.",
+      "ctas": {
+        "start_now": "Começar agora",
+        "setup_templates": "Configurar templates",
+        "open_queue": "Abrir fila",
+        "open_jobs": "Abrir Hub Vagas",
+        "open_templates": "Abrir templates",
+        "go_settings": "Abrir configurações",
+        "back_plans": "Ver planos"
+      },
+      "sections": {
+        "limits": {
+          "title": "Limites do seu plano",
+          "summary": "{{daily}} envios/dia • fila {{queue}} • {{templates}} template(s)",
+          "detail_daily": "Você pode enviar até {{daily}} e-mails por dia.",
+          "detail_queue": "Sua fila suporta até {{queue}} vagas para enviar.",
+          "detail_templates": "Você pode criar até {{templates}} template(s)."
+        },
+        "sending": {
+          "title": "Envio premium",
+          "summary": "Envie com recursos premium e maior segurança operacional.",
+          "detail_1": "Envio em lote e recursos premium para acelerar sua operação.",
+          "detail_2": "Use templates para padronizar e manter consistência."
+        },
+        "dns": {
+          "title": "Verificação DNS (anti-bounce)",
+          "summary": "Bloqueia envios para domínios sem MX válido para proteger sua reputação.",
+          "detail_1": "Antes de enviar, validamos o MX do domínio do destinatário.",
+          "detail_2": "Isso reduz bounce e ajuda a manter entregabilidade."
+        },
+        "privacy": {
+          "title": "Proteção anti-spam",
+          "summary": "Camadas extras para reduzir sinais suspeitos e proteger a conta.",
+          "detail_1": "Recursos de proteção ajudam a reduzir bloqueios e quedas de entregabilidade."
+        },
+        "magic_paste": {
+          "title": "Magic Paste (IA)",
+          "summary": "Copie/cole dados e deixe o sistema completar o restante com agilidade.",
+          "detail_1": "Acelera o preenchimento e montagem de operações.",
+          "detail_2": "Ideal para rotinas repetitivas com grande volume."
+        },
+        "ai": {
+          "title": "Escritor de Email com IA",
+          "summary": "Gere templates profissionais com poucos cliques (quando disponível no seu plano).",
+          "detail_1": "Geração orientada para H-2A/H-2B com linguagem profissional.",
+          "detail_2": "Use como base e personalize para sua estratégia."
+        },
+        "support": {
+          "title": "Suporte prioritário",
+          "summary": "Atendimento preferencial para destravar sua operação mais rápido.",
+          "detail_1": "Sua solicitação entra na frente na fila de suporte."
+        },
+        "visual": {
+          "title": "Hub Vagas com detalhes premium",
+          "summary": "Mais contexto visual e benefícios para decidir rápido.",
+          "detail_1": "Acesso a informações premium e visuais na base de vagas."
+        },
+        "delay": {
+          "title": "Delay humano (anti-spam)",
+          "summary": "Padrões de envio mais naturais para proteger a reputação.",
+          "detail_1": "Intercala envios com pausas para parecer mais humano.",
+          "detail_2": "Ajuda a reduzir bloqueios temporários em provedores."
+        }
+      }
     }
   },
   "jobs": {

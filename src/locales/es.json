@@ -488,6 +488,84 @@
     "footer": {
       "line1": "Pago único. Acceso de por vida.",
       "line2": "Pagos procesados de forma segura vía Stripe."
+    },
+    "payment_success": {
+      "title": "Pago confirmado",
+      "subtitle": "Ahora tienes acceso a las funciones de tu plan. Mira todo lo que se desbloqueó.",
+      "your_plan": "Tu plan",
+      "refreshing": "Sincronizando tu plan…",
+      "ready": "Todo listo — disfruta tus nuevas funciones.",
+      "free_note": "No pudimos detectar un plan premium activo en esta cuenta. Si acabas de pagar, espera unos segundos y recarga.",
+      "highlights": {
+        "daily": "Envíos por día",
+        "queue": "Tamaño de la cola",
+        "templates": "Plantillas"
+      },
+      "whats_unlocked": "Qué se desbloqueó",
+      "whats_unlocked_desc": "Haz clic para ver detalles y atajos para usar cada función.",
+      "ctas": {
+        "start_now": "Empezar ahora",
+        "setup_templates": "Configurar plantillas",
+        "open_queue": "Abrir cola",
+        "open_jobs": "Abrir Hub de Empleos",
+        "open_templates": "Abrir plantillas",
+        "go_settings": "Abrir configuración",
+        "back_plans": "Ver planes"
+      },
+      "sections": {
+        "limits": {
+          "title": "Límites de tu plan",
+          "summary": "{{daily}} envíos/día • cola {{queue}} • {{templates}} plantilla(s)",
+          "detail_daily": "Puedes enviar hasta {{daily}} emails por día.",
+          "detail_queue": "Tu cola soporta hasta {{queue}} empleos.",
+          "detail_templates": "Puedes crear hasta {{templates}} plantilla(s)."
+        },
+        "sending": {
+          "title": "Envío premium",
+          "summary": "Envía con capacidades premium y mayor seguridad operativa.",
+          "detail_1": "Envío masivo y flujos premium para acelerar la operación.",
+          "detail_2": "Usa plantillas para estandarizar y mantener consistencia."
+        },
+        "dns": {
+          "title": "Verificación DNS (anti-bounce)",
+          "summary": "Bloquea envíos a dominios sin MX válido para proteger tu reputación.",
+          "detail_1": "Antes de enviar, validamos el MX del dominio.",
+          "detail_2": "Esto reduce bounces y ayuda a la entregabilidad."
+        },
+        "privacy": {
+          "title": "Protección anti-spam",
+          "summary": "Capas extra para reducir señales sospechosas y proteger tu cuenta.",
+          "detail_1": "Funciones de protección pueden reducir bloqueos temporales y caídas de entregabilidad."
+        },
+        "magic_paste": {
+          "title": "Magic Paste (IA)",
+          "summary": "Pega datos y deja que el sistema complete lo demás rápidamente.",
+          "detail_1": "Acelera flujos repetitivos.",
+          "detail_2": "Ideal para rutinas de alto volumen."
+        },
+        "ai": {
+          "title": "Redactor de Email con IA",
+          "summary": "Genera plantillas profesionales en pocos clics (cuando esté disponible en tu plan).",
+          "detail_1": "Generación orientada a H-2A/H-2B con tono profesional.",
+          "detail_2": "Úsalo como base y personaliza según tu estrategia."
+        },
+        "support": {
+          "title": "Soporte prioritario",
+          "summary": "Atención preferente para destrabar tu operación más rápido.",
+          "detail_1": "Tus solicitudes se priorizan en el soporte."
+        },
+        "visual": {
+          "title": "Detalles premium del Hub",
+          "summary": "Más contexto visual y beneficios para decidir más rápido.",
+          "detail_1": "Acceso a información premium y visual en el Hub de Empleos."
+        },
+        "delay": {
+          "title": "Delay humano (anti-spam)",
+          "summary": "Patrones de envío más naturales para proteger reputación.",
+          "detail_1": "Intercala envíos con pausas para parecer más humano.",
+          "detail_2": "Ayuda a reducir bloqueos temporales de proveedores."
+        }
+      }
     }
   },
   "jobs": {
