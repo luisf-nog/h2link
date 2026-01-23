@@ -54,11 +54,31 @@
     "fields": {
       "email": "Email",
       "password": "Password",
-      "full_name": "Full name"
+      "full_name": "Full name",
+      "age": "Age",
+      "phone": "Phone (E.164)",
+      "contact_email": "Contact email"
     },
     "placeholders": {
       "email": "you@email.com",
-      "full_name": "Your name"
+      "full_name": "Your name",
+      "age": "e.g. 28",
+      "phone": "+15551234567",
+      "contact_email": "you@email.com"
+    },
+    "validation": {
+      "invalid_age": "Age must be between 14 and 90.",
+      "invalid_phone": "Phone must be in international format (E.164), e.g. +15551234567.",
+      "invalid_contact_email": "Please enter a valid contact email."
+    },
+    "marketing": {
+      "q1": "How many hours do you spend searching for jobs that match your profile?",
+      "q2": "How many hours do you lose writing one email at a time?",
+      "solution_prefix": "Do all of that in",
+      "solution_emphasis": "3 clicks",
+      "solution_suffix": "with our system.",
+      "subline": "Less manual work. More applications sent.",
+      "footer": "Efficiency, corporate solidity, and modern design — from first login to last send."
     },
     "actions": {
       "signin": "Sign in",
