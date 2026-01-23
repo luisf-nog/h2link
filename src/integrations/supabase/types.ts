@@ -65,11 +65,48 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_jobs: {
+        Row: {
+          company: string
+          created_at: string
+          email: string
+          eta_number: string | null
+          id: string
+          job_title: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          email: string
+          eta_number?: string | null
+          id?: string
+          job_title: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          email?: string
+          eta_number?: string | null
+          id?: string
+          job_title?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       my_queue: {
         Row: {
           created_at: string
           id: string
           job_id: string
+          manual_job_id: string | null
           sent_at: string | null
           status: string
           user_id: string
@@ -78,6 +115,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id: string
+          manual_job_id?: string | null
           sent_at?: string | null
           status?: string
           user_id: string
@@ -86,6 +124,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string
+          manual_job_id?: string | null
           sent_at?: string | null
           status?: string
           user_id?: string
@@ -96,6 +135,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "public_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "my_queue_manual_job_id_fkey"
+            columns: ["manual_job_id"]
+            isOneToOne: false
+            referencedRelation: "manual_jobs"
             referencedColumns: ["id"]
           },
         ]
