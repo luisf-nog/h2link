@@ -232,6 +232,10 @@
       "edit_title": "Editar template",
       "placeholders_help": "Você pode usar placeholders como"
     },
+    "spam_warning": {
+      "title": "Atenção: termo sensível",
+      "desc": "Termo detectado: '{{term}}'. Isso pode aumentar a chance de cair na caixa de Spam."
+    },
     "fields": {
       "visa_type": "Tipo de visto",
       "visa_type_hint": "Usado apenas para gerar com IA. No envio, o sistema usa o visto de cada vaga.",
@@ -319,7 +323,7 @@
       "empty": "Sua fila está vazia",
       "go_jobs": "Abrir Hub Vagas"
     },
-    "status": { "sent": "Enviado", "pending": "Pendente" },
+    "status": { "sent": "Enviado", "pending": "Pendente", "processing": "Processando", "failed": "Falhou", "paused": "Pausado" },
     "toasts": {
       "bg_started_title": "Envio iniciado",
       "bg_started_desc": "Seu envio está rodando em background. Você pode fechar esta página.",

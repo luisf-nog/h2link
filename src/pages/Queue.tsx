@@ -429,6 +429,14 @@ export default function Queue() {
   const pendingCount = pendingItems.length;
   const sentCount = queue.filter((q) => q.status === 'sent').length;
 
+  const statusLabel = (status: string) => {
+    if (status === 'sent') return t('queue.status.sent');
+    if (status === 'processing') return t('queue.status.processing');
+    if (status === 'failed') return t('queue.status.failed');
+    if (status === 'paused') return t('queue.status.paused');
+    return t('queue.status.pending');
+  };
+
   return (
     <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -579,10 +587,16 @@ export default function Queue() {
                         className={
                           item.status === 'sent'
                             ? 'bg-success/10 text-success border-success/30'
-                            : ''
+                            : item.status === 'failed'
+                              ? 'bg-destructive/10 text-destructive border-destructive/30'
+                              : item.status === 'paused'
+                                ? 'bg-warning/10 text-warning border-warning/30'
+                                : item.status === 'processing'
+                                  ? 'bg-primary/10 text-primary border-primary/30'
+                                  : ''
                         }
                       >
-                        {item.status === 'sent' ? t('queue.status.sent') : t('queue.status.pending')}
+                        {statusLabel(item.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

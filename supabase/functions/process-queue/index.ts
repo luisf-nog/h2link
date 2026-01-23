@@ -36,6 +36,32 @@ interface ProfileRow {
   contact_email: string | null;
   credits_used_today?: number | null;
   credits_reset_date?: string | null;
+  timezone?: string | null;
+  consecutive_errors?: number | null;
+}
+
+function getLocalHour(params: { timeZone: string; now?: Date }): number {
+  const { timeZone, now } = params;
+  const dt = now ?? new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(dt);
+  const hourPart = parts.find((p) => p.type === "hour")?.value ?? "0";
+  const hour = Number(hourPart);
+  return Number.isFinite(hour) ? hour : 0;
+}
+
+function isCircuitBreakerError(message: string): boolean {
+  const m = message.toLowerCase();
+  // Auth / credentials
+  if (m.includes("auth") || m.includes("authentication") || m.includes("senha") || m.includes("password")) return true;
+  if (m.includes("535") || m.includes("534") || m.includes("530")) return true;
+  // Typical bounces / hard fails
+  if (m.includes("550") || m.includes("551") || m.includes("552") || m.includes("553") || m.includes("554")) return true;
+  if (m.includes("mailbox") || m.includes("recipient") || m.includes("unknown user") || m.includes("user unknown")) return true;
+  return false;
 }
 
 interface PublicJobRow {
@@ -372,6 +398,18 @@ async function processOneUser(params: {
   }
   const dailyLimit = getDailyEmailLimit(p.plan_tier);
 
+  // Diamond: timezone awareness (send only during daytime)
+  if (p.plan_tier === "diamond") {
+    const tz = String(p.timezone ?? "UTC");
+    const localHour = getLocalHour({ timeZone: tz });
+    const withinWindow = localHour >= 8 && localHour < 19;
+    if (!withinWindow) {
+      return { processed: 0, sent: 0, failed: 0 };
+    }
+  }
+
+  let consecutiveErrors = Number(p.consecutive_errors ?? 0);
+
   // No retry: if profile is incomplete, mark first pending as failed and stop
   if (!p.full_name || p.age == null || !p.phone_e164 || !p.contact_email) {
     const { data: one } = await serviceClient
@@ -494,6 +532,19 @@ async function processOneUser(params: {
 
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
+
+    // Circuit breaker: pause remaining queue if too many consecutive errors
+    if (consecutiveErrors >= 3) {
+      await (serviceClient
+        .from("my_queue")
+        .update({
+          status: "paused",
+          last_error: "Pausado por 3 erros consecutivos. Verifique SMTP e tente novamente.",
+        } as any)
+        .eq("user_id", userId)
+        .eq("status", "pending")) as any;
+      break;
+    }
 
     if (creditsUsed >= dailyLimit) {
       // Mark the current row as failed and stop processing further rows
@@ -629,8 +680,10 @@ async function processOneUser(params: {
       creditsUsed += 1;
       await (serviceClient
         .from("profiles")
-        .update({ credits_used_today: creditsUsed, credits_reset_date: today } as any)
+        .update({ credits_used_today: creditsUsed, credits_reset_date: today, consecutive_errors: 0 } as any)
         .eq("id", userId)) as any;
+
+      consecutiveErrors = 0;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Falha ao enviar";
       await (serviceClient
@@ -643,6 +696,14 @@ async function processOneUser(params: {
         } as any)
         .eq("id", row.id)) as any;
       failed += 1;
+
+      if (isCircuitBreakerError(message)) {
+        consecutiveErrors += 1;
+        await (serviceClient
+          .from("profiles")
+          .update({ consecutive_errors: consecutiveErrors } as any)
+          .eq("id", userId)) as any;
+      }
     }
 
     if (idx < rows.length - 1) {

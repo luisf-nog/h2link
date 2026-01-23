@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,15 @@ export function TemplatesSettingsPanel() {
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+
+  const spamTerms = useMemo(
+    () => ["renda extra", "ganhe dinheiro", "clique aqui", "100% garantido", "urgente", "promoção", "$$$", "grátis"],
+    [],
+  );
+  const detectedSpamTerms = useMemo(() => {
+    const text = body.toLowerCase();
+    return spamTerms.filter((term) => text.includes(term.toLowerCase()));
+  }, [body, spamTerms]);
 
   const loadTemplates = async () => {
     if (!user?.id) return;
@@ -241,6 +251,14 @@ export function TemplatesSettingsPanel() {
                 <div className="space-y-2">
                   <Label>{t("templates.fields.body")}</Label>
                   <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} placeholder={t("templates.placeholders.body")} />
+                  {detectedSpamTerms.length > 0 ? (
+                    <Alert>
+                      <AlertTitle>{t("templates.spam_warning.title")}</AlertTitle>
+                      <AlertDescription>
+                        {t("templates.spam_warning.desc", { term: detectedSpamTerms[0] })}
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                 </div>
               </div>
 

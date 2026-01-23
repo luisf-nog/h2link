@@ -179,6 +179,7 @@ export type Database = {
       profiles: {
         Row: {
           age: number | null
+          consecutive_errors: number
           contact_email: string | null
           created_at: string
           credits_reset_date: string
@@ -191,10 +192,12 @@ export type Database = {
           preferred_language: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          timezone: string
           updated_at: string
         }
         Insert: {
           age?: number | null
+          consecutive_errors?: number
           contact_email?: string | null
           created_at?: string
           credits_reset_date?: string
@@ -207,10 +210,12 @@ export type Database = {
           preferred_language?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          timezone?: string
           updated_at?: string
         }
         Update: {
           age?: number | null
+          consecutive_errors?: number
           contact_email?: string | null
           created_at?: string
           credits_reset_date?: string
@@ -223,6 +228,7 @@ export type Database = {
           preferred_language?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
