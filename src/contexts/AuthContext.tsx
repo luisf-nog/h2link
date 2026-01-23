@@ -7,6 +7,9 @@ interface Profile {
   id: string;
   email: string;
   full_name: string | null;
+  age?: number | null;
+  phone_e164?: string | null;
+  contact_email?: string | null;
   plan_tier: PlanTier;
   credits_used_today: number;
   credits_reset_date: string;

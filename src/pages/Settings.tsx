@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmailSettingsPanel } from '@/components/settings/EmailSettingsPanel';
+import { z } from 'zod';
 import { TemplatesSettingsPanel } from '@/components/settings/TemplatesSettingsPanel';
 
 type SettingsTab = 'profile' | 'account' | 'email' | 'templates';
@@ -29,11 +30,52 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const fullName = formData.get('fullName') as string;
+    const fullName = String(formData.get('fullName') ?? '');
+    const ageRaw = String(formData.get('age') ?? '').trim();
+    const phone = String(formData.get('phone') ?? '').trim();
+    const contactEmail = String(formData.get('contactEmail') ?? '').trim();
+
+    const schema = z.object({
+      fullName: z.string().trim().min(2).max(120),
+      age: z
+        .string()
+        .trim()
+        .transform((v) => (v === '' ? null : Number(v)))
+        .refine((v) => v === null || (Number.isFinite(v) && v >= 14 && v <= 90), {
+          message: 'Idade inválida',
+        }),
+      phone: z
+        .string()
+        .trim()
+        .regex(/^\+\d{8,15}$/, { message: 'Telefone deve estar em formato internacional (+...)' }),
+      contactEmail: z.string().trim().email().max(255),
+    });
+
+    const parsed = schema.safeParse({
+      fullName,
+      age: ageRaw,
+      phone,
+      contactEmail,
+    });
+
+    if (!parsed.success) {
+      toast({
+        title: t('settings.toasts.update_error_title'),
+        description: parsed.error.issues?.[0]?.message ?? 'Dados inválidos',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName })
+      .update({
+        full_name: parsed.data.fullName,
+        age: parsed.data.age,
+        phone_e164: parsed.data.phone,
+        contact_email: parsed.data.contactEmail,
+      })
       .eq('id', profile?.id);
 
     if (error) {
@@ -108,6 +150,29 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
                     defaultValue={profile?.full_name || ''}
                     placeholder={t('settings.profile.placeholders.full_name')}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="age">Idade</Label>
+                    <Input id="age" name="age" type="number" min={14} max={90} defaultValue={profile?.age ?? ''} placeholder="Ex: 28" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone (internacional)</Label>
+                    <Input id="phone" name="phone" type="tel" defaultValue={profile?.phone_e164 ?? ''} placeholder="+5511999999999" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contactEmail">Email de contato</Label>
+                  <Input
+                    id="contactEmail"
+                    name="contactEmail"
+                    type="email"
+                    defaultValue={profile?.contact_email ?? profile?.email ?? ''}
+                    placeholder="contato@exemplo.com"
+                  />
+                  <p className="text-xs text-muted-foreground">Este email pode ser diferente do seu login.</p>
                 </div>
 
                 <Button type="submit" disabled={isLoading}>

@@ -18,6 +18,14 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type EmailTemplate = {
   id: string;
@@ -36,9 +44,12 @@ type EditorState =
 export function TemplatesSettingsPanel() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { i18n } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [visaType, setVisaType] = useState<"H-2A" | "H-2B">("H-2B");
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [editor, setEditor] = useState<EditorState>({ open: false });
 
@@ -122,6 +133,53 @@ export function TemplatesSettingsPanel() {
     }
   };
 
+  const handleGenerateWithAI = async () => {
+    if (!user?.id) return;
+    setGenerating(true);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sem sessão autenticada");
+
+      const lang = (i18n.language || "en").startsWith("pt")
+        ? "pt"
+        : (i18n.language || "en").startsWith("es")
+          ? "es"
+          : "en";
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-email-template`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ language: lang, visa_type: visaType }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.success === false) {
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
+
+      setSubject(String(payload.subject ?? ""));
+      setBody(String(payload.body ?? ""));
+
+      toast({
+        title: "Template gerado",
+        description:
+          typeof payload.remaining_today === "number"
+            ? `Restam ${payload.remaining_today} geração(ões) hoje.`
+            : undefined,
+      });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Falha ao gerar";
+      toast({ title: "Erro ao gerar com IA", description: message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const deleteTemplate = async (id: string) => {
     const ok = window.confirm("Excluir este template?");
     if (!ok) return;
@@ -155,10 +213,33 @@ export function TemplatesSettingsPanel() {
             <DialogContent className="sm:max-w-[640px]">
               <DialogHeader>
                 <DialogTitle>{editor.open && editor.mode === "edit" ? "Editar template" : "Novo template"}</DialogTitle>
-                <DialogDescription>Use texto simples. Quebras de linha serão preservadas no envio.</DialogDescription>
+                <DialogDescription>
+                  Use texto simples. Placeholders disponíveis:{" "}
+                  {"{{name}}"}, {"{{age}}"}, {"{{phone}}"}, {"{{contact_email}}"}, {"{{company}}"}, {"{{position}}"}, {"{{visa_type}}"}.
+                </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Visto</Label>
+                    <Select value={visaType} onValueChange={(v) => setVisaType(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="H-2B">H-2B</SelectItem>
+                        <SelectItem value="H-2A">H-2A</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button type="button" variant="secondary" onClick={handleGenerateWithAI} disabled={generating} className="w-full">
+                      {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Gerar com IA
+                    </Button>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label>Nome</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Primeira abordagem" />
