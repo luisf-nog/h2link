@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_daily_usage: {
+        Row: {
+          template_generations: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          template_generations?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          template_generations?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body: string
@@ -81,12 +102,15 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
+          contact_email: string | null
           created_at: string
           credits_reset_date: string
           credits_used_today: number
           email: string
           full_name: string | null
           id: string
+          phone_e164: string | null
           plan_tier: Database["public"]["Enums"]["plan_tier"]
           preferred_language: string
           stripe_customer_id: string | null
@@ -94,12 +118,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          age?: number | null
+          contact_email?: string | null
           created_at?: string
           credits_reset_date?: string
           credits_used_today?: number
           email: string
           full_name?: string | null
           id: string
+          phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
           preferred_language?: string
           stripe_customer_id?: string | null
@@ -107,12 +134,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          age?: number | null
+          contact_email?: string | null
           created_at?: string
           credits_reset_date?: string
           credits_used_today?: number
           email?: string
           full_name?: string | null
           id?: string
+          phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
           preferred_language?: string
           stripe_customer_id?: string | null
