@@ -16,6 +16,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
+import authWordmark from '@/assets/h2link-logo-wordmark.png';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -160,7 +161,7 @@ export default function Auth() {
         <section className="flex items-center justify-center bg-auth-left px-6 py-16 text-auth-left-foreground md:px-14">
           <div className="w-full max-w-md">
             <div className="mb-10">
-              <BrandLogo height={56} className="max-w-[240px]" />
+              <BrandLogo src={authWordmark} height={76} className="max-w-[320px]" />
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v === 'signup' ? 'signup' : 'signin')} className="w-full">
