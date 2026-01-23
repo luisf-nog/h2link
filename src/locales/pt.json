@@ -99,7 +99,11 @@
         "email_rate_limit_title": "Muitos e-mails de redefinição",
         "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente.",
         "cooldown_title": "Aguarde",
-        "cooldown_desc": "Você solicitou um link recentemente. Tente novamente em 1 minuto."
+        "cooldown_desc": "Você solicitou um link recentemente. Tente novamente em 1 minuto.",
+        "link_expired_title": "Link expirado",
+        "link_expired_desc": "Este link não é mais válido. Solicite um novo link de redefinição.",
+        "link_invalid_title": "Link inválido",
+        "link_invalid_desc": "Não foi possível validar este link. Solicite um novo link de redefinição."
       }
     },
     "fields": {

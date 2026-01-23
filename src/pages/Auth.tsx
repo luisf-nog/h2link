@@ -96,8 +96,31 @@ export default function Auth() {
       const code = url.searchParams.get('code');
       const type = url.searchParams.get('type');
       const tokenHash = url.searchParams.get('token_hash') ?? url.searchParams.get('token');
+      const authError = url.searchParams.get('error');
+      const authErrorCode = url.searchParams.get('error_code');
+      const authErrorDesc = url.searchParams.get('error_description');
 
       const isRecovery = type === 'recovery';
+
+      // If auth provider redirected with an error (common for expired recovery links), show a friendly message.
+      if (authError) {
+        setTab('signin');
+        setSigninPanel(isRecovery ? 'forgot' : 'signin');
+
+        if (isRecovery) {
+          const isExpired = authErrorCode === 'otp_expired' || /expired/i.test(String(authErrorDesc ?? ''));
+          openError(
+            isExpired ? t('auth.recovery.errors.link_expired_title') : t('auth.recovery.errors.link_invalid_title'),
+            isExpired ? t('auth.recovery.errors.link_expired_desc') : t('auth.recovery.errors.link_invalid_desc')
+          );
+        } else {
+          openError(t('auth.toasts.signin_error_title'), String(authErrorDesc ?? authError));
+        }
+
+        // Clean the URL to avoid re-processing on refresh.
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
 
       // Nothing to handle
       if (!code && !(type && tokenHash)) return;

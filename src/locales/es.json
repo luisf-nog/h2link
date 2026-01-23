@@ -99,7 +99,11 @@
         "email_rate_limit_title": "Demasiados emails de restablecimiento",
         "email_rate_limit_desc": "Espera unos minutos y vuelve a intentarlo.",
         "cooldown_title": "Espera",
-        "cooldown_desc": "Solicitaste un enlace recientemente. Inténtalo de nuevo en 1 minuto."
+        "cooldown_desc": "Solicitaste un enlace recientemente. Inténtalo de nuevo en 1 minuto.",
+        "link_expired_title": "Enlace expirado",
+        "link_expired_desc": "Este enlace ya no es válido. Solicita un nuevo enlace de restablecimiento.",
+        "link_invalid_title": "Enlace inválido",
+        "link_invalid_desc": "No pudimos validar este enlace. Solicita un nuevo enlace de restablecimiento."
       }
     },
     "fields": {
