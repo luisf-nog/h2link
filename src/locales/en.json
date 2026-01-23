@@ -267,7 +267,7 @@
     "subtitle": "{{pendingCount}} pending • {{sentCount}} sent",
     "actions": {
       "add_manual": "Add Company",
-      "send": "Send ({{pendingCount}})"
+      "send": "Send all ({{pendingCount}})"
     },
     "manual_dialog": {
       "title": "Add Company",
@@ -321,6 +321,9 @@
       "remove_error_title": "Remove error",
       "remove_success_title": "Removed from queue",
       "remove_success_desc": "The job was removed from your queue.",
+      "bulk_premium_title": "Premium feature",
+      "bulk_premium_desc": "Bulk sending (Send all) is available only on Premium plans. Upgrade to send everything in one click.",
+      "bulk_premium_cta": "View plans",
       "sent_title": "Emails sent!",
       "sent_desc": "{{count}} applications were sent."
     }
