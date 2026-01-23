@@ -232,6 +232,10 @@
       "edit_title": "Editar plantilla",
       "placeholders_help": "Puedes usar placeholders como"
     },
+    "spam_warning": {
+      "title": "Atención: término sensible",
+      "desc": "Término detectado: '{{term}}'. Esto puede aumentar la probabilidad de caer en Spam."
+    },
     "fields": {
       "visa_type": "Tipo de visa",
       "visa_type_hint": "Se usa solo para generar con IA. Al enviar, el sistema usa la visa de cada empleo.",
@@ -323,7 +327,7 @@
       "empty": "Tu cola está vacía",
       "go_jobs": "Abrir Hub de Empleos"
     },
-    "status": { "sent": "Enviado", "pending": "Pendiente" },
+    "status": { "sent": "Enviado", "pending": "Pendiente", "processing": "Procesando", "failed": "Falló", "paused": "Pausado" },
     "toasts": {
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",

@@ -232,6 +232,10 @@
       "edit_title": "Edit template",
       "placeholders_help": "You can use placeholders like"
     },
+    "spam_warning": {
+      "title": "Warning: sensitive term",
+      "desc": "Detected term: '{{term}}'. This may increase the chance of landing in Spam."
+    },
     "fields": {
       "visa_type": "Visa type",
       "visa_type_hint": "Used only for AI generation. Sending uses each job’s visa type.",
@@ -323,7 +327,7 @@
       "empty": "Your queue is empty",
       "go_jobs": "Open Jobs Hub"
     },
-    "status": { "sent": "Sent", "pending": "Pending" },
+    "status": { "sent": "Sent", "pending": "Pending", "processing": "Processing", "failed": "Failed", "paused": "Paused" },
     "toasts": {
       "bg_started_title": "Sending started",
       "bg_started_desc": "Your sending is running in the background. You can close this page.",

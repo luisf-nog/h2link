@@ -26,6 +26,22 @@ export default function Dashboard() {
   const [topStates, setTopStates] = useState<Array<{ name: string; count: number }>>([]);
   const [bestPaidState, setBestPaidState] = useState<{ name: string; avgSalary: number } | null>(null);
 
+  useEffect(() => {
+    // Silent timezone auto-detect -> persist to profile
+    if (!profile?.id) return;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!tz || tz === profile.timezone) return;
+
+    (async () => {
+      try {
+        await supabase.from('profiles').update({ timezone: tz }).eq('id', profile.id);
+      } catch {
+        // silent best-effort
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
+
   const stats = [
     {
       title: t('dashboard.stats.sent_today'),
