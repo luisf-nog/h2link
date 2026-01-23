@@ -11,8 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmailSettingsPanel } from '@/components/settings/EmailSettingsPanel';
+import { TemplatesSettingsPanel } from '@/components/settings/TemplatesSettingsPanel';
 
-type SettingsTab = 'profile' | 'account' | 'email';
+type SettingsTab = 'profile' | 'account' | 'email' | 'templates';
 
 export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
 
@@ -62,7 +63,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
       </div>
 
       <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             Perfil
@@ -74,6 +75,10 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
             SMTP
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-2">
+            <Mail className="h-4 w-4" />
+            Template
           </TabsTrigger>
         </TabsList>
 
@@ -150,6 +155,10 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
 
         <TabsContent value="email" className="space-y-6">
           <EmailSettingsPanel />
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-6">
+          <TemplatesSettingsPanel />
         </TabsContent>
       </Tabs>
     </div>
