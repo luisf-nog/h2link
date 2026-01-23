@@ -96,6 +96,12 @@
       "signup_success_title": "¡Cuenta creada!",
       "signup_success_desc": "Ya puedes iniciar sesión."
     },
+    "signup_notice": {
+      "title": "Cuenta creada — confirma tu email",
+      "desc": "Enviamos un enlace de confirmación{{email, select,  { } other { a }}} {{email}}. Abre el email y confirma para habilitar el acceso.",
+      "toast_title": "Confirma tu email",
+      "toast_desc": "Antes de iniciar sesión, confirma el enlace que enviamos a tu email."
+    },
     "confirmation": {
       "processing_title": "Confirmando tu email…",
       "processing_desc": "Estamos validando tu confirmación y preparando tu sesión.",

@@ -96,6 +96,12 @@
       "signup_success_title": "Account created!",
       "signup_success_desc": "You can now sign in."
     },
+    "signup_notice": {
+      "title": "Account created — confirm your email",
+      "desc": "We sent a confirmation link{{email, select,  { } other { to }}} {{email}}. Open the email and confirm to unlock access.",
+      "toast_title": "Confirm your email",
+      "toast_desc": "Before signing in, confirm the link we sent to your email."
+    },
     "confirmation": {
       "processing_title": "Confirming your email…",
       "processing_desc": "We’re validating your confirmation and preparing your session.",

@@ -36,6 +36,10 @@ export default function Auth() {
     active: false,
     state: 'processing',
   }));
+  const [signupNotice, setSignupNotice] = useState<{ visible: boolean; email?: string }>(() => ({
+    visible: false,
+    email: undefined,
+  }));
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; description: string }>(() => ({
     open: false,
     title: '',
@@ -167,6 +171,7 @@ export default function Auth() {
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setSignupNotice({ visible: false, email: undefined });
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
@@ -230,11 +235,21 @@ export default function Auth() {
     if (error) {
       openError(t('auth.toasts.signup_error_title'), error.message);
     } else {
-      toast({
-        title: t('auth.toasts.signup_success_title'),
-        description: t('auth.toasts.signup_success_desc'),
-      });
-      navigate('/dashboard');
+      // If auto-confirm is enabled (or user already has a session), go to dashboard.
+      // Otherwise show a clear confirmation-needed message.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
+
+      if (sessionData.session && isConfirmed) {
+        navigate('/dashboard');
+      } else {
+        setTab('signin');
+        setSignupNotice({ visible: true, email });
+        toast({
+          title: t('auth.signup_notice.toast_title'),
+          description: t('auth.signup_notice.toast_desc'),
+        });
+      }
     }
 
     setIsLoading(false);
@@ -392,6 +407,23 @@ export default function Auth() {
                       <CardDescription className="text-sm text-muted-foreground" />
                     </CardHeader>
                     <CardContent className="px-0">
+                      {signupNotice.visible && (
+                        <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                              <CheckCircle2 className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-foreground">
+                                {t('auth.signup_notice.title')}
+                              </p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {t('auth.signup_notice.desc', { email: signupNotice.email ?? '' })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <form onSubmit={handleSignIn} className="space-y-5">
                         <div className="space-y-2">
                           <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
