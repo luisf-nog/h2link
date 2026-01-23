@@ -54,11 +54,31 @@
     "fields": {
       "email": "Email",
       "password": "Senha",
-      "full_name": "Nome Completo"
+      "full_name": "Nome Completo",
+      "age": "Idade",
+      "phone": "Telefone (E.164)",
+      "contact_email": "Email de contato"
     },
     "placeholders": {
       "email": "seu@email.com",
-      "full_name": "Seu nome"
+      "full_name": "Seu nome",
+      "age": "Ex: 28",
+      "phone": "+5511999999999",
+      "contact_email": "seu@email.com"
+    },
+    "validation": {
+      "invalid_age": "A idade deve estar entre 14 e 90.",
+      "invalid_phone": "O telefone deve estar no formato internacional (E.164), por exemplo +5511999999999.",
+      "invalid_contact_email": "Informe um email de contato válido."
+    },
+    "marketing": {
+      "q1": "Quantas horas você gasta procurando por vagas no seu perfil?",
+      "q2": "Quantas horas você perde montando e-mail por e-mail?",
+      "solution_prefix": "Faça tudo isso em",
+      "solution_emphasis": "3 cliques",
+      "solution_suffix": "em nosso sistema.",
+      "subline": "Menos esforço manual. Mais aplicações enviadas.",
+      "footer": "Eficiência, solidez corporativa e modernidade — do primeiro login ao último envio."
     },
     "actions": {
       "signin": "Entrar",

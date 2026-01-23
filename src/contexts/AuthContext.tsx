@@ -27,7 +27,12 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    profileData?: { age?: number | null; phone_e164?: string | null; contact_email?: string | null }
+  ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -110,8 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    profileData?: { age?: number | null; phone_e164?: string | null; contact_email?: string | null }
+  ) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -121,6 +131,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
+
+    if (!error && profileData) {
+      // If we have an active session (auto-confirm enabled), update profile immediately.
+      const sessionToUse = data.session ?? (await supabase.auth.getSession()).data.session;
+      const userId = data.user?.id ?? sessionToUse?.user?.id;
+
+      if (sessionToUse && userId) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            age: typeof profileData.age === "number" ? profileData.age : null,
+            phone_e164: profileData.phone_e164?.trim() ? profileData.phone_e164.trim() : null,
+            contact_email: profileData.contact_email?.trim() ? profileData.contact_email.trim() : null,
+          })
+          .eq("id", userId);
+
+        if (!profileError) {
+          // keep local profile in sync
+          refreshProfile().catch(() => undefined);
+        }
+      }
+    }
+
     return { error };
   };
 
