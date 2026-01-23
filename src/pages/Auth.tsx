@@ -269,10 +269,10 @@ export default function Auth() {
                             <PhoneE164Input
                               id="signup-phone"
                               name="phone"
+                              defaultCountry="BR"
                               required
                               // placeholder comes from PhoneE164Input (smart by country)
                               invalidHint={t('auth.validation.invalid_phone')}
-                              triggerClassName="h-11 rounded-lg"
                               inputClassName="h-11 rounded-lg"
                             />
                           </div>
