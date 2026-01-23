@@ -11,6 +11,8 @@ import { CheckCircle2, Loader2, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { z } from 'zod';
+import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +34,7 @@ export default function Auth() {
       .string()
       .trim()
       .min(1)
-      .regex(/^\+\d{7,15}$/, { message: 'invalid_phone' }),
+      .refine((v) => Boolean(parsePhoneNumberFromString(v)?.isValid()), { message: 'invalid_phone' }),
     contactEmail: z.string().trim().email().max(255),
   });
 
@@ -247,13 +249,12 @@ export default function Auth() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="signup-phone">{t('auth.fields.phone')}</Label>
-                          <Input
+                          <PhoneE164Input
                             id="signup-phone"
                             name="phone"
-                            type="tel"
-                            inputMode="tel"
-                            placeholder={t('auth.placeholders.phone')}
                             required
+                            placeholder={t('auth.placeholders.phone')}
+                            invalidHint={t('auth.validation.invalid_phone')}
                           />
                         </div>
                       </div>

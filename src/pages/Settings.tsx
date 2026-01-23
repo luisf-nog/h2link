@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmailSettingsPanel } from '@/components/settings/EmailSettingsPanel';
 import { z } from 'zod';
 import { TemplatesSettingsPanel } from '@/components/settings/TemplatesSettingsPanel';
+import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 type SettingsTab = 'profile' | 'account' | 'email' | 'templates';
 
@@ -47,7 +49,9 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
       phone: z
         .string()
         .trim()
-        .regex(/^\+\d{8,15}$/, { message: t('settings.profile.validation.invalid_phone') }),
+        .refine((v) => Boolean(parsePhoneNumberFromString(v)?.isValid()), {
+          message: t('settings.profile.validation.invalid_phone'),
+        }),
       contactEmail: z.string().trim().email().max(255),
     });
 
@@ -167,12 +171,12 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">{t('settings.profile.fields.phone')}</Label>
-                    <Input
+                    <PhoneE164Input
                       id="phone"
                       name="phone"
-                      type="tel"
                       defaultValue={profile?.phone_e164 ?? ''}
                       placeholder={t('settings.profile.placeholders.phone')}
+                      invalidHint={t('settings.profile.validation.invalid_phone')}
                     />
                   </div>
                 </div>
