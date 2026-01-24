@@ -1,7 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 import { z } from "https://esm.sh/zod@3.25.76";
-import pdfParse from "https://esm.sh/pdf-parse@1.1.1";
+// pdf-parse depends on Node's fs, which is not available in the edge runtime.
+// Use pdfjs-dist to extract text from PDFs.
+import * as pdfjs from "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +15,28 @@ function json(status: number, payload: unknown) {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders },
   });
+}
+
+async function extractPdfText(data: Uint8Array): Promise<string> {
+  // pdfjs uses a worker in browsers; in this runtime we disable it.
+  // @ts-ignore - workerSrc exists but types may differ in esm builds.
+  pdfjs.GlobalWorkerOptions.workerSrc = "";
+
+  const doc = await pdfjs.getDocument({ data }).promise;
+  const maxPages = Math.min(doc.numPages, 25);
+  let out = "";
+  for (let p = 1; p <= maxPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const strings = (content.items ?? [])
+      // @ts-ignore
+      .map((it) => (typeof it?.str === "string" ? it.str : ""))
+      .filter(Boolean);
+    out += strings.join(" ") + "\n";
+    // Avoid overly large prompts
+    if (out.length > 40_000) break;
+  }
+  return out.trim();
 }
 
 const resumeSchema = z.object({
@@ -49,9 +73,17 @@ serve(async (req) => {
       return json(400, { success: false, error: "Missing PDF file (field: file)" });
     }
 
+    if (file.type && file.type !== "application/pdf") {
+      return json(400, { success: false, error: "Invalid file type. Please upload a PDF." });
+    }
+
+    // 20MB client-side limit exists, but enforce a soft limit here too.
+    if (file.size > 20 * 1024 * 1024) {
+      return json(413, { success: false, error: "File too large (max 20MB)" });
+    }
+
     const buf = new Uint8Array(await file.arrayBuffer());
-    const parsedPdf = await pdfParse(buf);
-    const text = String(parsedPdf?.text ?? "").trim();
+    const text = await extractPdfText(buf);
     if (!text) return json(400, { success: false, error: "Could not extract text from PDF" });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
