@@ -245,6 +245,13 @@ export default function Queue() {
     return out;
   };
 
+  const hashToIndex = (s: string, mod: number) => {
+    if (mod <= 1) return 0;
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h % mod;
+  };
+
   const isFree = planTier === 'free';
   const pendingItems = useMemo(() => queue.filter((q) => q.status === 'pending'), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
@@ -317,8 +324,7 @@ export default function Queue() {
       return { ok: false as const };
     }
 
-    // Gold: use the only template; Diamond: random among all templates (up to 5)
-    const tpl = planTier === 'diamond' ? templates[Math.floor(Math.random() * templates.length)] : templates[0];
+    // Free/Gold: rotate templates (if >1). Diamond: fallback uses rotation too.
 
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
@@ -331,7 +337,7 @@ export default function Queue() {
       return { ok: false as const };
     }
 
-    return { ok: true as const, tpl, token };
+    return { ok: true as const, templates, token };
   };
 
   useEffect(() => {
@@ -349,7 +355,7 @@ export default function Queue() {
     const guard = await ensureCanSend();
     if (!guard.ok) return;
 
-    const { tpl, token } = guard;
+    const { templates, token } = guard;
     const sentIds: string[] = [];
 
     for (let idx = 0; idx < items.length; idx++) {
@@ -373,8 +379,31 @@ export default function Queue() {
         job_phone: item.manual_jobs?.phone ?? '',
       };
 
-      const finalSubject = applyTemplate(tpl.subject, vars);
-      const finalBody = applyTemplate(tpl.body, vars);
+      const fallbackTpl = templates[hashToIndex(String(item.tracking_id ?? item.id), templates.length)] ?? templates[0];
+
+      let finalSubject = applyTemplate(fallbackTpl.subject, vars);
+      let finalBody = applyTemplate(fallbackTpl.body, vars);
+
+      // Diamond: dynamic generation per job (subject+body). Fallback to template if AI fails.
+      if (planTier === 'diamond') {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-job-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ queueId: item.id }),
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (res.ok && payload?.success !== false && payload?.subject && payload?.body) {
+            finalSubject = String(payload.subject);
+            finalBody = String(payload.body);
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       const sendProfile = pickSendProfile();
       const dedupeId = planTier === 'diamond' ? crypto.randomUUID() : undefined;

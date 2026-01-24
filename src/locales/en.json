@@ -345,8 +345,10 @@
     "subtitle": "Create and manage templates to speed up your applications.",
     "actions": {
       "new": "New template",
-      "generate_ai": "Generate with AI"
+      "generate_ai": "Generate with AI",
+      "rewrite_ai": "✨ Rewrite with AI"
     },
+    "ai_counter": "Attempts today: {{used}}/{{limit}}",
     "editor": {
       "new_title": "New template",
       "edit_title": "Edit template",
@@ -389,6 +391,33 @@
       "generate_error_fallback": "Could not generate template.",
       "limit_reached_title": "Template limit reached",
       "limit_reached_desc": "Your plan allows up to {{max}} template(s). Upgrade to create more."
+    }
+  },
+
+  "resume": {
+    "title": "Resume (AI)",
+    "subtitle": "Upload your PDF, review extracted data, and save it so Diamond can personalize each job.",
+    "upload": {
+      "label": "PDF upload",
+      "note": "AI can be wrong — review before saving.",
+      "actions": { "parse": "Extract with AI" }
+    },
+    "fields": {
+      "name": "Name",
+      "skills": "Skills (comma-separated)",
+      "skills_hint": "e.g. farm worker, landscaping, forklift",
+      "experience_years": "Years of experience",
+      "previous_jobs": "Previous jobs (comma-separated)",
+      "previous_jobs_hint": "e.g. Farm worker, Construction",
+      "bio": "Short bio"
+    },
+    "actions": { "save": "Save resume" },
+    "toasts": {
+      "parsed_title": "Resume extracted",
+      "parsed_desc": "Review the fields and save.",
+      "parse_error_title": "Failed to extract resume",
+      "saved_title": "Resume saved",
+      "save_error_title": "Error saving resume"
     }
   },
   "queue": {

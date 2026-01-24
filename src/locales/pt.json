@@ -345,8 +345,10 @@
     "subtitle": "Crie e gerencie templates para acelerar suas aplicações.",
     "actions": {
       "new": "Novo template",
-      "generate_ai": "Gerar com IA"
+      "generate_ai": "Gerar com IA",
+      "rewrite_ai": "✨ Reescrever com IA"
     },
+    "ai_counter": "Tentativas hoje: {{used}}/{{limit}}",
     "editor": {
       "new_title": "Novo template",
       "edit_title": "Editar template",
@@ -389,6 +391,33 @@
       "generate_error_fallback": "Não foi possível gerar o template.",
       "limit_reached_title": "Limite de templates atingido",
       "limit_reached_desc": "Seu plano permite até {{max}} template(s). Faça upgrade para criar mais."
+    }
+  },
+
+  "resume": {
+    "title": "Currículo (IA)",
+    "subtitle": "Envie seu PDF, revise os dados extraídos e salve para o plano Diamond personalizar cada vaga.",
+    "upload": {
+      "label": "Upload do PDF",
+      "note": "A IA pode errar — revise antes de salvar.",
+      "actions": { "parse": "Extrair com IA" }
+    },
+    "fields": {
+      "name": "Nome",
+      "skills": "Skills (separe por vírgula)",
+      "skills_hint": "Ex: farm worker, landscaping, forklift",
+      "experience_years": "Anos de experiência",
+      "previous_jobs": "Trabalhos anteriores (vírgula)",
+      "previous_jobs_hint": "Ex: Farm worker, Construction",
+      "bio": "Bio curta"
+    },
+    "actions": { "save": "Salvar currículo" },
+    "toasts": {
+      "parsed_title": "Currículo extraído",
+      "parsed_desc": "Revise os campos e salve.",
+      "parse_error_title": "Falha ao extrair currículo",
+      "saved_title": "Currículo salvo",
+      "save_error_title": "Erro ao salvar currículo"
     }
   },
   "queue": {
