@@ -422,9 +422,10 @@
         "add_error_title": "Add error"
       }
     },
-    "toasts": {
-      "no_template_title": "No templates found",
-      "no_template_desc": "Create at least one template in Settings before sending."
+    "smtp_required": {
+      "title": "Set up SMTP first",
+      "description": "To send emails, you need to configure your SMTP account in Settings → SMTP.",
+      "actions": { "cancel": "Not now", "go_settings": "Open SMTP settings" }
     },
     "stats": {
       "in_queue": "In Queue",
@@ -455,6 +456,8 @@
     },
     "status": { "sent": "Sent", "pending": "Pending", "processing": "Processing", "failed": "Failed", "paused": "Paused" },
     "toasts": {
+      "no_template_title": "No templates found",
+      "no_template_desc": "Create at least one template in Settings before sending.",
       "bg_started_title": "Sending started",
       "bg_started_desc": "Your sending is running in the background. You can close this page.",
       "bg_started_selected_title": "Sending started",
@@ -465,9 +468,8 @@
       "remove_error_title": "Remove error",
       "remove_success_title": "Removed from queue",
       "remove_success_desc": "The job was removed from your queue.",
-      "bulk_premium_title": "Premium feature",
-      "bulk_premium_desc": "Bulk sending (Send all) is available only on Premium plans. Upgrade to send everything in one click.",
-      "bulk_premium_cta": "View plans",
+      "daily_limit_reached_title": "Daily limit reached",
+      "daily_limit_reached_desc": "You’ve reached your daily sending limit. Try again tomorrow or upgrade your plan.",
       "sent_title": "Emails sent!",
       "sent_desc": "{{count}} applications were sent."
     }
