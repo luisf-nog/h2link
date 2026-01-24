@@ -268,56 +268,77 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
 
-    // Enhanced prompt following the exact example structure
-    const systemPrompt = `You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) seasonal jobs in the USA.
+    // Enhanced prompt with strict visual layout rules
+    const systemPrompt = `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B manual labor jobs.
 
-Write a professional, convincing cover letter email. You MUST cross-reference the job description/requirements with the user's resume_data to create a personalized email.
+Your goal is to write a high-converting, professional email based on resume_data and job_description.
 
-=== STRICT ANTI-HALLUCINATION RULES ===
-- Use ONLY information from resume_data. NEVER invent skills, certifications, licenses, tools, years of experience, employers, or locations.
-- If the job requires something NOT in resume_data, do NOT claim it. Instead, emphasize: physical stamina, reliability, trustworthiness, fast learning, hard work, dedication, and willingness to learn.
-- Focus on transferable qualities: punctuality, discipline, availability, team player, follows instructions precisely.
+### 1. DYNAMIC VARIATION RULES (CRITICAL) ⚠️
 
-=== TONE & STYLE (Blue Collar Professional) ===
-- Humble, hardworking, reliable, respectful, direct.
-- Simple US English. No corporate jargon.
-- BANNED phrases: "I hope this email finds you well", "I really need this job", desperate pleas, overly formal language.
+* **Avoid Repetition:** You must NOT generate the exact same text every time. Vary your vocabulary and sentence structure while keeping the meaning.
 
-=== BOLD TEXT USAGE ===
-Use **bold** to highlight KEY information that makes the candidate stand out:
-- **job_title** and **company name** in opening
-- **age** (e.g., "At **25 years old**")
-- **full availability** (e.g., "**weekends (Saturdays and Sundays), holidays, and overtime**")
+* **Tone:** Humble, hardworking, direct, and polite. Use simple English (A2/B1 level). Avoid complex corporate jargon.
+
+### 2. STRICT VISUAL LAYOUT RULES
+
+* **NO WALLS OF TEXT:** Break the email into short, distinct paragraphs.
+
+* **SPACING:** You MUST insert a double line break (\\n\\n) between EVERY paragraph. This is CRITICAL.
+
+* **NO BULLET POINTS:** Write in full sentences only.
+
+### 3. CONTENT STRUCTURE (Follow this exact sequence with paragraph breaks)
+
+**Block 1: Salutation & Opening**
+- Start with "Hello," or "Dear Hiring Manager,"
+- Vary the opening: "I am writing to apply...", "I am expressing my strong interest...", "I wish to submit my application..."
+- Mention the specific **Job Title** and **Company Name** in bold.
+- Mention age and years of experience (e.g., "At **25 years old**, I have 4 years of experience...").
+
+[INSERT DOUBLE LINE BREAK HERE]
+
+**Block 2: The "Hook" (Availability)**
+- CRUCIAL: State clearly that you are available for **Weekends, Holidays, and Overtime**.
+- Variation: Sometimes say "fully available for weekends", other times "ready to work 7 days a week", or "willing to work long hours and holidays".
+
+[INSERT DOUBLE LINE BREAK HERE]
+
+**Block 3: Hard Skills & Reliability**
+- Mention physical stamina (lifting 50lb+).
+- Mention reliability ("I show up on time").
+- Mention languages (Native Portuguese, Intermediate English).
+
+[INSERT DOUBLE LINE BREAK HERE]
+
+**Block 4: Closing**
+- "I am ready to start immediately." or "I can join the team right away."
+- "Thank you for your time."
+
+[INSERT DOUBLE LINE BREAK HERE]
+
+**Block 5: Sign-off**
+- "Best regards," or "Sincerely,"
+- [User Name]
+- [Phone Number]
+- [Email]
+
+### 4. ANTI-HALLUCINATION
+
+* If the resume lacks specific skills for the job, emphasize "Fast Learner", "Hardworking", and "Physical Strength" instead of inventing skills.
+* NEVER invent certifications, licenses, employers, or skills not in resume_data.
+
+### 5. BOLD TEXT USAGE
+
+Use **bold** (double asterisks) to highlight:
+- Job title and company name
+- Age (e.g., "At **25 years old**")
+- Availability (e.g., "**weekends, holidays, and overtime**")
 - Key traits like **physically fit**, **quick learner**, **reliable**
-- Languages if relevant (e.g., "**intermediate English**")
 
-=== EMAIL STRUCTURE (4-7 paragraphs, vary each email) ===
+### 6. OUTPUT FORMAT
 
-1) GREETING: Start with "Hello," or "Dear Hiring Manager," (vary between emails)
-
-2) OPENING PARAGRAPH: State you're applying for the **[job_title]** at **[company]** under the [visa_type] program. Mention age and 2-3 key qualities that match what the job is looking for.
-
-3) AVAILABILITY PARAGRAPH: Emphasize **full availability** - ready to work **weekends (Saturdays and Sundays), holidays, and overtime** whenever necessary. State that the job is your priority and you're fully committed to meeting schedule demands.
-
-4) SKILLS/EXPERIENCE PARAGRAPH: As a hardworking laborer, eager to join and contribute immediately. Mention physical fitness, capability to lift heavy materials (50lb+), accustomed to fast-paced environments. Emphasize punctuality and readiness to work every day.
-
-5) ADDITIONAL QUALITIES PARAGRAPH: Quick learner who follows instructions precisely to ensure safety and quality. Mention languages from resume_data (e.g., native Portuguese speaker with intermediate English and basic Spanish).
-
-6) CLOSING PARAGRAPH: Ready to start immediately and would appreciate the opportunity to discuss how to contribute to the team.
-
-7) SIGN-OFF: "Best regards," followed by signature block on separate lines.
-
-=== SIGNATURE BLOCK ===
-After "Best regards," add on separate lines:
-- Full name (from resume_data)
-- Phone number (from resume_data, if available)
-- Email address (from resume_data, if available)
-
-=== OUTPUT REQUIREMENTS ===
-- Return ONLY the email body text with paragraph breaks (double newlines between paragraphs).
-- NO JSON. NO code fences. NO markdown headers.
-- Maximum 280 words (can be shorter if natural).
-- Each email should feel unique - vary paragraph order, word choices, and structure within the guidelines.`;
+Return ONLY the email body text. Each paragraph MUST be separated by exactly two newlines (\\n\\n).
+NO JSON. NO code fences. NO markdown headers. Maximum 250 words.`;
 
     const jobContext = [
       `Visa type: ${visaType}`,
@@ -334,12 +355,12 @@ After "Best regards," add on separate lines:
       `=== JOB INFORMATION ===\n${jobContext}\n\n` +
       `=== JOB DESCRIPTION ===\n${jobDescription || "Not provided"}\n\n` +
       `=== JOB REQUIREMENTS ===\n${jobRequirements || "Not provided"}\n\n` +
-      `=== SIGNATURE CONTACT (Use these exact values) ===\n` +
+      `=== SIGNATURE CONTACT (Use these exact values in sign-off) ===\n` +
       `Full name: ${fullName || "(missing)"}\n` +
       `Phone: ${phone || "(missing)"}\n` +
       `Email: ${email || "(missing)"}\n\n` +
       `=== CANDIDATE RESUME DATA (Source of Truth - JSON) ===\n${JSON.stringify(resumeData, null, 2)}\n\n` +
-      `Write a personalized cover letter email matching the candidate's resume to this specific job.`;
+      `Write a personalized cover letter email. REMEMBER: Each paragraph MUST be separated by double line breaks (\\n\\n).`;
 
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -350,7 +371,7 @@ After "Best regards," add on separate lines:
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        temperature: 0.2,
+        temperature: 0.7,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
