@@ -481,6 +481,9 @@ async function generateDiamondEmail(params: {
   const systemPrompt =
     "You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) jobs in the USA. " +
     "Write a short, professional, and convincing email (cover letter) using ONLY the user's resume_data as the source of truth. " +
+    "\n\nJOB REQUIREMENTS ARE CRITICAL: " +
+    "The job requirements section tells you exactly what the employer wants. Address these requirements DIRECTLY in the email. " +
+    "For each requirement the candidate meets, highlight it with **bold**. If there's a gap, emphasize willingness to learn. " +
     "\n\nSTRICT ANTI-HALLUCINATION RULES: " +
     "Use ONLY resume_data. Never invent skills, certifications, licenses, tools, years of experience, employers, or locations. " +
     "If the job requires something not present in resume_data, do NOT claim it—emphasize physical stamina, reliability, fast learning, hard work, and willingness to learn. " +
@@ -494,8 +497,8 @@ async function generateDiamondEmail(params: {
     "Paragraph guidance: " +
     "1) Greeting line (can vary: 'Hello,' or 'Dear Hiring Manager,'). " +
     "2) One sentence: applying for the specific job_title at the company. " +
-    "3) Experience hook: connect ONLY real experience from resume_data to the job. Use **bold** sparingly for key traits. " +
-    "4) Availability & work attitude: highlight full availability (weekends/holidays/overtime) ONLY if explicitly supported by resume_data. Mention reliability, sobriety, safety, willingness to learn. " +
+    "3) Requirements match: This is the KEY paragraph. Address JOB REQUIREMENTS directly. Highlight matches with **bold**. " +
+    "4) Availability & work attitude: highlight full availability (weekends/holidays/overtime). Mention reliability, safety, willingness to learn. " +
     "5) Closing: 'My resume is attached. Thank you.' then 'Best regards,'. " +
     "6) Signature block on separate lines: name, phone, email — ONLY if present in resume_data. " +
     "\n\nOUTPUT: Return JSON with {subject, body}. The body MUST contain multiple paragraphs separated by \\n\\n. No markdown fences.";
@@ -506,9 +509,10 @@ async function generateDiamondEmail(params: {
     `Company: ${job.company}\n` +
     `Job title: ${job.job_title}\n\n` +
     `Job description:\n${String(job.description ?? "").trim()}\n\n` +
-    `Job requirements:\n${String(job.requirements ?? "").trim()}\n\n` +
+    `⚠️ JOB REQUIREMENTS (CRITICAL - ADDRESS THESE DIRECTLY):\n${String(job.requirements ?? "").trim()}\n\n` +
+    `IMPORTANT: The requirements above are what the employer is looking for. Cross-reference with the candidate's resume and highlight matches.\n\n` +
     `Candidate resume_data (JSON):\n${JSON.stringify(resumeData)}\n\n` +
-    `Cross candidate skills with the job. If there is no strong match, focus on physical effort and willingness to learn.`;
+    `Address the job requirements directly. Highlight matches. If there is no strong match, focus on physical effort and willingness to learn.`;
 
   const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
