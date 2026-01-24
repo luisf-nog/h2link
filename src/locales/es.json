@@ -487,6 +487,9 @@
     "toasts": {
       "no_template_title": "No se encontraron plantillas",
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
+      "resume_required_title": "Currículum requerido",
+      "resume_required_desc": "En Diamond, sube tu currículum en Configuración → Currículum para generar un email personalizado por empleo.",
+      "diamond_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
       "bg_started_selected_title": "Envío iniciado",

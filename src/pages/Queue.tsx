@@ -305,6 +305,7 @@ export default function Queue() {
       return { ok: false as const };
     }
 
+    // Templates are mandatory for Free/Gold, optional for Diamond (AI generates per job).
     const { data: tplData, error: tplError } = await supabase
       .from('email_templates')
       .select('id,name,subject,body')
@@ -315,7 +316,7 @@ export default function Queue() {
     }
 
     const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
-    if (templates.length === 0) {
+    if (templates.length === 0 && planTier !== 'diamond') {
       toast({
         title: t('queue.toasts.no_template_title'),
         description: t('queue.toasts.no_template_desc'),
@@ -323,8 +324,6 @@ export default function Queue() {
       });
       return { ok: false as const };
     }
-
-    // Free/Gold: rotate templates (if >1). Diamond: fallback uses rotation too.
 
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
@@ -379,10 +378,13 @@ export default function Queue() {
         job_phone: item.manual_jobs?.phone ?? '',
       };
 
-      const fallbackTpl = templates[hashToIndex(String(item.tracking_id ?? item.id), templates.length)] ?? templates[0];
+      const fallbackTpl =
+        templates.length > 0
+          ? templates[hashToIndex(String(item.tracking_id ?? item.id), templates.length)] ?? templates[0]
+          : null;
 
-      let finalSubject = applyTemplate(fallbackTpl.subject, vars);
-      let finalBody = applyTemplate(fallbackTpl.body, vars);
+      let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : '';
+      let finalBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars) : '';
 
       // Diamond: dynamic generation per job (subject+body). Fallback to template if AI fails.
       if (planTier === 'diamond') {
@@ -399,10 +401,23 @@ export default function Queue() {
           if (res.ok && payload?.success !== false && payload?.subject && payload?.body) {
             finalSubject = String(payload.subject);
             finalBody = String(payload.body);
+          } else if (payload?.error === 'resume_data_missing') {
+            toast({
+              title: t('queue.toasts.resume_required_title'),
+              description: t('queue.toasts.resume_required_desc'),
+              variant: 'destructive',
+            });
+            navigate('/settings?tab=resume');
+            throw new Error('resume_data_missing');
           }
         } catch {
           // ignore
         }
+      }
+
+      // Diamond without templates must have AI output; otherwise fail with a clear message.
+      if (planTier === 'diamond' && (!finalSubject.trim() || !finalBody.trim())) {
+        throw new Error(t('queue.toasts.diamond_ai_failed_no_fallback'));
       }
 
       const sendProfile = pickSendProfile();
