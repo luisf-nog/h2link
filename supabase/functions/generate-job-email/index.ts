@@ -85,8 +85,8 @@ serve(async (req) => {
       .eq("id", userId)
       .maybeSingle();
     if (profileErr) throw profileErr;
-    if ((profile as any)?.plan_tier !== "diamond") {
-      return json(403, { success: false, error: "Diamond only" });
+    if ((profile as any)?.plan_tier !== "black") {
+      return json(403, { success: false, error: "Black plan only" });
     }
 
     const resumeData = (profile as any)?.resume_data;
@@ -98,7 +98,7 @@ serve(async (req) => {
       .from("my_queue")
       .select(
         `id, user_id, job_id, manual_job_id,
-         public_jobs (company, job_title, visa_type, description, requirements),
+         public_jobs (company, job_title, visa_type, description, requirements, weekly_hours, salary, start_date, end_date, housing_info),
          manual_jobs (company, job_title)`
       )
       .eq("id", payload.data.queueId)
@@ -114,40 +114,84 @@ serve(async (req) => {
     const jobTitle = String((job as any)?.job_title ?? "").trim();
     const company = String((job as any)?.company ?? "").trim();
     const visaType = String((job as any)?.visa_type ?? "H-2B").trim();
+    const weeklyHours = (job as any)?.weekly_hours ?? null;
+    const salary = (job as any)?.salary ?? null;
+    const startDate = (job as any)?.start_date ?? null;
+    const endDate = (job as any)?.end_date ?? null;
+    const housingInfo = String((job as any)?.housing_info ?? "").trim();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
 
-    const systemPrompt =
-      "You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) jobs in the USA. " +
-      "Write a short, professional, and convincing email (cover letter) using ONLY the user's resume_data as the source of truth. " +
-      "\n\nSTRICT ANTI-HALLUCINATION RULES: " +
-      "Use ONLY resume_data. Never invent skills, certifications, licenses, tools, years of experience, employers, or locations. " +
-      "If the job requires something not present in resume_data, do NOT claim it—emphasize physical stamina, reliability, fast learning, hard work, and willingness to learn. " +
-      "\n\nTONE & STYLE (Blue Collar Professional): " +
-      "Humble, hardworking, reliable, respectful. Simple US English. No corporate speak. " +
-      "BANNED: 'I hope this email finds you well' and desperate pleas like 'I really need this job'. " +
-      "\n\nFORMATTING & STRUCTURE: " +
-      "Write 3 to 6 short paragraphs, separated by a blank line (double newline). " +
-      "Do NOT use bullet points, hyphens as lists, or numbered lists. " +
-      "Max 230 words. " +
-      "Paragraph guidance: " +
-      "1) Greeting line (can vary: 'Hello,' or 'Dear Hiring Manager,'). " +
-      "2) One sentence: applying for the specific job_title at the company. " +
-      "3) Experience hook: connect ONLY real experience from resume_data to the job. Use **bold** sparingly for key availability/traits or a skill ONLY if explicitly present. " +
-      "4) Availability & work attitude: highlight **full availability** (weekends/holidays/overtime) ONLY if explicitly supported by resume_data; otherwise say you are available for the full season and can start immediately. Mention reliability, sobriety, safety, willingness to learn. " +
-      "5) Closing: 'My resume is attached. Thank you.' then 'Best regards,'. " +
-      "6) Signature block on separate lines: name, phone, email — ONLY if present in resume_data (do not invent). " +
-      "\n\nOUTPUT REQUIREMENT: Return ONLY the email body text (with paragraph breaks). No JSON. No code fences.";
+    // Enhanced prompt following the exact example structure
+    const systemPrompt = `You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) seasonal jobs in the USA.
+
+Write a professional, convincing cover letter email. You MUST cross-reference the job description/requirements with the user's resume_data to create a personalized email.
+
+=== STRICT ANTI-HALLUCINATION RULES ===
+- Use ONLY information from resume_data. NEVER invent skills, certifications, licenses, tools, years of experience, employers, or locations.
+- If the job requires something NOT in resume_data, do NOT claim it. Instead, emphasize: physical stamina, reliability, trustworthiness, fast learning, hard work, dedication, and willingness to learn.
+- Focus on transferable qualities: punctuality, discipline, availability, team player, follows instructions precisely.
+
+=== TONE & STYLE (Blue Collar Professional) ===
+- Humble, hardworking, reliable, respectful, direct.
+- Simple US English. No corporate jargon.
+- BANNED phrases: "I hope this email finds you well", "I really need this job", desperate pleas, overly formal language.
+
+=== BOLD TEXT USAGE ===
+Use **bold** to highlight KEY information that makes the candidate stand out:
+- **job_title** and **company name** in opening
+- **age** (e.g., "At **25 years old**")
+- **full availability** (e.g., "**weekends (Saturdays and Sundays), holidays, and overtime**")
+- Key traits like **physically fit**, **quick learner**, **reliable**
+- Languages if relevant (e.g., "**intermediate English**")
+
+=== EMAIL STRUCTURE (4-7 paragraphs, vary each email) ===
+
+1) GREETING: Start with "Hello," or "Dear Hiring Manager," (vary between emails)
+
+2) OPENING PARAGRAPH: State you're applying for the **[job_title]** at **[company]** under the [visa_type] program. Mention age and 2-3 key qualities that match what the job is looking for.
+
+3) AVAILABILITY PARAGRAPH: Emphasize **full availability** - ready to work **weekends (Saturdays and Sundays), holidays, and overtime** whenever necessary. State that the job is your priority and you're fully committed to meeting schedule demands.
+
+4) SKILLS/EXPERIENCE PARAGRAPH: As a hardworking laborer, eager to join and contribute immediately. Mention physical fitness, capability to lift heavy materials (50lb+), accustomed to fast-paced environments. Emphasize punctuality and readiness to work every day.
+
+5) ADDITIONAL QUALITIES PARAGRAPH: Quick learner who follows instructions precisely to ensure safety and quality. Mention languages from resume_data (e.g., native Portuguese speaker with intermediate English and basic Spanish).
+
+6) CLOSING PARAGRAPH: Ready to start immediately and would appreciate the opportunity to discuss how to contribute to the team.
+
+7) SIGN-OFF: "Best regards," followed by signature block on separate lines.
+
+=== SIGNATURE BLOCK ===
+After "Best regards," add on separate lines:
+- Full name (from resume_data)
+- Phone number (from resume_data, if available)
+- Email address (from resume_data, if available)
+
+=== OUTPUT REQUIREMENTS ===
+- Return ONLY the email body text with paragraph breaks (double newlines between paragraphs).
+- NO JSON. NO code fences. NO markdown headers.
+- Maximum 280 words (can be shorter if natural).
+- Each email should feel unique - vary paragraph order, word choices, and structure within the guidelines.`;
+
+    const jobContext = [
+      `Visa type: ${visaType}`,
+      `Company: ${company}`,
+      `Job title: ${jobTitle}`,
+      weeklyHours ? `Weekly hours: ${weeklyHours}` : null,
+      salary ? `Salary: $${salary}/hour` : null,
+      startDate ? `Start date: ${startDate}` : null,
+      endDate ? `End date: ${endDate}` : null,
+      housingInfo ? `Housing: ${housingInfo}` : null,
+    ].filter(Boolean).join("\n");
 
     const userPrompt =
-      `Job context:\n` +
-      `Visa type: ${visaType}\n` +
-      `Company: ${company}\n` +
-      `Job title: ${jobTitle}\n\n` +
-      `Job description:\n${jobDescription}\n\n` +
-      `Job requirements:\n${jobRequirements}\n\n` +
-      `resume_data (JSON, source of truth):\n${JSON.stringify(resumeData)}\n`;
+      `=== JOB INFORMATION ===\n${jobContext}\n\n` +
+      `=== JOB DESCRIPTION ===\n${jobDescription || "Not provided"}\n\n` +
+      `=== JOB REQUIREMENTS ===\n${jobRequirements || "Not provided"}\n\n` +
+      `=== CANDIDATE RESUME DATA (Source of Truth - JSON) ===\n${JSON.stringify(resumeData, null, 2)}\n\n` +
+      `Write a personalized cover letter email matching the candidate's resume to this specific job.`;
+
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -175,8 +219,8 @@ serve(async (req) => {
     const unfenced = stripMarkdownFences(raw);
     const normalized = normalizeParagraphs(unfenced);
 
-    // Force the 230-word cap even if the model overshoots.
-    const body = limitWords(normalized, 230);
+    // Force the 280-word cap even if the model overshoots (4-7 paragraphs).
+    const body = limitWords(normalized, 280);
     if (!body) {
       return json(500, {
         success: false,
