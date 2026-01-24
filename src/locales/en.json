@@ -358,6 +358,22 @@
       "fallback_note": "Optionally, you can create fallback templates in case the AI cannot generate the email."
     },
     "ai_counter": "Attempts today: {{used}}/{{limit}}",
+    "ai_limit_reached": "You have reached the limit of 3 generations per day. Try again tomorrow.",
+    "ai_options": {
+      "title": "Configure AI generation",
+      "description": "Choose the size and tone of the email to be generated.",
+      "length_label": "Email length",
+      "length_short": "Short (3-4 sentences)",
+      "length_medium": "Medium (5-7 sentences)",
+      "length_long": "Long (8-10 sentences)",
+      "length_hint": "Shorter emails are more direct and have a higher chance of being read.",
+      "tone_label": "Message tone",
+      "tone_direct": "Direct and humble",
+      "tone_professional": "Formal and professional",
+      "tone_friendly": "Warm and friendly",
+      "tone_hint": "We recommend the direct tone for H-2A/H-2B jobs.",
+      "generate_button": "Generate with AI"
+    },
     "editor": {
       "new_title": "New template",
       "edit_title": "Edit template",

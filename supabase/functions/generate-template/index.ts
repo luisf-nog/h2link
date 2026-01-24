@@ -40,6 +40,11 @@ function extractFirstJsonObject(text: string): string {
   return t;
 }
 
+const requestSchema = z.object({
+  length: z.enum(["short", "medium", "long"]).optional().default("medium"),
+  tone: z.enum(["professional", "friendly", "direct"]).optional().default("direct"),
+}).optional();
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { success: false, error: "Method not allowed" });
@@ -60,20 +65,19 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
     if (claimsError || !userId) return json(401, { success: false, error: "Unauthorized" });
 
+    // Parse request body for options
+    const rawBody = await req.json().catch(() => ({}));
+    const optionsParsed = requestSchema.safeParse(rawBody);
+    const options = optionsParsed.success ? optionsParsed.data : { length: "medium", tone: "direct" };
+    const length = options?.length ?? "medium";
+    const tone = options?.tone ?? "direct";
+
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     const today = new Date().toISOString().slice(0, 10);
-
-    // "1ª grátis" = se o usuário ainda não tem nenhum template.
-    const { count: templatesCount } = await serviceClient
-      .from("email_templates")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    const isFreebie = (templatesCount ?? 0) === 0;
 
     // Get usage
     const { data: usageRow, error: usageErr } = await serviceClient
@@ -83,22 +87,21 @@ serve(async (req) => {
       .maybeSingle();
     if (usageErr) throw usageErr;
 
-    const currentDate = String((usageRow as any)?.usage_date ?? today);
-    let used = Number((usageRow as any)?.template_generations ?? 0);
+    const currentDate = String((usageRow as any)?.usage_date ?? "");
+    let used = currentDate === today ? Number((usageRow as any)?.template_generations ?? 0) : 0;
 
     // Reset if date changed
     if (currentDate !== today) {
-      used = 0;
       await serviceClient
         .from("ai_daily_usage")
         .upsert({ user_id: userId, usage_date: today, template_generations: 0, updated_at: new Date().toISOString() } as any);
     }
 
     const LIMIT = 3;
-    if (!isFreebie && used >= LIMIT) {
+    if (used >= LIMIT) {
       return json(429, {
         success: false,
-        error: "Limite diário de IA atingido. Tente amanhã ou faça upgrade.",
+        error: "Limite diário de IA atingido. Tente amanhã.",
         used_today: used,
         limit: LIMIT,
       });
@@ -107,15 +110,30 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
 
+    // Dynamic prompt based on options
+    const lengthGuide = {
+      short: "Keep it very short (3-4 sentences max, under 80 words).",
+      medium: "Keep it concise (5-7 sentences, around 120 words).",
+      long: "Write a complete letter (8-10 sentences, around 180 words).",
+    }[length];
+
+    const toneGuide = {
+      professional: "Use a formal, professional tone.",
+      friendly: "Use a warm, friendly tone while remaining respectful.",
+      direct: "Use a humble, direct, no-nonsense tone focused on hard work.",
+    }[tone];
+
     const systemPrompt =
       "Return ONLY valid JSON with keys {subject, body}. " +
-      "Write in English. Keep it short, persuasive, respectful and direct. " +
-      "Context: user is applying to H-2A/H-2B seasonal visa jobs.";
+      "Write in English. " + toneGuide + " " + lengthGuide + " " +
+      "Context: user is applying to H-2A/H-2B seasonal visa jobs in the USA.";
 
     const userPrompt =
-      "Create a short, persuasive email template for H-2A/H-2B job applications. " +
-      "Focus on availability and hard work. Avoid corporate jargon. " +
-      "Include placeholders: {{company}} and {{position}}. ";
+      "Create a persuasive email template for H-2A/H-2B job applications. " +
+      "Focus on availability (weekends, holidays, overtime) and hard work ethic. " +
+      "Avoid corporate jargon. Use simple English. " +
+      "Include placeholders: {{company}}, {{position}}, {{name}}, {{phone}}, {{contact_email}}. " +
+      "The email should feel genuine and personalized.";
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -125,7 +143,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        temperature: 0.5,
+        temperature: 0.7,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -145,7 +163,6 @@ serve(async (req) => {
       const jsonCandidate = extractFirstJsonObject(content);
       parsed = JSON.parse(jsonCandidate);
     } catch {
-      // Return a small snippet to help debugging without leaking large content.
       const snippet = content.slice(0, 500);
       return json(500, { success: false, error: "AI returned invalid JSON", snippet });
     }
@@ -155,19 +172,16 @@ serve(async (req) => {
       return json(500, { success: false, error: "AI output validation failed" });
     }
 
-    // Increment usage (unless freebie)
-    let nextUsed = used;
-    if (!isFreebie) {
-      nextUsed = used + 1;
-      await serviceClient
-        .from("ai_daily_usage")
-        .upsert({
-          user_id: userId,
-          usage_date: today,
-          template_generations: nextUsed,
-          updated_at: new Date().toISOString(),
-        } as any);
-    }
+    // Always increment usage
+    const nextUsed = used + 1;
+    await serviceClient
+      .from("ai_daily_usage")
+      .upsert({
+        user_id: userId,
+        usage_date: today,
+        template_generations: nextUsed,
+        updated_at: new Date().toISOString(),
+      } as any);
 
     return json(200, {
       success: true,
@@ -175,7 +189,6 @@ serve(async (req) => {
       used_today: nextUsed,
       limit: LIMIT,
       remaining_today: Math.max(0, LIMIT - nextUsed),
-      freebie: isFreebie,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";

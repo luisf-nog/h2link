@@ -17,6 +17,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, Plus, Sparkles, Trash2, Zap } from "lucide-react";
@@ -37,6 +44,9 @@ type EditorState =
   | { open: true; mode: "create"; template?: undefined }
   | { open: true; mode: "edit"; template: EmailTemplate };
 
+type AILength = "short" | "medium" | "long";
+type AITone = "professional" | "friendly" | "direct";
+
 export function TemplatesSettingsPanel() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -47,6 +57,11 @@ export function TemplatesSettingsPanel() {
   const [generating, setGenerating] = useState(false);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [editor, setEditor] = useState<EditorState>({ open: false });
+
+  // AI Options popup state
+  const [aiOptionsOpen, setAiOptionsOpen] = useState(false);
+  const [aiLength, setAiLength] = useState<AILength>("medium");
+  const [aiTone, setAiTone] = useState<AITone>("direct");
 
   const canLoad = useMemo(() => Boolean(user?.id), [user?.id]);
 
@@ -172,8 +187,21 @@ export function TemplatesSettingsPanel() {
     }
   };
 
+  const openAiOptionsPopup = () => {
+    if (aiUsedToday >= aiLimit) {
+      toast({
+        title: t("templates.toasts.generate_error_title"),
+        description: t("templates.ai_limit_reached"),
+        variant: "destructive",
+      });
+      return;
+    }
+    setAiOptionsOpen(true);
+  };
+
   const handleRewriteWithAI = async () => {
     if (!user?.id) return;
+    setAiOptionsOpen(false);
     setGenerating(true);
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -187,7 +215,7 @@ export function TemplatesSettingsPanel() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ length: aiLength, tone: aiTone }),
       });
 
       const payload = await res.json().catch(() => ({}));
@@ -204,7 +232,7 @@ export function TemplatesSettingsPanel() {
 
       toast({
         title: t("templates.toasts.generated_title"),
-        description: t("templates.ai_counter", { used: payload.used_today ?? aiUsedToday, limit: aiLimit }),
+        description: t("templates.ai_counter", { used: payload.used_today ?? aiUsedToday + 1, limit: aiLimit }),
       });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("templates.toasts.generate_error_fallback");
@@ -343,9 +371,69 @@ export function TemplatesSettingsPanel() {
     );
   }
 
+  // AI Options Dialog (shared between both views)
+  const aiOptionsDialog = (
+    <Dialog open={aiOptionsOpen} onOpenChange={setAiOptionsOpen}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            {t("templates.ai_options.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {t("templates.ai_options.description")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label>{t("templates.ai_options.length_label")}</Label>
+            <Select value={aiLength} onValueChange={(v) => setAiLength(v as AILength)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="short">{t("templates.ai_options.length_short")}</SelectItem>
+                <SelectItem value="medium">{t("templates.ai_options.length_medium")}</SelectItem>
+                <SelectItem value="long">{t("templates.ai_options.length_long")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t("templates.ai_options.length_hint")}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("templates.ai_options.tone_label")}</Label>
+            <Select value={aiTone} onValueChange={(v) => setAiTone(v as AITone)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="direct">{t("templates.ai_options.tone_direct")}</SelectItem>
+                <SelectItem value="professional">{t("templates.ai_options.tone_professional")}</SelectItem>
+                <SelectItem value="friendly">{t("templates.ai_options.tone_friendly")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t("templates.ai_options.tone_hint")}</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setAiOptionsOpen(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button onClick={handleRewriteWithAI} disabled={generating}>
+            {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {t("templates.ai_options.generate_button")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   // Standard template management for static plans (Free, Gold, Diamond)
   return (
     <div className="space-y-6">
+      {aiOptionsDialog}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div>
@@ -374,7 +462,12 @@ export function TemplatesSettingsPanel() {
               <div className="grid gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <p className="text-sm text-muted-foreground">{t("templates.ai_counter", { used: aiUsedToday, limit: aiLimit })}</p>
-                  <Button type="button" variant="secondary" onClick={handleRewriteWithAI} disabled={generating}>
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={openAiOptionsPopup} 
+                    disabled={generating || aiUsedToday >= aiLimit}
+                  >
                     {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                     {t("templates.actions.rewrite_ai")}
                   </Button>

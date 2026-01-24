@@ -358,6 +358,22 @@
       "fallback_note": "Opcionalmente, puedes crear plantillas de respaldo en caso de que la IA no pueda generar el email."
     },
     "ai_counter": "Intentos hoy: {{used}}/{{limit}}",
+    "ai_limit_reached": "Has alcanzado el límite de 3 generaciones por día. Inténtalo mañana.",
+    "ai_options": {
+      "title": "Configurar generación de IA",
+      "description": "Elige el tamaño y tono del email que se generará.",
+      "length_label": "Longitud del email",
+      "length_short": "Corto (3-4 frases)",
+      "length_medium": "Medio (5-7 frases)",
+      "length_long": "Largo (8-10 frases)",
+      "length_hint": "Los emails más cortos son más directos y tienen mayor probabilidad de ser leídos.",
+      "tone_label": "Tono del mensaje",
+      "tone_direct": "Directo y humilde",
+      "tone_professional": "Formal y profesional",
+      "tone_friendly": "Amigable y cálido",
+      "tone_hint": "Recomendamos el tono directo para empleos H-2A/H-2B.",
+      "generate_button": "Generar con IA"
+    },
     "editor": {
       "new_title": "Nueva plantilla",
       "edit_title": "Editar plantilla",

@@ -358,6 +358,22 @@
       "fallback_note": "Opcionalmente, você pode criar templates de fallback caso a IA não consiga gerar o email."
     },
     "ai_counter": "Tentativas hoje: {{used}}/{{limit}}",
+    "ai_limit_reached": "Você atingiu o limite de 3 gerações por dia. Tente novamente amanhã.",
+    "ai_options": {
+      "title": "Configurar geração de IA",
+      "description": "Escolha o tamanho e tom do email que será gerado.",
+      "length_label": "Tamanho do email",
+      "length_short": "Curto (3-4 frases)",
+      "length_medium": "Médio (5-7 frases)",
+      "length_long": "Longo (8-10 frases)",
+      "length_hint": "Emails mais curtos são mais diretos e têm maior chance de serem lidos.",
+      "tone_label": "Tom da mensagem",
+      "tone_direct": "Direto e humilde",
+      "tone_professional": "Formal e profissional",
+      "tone_friendly": "Amigável e acolhedor",
+      "tone_hint": "Recomendamos o tom direto para vagas H-2A/H-2B.",
+      "generate_button": "Gerar com IA"
+    },
     "editor": {
       "new_title": "Novo template",
       "edit_title": "Editar template",
