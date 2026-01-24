@@ -312,7 +312,7 @@ export default function Queue() {
       return { ok: false as const };
     }
 
-    // Templates are mandatory for Free/Gold, optional for Diamond (AI generates per job).
+    // Templates are mandatory for Free/Gold, optional for Diamond/Black (AI generates per job).
     const { data: tplData, error: tplError } = await supabase
       .from('email_templates')
       .select('id,name,subject,body')
@@ -323,7 +323,9 @@ export default function Queue() {
     }
 
     const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
-    if (templates.length === 0 && planTier !== 'diamond') {
+    // Black and Diamond use dynamic AI generation, so templates are optional
+    const needsTemplates = planTier !== 'diamond' && planTier !== 'black';
+    if (templates.length === 0 && needsTemplates) {
       toast({
         title: t('queue.toasts.no_template_title'),
         description: t('queue.toasts.no_template_desc'),
