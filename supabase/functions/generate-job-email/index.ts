@@ -271,7 +271,13 @@ serve(async (req) => {
     // Enhanced prompt with strict visual layout rules
     const systemPrompt = `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B manual labor jobs.
 
-Your goal is to write a high-converting, professional email based on resume_data and job_description.
+Your goal is to write a high-converting, professional email based on resume_data, job_description, and ESPECIALLY the JOB REQUIREMENTS.
+
+### 0. JOB REQUIREMENTS ARE CRITICAL ⚠️
+
+* **REQUIREMENTS FIRST:** The job requirements section is the MOST IMPORTANT part. Read them carefully and address how the candidate meets each requirement.
+* **Direct Match:** If the candidate's resume_data shows experience matching a requirement, highlight it with **bold**.
+* **Honest Gaps:** If the candidate lacks a specific requirement, emphasize willingness to learn, physical strength, and reliability instead. NEVER invent skills.
 
 ### 1. DYNAMIC VARIATION RULES (CRITICAL) ⚠️
 
@@ -297,26 +303,34 @@ Your goal is to write a high-converting, professional email based on resume_data
 
 [INSERT DOUBLE LINE BREAK HERE]
 
-**Block 2: The "Hook" (Availability)**
+**Block 2: Requirements Match (MOST IMPORTANT)**
+- This is the KEY paragraph. Address the JOB REQUIREMENTS directly.
+- For each requirement the candidate meets, state it clearly with **bold**.
+- Example: "I have **3 years of landscaping experience** as required, and I am **comfortable operating power tools**."
+- If the job requires something not in resume, say "I am a **fast learner** and ready to be trained."
+
+[INSERT DOUBLE LINE BREAK HERE]
+
+**Block 3: The "Hook" (Availability)**
 - CRUCIAL: State clearly that you are available for **Weekends, Holidays, and Overtime**.
 - Variation: Sometimes say "fully available for weekends", other times "ready to work 7 days a week", or "willing to work long hours and holidays".
 
 [INSERT DOUBLE LINE BREAK HERE]
 
-**Block 3: Hard Skills & Reliability**
+**Block 4: Hard Skills & Reliability**
 - Mention physical stamina (lifting 50lb+).
 - Mention reliability ("I show up on time").
 - Mention languages (Native Portuguese, Intermediate English).
 
 [INSERT DOUBLE LINE BREAK HERE]
 
-**Block 4: Closing**
+**Block 5: Closing**
 - "I am ready to start immediately." or "I can join the team right away."
 - "Thank you for your time."
 
 [INSERT DOUBLE LINE BREAK HERE]
 
-**Block 5: Sign-off**
+**Block 6: Sign-off**
 - "Best regards," or "Sincerely,"
 - [User Name]
 - [Phone Number]
@@ -332,13 +346,14 @@ Your goal is to write a high-converting, professional email based on resume_data
 Use **bold** (double asterisks) to highlight:
 - Job title and company name
 - Age (e.g., "At **25 years old**")
+- Requirements the candidate meets (e.g., "**3 years of landscaping experience**")
 - Availability (e.g., "**weekends, holidays, and overtime**")
 - Key traits like **physically fit**, **quick learner**, **reliable**
 
 ### 6. OUTPUT FORMAT
 
 Return ONLY the email body text. Each paragraph MUST be separated by exactly two newlines (\\n\\n).
-NO JSON. NO code fences. NO markdown headers. Maximum 250 words.`;
+NO JSON. NO code fences. NO markdown headers. Maximum 280 words.`;
 
     const jobContext = [
       `Visa type: ${visaType}`,
@@ -354,13 +369,14 @@ NO JSON. NO code fences. NO markdown headers. Maximum 250 words.`;
     const userPrompt =
       `=== JOB INFORMATION ===\n${jobContext}\n\n` +
       `=== JOB DESCRIPTION ===\n${jobDescription || "Not provided"}\n\n` +
-      `=== JOB REQUIREMENTS ===\n${jobRequirements || "Not provided"}\n\n` +
+      `=== ⚠️ JOB REQUIREMENTS (CRITICAL - ADDRESS THESE DIRECTLY) ===\n${jobRequirements || "Not provided"}\n\n` +
+      `IMPORTANT: The requirements above are what the employer is looking for. Cross-reference with the candidate's resume and highlight matches.\n\n` +
       `=== SIGNATURE CONTACT (Use these exact values in sign-off) ===\n` +
       `Full name: ${fullName || "(missing)"}\n` +
       `Phone: ${phone || "(missing)"}\n` +
       `Email: ${email || "(missing)"}\n\n` +
       `=== CANDIDATE RESUME DATA (Source of Truth - JSON) ===\n${JSON.stringify(resumeData, null, 2)}\n\n` +
-      `Write a personalized cover letter email. REMEMBER: Each paragraph MUST be separated by double line breaks (\\n\\n).`;
+      `Write a personalized cover letter email. Address the JOB REQUIREMENTS directly. Each paragraph MUST be separated by double line breaks (\\n\\n).`;
 
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
