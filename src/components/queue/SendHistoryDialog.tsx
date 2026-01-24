@@ -19,6 +19,7 @@ interface SendHistoryEntry {
   sent_at: string;
   status: string;
   error_message: string | null;
+  opened_at: string | null;
 }
 
 interface SendHistoryDialogProps {
@@ -27,7 +28,6 @@ interface SendHistoryDialogProps {
   queueId: string;
   jobTitle: string;
   company: string;
-  openedAt?: string | null;
 }
 
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
@@ -38,7 +38,6 @@ export function SendHistoryDialog({
   queueId,
   jobTitle,
   company,
-  openedAt,
 }: SendHistoryDialogProps) {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -53,7 +52,7 @@ export function SendHistoryDialog({
       try {
         const { data, error } = await supabase
           .from('queue_send_history')
-          .select('id, sent_at, status, error_message')
+          .select('id, sent_at, status, error_message, opened_at')
           .eq('queue_id', queueId)
           .order('sent_at', { ascending: false });
 
@@ -83,7 +82,7 @@ export function SendHistoryDialog({
   const getStatusIcon = (status: string) => {
     if (status === 'success') return <CheckCircle2 className="h-4 w-4 text-success" />;
     if (status === 'failed') return <XCircle className="h-4 w-4 text-destructive" />;
-    if (status === 'skipped') return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+    if (status === 'skipped') return <AlertTriangle className="h-4 w-4 text-warning" />;
     return null;
   };
 
@@ -130,7 +129,7 @@ export function SendHistoryDialog({
                             ? 'bg-success/10 text-success border-success/30'
                             : entry.status === 'failed'
                               ? 'bg-destructive/10 text-destructive border-destructive/30'
-                              : 'bg-orange-500/10 text-orange-600 border-orange-500/30'
+                              : 'bg-warning/10 text-warning border-warning/30'
                         }
                       >
                         {getStatusLabel(entry.status)}
@@ -148,8 +147,8 @@ export function SendHistoryDialog({
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Eye className="h-3.5 w-3.5" />
                       <span>{t('queue.history.opened_at')}:</span>
-                      <span className={`font-medium ${openedAt ? 'text-success' : 'text-muted-foreground'}`}>
-                        {openedAt ? formatDate(openedAt) : t('queue.history.not_opened')}
+                      <span className={`font-medium ${entry.opened_at ? 'text-success' : 'text-muted-foreground'}`}>
+                        {entry.opened_at ? formatDate(entry.opened_at) : t('queue.history.not_opened')}
                       </span>
                     </div>
                   </div>

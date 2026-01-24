@@ -716,6 +716,9 @@ async function processOneUser(params: {
     if (!locked) continue;
 
     processed += 1;
+    
+    // Generate unique tracking_id for this specific send (declared outside try for error handling scope)
+    const historyTrackingId = crypto.randomUUID();
 
     try {
       let job:
@@ -801,11 +804,10 @@ async function processOneUser(params: {
         throw new Error("no_email_content");
       }
 
-      // Open tracking pixel
-      if (row.tracking_id) {
-        const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(String(row.tracking_id))}`;
-        htmlBody += `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
-      }
+
+      // Open tracking pixel - uses history-specific tracking_id for per-send tracking
+      const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(historyTrackingId)}`;
+      htmlBody += `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
 
       const sendProfile = pickSendProfile(p.plan_tier);
       const extraHeaders: string[] = [];
@@ -856,7 +858,7 @@ async function processOneUser(params: {
         } as any)
         .eq("id", row.id)) as any;
 
-      // Log send history
+      // Log send history with unique tracking_id for this specific send
       await (serviceClient
         .from("queue_send_history")
         .insert({
@@ -864,6 +866,7 @@ async function processOneUser(params: {
           user_id: userId,
           sent_at: new Date().toISOString(),
           status: "success",
+          tracking_id: historyTrackingId,
         } as any)) as any;
 
       sent += 1;
@@ -886,7 +889,7 @@ async function processOneUser(params: {
         } as any)
         .eq("id", row.id)) as any;
 
-      // Log failed send history
+      // Log failed send history with tracking_id for consistency
       await (serviceClient
         .from("queue_send_history")
         .insert({
@@ -895,6 +898,7 @@ async function processOneUser(params: {
           sent_at: new Date().toISOString(),
           status: "failed",
           error_message: message,
+          tracking_id: historyTrackingId,
         } as any)) as any;
 
       failed += 1;
