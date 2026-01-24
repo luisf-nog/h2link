@@ -378,6 +378,12 @@ function hashToIndex(s: string, mod: number): number {
   return h % mod;
 }
 
+function stripMarkdownFences(text: string): string {
+  let t = String(text ?? "").trim();
+  t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  return t.trim();
+}
+
 async function generateDiamondEmail(params: {
   resumeData: unknown;
   job: PublicJobRow;
@@ -388,8 +394,8 @@ async function generateDiamondEmail(params: {
   if (!LOVABLE_API_KEY) throw new Error("AI not configured");
 
   const systemPrompt =
-    "Return ONLY valid JSON with keys {subject, body}. " +
-    "Write in English. Subject must be short. Body must be a short cover letter. " +
+    "Return ONLY valid JSON with keys {subject, body}. No markdown fences. No explanation. " +
+    "Write in English. Subject must be short. Body must be a short cover letter (3-6 paragraphs, max 230 words). " +
     "Tone: respectful, direct, humble. No corporate jargon.";
 
   const userPrompt =
@@ -420,11 +426,20 @@ async function generateDiamondEmail(params: {
 
   if (!aiResp.ok) throw new Error(`AI error (${aiResp.status})`);
   const aiJson = await aiResp.json();
-  const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
-  const parsed = JSON.parse(content);
+  const rawContent = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
+  // Strip markdown fences if present (e.g., ```json ... ```)
+  const cleanContent = stripMarkdownFences(rawContent);
+  
+  let parsed: { subject?: string; body?: string };
+  try {
+    parsed = JSON.parse(cleanContent);
+  } catch (e) {
+    throw new Error(`AI returned invalid JSON: ${cleanContent.slice(0, 200)}`);
+  }
+  
   const subject = String(parsed?.subject ?? "").trim();
   const body = String(parsed?.body ?? "").trim();
-  if (!subject || !body) throw new Error("AI output invalid");
+  if (!subject || !body) throw new Error("AI output missing subject or body");
   return { subject, body };
 }
 
