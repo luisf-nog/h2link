@@ -20,6 +20,38 @@ function getDailyEmailLimit(planTier: PlanTier): number {
 
 type EmailProvider = "gmail" | "outlook";
 
+function escapeHtml(input: string): string {
+  return String(input)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Convert plain text (with optional **bold**) into simple, reliable HTML.
+function textToHtmlEmailBody(input: string): string {
+  const normalized = String(input ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  const escaped = escapeHtml(normalized);
+  const withBold = escaped.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
+
+  const paragraphs = withBold
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => p.replace(/\n/g, "<br>"));
+
+  if (paragraphs.length === 0) return "";
+
+  return paragraphs
+    .map((p) => `<p style="margin:0 0 12px 0;">${p}</p>`)
+    .join("");
+}
+
 interface EmailRequest {
   to: string;
   subject: string;
@@ -433,7 +465,7 @@ const handler = async (req: Request): Promise<Response> => {
     const normalizedProvider: EmailProvider = provider === "outlook" ? "outlook" : "gmail";
     const smtpConfig = SMTP_CONFIGS[normalizedProvider];
 
-    let htmlBody = String(body.body).replace(/\n/g, "<br>");
+    let htmlBody = textToHtmlEmailBody(body.body);
 
     // Open tracking pixel (best-effort)
     try {
