@@ -1,4 +1,4 @@
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ export function AppSidebar() {
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard },
     { title: t('nav.jobs'), url: '/jobs', icon: Search },
     { title: t('nav.queue'), url: '/queue', icon: ListTodo },
+    { title: t('nav.referrals'), url: '/referrals', icon: Users },
     { title: t('nav.plans'), url: '/plans', icon: Diamond },
     { title: t('nav.settings'), url: '/settings', icon: Settings },
   ];

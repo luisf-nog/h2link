@@ -38,6 +38,7 @@
     "dashboard": "Panel",
     "jobs": "Hub de Empleos",
     "queue": "Mi cola",
+    "referrals": "Referencias",
     "plans": "Planes",
     "settings": "Configuración"
   },
@@ -769,6 +770,8 @@
   "referrals": {
     "title": "Referidos",
     "subtitle": "El bono se activa solo cuando tu amigo envía su primer email.",
+    "page_title": "Referidos",
+    "page_subtitle": "Invita amigos y gana créditos extra de envío diario.",
     "active_label": "Referidos activos",
     "bonus_label": "Tu bono actual (+emails/día)",
     "explainer": "Invita a un amigo. En cuanto envíe su primer email, ambos ganan +5 en el límite diario.",
@@ -776,10 +779,23 @@
     "copy": "Copiar código",
     "copied": "¡Copiado!",
     "list_title": "Tus referidos",
+    "list_subtitle": "Sigue el estado de cada referido.",
     "list_empty": "Aún no tienes referidos.",
     "unknown": "Usuario",
     "status_pending": "Pendiente",
     "status_active": "Activo",
-    "signup_hint": "Si tienes un código de referido, pégalo aquí (opcional)."
+    "signup_hint": "Si tienes un código de referido, pégalo aquí (opcional).",
+    "stats": {
+      "active": "Referidos activos",
+      "bonus": "Bono de envíos",
+      "bonus_desc": "emails extra por día",
+      "total": "Total referidos",
+      "total_desc": "usuarios invitados"
+    },
+    "share": {
+      "title": "Compartir",
+      "subtitle": "Usa tu código o enlace para invitar amigos.",
+      "link_label": "Tu enlace de referido"
+    }
   }
 }
