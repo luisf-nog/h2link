@@ -541,6 +541,10 @@
       "no_template_desc": "Create at least one template in Settings before sending.",
       "resume_required_title": "Resume required",
       "resume_required_desc": "On Black plan, upload your resume in Settings → Resume so we can generate a tailored email for each job.",
+      "bulk_premium_title": "Premium Feature",
+      "bulk_premium_desc": "The bulk send (Send All) is exclusive to Premium plans. Upgrade to send everything at once.",
+      "bulk_premium_cta": "View plans",
+      "black_ai_failed_no_fallback": "AI failed to generate the email and there is no fallback template.",
       "black_ai_failed_no_fallback": "AI failed to generate the email and there is no fallback template.",
       "bg_started_title": "Sending started",
       "bg_started_desc": "Your sending is running in the background. You can close this page.",
@@ -742,6 +746,11 @@
       "gold_desc": "Unlock emails and companies for {{price}} (lifetime)",
       "diamond_desc": "Full access + AI + visual benefits for {{price}} (lifetime)",
       "cta": "View plans"
+    },
+    "upgrade_banner": {
+      "title": "Daily limit reached!",
+      "description": "You've sent {{limit}} emails today. Upgrade for more daily sends.",
+      "cta": "Upgrade now"
     },
     "pagination": {
       "page_of": "Page {{page}} of {{totalPages}}"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PLANS_CONFIG } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +29,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -42,6 +43,7 @@ export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const isAdmin = useIsAdmin();
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
@@ -55,6 +57,13 @@ export default function Jobs() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
+
+  // Derive daily limit data for banner
+  const planTierCheck = profile?.plan_tier || 'free';
+  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  const dailyLimitTotal = (PLANS_CONFIG[planTierCheck]?.limits?.daily_emails ?? 0) + referralBonus;
+  const creditsUsedToday = profile?.credits_used_today || 0;
+  const isFreeLimitReached = planTierCheck === 'free' && creditsUsedToday >= dailyLimitTotal;
 
   const [visaType, setVisaType] = useState<'all' | 'H-2B' | 'H-2A'>(() => {
     const v = searchParams.get('visa');
@@ -436,6 +445,24 @@ export default function Jobs() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
+      {/* Upgrade Banner for Free users at limit */}
+      {isFreeLimitReached && (
+        <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">{t('jobs.upgrade_banner.title')}</p>
+              <p className="text-sm text-muted-foreground">{t('jobs.upgrade_banner.description', { limit: dailyLimitTotal })}</p>
+            </div>
+          </div>
+          <Button onClick={() => navigate('/plans')} size="sm">
+            {t('jobs.upgrade_banner.cta')}
+          </Button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

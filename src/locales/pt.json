@@ -746,6 +746,11 @@
       "diamond_desc": "Acesso completo + IA + benefícios visuais por {{price}} (vitalício)",
       "cta": "Ver Planos"
     },
+    "upgrade_banner": {
+      "title": "Limite diário atingido!",
+      "description": "Você enviou {{limit}} emails hoje. Faça upgrade para mais envios diários.",
+      "cta": "Fazer upgrade"
+    },
     "pagination": {
       "page_of": "Página {{page}} de {{totalPages}}"
     },

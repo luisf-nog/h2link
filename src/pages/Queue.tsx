@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, Eye, RefreshCw, History } from 'lucide-react';
+import { Trash2, Send, Loader2, Eye, RefreshCw, History, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
@@ -85,6 +85,7 @@ export default function Queue() {
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
 
@@ -801,6 +802,27 @@ export default function Queue() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Premium Feature Dialog for Send All */}
+      <AlertDialog open={premiumDialogOpen} onOpenChange={setPremiumDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('queue.toasts.bulk_premium_title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('queue.toasts.bulk_premium_desc')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('queue.upgrade_required.actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setPremiumDialogOpen(false);
+                navigate('/plans');
+              }}
+            >
+              {t('queue.toasts.bulk_premium_cta')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <SendHistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
@@ -832,17 +854,28 @@ export default function Queue() {
             {t('queue.actions.send_selected', { count: selectedPendingIds.length })}
           </Button>
 
-          <Button
-            onClick={handleSendAll}
-            disabled={pendingCount === 0 || sending}
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4 mr-2" />
-            )}
-            {t('queue.actions.send', { pendingCount })}
-          </Button>
+          {planTier === 'free' ? (
+            <Button
+              variant="secondary"
+              onClick={() => setPremiumDialogOpen(true)}
+              disabled={pendingCount === 0}
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              {t('queue.actions.send', { pendingCount })}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSendAll}
+              disabled={pendingCount === 0 || sending}
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {t('queue.actions.send', { pendingCount })}
+            </Button>
+          )}
         </div>
       </div>
 
