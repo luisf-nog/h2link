@@ -18,11 +18,14 @@ function json(status: number, payload: unknown) {
 }
 
 async function extractPdfText(data: Uint8Array): Promise<string> {
-  // pdfjs uses a worker in browsers; in this runtime we disable it.
-  // @ts-ignore - workerSrc exists but types may differ in esm builds.
-  pdfjs.GlobalWorkerOptions.workerSrc = "";
+  // In the edge runtime we must NOT use a worker; otherwise pdfjs throws
+  // "No 'GlobalWorkerOptions.workerSrc' specified.".
+  // Passing disableWorker avoids worker usage entirely.
+  // @ts-ignore - types vary across builds
+  pdfjs.GlobalWorkerOptions.workerSrc = "pdf.worker.min.mjs";
 
-  const doc = await pdfjs.getDocument({ data }).promise;
+  // @ts-ignore - disableWorker is supported by pdfjs
+  const doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
   const maxPages = Math.min(doc.numPages, 25);
   let out = "";
   for (let p = 1; p <= maxPages; p++) {
