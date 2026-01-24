@@ -205,6 +205,7 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           resume_data: Json | null
+          resume_url: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           timezone: string
@@ -229,6 +230,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           resume_data?: Json | null
+          resume_url?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           timezone?: string
@@ -253,6 +255,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           resume_data?: Json | null
+          resume_url?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           timezone?: string

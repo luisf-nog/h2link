@@ -405,11 +405,16 @@
 
   "resume": {
     "title": "Currículo (IA)",
-    "subtitle": "Envie seu PDF, revise os dados extraídos e salve para o plano Diamond personalizar cada vaga.",
+    "subtitle": "Envie seu PDF, revise os dados extraídos e salve. O currículo será anexado em todos os emails enviados.",
     "upload": {
       "label": "Upload do PDF",
       "note": "A IA pode errar — revise antes de salvar.",
       "actions": { "parse": "Extrair com IA" }
+    },
+    "status": {
+      "attached": "Currículo anexado",
+      "attached_desc": "Este PDF será anexado automaticamente a todos os emails enviados.",
+      "view": "Visualizar"
     },
     "fields": {
       "name": "Nome",
@@ -420,7 +425,10 @@
       "previous_jobs_hint": "Ex: Farm worker, Construction",
       "bio": "Bio curta"
     },
-    "actions": { "save": "Salvar currículo" },
+    "actions": { 
+      "save": "Salvar currículo",
+      "uploading": "Enviando PDF..."
+    },
     "toasts": {
       "parsed_title": "Currículo extraído",
       "parsed_desc": "Revise os campos e salve.",

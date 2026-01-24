@@ -43,6 +43,7 @@ interface ProfileRow {
   phone_e164: string | null;
   contact_email: string | null;
   resume_data?: unknown | null;
+  resume_url?: string | null;
   credits_used_today?: number | null;
   credits_reset_date?: string | null;
   timezone?: string | null;
@@ -250,8 +251,10 @@ function createMimeMessage(params: {
   subject: string;
   htmlBody: string;
   extraHeaders?: string[];
+  attachment?: { name: string; content: Uint8Array; mimeType: string };
 }): string {
-  const { from, to, subject, htmlBody, extraHeaders } = params;
+  const { from, to, subject, htmlBody, extraHeaders, attachment } = params;
+  const boundary = `----=_Part_${crypto.randomUUID()}`;
   const subjectEncoded = `=?UTF-8?B?${utf8ToBase64(subject)}?=`;
 
   const baseHeaders = [
@@ -264,13 +267,50 @@ function createMimeMessage(params: {
 
   const safeExtraHeaders = (extraHeaders ?? []).filter(Boolean);
 
-  return [
-    ...baseHeaders,
-    ...safeExtraHeaders,
+  const htmlPart = [
     `Content-Type: text/html; charset=UTF-8`,
     `Content-Transfer-Encoding: base64`,
     ``,
     utf8ToBase64(`<div style="font-family: Calibri, sans-serif; font-size: 14px;">${htmlBody}</div>`),
+  ].join("\r\n");
+
+  if (!attachment) {
+    return [
+      ...baseHeaders,
+      ...safeExtraHeaders,
+      `Content-Type: text/html; charset=UTF-8`,
+      `Content-Transfer-Encoding: base64`,
+      ``,
+      utf8ToBase64(`<div style="font-family: Calibri, sans-serif; font-size: 14px;">${htmlBody}</div>`),
+    ].join("\r\n");
+  }
+
+  const attachmentB64 = base64Encode(
+    attachment.content.buffer.slice(
+      attachment.content.byteOffset,
+      attachment.content.byteOffset + attachment.content.byteLength,
+    ) as ArrayBuffer,
+  );
+
+  const attachmentPart = [
+    `Content-Type: ${attachment.mimeType}; name="${attachment.name}"`,
+    `Content-Transfer-Encoding: base64`,
+    `Content-Disposition: attachment; filename="${attachment.name}"`,
+    ``,
+    attachmentB64,
+  ].join("\r\n");
+
+  return [
+    ...baseHeaders,
+    ...safeExtraHeaders,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    htmlPart,
+    `--${boundary}`,
+    attachmentPart,
+    `--${boundary}--`,
+    ``,
   ].join("\r\n");
 }
 
@@ -520,7 +560,7 @@ async function processOneUser(params: {
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
-    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,credits_used_today,credits_reset_date,referral_bonus_limit")
+    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors")
     .eq("id", userId)
     .single();
 
@@ -829,12 +869,35 @@ async function processOneUser(params: {
           `</div>`;
       }
 
+      // Fetch resume PDF attachment if available
+      let attachment: { name: string; content: Uint8Array; mimeType: string } | undefined;
+      if (p.resume_url) {
+        try {
+          const resumeResp = await withTimeout(fetch(p.resume_url), 15000, "fetch resume");
+          if (resumeResp.ok) {
+            const arrayBuffer = await withTimeout(resumeResp.arrayBuffer(), 20000, "read resume");
+            // Extract filename from URL or use default
+            const urlParts = p.resume_url.split("/");
+            const fileName = urlParts[urlParts.length - 1]?.split("?")[0] || "resume.pdf";
+            attachment = {
+              name: fileName,
+              content: new Uint8Array(arrayBuffer),
+              mimeType: "application/pdf",
+            };
+          }
+        } catch (_e) {
+          // Non-fatal: continue without attachment
+          console.warn(`[RESUME-ATTACH] Failed to fetch resume for user ${userId}: ${_e}`);
+        }
+      }
+
       const rawMessage = createMimeMessage({
         from: smtpEmail,
         to: job.email,
         subject: finalSubject,
         htmlBody,
         extraHeaders,
+        attachment,
       });
 
       if (smtpConfig.useStartTls) {

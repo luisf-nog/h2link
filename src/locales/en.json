@@ -405,11 +405,16 @@
 
   "resume": {
     "title": "Resume (AI)",
-    "subtitle": "Upload your PDF, review extracted data, and save it so Diamond can personalize each job.",
+    "subtitle": "Upload your PDF, review extracted data, and save. The resume will be attached to all emails sent.",
     "upload": {
       "label": "PDF upload",
       "note": "AI can be wrong — review before saving.",
       "actions": { "parse": "Extract with AI" }
+    },
+    "status": {
+      "attached": "Resume attached",
+      "attached_desc": "This PDF will be automatically attached to all emails sent.",
+      "view": "View"
     },
     "fields": {
       "name": "Name",
@@ -420,7 +425,10 @@
       "previous_jobs_hint": "e.g. Farm worker, Construction",
       "bio": "Short bio"
     },
-    "actions": { "save": "Save resume" },
+    "actions": { 
+      "save": "Save resume",
+      "uploading": "Uploading PDF..."
+    },
     "toasts": {
       "parsed_title": "Resume extracted",
       "parsed_desc": "Review the fields and save.",
