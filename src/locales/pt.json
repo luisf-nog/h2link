@@ -435,7 +435,15 @@
       "send_selected": "Enviar selecionados ({{count}})",
       "retry": "Reenviar",
       "retry_all_failed": "Reenviar falhos ({{count}})",
-      "resend": "Enviar novamente"
+      "resend": "Enviar novamente",
+      "view_history": "Ver histórico"
+    },
+    "history": {
+      "title": "Histórico de Envios",
+      "empty": "Nenhum envio registrado.",
+      "status_success": "Sucesso",
+      "status_failed": "Falhou",
+      "status_skipped": "Pulado"
     },
     "manual_dialog": {
       "title": "Adicionar Empresa",

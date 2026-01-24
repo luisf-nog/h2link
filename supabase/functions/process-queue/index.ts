@@ -856,6 +856,16 @@ async function processOneUser(params: {
         } as any)
         .eq("id", row.id)) as any;
 
+      // Log send history
+      await (serviceClient
+        .from("queue_send_history")
+        .insert({
+          queue_id: row.id,
+          user_id: userId,
+          sent_at: new Date().toISOString(),
+          status: "success",
+        } as any)) as any;
+
       sent += 1;
       creditsUsed += 1;
       await (serviceClient
@@ -875,6 +885,18 @@ async function processOneUser(params: {
           last_attempt_at: new Date().toISOString(),
         } as any)
         .eq("id", row.id)) as any;
+
+      // Log failed send history
+      await (serviceClient
+        .from("queue_send_history")
+        .insert({
+          queue_id: row.id,
+          user_id: userId,
+          sent_at: new Date().toISOString(),
+          status: "failed",
+          error_message: message,
+        } as any)) as any;
+
       failed += 1;
 
       if (isCircuitBreakerError(message)) {

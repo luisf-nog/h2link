@@ -430,7 +430,15 @@
       "send_selected": "Send selected ({{count}})",
       "retry": "Retry",
       "retry_all_failed": "Retry failed ({{count}})",
-      "resend": "Resend"
+      "resend": "Resend",
+      "view_history": "View history"
+    },
+    "history": {
+      "title": "Send History",
+      "empty": "No sends recorded.",
+      "status_success": "Success",
+      "status_failed": "Failed",
+      "status_skipped": "Skipped"
     },
     "manual_dialog": {
       "title": "Add Company",
