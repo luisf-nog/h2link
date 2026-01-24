@@ -255,6 +255,7 @@ export default function Queue() {
 
   const isFree = planTier === 'free';
   const pendingItems = useMemo(() => queue.filter((q) => q.status === 'pending'), [queue]);
+  const failedItems = useMemo(() => queue.filter((q) => q.status === 'failed'), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
   const selectedPendingIds = useMemo(
     () => Object.keys(selectedIds).filter((id) => selectedIds[id] && pendingIds.has(id)),
@@ -630,6 +631,26 @@ export default function Queue() {
     }
   };
 
+  const handleRetryAllFailed = async () => {
+    if (failedItems.length === 0) return;
+    setSending(true);
+    try {
+      // Reset all failed items to pending
+      const failedIds = failedItems.map((it) => it.id);
+      await supabase.from('my_queue').update({ status: 'pending', last_error: null }).in('id', failedIds);
+      
+      // Re-fetch and send
+      const updatedItems = failedItems.map((it) => ({ ...it, status: 'pending' }));
+      await sendQueueItems(updatedItems.slice(0, remainingToday));
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+      fetchQueue();
+    } finally {
+      setSending(false);
+    }
+  };
+
   const pendingCount = pendingItems.length;
   const sentCount = queue.filter((q) => q.status === 'sent').length;
 
@@ -681,6 +702,13 @@ export default function Queue() {
 
         <div className="flex gap-2 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
+
+          {failedItems.length > 0 && (
+            <Button variant="outline" onClick={handleRetryAllFailed} disabled={sending}>
+              {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              {t('queue.actions.retry_all_failed', { count: failedItems.length })}
+            </Button>
+          )}
 
           <Button variant="secondary" onClick={handleSendSelected} disabled={selectedPendingIds.length === 0 || sending}>
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
