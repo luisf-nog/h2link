@@ -665,11 +665,29 @@ export default function Queue() {
     
     // Fire and forget - don't await, let it run in background
     sendQueueItems([item])
-      .catch((e: unknown) => {
+      .catch(async (e: unknown) => {
         const message = e instanceof Error ? e.message : t('common.errors.send_failed');
         toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
-        // Revert status on error
-        setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'pending' } : q));
+        
+        // Log the error in send history (preserve history, don't clear it)
+        const now = new Date().toISOString();
+        await supabase.from('queue_send_history').insert({
+          queue_id: item.id,
+          user_id: profile?.id,
+          sent_at: now,
+          status: 'failed',
+          error_message: message,
+        });
+        
+        // Update queue status to failed with error message
+        await supabase.from('my_queue').update({ 
+          status: 'failed', 
+          last_error: message,
+          last_attempt_at: now,
+        }).eq('id', item.id);
+        
+        // Update local state
+        setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'failed', last_error: message } : q));
       })
       .finally(() => {
         setSendingIds(prev => {
