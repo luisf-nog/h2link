@@ -670,6 +670,7 @@ export default function Queue() {
     if (status === 'processing') return t('queue.status.processing');
     if (status === 'failed') return t('queue.status.failed');
     if (status === 'paused') return t('queue.status.paused');
+    if (status === 'skipped_invalid_domain') return t('queue.status.skipped_invalid_domain');
     return t('queue.status.pending');
   };
 
@@ -853,7 +854,9 @@ export default function Queue() {
                                 ? 'bg-warning/10 text-warning border-warning/30'
                                 : item.status === 'processing'
                                   ? 'bg-primary/10 text-primary border-primary/30'
-                                  : ''
+                                  : item.status === 'skipped_invalid_domain'
+                                    ? 'bg-orange-500/10 text-orange-600 border-orange-500/30'
+                                    : ''
                         }
                       >
                         {item.status === 'sent' && item.sent_at ? (
