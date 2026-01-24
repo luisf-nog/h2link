@@ -14,6 +14,26 @@ function json(status: number, payload: unknown) {
   });
 }
 
+function extractJsonObject(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  // Strip common Markdown fences.
+  const unfenced = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  // If it's already a JSON object, return as-is.
+  if (unfenced.startsWith("{") && unfenced.endsWith("}")) return unfenced;
+
+  // Otherwise, try to extract the first JSON object in the text.
+  const start = unfenced.indexOf("{");
+  const end = unfenced.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  return unfenced.slice(start, end + 1);
+}
+
 const resumeSchema = z.object({
   name: z.string().default(""),
   skills: z.array(z.string()).default([]),
@@ -96,9 +116,15 @@ serve(async (req) => {
     const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
     let parsed: unknown;
     try {
-      parsed = JSON.parse(content);
+      const extracted = extractJsonObject(content);
+      if (!extracted) throw new Error("no_json_object");
+      parsed = JSON.parse(extracted);
     } catch {
-      return json(500, { success: false, error: "AI returned invalid JSON" });
+      return json(500, {
+        success: false,
+        error: "AI returned invalid JSON",
+        details: content.slice(0, 800),
+      });
     }
 
     const validated = resumeSchema.safeParse(parsed);
