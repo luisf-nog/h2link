@@ -630,7 +630,8 @@ export default function Queue() {
   };
 
   const handleSendOne = async (item: QueueItem) => {
-    if (item.status !== 'pending') return;
+    // Allow resending for 'pending' or 'sent' items (user can resend anytime)
+    if (item.status !== 'pending' && item.status !== 'sent') return;
     setSendingOneId(item.id);
     try {
       await sendQueueItems([item]);
