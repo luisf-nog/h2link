@@ -486,7 +486,7 @@
       "opened_at": "Visualizado em: {{date}}",
       "disclaimer": "A confirmação de leitura depende das configurações de privacidade do destinatário."
     },
-    "status": { "sent": "Enviado", "pending": "Pendente", "processing": "Processando", "failed": "Falhou", "paused": "Pausado" },
+    "status": { "sent": "Enviado", "pending": "Pendente", "processing": "Processando", "failed": "Falhou", "paused": "Pausado", "skipped_invalid_domain": "Domínio inválido" },
     "toasts": {
       "bg_started_title": "Envio iniciado",
       "bg_started_desc": "Seu envio está rodando em background. Você pode fechar esta página.",

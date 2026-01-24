@@ -67,6 +67,44 @@ function isCircuitBreakerError(message: string): boolean {
   return false;
 }
 
+// ============ EMAIL VALIDATION ============
+
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+function extractDomain(email: string): string | null {
+  const s = String(email).trim().toLowerCase();
+  const at = s.lastIndexOf("@");
+  if (at <= 0 || at === s.length - 1) return null;
+  const domain = s.slice(at + 1).trim();
+  if (!domain || domain.length < 3) return null;
+  return domain;
+}
+
+async function validateEmailDNS(email: string): Promise<{ valid: boolean; reason?: string }> {
+  // Step A: Syntax validation
+  if (!EMAIL_REGEX.test(email)) {
+    return { valid: false, reason: "Formato de e-mail inválido" };
+  }
+
+  // Step B: Extract domain
+  const domain = extractDomain(email);
+  if (!domain) {
+    return { valid: false, reason: "Domínio de e-mail inválido" };
+  }
+
+  // Step C: MX Lookup
+  try {
+    const mx = await Deno.resolveDns(domain, "MX");
+    if (!Array.isArray(mx) || mx.length === 0) {
+      return { valid: false, reason: `Domínio ${domain} sem servidor de e-mail (MX)` };
+    }
+    return { valid: true };
+  } catch (_e) {
+    // DNS resolution failed - domain doesn't exist or has no MX records
+    return { valid: false, reason: `Domínio ${domain} inativo ou inexistente` };
+  }
+}
+
 interface PublicJobRow {
   id: string;
   company: string;
@@ -704,6 +742,23 @@ async function processOneUser(params: {
       }
 
       if (!job?.email) throw new Error("Destino (email) ausente");
+
+      // Validate email domain before sending (prevent hard bounces)
+      const emailValidation = await validateEmailDNS(job.email);
+      if (!emailValidation.valid) {
+        await (serviceClient
+          .from("my_queue")
+          .update({
+            status: "skipped_invalid_domain",
+            processing_started_at: null,
+            last_error: emailValidation.reason ?? "Domínio de e-mail inválido",
+            last_attempt_at: new Date().toISOString(),
+          } as any)
+          .eq("id", row.id)) as any;
+        failed += 1;
+        console.log(`[MX-SKIP] user=${userId} queue=${row.id} email=${job.email} reason=${emailValidation.reason}`);
+        continue;
+      }
 
       const visaType = ("visa_type" in job && job.visa_type === "H-2A") ? "H-2A" : "H-2B";
       const fallbackTpl =

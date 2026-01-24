@@ -486,7 +486,7 @@
       "opened_at": "Visto en: {{date}}",
       "disclaimer": "La confirmación de lectura depende de la configuración de privacidad del destinatario."
     },
-    "status": { "sent": "Enviado", "pending": "Pendiente", "processing": "Procesando", "failed": "Falló", "paused": "Pausado" },
+    "status": { "sent": "Enviado", "pending": "Pendiente", "processing": "Procesando", "failed": "Falló", "paused": "Pausado", "skipped_invalid_domain": "Dominio inválido" },
     "toasts": {
       "no_template_title": "No se encontraron plantillas",
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
