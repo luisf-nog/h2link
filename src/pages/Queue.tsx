@@ -20,7 +20,8 @@ import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, type Locale } from 'date-fns';
+import { ptBR, enUS, es } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -67,10 +68,12 @@ type EmailTemplate = {
   body: string;
 };
 
+const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
+
 export default function Queue() {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -855,7 +858,11 @@ export default function Queue() {
                       >
                         {item.status === 'sent' && item.sent_at ? (
                           <span className="flex items-center gap-1">
-                            {item.send_count}x {format(new Date(item.sent_at), 'dd/MM HH:mm')}
+                            {item.send_count}x {format(
+                              new Date(item.sent_at),
+                              i18n.language === 'en' ? 'MM/dd hh:mm a' : 'dd/MM HH:mm',
+                              { locale: dateLocaleMap[i18n.language] ?? enUS }
+                            )}
                           </span>
                         ) : (
                           statusLabel(item.status)
