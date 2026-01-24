@@ -468,6 +468,11 @@
       "description": "Para enviar emails, necesitas configurar tu cuenta SMTP en Configuración → SMTP.",
       "actions": { "cancel": "Ahora no", "go_settings": "Abrir configuración SMTP" }
     },
+    "upgrade_required": {
+      "title": "¡Límite diario alcanzado!",
+      "description": "Alcanzaste tu límite de {{limit}} envíos por día. Actualiza tu plan para enviar más.",
+      "actions": { "cancel": "Volver", "view_plans": "Ver planes premium" }
+    },
     "stats": {
       "in_queue": "En cola",
       "sent_today": "Enviadas hoy",

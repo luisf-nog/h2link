@@ -72,7 +72,7 @@ type EmailTemplate = {
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
 
 export default function Queue() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -84,6 +84,7 @@ export default function Queue() {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
 
@@ -298,11 +299,7 @@ export default function Queue() {
     }
 
     if (remainingToday <= 0) {
-      toast({
-        title: t('queue.toasts.daily_limit_reached_title'),
-        description: t('queue.toasts.daily_limit_reached_desc'),
-        variant: 'destructive',
-      });
+      setUpgradeDialogOpen(true);
       return { ok: false as const };
     }
 
@@ -459,6 +456,11 @@ export default function Queue() {
       })();
 
       if (!res.ok || payload?.success === false) {
+        // Handle daily limit reached specifically
+        if (res.status === 429 || payload?.error === 'daily_limit_reached') {
+          setUpgradeDialogOpen(true);
+          throw new Error('daily_limit_reached');
+        }
         throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
       }
 
@@ -497,6 +499,8 @@ export default function Queue() {
       description: String(t('queue.toasts.sent_desc', { count: formatNumber(sentIds.length) } as any)),
     });
 
+    // Refresh profile to get updated credits_used_today
+    await refreshProfile();
     fetchQueue();
   };
 
@@ -713,6 +717,27 @@ export default function Queue() {
               }}
             >
               {t('queue.smtp_required.actions.go_settings')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Upgrade Dialog when daily limit is reached */}
+      <AlertDialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('queue.upgrade_required.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('queue.upgrade_required.description', { limit: dailyLimitTotal })}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('queue.upgrade_required.actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setUpgradeDialogOpen(false);
+                navigate('/plans');
+              }}
+            >
+              {t('queue.upgrade_required.actions.view_plans')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

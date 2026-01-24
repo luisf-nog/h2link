@@ -468,6 +468,11 @@
       "description": "To send emails, you need to configure your SMTP account in Settings → SMTP.",
       "actions": { "cancel": "Not now", "go_settings": "Open SMTP settings" }
     },
+    "upgrade_required": {
+      "title": "Daily limit reached!",
+      "description": "You've reached your limit of {{limit}} emails per day. Upgrade to send more.",
+      "actions": { "cancel": "Go back", "view_plans": "View premium plans" }
+    },
     "stats": {
       "in_queue": "In Queue",
       "sent_today": "Sent Today",
