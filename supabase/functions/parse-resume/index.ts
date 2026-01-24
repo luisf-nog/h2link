@@ -18,14 +18,25 @@ function json(status: number, payload: unknown) {
 }
 
 async function extractPdfText(data: Uint8Array): Promise<string> {
-  // In the edge runtime we must NOT use a worker; otherwise pdfjs throws
-  // "No 'GlobalWorkerOptions.workerSrc' specified.".
-  // Passing disableWorker avoids worker usage entirely.
+  // Edge runtime (Deno) cannot load a relative worker script.
+  // Even with disableWorker=true, pdfjs may attempt a "fake worker" fallback and
+  // import(workerSrc). Therefore workerSrc MUST be an absolute URL.
   // @ts-ignore - types vary across builds
-  pdfjs.GlobalWorkerOptions.workerSrc = "pdf.worker.min.mjs";
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.worker.mjs";
 
-  // @ts-ignore - disableWorker is supported by pdfjs
-  const doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
+  let doc: any;
+  try {
+    // @ts-ignore - disableWorker is supported by pdfjs
+    doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
+  } catch (e) {
+    // Fallback: try non-legacy worker path in case esm changes packaging.
+    // @ts-ignore
+    pdfjs.GlobalWorkerOptions.workerSrc =
+      "https://esm.sh/pdfjs-dist@4.10.38/build/pdf.worker.mjs";
+    // @ts-ignore
+    doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
+  }
   const maxPages = Math.min(doc.numPages, 25);
   let out = "";
   for (let p = 1; p <= maxPages; p++) {
@@ -86,8 +97,20 @@ serve(async (req) => {
     }
 
     const buf = new Uint8Array(await file.arrayBuffer());
+
+    console.info("parse-resume: received file", {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
+
     const text = await extractPdfText(buf);
     if (!text) return json(400, { success: false, error: "Could not extract text from PDF" });
+
+    console.info("parse-resume: extracted text", {
+      length: text.length,
+      preview: text.slice(0, 200),
+    });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
@@ -139,6 +162,7 @@ serve(async (req) => {
     return json(200, { success: true, resume_data: validated.data });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("parse-resume: unhandled error", e);
     return json(500, { success: false, error: message });
   }
 });
