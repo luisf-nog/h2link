@@ -11,6 +11,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Jobs from "./pages/Jobs";
 import Queue from "./pages/Queue";
+import Referrals from "./pages/Referrals";
 import Plans from "./pages/Plans";
 import Settings from "./pages/Settings";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -109,6 +110,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <Queue />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/referrals"
+      element={
+        <ProtectedRoute>
+          <Referrals />
         </ProtectedRoute>
       }
     />

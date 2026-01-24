@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/number';
 import { Button } from '@/components/ui/button';
-import { ReferralWidget } from '@/components/referrals/ReferralWidget';
+
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -186,7 +186,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {profile?.id ? <ReferralWidget /> : null}
+      
 
       {/* Credits Card */}
       <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">

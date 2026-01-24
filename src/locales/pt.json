@@ -38,6 +38,7 @@
     "dashboard": "Dashboard",
     "jobs": "Hub Vagas",
     "queue": "Minha Fila",
+    "referrals": "Indicações",
     "plans": "Planos",
     "settings": "Configurações"
   },
@@ -772,6 +773,8 @@
   "referrals": {
     "title": "Indicações",
     "subtitle": "Bônus só ativa quando o indicado envia o 1º e-mail.",
+    "page_title": "Indicações",
+    "page_subtitle": "Convide amigos e ganhe créditos extras de envio diário.",
     "active_label": "Indicações ativas",
     "bonus_label": "Seu bônus atual (+envios/dia)",
     "explainer": "Convide um amigo. Assim que ele enviar o primeiro e-mail, vocês dois ganham +5 no limite diário.",
@@ -779,10 +782,23 @@
     "copy": "Copiar código",
     "copied": "Copiado!",
     "list_title": "Seus indicados",
+    "list_subtitle": "Acompanhe o status de cada indicação.",
     "list_empty": "Você ainda não indicou ninguém.",
     "unknown": "Usuário",
     "status_pending": "Pendente",
     "status_active": "Ativo",
-    "signup_hint": "Se você tem um código de indicação, cole aqui (opcional)."
+    "signup_hint": "Se você tem um código de indicação, cole aqui (opcional).",
+    "stats": {
+      "active": "Indicações ativas",
+      "bonus": "Bônus de envios",
+      "bonus_desc": "emails extras por dia",
+      "total": "Total de indicados",
+      "total_desc": "usuários convidados"
+    },
+    "share": {
+      "title": "Compartilhar",
+      "subtitle": "Use seu código ou link para convidar amigos.",
+      "link_label": "Seu link de indicação"
+    }
   }
 }

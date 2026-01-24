@@ -38,6 +38,7 @@
     "dashboard": "Dashboard",
     "jobs": "Jobs Hub",
     "queue": "My Queue",
+    "referrals": "Referrals",
     "plans": "Plans",
     "settings": "Settings"
   },
@@ -769,6 +770,8 @@
   "referrals": {
     "title": "Referrals",
     "subtitle": "Bonus activates only when your friend sends their first email.",
+    "page_title": "Referrals",
+    "page_subtitle": "Invite friends and earn extra daily sending credits.",
     "active_label": "Active referrals",
     "bonus_label": "Your current bonus (+emails/day)",
     "explainer": "Invite a friend. As soon as they send their first email, you both gain +5 on the daily limit.",
@@ -776,10 +779,23 @@
     "copy": "Copy code",
     "copied": "Copied!",
     "list_title": "Your referred users",
+    "list_subtitle": "Track the status of each referral.",
     "list_empty": "No referrals yet.",
     "unknown": "User",
     "status_pending": "Pending",
     "status_active": "Active",
-    "signup_hint": "If you have a referral code, paste it here (optional)."
+    "signup_hint": "If you have a referral code, paste it here (optional).",
+    "stats": {
+      "active": "Active referrals",
+      "bonus": "Sending bonus",
+      "bonus_desc": "extra emails per day",
+      "total": "Total referred",
+      "total_desc": "invited users"
+    },
+    "share": {
+      "title": "Share",
+      "subtitle": "Use your code or link to invite friends.",
+      "link_label": "Your referral link"
+    }
   }
 }
