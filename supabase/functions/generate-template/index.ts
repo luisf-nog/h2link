@@ -19,6 +19,27 @@ const responseSchema = z.object({
   body: z.string().min(1),
 });
 
+function stripMarkdownFences(text: string): string {
+  return String(text ?? "")
+    .trim()
+    .replace(/^```[a-zA-Z]*\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function extractFirstJsonObject(text: string): string {
+  const t = stripMarkdownFences(text);
+
+  // Try to grab the first JSON object even if the model added prose around it.
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    return t.slice(start, end + 1).trim();
+  }
+
+  return t;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { success: false, error: "Method not allowed" });
@@ -121,9 +142,12 @@ serve(async (req) => {
     const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
     let parsed: unknown;
     try {
-      parsed = JSON.parse(content);
+      const jsonCandidate = extractFirstJsonObject(content);
+      parsed = JSON.parse(jsonCandidate);
     } catch {
-      return json(500, { success: false, error: "AI returned invalid JSON" });
+      // Return a small snippet to help debugging without leaking large content.
+      const snippet = content.slice(0, 500);
+      return json(500, { success: false, error: "AI returned invalid JSON", snippet });
     }
 
     const validated = responseSchema.safeParse(parsed);
