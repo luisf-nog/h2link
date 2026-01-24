@@ -79,7 +79,7 @@ export default function Queue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [sendingOneId, setSendingOneId] = useState<string | null>(null);
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set()); // Track multiple individual sends
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
@@ -652,18 +652,32 @@ export default function Queue() {
     }
   };
 
-  const handleSendOne = async (item: QueueItem) => {
+  const handleSendOne = (item: QueueItem) => {
     // Allow resending for 'pending' or 'sent' items (user can resend anytime)
     if (item.status !== 'pending' && item.status !== 'sent') return;
-    setSendingOneId(item.id);
-    try {
-      await sendQueueItems([item]);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
-    } finally {
-      setSendingOneId(null);
-    }
+    if (sendingIds.has(item.id)) return; // Already sending this item
+    
+    // Mark as sending immediately (fire and forget approach)
+    setSendingIds(prev => new Set(prev).add(item.id));
+    
+    // Update local state to show "processing" immediately
+    setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'processing' } : q));
+    
+    // Fire and forget - don't await, let it run in background
+    sendQueueItems([item])
+      .catch((e: unknown) => {
+        const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+        toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+        // Revert status on error
+        setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'pending' } : q));
+      })
+      .finally(() => {
+        setSendingIds(prev => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+      });
   };
 
   const handleRetryOne = async (item: QueueItem) => {
@@ -1013,11 +1027,11 @@ export default function Queue() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            disabled={(item.status !== 'pending' && item.status !== 'sent') || sending || sendingOneId != null}
+                            disabled={(item.status !== 'pending' && item.status !== 'sent') || sending || sendingIds.has(item.id)}
                             onClick={() => handleSendOne(item)}
                             title={item.status === 'sent' ? t('queue.actions.resend') : undefined}
                           >
-                            {sendingOneId === item.id ? (
+                            {sendingIds.has(item.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : item.status === 'sent' ? (
                               <RefreshCw className="h-4 w-4" />
