@@ -8,6 +8,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+type PlanTier = "free" | "gold" | "diamond";
+
+function getDailyEmailLimit(planTier: PlanTier): number {
+  // Keep in sync with src/config/plans.config.ts
+  if (planTier === "gold") return 150;
+  if (planTier === "diamond") return 350;
+  return 5;
+}
+
 type EmailProvider = "gmail" | "outlook";
 
 interface EmailRequest {
@@ -352,6 +361,41 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // ===== DAILY LIMIT ENFORCEMENT =====
+    const { data: profile, error: profileError } = await serviceClient
+      .from("profiles")
+      .select("plan_tier, credits_used_today, credits_reset_date, referral_bonus_limit")
+      .eq("id", userId)
+      .single();
+
+    if (profileError) {
+      return json(500, { success: false, error: "Failed to fetch profile" });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    let creditsUsed = Number(profile.credits_used_today ?? 0);
+
+    // Reset credits if new day
+    if (profile.credits_reset_date !== today) {
+      creditsUsed = 0;
+      await serviceClient
+        .from("profiles")
+        .update({ credits_used_today: 0, credits_reset_date: today } as any)
+        .eq("id", userId);
+    }
+
+    const dailyLimit = getDailyEmailLimit(profile.plan_tier as PlanTier) + Number(profile.referral_bonus_limit ?? 0);
+
+    if (creditsUsed >= dailyLimit) {
+      return json(429, { 
+        success: false, 
+        error: "daily_limit_reached",
+        limit: dailyLimit,
+        used: creditsUsed 
+      });
+    }
+    // ===== END DAILY LIMIT ENFORCEMENT =====
+
     const { data: creds, error: credsError } = await serviceClient
       .from("smtp_credentials")
       .select("provider,email,has_password")
@@ -472,6 +516,16 @@ const handler = async (req: Request): Promise<Response> => {
         rawMessage,
       });
     }
+
+    // ===== INCREMENT CREDITS AFTER SUCCESSFUL SEND =====
+    await serviceClient
+      .from("profiles")
+      .update({ 
+        credits_used_today: creditsUsed + 1, 
+        credits_reset_date: today 
+      } as any)
+      .eq("id", userId);
+    // ===== END INCREMENT CREDITS =====
 
     return json(200, { success: true, message: "Email sent" });
   } catch (error: unknown) {
