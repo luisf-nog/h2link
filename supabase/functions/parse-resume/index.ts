@@ -21,21 +21,21 @@ async function extractPdfText(data: Uint8Array): Promise<string> {
   // Edge runtime (Deno) cannot load a relative worker script.
   // Even with disableWorker=true, pdfjs may attempt a "fake worker" fallback and
   // import(workerSrc). Therefore workerSrc MUST be an absolute URL.
+  // Use a CDN that serves the worker file directly as an ES module.
+  // esm.sh doesn't reliably expose internal worker files for pdfjs-dist 4.x.
   // @ts-ignore - types vary across builds
-  // NOTE: esm.sh doesn't reliably expose the worker file for pdfjs-dist 4.x,
-  // so we use a CDN that hosts the package files directly.
   pdfjs.GlobalWorkerOptions.workerSrc =
-    "https://unpkg.com/pdfjs-dist@4.10.38/legacy/build/pdf.worker.mjs";
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs";
 
   let doc: any;
   try {
     // @ts-ignore - disableWorker is supported by pdfjs
     doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
   } catch (e) {
-    // Fallback: try another CDN (and a non-legacy worker path) in case the first CDN is blocked.
+    // Fallback: non-legacy worker path (package structure can differ by build).
     // @ts-ignore
     pdfjs.GlobalWorkerOptions.workerSrc =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs";
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
     // @ts-ignore
     doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
   }
