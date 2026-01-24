@@ -726,12 +726,17 @@
         "openings": "Openings",
         "salary": "Salary",
         "visa": "Visa",
+        "requirements": "Requirements",
         "posted": "Posted",
         "start": "Start",
         "end": "End",
         "email": "Email",
         "benefits": "Benefits",
         "action": "Action"
+      },
+      "requirements_tooltip": {
+        "available": "Click to see requirements",
+        "none": "No requirements listed"
       },
       "loading": "Loading jobs...",
       "empty": "No jobs found"
