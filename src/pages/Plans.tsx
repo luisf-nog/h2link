@@ -217,7 +217,7 @@ export default function Plans() {
               key={plan.id}
               className={cn(
                 'relative overflow-hidden transition-all duration-300 flex flex-col',
-                isBlack && 'bg-gradient-to-b from-zinc-900 to-background border-plan-black shadow-xl shadow-plan-black/20',
+                isBlack && 'border-2 border-plan-black shadow-lg',
                 isRecommended && !isBlack && `border-2 ${getPlanColorClass(plan.id, 'border')} shadow-lg`,
                 isCurrentPlan && 'ring-2 ring-primary',
                 !isBlack && !isRecommended && 'hover:shadow-md hover:border-muted-foreground/30'
@@ -246,10 +246,7 @@ export default function Plans() {
                     {t(`plans.tiers.${plan.id}.label`)}
                   </CardTitle>
                 </div>
-                <CardDescription className={cn(
-                  "text-sm",
-                  isBlack && 'text-muted-foreground'
-                )}>
+                <CardDescription className="text-sm text-muted-foreground">
                   {t(`plans.tiers.${plan.id}.description`)}
                 </CardDescription>
 
@@ -268,9 +265,7 @@ export default function Plans() {
                 </div>
               </CardHeader>
 
-              <Separator className={cn(
-                isBlack && 'bg-zinc-800'
-              )} />
+              <Separator />
 
               <CardContent className="flex-1 pt-4 space-y-4">
                 <ul className="space-y-2.5">
@@ -286,14 +281,11 @@ export default function Plans() {
                             'h-4 w-4 flex-shrink-0 mt-0.5',
                             feature.highlight 
                               ? getPlanColorClass(plan.id, 'text') 
-                              : isBlack 
-                                ? 'text-zinc-400' 
-                                : 'text-muted-foreground'
+                              : 'text-muted-foreground'
                           )}
                         />
                         <span className={cn(
-                          feature.highlight && getPlanColorClass(plan.id, 'text'),
-                          isBlack && !feature.highlight && 'text-zinc-300'
+                          feature.highlight && getPlanColorClass(plan.id, 'text')
                         )}>
                           {feature.key}
                         </span>

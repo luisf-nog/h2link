@@ -82,7 +82,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
-      spy_pixel: true,
+      spy_pixel: false,
       resume_parsing: true,
     },
     settings: {
