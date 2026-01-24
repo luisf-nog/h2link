@@ -30,11 +30,42 @@ function escapeHtml(input: string): string {
 }
 
 // Convert plain text (with optional **bold**) into simple, reliable HTML.
+// Forces paragraph breaks even if AI only returns single \n or no breaks at all.
 function textToHtmlEmailBody(input: string): string {
-  const normalized = String(input ?? "")
+  let normalized = String(input ?? "")
     .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+  // If there are no double line breaks but there are single ones, convert them
+  if (!normalized.includes("\n\n") && normalized.includes("\n")) {
+    // Convert single newlines to double newlines for paragraph breaks
+    normalized = normalized.replace(/\n/g, "\n\n");
+  }
+
+  // If still no breaks and text is long, force paragraph breaks at sentence boundaries
+  if (!normalized.includes("\n\n") && normalized.length > 300) {
+    // Split at sentence endings followed by space and capital letter
+    const sentences = normalized.split(/(?<=[.!?])\s+(?=[A-Z])/g);
+    if (sentences.length >= 3) {
+      // Group into paragraphs of 2-3 sentences
+      const paragraphs: string[] = [];
+      let current: string[] = [];
+      for (const s of sentences) {
+        current.push(s);
+        if (current.length >= 2) {
+          paragraphs.push(current.join(" "));
+          current = [];
+        }
+      }
+      if (current.length > 0) {
+        paragraphs.push(current.join(" "));
+      }
+      normalized = paragraphs.join("\n\n");
+    }
+  }
+
+  // Clean up excessive breaks
+  normalized = normalized.replace(/\n{3,}/g, "\n\n").trim();
 
   const escaped = escapeHtml(normalized);
   const withBold = escaped.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
