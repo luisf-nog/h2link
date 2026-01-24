@@ -16,6 +16,7 @@ import { TemplatesSettingsPanel } from '@/components/settings/TemplatesSettingsP
 import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { ResumeSettingsSection } from '@/components/settings/ResumeSettingsSection';
 
 type SettingsTab = 'profile' | 'account' | 'email' | 'templates';
 
@@ -95,6 +96,50 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
       });
     } else {
       await refreshProfile();
+
+      // Onboarding trigger: create first AI template after profile is complete.
+      try {
+        const hasAllFields =
+          parsed.data.fullName.trim().length > 0 &&
+          parsed.data.age != null &&
+          parsed.data.phone.trim().length > 0 &&
+          parsed.data.contactEmail.trim().length > 0;
+
+        if (hasAllFields && profile?.id) {
+          const { count } = await supabase
+            .from('email_templates')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', profile.id);
+
+          if ((count ?? 0) === 0) {
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+            const token = sessionData.session?.access_token;
+            if (!token) throw new Error(t('common.errors.no_session'));
+
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-template`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({}),
+            });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok || payload?.success === false) throw new Error(payload?.error || `HTTP ${res.status}`);
+
+            await supabase.from('email_templates').insert({
+              user_id: profile.id,
+              name: 'Meu Primeiro Template (IA)',
+              subject: String(payload.subject ?? ''),
+              body: String(payload.body ?? ''),
+            });
+          }
+        }
+      } catch {
+        // Best-effort: do not block profile save flow.
+      }
+
       toast({
         title: t('settings.toasts.update_success_title'),
         description: t('settings.toasts.update_success_desc'),
@@ -205,6 +250,8 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
               </form>
             </CardContent>
           </Card>
+
+          <ResumeSettingsSection />
         </TabsContent>
 
         <TabsContent value="account" className="space-y-6">

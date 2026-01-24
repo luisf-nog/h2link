@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PLANS_CONFIG } from "@/config/plans.config";
 
@@ -53,6 +53,9 @@ export function TemplatesSettingsPanel() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
 
+  const [aiUsedToday, setAiUsedToday] = useState<number>(0);
+  const aiLimit = 3;
+
   const spamTerms = useMemo(
     () => ["renda extra", "ganhe dinheiro", "clique aqui", "100% garantido", "urgente", "promoção", "$$$", "grátis"],
     [],
@@ -75,6 +78,22 @@ export function TemplatesSettingsPanel() {
       toast({ title: t("templates.toasts.load_error_title"), description: error.message, variant: "destructive" });
     }
     setTemplates(((data as EmailTemplate[]) ?? []).filter(Boolean));
+
+    // Load AI usage (users can SELECT their own rows)
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: usage } = await supabase
+        .from("ai_daily_usage")
+        .select("usage_date,template_generations")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const rowDate = String((usage as any)?.usage_date ?? today);
+      const used = rowDate === today ? Number((usage as any)?.template_generations ?? 0) : 0;
+      setAiUsedToday(Number.isFinite(used) ? used : 0);
+    } catch {
+      // ignore
+    }
+
     setLoading(false);
   };
 
@@ -151,7 +170,7 @@ export function TemplatesSettingsPanel() {
     }
   };
 
-  const handleGenerateWithAI = async () => {
+  const handleRewriteWithAI = async () => {
     if (!user?.id) return;
     setGenerating(true);
     try {
@@ -160,13 +179,12 @@ export function TemplatesSettingsPanel() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error(t("common.errors.no_session"));
 
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-email-template`, {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-template`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // language is intentionally omitted: AI generation must always be in English
         body: JSON.stringify({}),
       });
 
@@ -178,12 +196,13 @@ export function TemplatesSettingsPanel() {
       setSubject(String(payload.subject ?? ""));
       setBody(String(payload.body ?? ""));
 
+      if (typeof payload.used_today === "number") {
+        setAiUsedToday(payload.used_today);
+      }
+
       toast({
         title: t("templates.toasts.generated_title"),
-        description:
-          typeof payload.remaining_today === "number"
-            ? t("templates.toasts.remaining_today", { count: payload.remaining_today })
-            : undefined,
+        description: t("templates.ai_counter", { used: payload.used_today ?? aiUsedToday, limit: aiLimit }),
       });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("templates.toasts.generate_error_fallback");
@@ -234,10 +253,11 @@ export function TemplatesSettingsPanel() {
               </DialogHeader>
 
               <div className="grid gap-4">
-                <div className="flex justify-end">
-                  <Button type="button" variant="secondary" onClick={handleGenerateWithAI} disabled={generating}>
-                    {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t("templates.actions.generate_ai")}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <p className="text-sm text-muted-foreground">{t("templates.ai_counter", { used: aiUsedToday, limit: aiLimit })}</p>
+                  <Button type="button" variant="secondary" onClick={handleRewriteWithAI} disabled={generating}>
+                    {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {t("templates.actions.rewrite_ai")}
                   </Button>
                 </div>
                 <div className="space-y-2">

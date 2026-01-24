@@ -66,7 +66,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       stripe_id_brl: "price_1SsohfKliiuLyRPm2t81CuGj",
       stripe_id_usd: "price_1SsovLKliiuLyRPmIqN11GXC",
     },
-    limits: { daily_emails: 150, max_queue_size: 500, max_templates: 1 },
+    limits: { daily_emails: 150, max_queue_size: 500, max_templates: 3 },
     features: {
       cloud_sending: true,
       mask_user_agent: true,

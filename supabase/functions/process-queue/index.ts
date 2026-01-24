@@ -35,6 +35,7 @@ interface ProfileRow {
   age: number | null;
   phone_e164: string | null;
   contact_email: string | null;
+  resume_data?: unknown | null;
   credits_used_today?: number | null;
   credits_reset_date?: string | null;
   timezone?: string | null;
@@ -72,6 +73,8 @@ interface PublicJobRow {
   job_title: string;
   email: string;
   visa_type: string | null;
+  description?: string | null;
+  requirements?: string | null;
 }
 
 interface ManualJobRow {
@@ -368,6 +371,63 @@ function getDelayMs(planTier: PlanTier): number {
   return 0;
 }
 
+function hashToIndex(s: string, mod: number): number {
+  if (mod <= 1) return 0;
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % mod;
+}
+
+async function generateDiamondEmail(params: {
+  resumeData: unknown;
+  job: PublicJobRow;
+  visaType: string;
+}): Promise<{ subject: string; body: string }> {
+  const { resumeData, job, visaType } = params;
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("AI not configured");
+
+  const systemPrompt =
+    "Return ONLY valid JSON with keys {subject, body}. " +
+    "Write in English. Subject must be short. Body must be a short cover letter. " +
+    "Tone: respectful, direct, humble. No corporate jargon.";
+
+  const userPrompt =
+    `Write a short job application email (cover letter) for this H-2A/H-2B job.\n` +
+    `Visa type: ${visaType}\n` +
+    `Company: ${job.company}\n` +
+    `Job title: ${job.job_title}\n\n` +
+    `Job description:\n${String(job.description ?? "").trim()}\n\n` +
+    `Job requirements:\n${String(job.requirements ?? "").trim()}\n\n` +
+    `Candidate resume_data (JSON):\n${JSON.stringify(resumeData)}\n\n` +
+    `Cross candidate skills with the job. If there is no strong match, focus on physical effort and willingness to learn.`;
+
+  const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      temperature: 0.5,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!aiResp.ok) throw new Error(`AI error (${aiResp.status})`);
+  const aiJson = await aiResp.json();
+  const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
+  const parsed = JSON.parse(content);
+  const subject = String(parsed?.subject ?? "").trim();
+  const body = String(parsed?.body ?? "").trim();
+  if (!subject || !body) throw new Error("AI output invalid");
+  return { subject, body };
+}
+
 async function processOneUser(params: {
   serviceClient: any;
   userId: string;
@@ -379,7 +439,7 @@ async function processOneUser(params: {
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
-    .select("id,plan_tier,full_name,age,phone_e164,contact_email,credits_used_today,credits_reset_date,referral_bonus_limit")
+    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,credits_used_today,credits_reset_date,referral_bonus_limit")
     .eq("id", userId)
     .single();
 
@@ -591,7 +651,7 @@ async function processOneUser(params: {
       if (row.job_id) {
         const { data: pj, error: pjErr } = await serviceClient
           .from("public_jobs")
-          .select("id,company,job_title,email,visa_type")
+          .select("id,company,job_title,email,visa_type,description,requirements")
           .eq("id", row.job_id)
           .maybeSingle();
         if (pjErr) throw pjErr;
@@ -609,9 +669,7 @@ async function processOneUser(params: {
       if (!job?.email) throw new Error("Destino (email) ausente");
 
       const visaType = ("visa_type" in job && job.visa_type === "H-2A") ? "H-2A" : "H-2B";
-      const tpl = p.plan_tier === "diamond"
-        ? tpls[Math.floor(Math.random() * tpls.length)]
-        : tpls[0];
+      const fallbackTpl = tpls[hashToIndex(String(row.tracking_id ?? row.id), tpls.length)] ?? tpls[0];
 
       const vars: Record<string, string> = {
         name: p.full_name ?? "",
@@ -626,8 +684,21 @@ async function processOneUser(params: {
         job_phone: ("phone" in job ? (job.phone ?? "") : ""),
       };
 
-      const finalSubject = applyTemplate(tpl.subject, vars);
-      let htmlBody = applyTemplate(tpl.body, vars).replace(/\n/g, "<br>");
+      let finalSubject = applyTemplate(fallbackTpl.subject, vars);
+      let htmlBody = applyTemplate(fallbackTpl.body, vars).replace(/\n/g, "<br>");
+
+      // Diamond: dynamic generation per job (subject+body). Fallback to templates if AI fails or resume_data missing.
+      if (p.plan_tier === "diamond" && row.job_id) {
+        try {
+          if (!p.resume_data) throw new Error("resume_data_missing");
+          const pj = job as PublicJobRow;
+          const ai = await generateDiamondEmail({ resumeData: p.resume_data, job: pj, visaType });
+          finalSubject = ai.subject;
+          htmlBody = ai.body.replace(/\n/g, "<br>");
+        } catch {
+          // keep fallback
+        }
+      }
 
       // Open tracking pixel
       if (row.tracking_id) {
