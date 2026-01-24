@@ -428,7 +428,8 @@
       "send": "Enviar todas ({{pendingCount}})",
       "send_selected": "Enviar seleccionados ({{count}})",
       "retry": "Reintentar",
-      "retry_all_failed": "Reintentar fallidas ({{count}})"
+      "retry_all_failed": "Reintentar fallidas ({{count}})",
+      "resend": "Reenviar"
     },
     "manual_dialog": {
       "title": "Agregar empresa",

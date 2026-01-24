@@ -40,6 +40,7 @@ interface QueueItem {
   opened_at?: string | null;
   tracking_id?: string;
   created_at: string;
+  send_count: number;
   public_jobs: {
     id: string;
     job_title: string;
@@ -183,9 +184,10 @@ export default function Queue() {
         id,
         status,
         sent_at,
-         opened_at,
-         tracking_id,
+        opened_at,
+        tracking_id,
         created_at,
+        send_count,
         public_jobs (
           id,
           job_title,
@@ -463,8 +465,14 @@ export default function Queue() {
       }
     }
 
-    if (sentIds.length > 0) {
-      await supabase.from('my_queue').update({ status: 'sent', sent_at: new Date().toISOString() }).in('id', sentIds);
+    // Increment send_count for each sent item
+    for (const sentId of sentIds) {
+      const currentItem = items.find((i) => i.id === sentId);
+      const newCount = (currentItem?.send_count ?? 0) + 1;
+      await supabase
+        .from('my_queue')
+        .update({ status: 'sent', sent_at: new Date().toISOString(), send_count: newCount })
+        .eq('id', sentId);
     }
 
     toast({
@@ -845,7 +853,13 @@ export default function Queue() {
                                   : ''
                         }
                       >
-                        {statusLabel(item.status)}
+                        {item.status === 'sent' && item.sent_at ? (
+                          <span className="flex items-center gap-1">
+                            {item.send_count}x {format(new Date(item.sent_at), 'dd/MM HH:mm')}
+                          </span>
+                        ) : (
+                          statusLabel(item.status)
+                        )}
                       </Badge>
                     </TableCell>
 
@@ -902,11 +916,14 @@ export default function Queue() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            disabled={item.status !== 'pending' || sending || sendingOneId != null}
+                            disabled={(item.status !== 'pending' && item.status !== 'sent') || sending || sendingOneId != null}
                             onClick={() => handleSendOne(item)}
+                            title={item.status === 'sent' ? t('queue.actions.resend') : undefined}
                           >
                             {sendingOneId === item.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : item.status === 'sent' ? (
+                              <RefreshCw className="h-4 w-4" />
                             ) : (
                               <Send className="h-4 w-4" />
                             )}
