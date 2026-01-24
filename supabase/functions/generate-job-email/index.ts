@@ -42,6 +42,48 @@ function normalizeParagraphs(text: string): string {
   return t;
 }
 
+function normalizePhone(input: unknown): string {
+  const s = String(input ?? "").trim();
+  if (!s) return "";
+  return s;
+}
+
+function normalizeEmail(input: unknown): string {
+  const s = String(input ?? "").trim();
+  if (!s) return "";
+  return s;
+}
+
+function ensureSignature(params: { body: string; fullName: string; phone: string; email: string }): string {
+  const { body, fullName, phone, email } = params;
+  const trimmed = String(body ?? "").trim();
+  if (!trimmed) return trimmed;
+
+  // If the model didn't include the required signature details, enforce them deterministically.
+  const hasBestRegards = /\bBest regards\b/i.test(trimmed);
+  const hasName = fullName ? new RegExp(fullName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(trimmed) : false;
+  const hasEmail = email ? new RegExp(email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(trimmed) : false;
+  const hasPhone = phone ? trimmed.includes(phone) : false;
+
+  if (hasBestRegards && hasName && (email ? hasEmail : true) && (phone ? hasPhone : true)) {
+    return trimmed;
+  }
+
+  const sigLines = [
+    "Best regards,",
+    fullName || "",
+    phone || "",
+    email || "",
+  ].filter(Boolean);
+
+  // Avoid duplicating sign-off: if it already has Best regards, just append missing lines.
+  if (hasBestRegards) {
+    return normalizeParagraphs(`${trimmed}\n${sigLines.slice(1).join("\n")}`);
+  }
+
+  return normalizeParagraphs(`${trimmed}\n\n${sigLines.join("\n")}`);
+}
+
 const requestSchema = z.object({
   queueId: z.string().uuid(),
 });
@@ -81,7 +123,7 @@ serve(async (req) => {
 
     const { data: profile, error: profileErr } = await serviceClient
       .from("profiles")
-      .select("plan_tier,resume_data")
+      .select("plan_tier,resume_data,full_name,phone_e164,contact_email,email")
       .eq("id", userId)
       .maybeSingle();
     if (profileErr) throw profileErr;
@@ -93,6 +135,11 @@ serve(async (req) => {
     if (!resumeData) {
       return json(400, { success: false, error: "resume_data_missing" });
     }
+
+    // Signature sources of truth (prefer profile fields; fall back to resume_data keys if present)
+    const fullName = String((profile as any)?.full_name ?? (resumeData as any)?.full_name ?? (resumeData as any)?.name ?? "").trim();
+    const phone = normalizePhone((profile as any)?.phone_e164 ?? (resumeData as any)?.phone_e164 ?? (resumeData as any)?.phone ?? "");
+    const email = normalizeEmail((profile as any)?.contact_email ?? (profile as any)?.email ?? (resumeData as any)?.email ?? "");
 
     const { data: queueRow, error: qErr } = await serviceClient
       .from("my_queue")
@@ -189,6 +236,10 @@ After "Best regards," add on separate lines:
       `=== JOB INFORMATION ===\n${jobContext}\n\n` +
       `=== JOB DESCRIPTION ===\n${jobDescription || "Not provided"}\n\n` +
       `=== JOB REQUIREMENTS ===\n${jobRequirements || "Not provided"}\n\n` +
+      `=== SIGNATURE CONTACT (Use these exact values) ===\n` +
+      `Full name: ${fullName || "(missing)"}\n` +
+      `Phone: ${phone || "(missing)"}\n` +
+      `Email: ${email || "(missing)"}\n\n` +
       `=== CANDIDATE RESUME DATA (Source of Truth - JSON) ===\n${JSON.stringify(resumeData, null, 2)}\n\n` +
       `Write a personalized cover letter email matching the candidate's resume to this specific job.`;
 
@@ -219,8 +270,11 @@ After "Best regards," add on separate lines:
     const unfenced = stripMarkdownFences(raw);
     const normalized = normalizeParagraphs(unfenced);
 
+    // Ensure required signature details (then enforce the 280-word cap).
+    const withSignature = ensureSignature({ body: normalized, fullName, phone, email });
+
     // Force the 280-word cap even if the model overshoots (4-7 paragraphs).
-    const body = limitWords(normalized, 280);
+    const body = limitWords(withSignature, 280);
     if (!body) {
       return json(500, {
         success: false,
