@@ -405,11 +405,16 @@
 
   "resume": {
     "title": "Currículum (IA)",
-    "subtitle": "Sube tu PDF, revisa los datos extraídos y guárdalos para que Diamond personalice cada empleo.",
+    "subtitle": "Sube tu PDF, revisa los datos extraídos y guárdalos. El currículum será adjuntado a todos los emails.",
     "upload": {
       "label": "Subida de PDF",
       "note": "La IA puede equivocarse — revisa antes de guardar.",
       "actions": { "parse": "Extraer con IA" }
+    },
+    "status": {
+      "attached": "Currículum adjuntado",
+      "attached_desc": "Este PDF será adjuntado automáticamente a todos los emails enviados.",
+      "view": "Ver"
     },
     "fields": {
       "name": "Nombre",
@@ -420,7 +425,10 @@
       "previous_jobs_hint": "Ej: Farm worker, Construction",
       "bio": "Bio corta"
     },
-    "actions": { "save": "Guardar currículum" },
+    "actions": { 
+      "save": "Guardar currículum",
+      "uploading": "Subiendo PDF..."
+    },
     "toasts": {
       "parsed_title": "Currículum extraído",
       "parsed_desc": "Revisa los campos y guarda.",

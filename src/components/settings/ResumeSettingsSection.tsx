@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { extractTextFromPDF } from "@/lib/pdf";
 
@@ -39,13 +39,15 @@ export function ResumeSettingsSection() {
   const [extracting, setExtracting] = useState(false);
   const [resumeText, setResumeText] = useState<string>("");
   const [resume, setResume] = useState<ResumeData>(emptyResume);
+  const [currentResumeUrl, setCurrentResumeUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const canLoad = useMemo(() => Boolean(profile?.id), [profile?.id]);
 
   const load = async () => {
     if (!profile?.id) return;
     setLoading(true);
-    const { data, error } = await supabase.from("profiles").select("resume_data").eq("id", profile.id).maybeSingle();
+    const { data, error } = await supabase.from("profiles").select("resume_data, resume_url").eq("id", profile.id).maybeSingle();
     if (error) {
       toast({ title: t("common.errors.save_failed"), description: error.message, variant: "destructive" });
     }
@@ -58,6 +60,9 @@ export function ResumeSettingsSection() {
         previous_jobs: Array.isArray(rd.previous_jobs) ? rd.previous_jobs.map(String) : [],
         bio: String(rd.bio ?? ""),
       });
+    }
+    if ((data as any)?.resume_url) {
+      setCurrentResumeUrl((data as any).resume_url);
     }
     setLoading(false);
   };
@@ -122,6 +127,32 @@ export function ResumeSettingsSection() {
     if (!profile?.id) return;
     setSaving(true);
     try {
+      let uploadedUrl = currentResumeUrl;
+
+      // Upload PDF file if selected
+      if (file) {
+        setUploading(true);
+        const filePath = `${profile.id}/${file.name}`;
+        
+        // Delete existing files in user folder first
+        const { data: existingFiles } = await supabase.storage.from("resumes").list(profile.id);
+        if (existingFiles && existingFiles.length > 0) {
+          const filesToDelete = existingFiles.map((f) => `${profile.id}/${f.name}`);
+          await supabase.storage.from("resumes").remove(filesToDelete);
+        }
+        
+        const { error: uploadError } = await supabase.storage.from("resumes").upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from("resumes").getPublicUrl(filePath);
+        uploadedUrl = urlData.publicUrl;
+        setCurrentResumeUrl(uploadedUrl);
+        setUploading(false);
+      }
+
       const payload: ResumeData = {
         name: resume.name.trim(),
         skills: resume.skills.map((s) => s.trim()).filter(Boolean),
@@ -130,13 +161,18 @@ export function ResumeSettingsSection() {
         bio: resume.bio.trim(),
       };
 
-      const { error } = await supabase.from("profiles").update({ resume_data: payload as any }).eq("id", profile.id);
+      const { error } = await supabase.from("profiles").update({ 
+        resume_data: payload as any,
+        resume_url: uploadedUrl,
+      } as any).eq("id", profile.id);
       if (error) throw error;
       await refreshProfile();
+      setFile(null); // Clear file after successful upload
       toast({ title: t("resume.toasts.saved_title") });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("common.errors.save_failed");
       toast({ title: t("resume.toasts.save_error_title"), description: message, variant: "destructive" });
+      setUploading(false);
     } finally {
       setSaving(false);
     }
@@ -153,6 +189,26 @@ export function ResumeSettingsSection() {
           <div className="text-muted-foreground">{t("common.loading")}</div>
         ) : (
           <>
+            {/* Current resume status */}
+            {currentResumeUrl && !file && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{t("resume.status.attached")}</p>
+                  <p className="text-xs text-muted-foreground">{t("resume.status.attached_desc")}</p>
+                </div>
+                <a
+                  href={currentResumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  <FileText className="h-3 w-3" />
+                  {t("resume.status.view")}
+                </a>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>{t("resume.upload.label")}</Label>
               <Input
@@ -176,6 +232,12 @@ export function ResumeSettingsSection() {
                   }
                 }}
               />
+              {file && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={parseResume} disabled={!file || parsing || extracting || !resumeText}>
                   {parsing || extracting ? (
@@ -242,9 +304,9 @@ export function ResumeSettingsSection() {
               <Textarea value={resume.bio} onChange={(e) => setResume((p) => ({ ...p, bio: e.target.value }))} rows={5} />
             </div>
 
-            <Button type="button" onClick={save} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("resume.actions.save")}
+            <Button type="button" onClick={save} disabled={saving || uploading}>
+              {(saving || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {uploading ? t("resume.actions.uploading") : t("resume.actions.save")}
             </Button>
           </>
         )}
