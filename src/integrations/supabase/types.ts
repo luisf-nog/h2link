@@ -130,9 +130,11 @@ export type Database = {
           last_attempt_at: string | null
           last_error: string | null
           manual_job_id: string | null
+          opened_at: string | null
           processing_started_at: string | null
           sent_at: string | null
           status: string
+          tracking_id: string
           user_id: string
         }
         Insert: {
@@ -142,9 +144,11 @@ export type Database = {
           last_attempt_at?: string | null
           last_error?: string | null
           manual_job_id?: string | null
+          opened_at?: string | null
           processing_started_at?: string | null
           sent_at?: string | null
           status?: string
+          tracking_id?: string
           user_id: string
         }
         Update: {
@@ -154,9 +158,11 @@ export type Database = {
           last_attempt_at?: string | null
           last_error?: string | null
           manual_job_id?: string | null
+          opened_at?: string | null
           processing_started_at?: string | null
           sent_at?: string | null
           status?: string
+          tracking_id?: string
           user_id?: string
         }
         Relationships: [

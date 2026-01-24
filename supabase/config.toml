@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.reprocess-upgrade]
 verify_jwt = false
+
+[functions.track-email-open]
+verify_jwt = false
