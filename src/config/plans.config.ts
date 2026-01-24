@@ -127,7 +127,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     id: "black",
     label: "Black",
     color: "zinc",
-    description: "A ferramenta profissional completa",
+    description: "IA dinâmica por vaga",
     price: {
       brl: 299.0,
       usd: 59.0,
