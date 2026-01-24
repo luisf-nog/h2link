@@ -346,8 +346,16 @@
     "subtitle": "Crea y administra plantillas para acelerar tus solicitudes.",
     "actions": {
       "new": "Nueva plantilla",
+      "new_fallback": "Crear plantilla de respaldo",
       "generate_ai": "Generar con IA",
       "rewrite_ai": "✨ Reescribir con IA"
+    },
+    "ai_writer": {
+      "title": "IA Dinámica Activa",
+      "description": "Tus emails se generan automáticamente por IA para cada empleo.",
+      "active_title": "Generación automática activada",
+      "active_desc": "Cada email que envíes será único, generado por IA basado en tu currículum y la descripción del empleo. No se necesitan plantillas.",
+      "fallback_note": "Opcionalmente, puedes crear plantillas de respaldo en caso de que la IA no pueda generar el email."
     },
     "ai_counter": "Intentos hoy: {{used}}/{{limit}}",
     "editor": {
@@ -534,8 +542,13 @@
     "lifetime": "(de por vida)",
     "tiers": {
       "free": { "label": "Starter", "description": "Para probar y conocer" },
-      "gold": { "label": "Gold", "description": "Para mayor volumen" },
-      "diamond": { "label": "Diamond", "description": "La herramienta profesional completa" }
+      "gold": { "label": "Gold", "description": "Volumen con plantillas guardadas" },
+      "diamond": { "label": "Diamond", "description": "Más volumen y visibilidad" },
+      "black": { "label": "Black", "description": "IA dinámica por empleo" }
+    },
+    "method": {
+      "static": "Plantillas",
+      "dynamic": "IA Dinámica"
     },
     "actions": {
       "current": "Plan actual",
@@ -544,6 +557,12 @@
     },
     "features": {
       "daily_emails": "{{count}} envíos/día",
+      "templates_count": "{{count}} plantillas",
+      "unlimited_templates": "Plantillas ilimitadas",
+      "static_templates": "Envío vía plantillas guardadas",
+      "dynamic_ai": "Email único por empleo (IA)",
+      "resume_parsing": "Extracción de currículum (IA)",
+      "spy_pixel": "Rastreo de apertura",
       "queue_size": "Cola de hasta {{size}} empleos",
       "unlimited": "ilimitada",
       "cloud_sending": "Envío en la nube",

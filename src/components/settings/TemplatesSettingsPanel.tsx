@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +19,9 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Sparkles, Trash2, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { PLANS_CONFIG } from "@/config/plans.config";
+import { PLANS_CONFIG, PlanTier, usesDynamicAI } from "@/config/plans.config";
 
 type EmailTemplate = {
   id: string;
@@ -37,7 +38,7 @@ type EditorState =
   | { open: true; mode: "edit"; template: EmailTemplate };
 
 export function TemplatesSettingsPanel() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -55,6 +56,10 @@ export function TemplatesSettingsPanel() {
 
   const [aiUsedToday, setAiUsedToday] = useState<number>(0);
   const aiLimit = 3;
+
+  const planTier = (profile?.plan_tier || "free") as PlanTier;
+  const isDynamicPlan = usesDynamicAI(planTier);
+  const maxTemplates = PLANS_CONFIG[planTier].limits.max_templates;
 
   const spamTerms = useMemo(
     () => ["renda extra", "ganhe dinheiro", "clique aqui", "100% garantido", "urgente", "promoção", "$$$", "grátis"],
@@ -126,11 +131,8 @@ export function TemplatesSettingsPanel() {
       return;
     }
 
-    // Check plan limits
-    if (editor.open && editor.mode === "create") {
-      const { data: profile } = await supabase.from("profiles").select("plan_tier").eq("id", user.id).single();
-      const planTier = profile?.plan_tier || "free";
-      const maxTemplates = PLANS_CONFIG[planTier].limits.max_templates;
+    // Check plan limits (skip for dynamic plans with unlimited templates)
+    if (editor.open && editor.mode === "create" && maxTemplates < 100) {
       if (templates.length >= maxTemplates) {
         toast({
           title: t("templates.toasts.limit_reached_title"),
@@ -227,17 +229,134 @@ export function TemplatesSettingsPanel() {
     }
   };
 
+  // For Black users: show a special banner indicating AI auto-generation
+  if (isDynamicPlan) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-plan-black">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-plan-black/10">
+                <Zap className="h-6 w-6 text-plan-black" />
+              </div>
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {t("templates.ai_writer.title")}
+                  <Badge variant="default" className="bg-plan-black">
+                    {t("plans.tiers.black.label")}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>{t("templates.ai_writer.description")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <Sparkles className="h-4 w-4" />
+              <AlertTitle>{t("templates.ai_writer.active_title")}</AlertTitle>
+              <AlertDescription>{t("templates.ai_writer.active_desc")}</AlertDescription>
+            </Alert>
+            
+            {/* Optional: Allow Black users to create templates as fallback */}
+            <div className="mt-6">
+              <p className="text-sm text-muted-foreground mb-4">{t("templates.ai_writer.fallback_note")}</p>
+              <Dialog open={editor.open} onOpenChange={(open) => (!open ? closeEditor() : undefined)}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" onClick={openCreate}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t("templates.actions.new_fallback")}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[640px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editor.open && editor.mode === "edit" ? t("templates.editor.edit_title") : t("templates.editor.new_title")}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {t("templates.editor.placeholders_help")} {"{{name}}"}, {"{{age}}"}, {"{{phone}}"}, {"{{contact_email}}"}, {"{{company}}"}, {"{{position}}"}, {"{{visa_type}}"}.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label>{t("templates.fields.name")}</Label>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("templates.placeholders.name")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("templates.fields.subject")}</Label>
+                      <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("templates.placeholders.subject")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("templates.fields.body")}</Label>
+                      <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} placeholder={t("templates.placeholders.body")} />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={closeEditor} disabled={saving}>
+                      {t("common.cancel")}
+                    </Button>
+                    <Button onClick={upsertTemplate} disabled={saving}>
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {t("common.save")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              {templates.length > 0 && (
+                <Table className="mt-4">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("templates.table.name")}</TableHead>
+                      <TableHead>{t("templates.table.subject")}</TableHead>
+                      <TableHead className="text-right">{t("templates.table.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {templates.map((tpl) => (
+                      <TableRow key={tpl.id}>
+                        <TableCell className="font-medium">{tpl.name}</TableCell>
+                        <TableCell className="truncate max-w-[380px]">{tpl.subject}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(tpl)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteTemplate(tpl.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Standard template management for static plans (Free, Gold, Diamond)
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div>
             <CardTitle>{t("templates.title")}</CardTitle>
-            <CardDescription>{t("templates.subtitle")}</CardDescription>
+            <CardDescription>
+              {t("templates.subtitle")} ({templates.length}/{maxTemplates})
+            </CardDescription>
           </div>
           <Dialog open={editor.open} onOpenChange={(open) => (!open ? closeEditor() : undefined)}>
             <DialogTrigger asChild>
-              <Button onClick={openCreate}>
+              <Button onClick={openCreate} disabled={templates.length >= maxTemplates}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t("templates.actions.new")}
               </Button>
@@ -318,19 +437,19 @@ export function TemplatesSettingsPanel() {
                   </TableCell>
                 </TableRow>
               ) : (
-                templates.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.name}</TableCell>
-                    <TableCell className="truncate max-w-[380px]">{t.subject}</TableCell>
+                templates.map((tpl) => (
+                  <TableRow key={tpl.id}>
+                    <TableCell className="font-medium">{tpl.name}</TableCell>
+                    <TableCell className="truncate max-w-[380px]">{tpl.subject}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(t)}>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(tpl)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive"
-                        onClick={() => deleteTemplate(t.id)}
+                        onClick={() => deleteTemplate(tpl.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

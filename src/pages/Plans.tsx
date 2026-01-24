@@ -1,10 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { PLANS_CONFIG, PlanTier } from '@/config/plans.config';
+import { PLANS_CONFIG, PlanTier, usesDynamicAI } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Crown, Sparkles } from 'lucide-react';
+import { Check, Crown, Sparkles, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -19,7 +20,7 @@ export default function Plans() {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
-  const currentPlan = profile?.plan_tier || 'free';
+  const currentPlan = (profile?.plan_tier || 'free') as PlanTier;
 
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
@@ -95,19 +96,25 @@ export default function Plans() {
     const features = [];
 
     features.push(t('plans.features.daily_emails', { count: formatNumber(config.limits.daily_emails) } as any));
-    features.push(
-      t('plans.features.queue_size', {
-        size:
-          config.limits.max_queue_size === 9999
-            ? t('plans.features.unlimited')
-            : formatNumber(config.limits.max_queue_size),
-      } as any)
-    );
+    
+    if (config.limits.max_templates > 100) {
+      features.push(t('plans.features.unlimited_templates'));
+    } else {
+      features.push(t('plans.features.templates_count', { count: config.limits.max_templates } as any));
+    }
 
+    // Sending method
+    if (usesDynamicAI(planId)) {
+      features.push(t('plans.features.dynamic_ai'));
+    } else if (planId !== 'free') {
+      features.push(t('plans.features.static_templates'));
+    }
+
+    if (config.features.resume_parsing) features.push(t('plans.features.resume_parsing'));
+    if (config.features.spy_pixel) features.push(t('plans.features.spy_pixel'));
     if (config.features.cloud_sending) features.push(t('plans.features.cloud_sending'));
     if (config.features.mask_user_agent) features.push(t('plans.features.mask_user_agent'));
     if (config.features.dns_bounce_check) features.push(t('plans.features.dns_bounce_check'));
-    if (config.features.magic_paste) features.push(t('plans.features.magic_paste'));
     if (config.features.ai_email_writer) features.push(t('plans.features.ai_email_writer'));
     if (config.features.priority_support) features.push(t('plans.features.priority_support'));
 
@@ -115,6 +122,22 @@ export default function Plans() {
     if (config.settings.delay_strategy === 'human') features.push(t('plans.features.human_delay'));
 
     return features;
+  };
+
+  const getPlanIcon = (planId: PlanTier) => {
+    if (planId === 'black') return <Zap className="h-5 w-5 text-plan-black" />;
+    if (planId === 'diamond') return <Crown className="h-5 w-5 text-plan-diamond" />;
+    return null;
+  };
+
+  const getPlanColorClass = (planId: PlanTier, type: 'text' | 'bg' | 'border') => {
+    const colors = {
+      free: { text: 'text-foreground', bg: '', border: '' },
+      gold: { text: 'text-plan-gold', bg: 'bg-plan-gold', border: 'border-plan-gold' },
+      diamond: { text: 'text-plan-diamond', bg: 'bg-plan-diamond', border: 'border-plan-diamond' },
+      black: { text: 'text-plan-black', bg: 'bg-plan-black', border: 'border-plan-black' },
+    };
+    return colors[planId][type];
   };
 
   const plans = Object.values(PLANS_CONFIG);
@@ -128,37 +151,43 @@ export default function Plans() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {plans.map((plan) => {
           const isCurrentPlan = currentPlan === plan.id;
-          const isRecommended = plan.id === 'diamond';
+          const isRecommended = plan.id === 'black';
 
           return (
             <Card
               key={plan.id}
               className={cn(
                 'relative overflow-hidden transition-all hover:shadow-lg',
-                isRecommended && 'border-plan-diamond shadow-plan-diamond/20',
+                isRecommended && `${getPlanColorClass(plan.id, 'border')} shadow-lg`,
                 isCurrentPlan && 'ring-2 ring-primary'
               )}
             >
               {isRecommended && (
-                <div className="absolute top-0 right-0 bg-plan-diamond text-white text-xs px-3 py-1 rounded-bl-lg font-medium">
+                <div className={cn(
+                  "absolute top-0 right-0 text-white text-xs px-3 py-1 rounded-bl-lg font-medium",
+                  getPlanColorClass(plan.id, 'bg')
+                )}>
                   <Sparkles className="h-3 w-3 inline mr-1" />
                   {t('plans.recommended')}
                 </div>
               )}
 
-              <CardHeader className="pb-4">
+              {/* Method Badge */}
+              {plan.id !== 'free' && (
+                <div className="absolute top-0 left-0 px-2 py-1">
+                  <Badge variant={usesDynamicAI(plan.id) ? "default" : "secondary"} className="text-xs">
+                    {usesDynamicAI(plan.id) ? t('plans.method.dynamic') : t('plans.method.static')}
+                  </Badge>
+                </div>
+              )}
+
+              <CardHeader className="pb-4 pt-8">
                 <div className="flex items-center gap-2">
-                  {plan.id === 'diamond' && <Crown className="h-5 w-5 text-plan-diamond" />}
-                  <CardTitle
-                    className={cn(
-                      plan.color === 'slate' && 'text-foreground',
-                      plan.color === 'blue' && 'text-plan-gold',
-                      plan.color === 'violet' && 'text-plan-diamond'
-                    )}
-                  >
+                  {getPlanIcon(plan.id)}
+                  <CardTitle className={getPlanColorClass(plan.id, 'text')}>
                     {t(`plans.tiers.${plan.id}.label`)}
                   </CardTitle>
                 </div>
@@ -181,9 +210,7 @@ export default function Plans() {
                       <Check
                         className={cn(
                           'h-4 w-4 flex-shrink-0',
-                          plan.color === 'slate' && 'text-muted-foreground',
-                          plan.color === 'blue' && 'text-plan-gold',
-                          plan.color === 'violet' && 'text-plan-diamond'
+                          getPlanColorClass(plan.id, 'text') || 'text-muted-foreground'
                         )}
                       />
                       <span>{feature}</span>
@@ -194,6 +221,7 @@ export default function Plans() {
                 <Button
                   className={cn(
                     'w-full',
+                    plan.id === 'black' && 'bg-plan-black hover:bg-plan-black/90',
                     plan.id === 'diamond' && 'bg-plan-diamond hover:bg-plan-diamond/90',
                     plan.id === 'gold' && 'bg-plan-gold hover:bg-plan-gold/90'
                   )}

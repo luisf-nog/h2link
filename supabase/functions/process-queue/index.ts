@@ -8,13 +8,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-cron-token",
 };
 
-type PlanTier = "free" | "gold" | "diamond";
+type PlanTier = "free" | "gold" | "diamond" | "black";
+type SendingMethod = "static" | "dynamic";
 
 function getDailyEmailLimit(planTier: PlanTier): number {
   // Keep in sync with src/config/plans.config.ts
-  if (planTier === "gold") return 150;
+  if (planTier === "black") return 500;
   if (planTier === "diamond") return 350;
+  if (planTier === "gold") return 150;
   return 5;
+}
+
+function getSendingMethod(planTier: PlanTier): SendingMethod {
+  // Only Black uses dynamic AI generation
+  return planTier === "black" ? "dynamic" : "static";
 }
 
 type EmailProvider = "gmail" | "outlook";
@@ -578,8 +585,9 @@ async function processOneUser(params: {
     .order("created_at", { ascending: false });
   if (tplErr) throw tplErr;
   const tpls = (templates ?? []) as EmailTemplateRow[];
-  // Templates are required for Free/Gold, optional for Diamond (AI generates per job).
-  if (tpls.length === 0 && p.plan_tier !== "diamond") {
+  // Templates are required for Static plans (Free/Gold/Diamond). Black (Dynamic) can work without templates.
+  const userSendingMethod = getSendingMethod(p.plan_tier);
+  if (tpls.length === 0 && userSendingMethod === "static") {
     // Mark first pending as failed
     const { data: one } = await serviceClient
       .from("my_queue")
@@ -785,8 +793,9 @@ async function processOneUser(params: {
       let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
       let htmlBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars).replace(/\n/g, "<br>") : "";
 
-      // Diamond: dynamic generation per job (subject+body). Fallback to templates if AI fails or resume_data missing.
-      if (p.plan_tier === "diamond" && row.job_id) {
+      // Black (Dynamic method): AI generates unique email per job. Fallback to templates if AI fails or resume_data missing.
+      const sendingMethod = getSendingMethod(p.plan_tier);
+      if (sendingMethod === "dynamic" && row.job_id) {
         try {
           if (!p.resume_data) throw new Error("resume_data_missing");
           const pj = job as PublicJobRow;
@@ -794,7 +803,7 @@ async function processOneUser(params: {
           finalSubject = ai.subject;
           htmlBody = ai.body.replace(/\n/g, "<br>");
         } catch (e) {
-          // If there's no template fallback, Diamond must fail explicitly.
+          // If there's no template fallback, Black must fail explicitly.
           if (!fallbackTpl) throw e;
           // otherwise keep fallback
         }
