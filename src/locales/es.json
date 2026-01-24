@@ -541,6 +541,10 @@
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
       "resume_required_title": "Currículum requerido",
       "resume_required_desc": "En el plan Black, sube tu currículum en Configuración → Currículum para generar un email personalizado por empleo.",
+      "bulk_premium_title": "Recurso Premium",
+      "bulk_premium_desc": "El envío masivo (Enviar todos) es exclusivo para planes Premium. Actualiza para enviar todo de una vez.",
+      "bulk_premium_cta": "Ver planes",
+      "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
@@ -742,6 +746,11 @@
       "gold_desc": "Desbloquea emails y empresas por {{price}} (de por vida)",
       "diamond_desc": "Acceso completo + IA + beneficios visuales por {{price}} (de por vida)",
       "cta": "Ver planes"
+    },
+    "upgrade_banner": {
+      "title": "¡Límite diario alcanzado!",
+      "description": "Enviaste {{limit}} emails hoy. Actualiza para más envíos diarios.",
+      "cta": "Actualizar ahora"
     },
     "pagination": {
       "page_of": "Página {{page}} de {{totalPages}}"
