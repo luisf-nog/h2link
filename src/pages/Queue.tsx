@@ -312,7 +312,7 @@ export default function Queue() {
       return { ok: false as const };
     }
 
-    // Templates are mandatory for Free/Gold, optional for Diamond/Black (AI generates per job).
+    // Templates are mandatory for Free/Gold/Diamond, optional for Black (AI generates per job).
     const { data: tplData, error: tplError } = await supabase
       .from('email_templates')
       .select('id,name,subject,body')
@@ -323,9 +323,8 @@ export default function Queue() {
     }
 
     const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
-    // Black and Diamond use dynamic AI generation, so templates are optional
-    const needsTemplates = planTier !== 'diamond' && planTier !== 'black';
-    if (templates.length === 0 && needsTemplates) {
+    // Only Black uses dynamic AI generation, so templates are optional only for Black
+    if (templates.length === 0 && planTier !== 'black') {
       toast({
         title: t('queue.toasts.no_template_title'),
         description: t('queue.toasts.no_template_desc'),
@@ -412,8 +411,8 @@ export default function Queue() {
       let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : '';
       let finalBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars) : '';
 
-      // Diamond: dynamic generation per job (subject+body). Fallback to template if AI fails.
-      if (planTier === 'diamond') {
+      // Black: dynamic AI generation per job (subject+body). Fallback to template if AI fails.
+      if (planTier === 'black') {
         try {
           const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-job-email`, {
             method: 'POST',
@@ -436,18 +435,21 @@ export default function Queue() {
             navigate('/settings?tab=resume');
             throw new Error('resume_data_missing');
           }
-        } catch {
-          // ignore
+        } catch (e) {
+          // If AI fails for Black, use template as fallback if available
+          if (!finalSubject.trim() || !finalBody.trim()) {
+            throw new Error(t('queue.toasts.black_ai_failed_no_fallback'));
+          }
         }
       }
 
-      // Diamond without templates must have AI output; otherwise fail with a clear message.
-      if (planTier === 'diamond' && (!finalSubject.trim() || !finalBody.trim())) {
-        throw new Error(t('queue.toasts.diamond_ai_failed_no_fallback'));
+      // Black without templates must have AI output; otherwise fail with a clear message.
+      if (planTier === 'black' && (!finalSubject.trim() || !finalBody.trim())) {
+        throw new Error(t('queue.toasts.black_ai_failed_no_fallback'));
       }
 
       const sendProfile = pickSendProfile();
-      const dedupeId = planTier === 'diamond' ? crypto.randomUUID() : undefined;
+      const dedupeId = planTier === 'black' ? crypto.randomUUID() : undefined;
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
         method: 'POST',
