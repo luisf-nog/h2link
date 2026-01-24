@@ -752,7 +752,6 @@ export default function Queue() {
         queueId={historyItem?.id ?? ''}
         jobTitle={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.job_title ?? ''}
         company={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.company ?? ''}
-        openedAt={historyItem?.opened_at}
       />
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

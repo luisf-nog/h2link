@@ -32,18 +32,54 @@ const handler = async (req: Request): Promise<Response> => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
 
-      const { data: row } = await serviceClient
-        .from("my_queue")
+      // Look for the tracking_id in queue_send_history (per-send tracking)
+      const { data: historyRow } = await serviceClient
+        .from("queue_send_history")
         .select("id,opened_at")
         .eq("tracking_id", id)
         .maybeSingle();
 
-      if (row?.id && !row.opened_at) {
+      if (historyRow?.id && !historyRow.opened_at) {
+        // Update the specific send history record with opened_at
         await serviceClient
-          .from("my_queue")
+          .from("queue_send_history")
           .update({ opened_at: new Date().toISOString() } as any)
-          .eq("id", row.id)
+          .eq("id", historyRow.id)
           .is("opened_at", null);
+
+        // Also update the my_queue.opened_at for backward compatibility
+        // Get the queue_id from this history record to update it
+        const { data: historyFull } = await serviceClient
+          .from("queue_send_history")
+          .select("queue_id")
+          .eq("id", historyRow.id)
+          .single();
+
+        if (historyFull?.queue_id) {
+          // Update opened_at in my_queue only if not already set
+          await serviceClient
+            .from("my_queue")
+            .update({ opened_at: new Date().toISOString() } as any)
+            .eq("id", historyFull.queue_id)
+            .is("opened_at", null);
+        }
+      }
+
+      // Fallback: check my_queue.tracking_id for older emails (backward compatibility)
+      if (!historyRow) {
+        const { data: row } = await serviceClient
+          .from("my_queue")
+          .select("id,opened_at")
+          .eq("tracking_id", id)
+          .maybeSingle();
+
+        if (row?.id && !row.opened_at) {
+          await serviceClient
+            .from("my_queue")
+            .update({ opened_at: new Date().toISOString() } as any)
+            .eq("id", row.id)
+            .is("opened_at", null);
+        }
       }
     }
   } catch {

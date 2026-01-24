@@ -366,27 +366,33 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          opened_at: string | null
           queue_id: string
           sent_at: string
           status: string
+          tracking_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
           error_message?: string | null
           id?: string
+          opened_at?: string | null
           queue_id: string
           sent_at?: string
           status?: string
+          tracking_id?: string
           user_id: string
         }
         Update: {
           created_at?: string
           error_message?: string | null
           id?: string
+          opened_at?: string | null
           queue_id?: string
           sent_at?: string
           status?: string
+          tracking_id?: string
           user_id?: string
         }
         Relationships: [
