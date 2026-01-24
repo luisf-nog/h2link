@@ -428,7 +428,8 @@
       "send": "Send all ({{pendingCount}})",
       "send_selected": "Send selected ({{count}})",
       "retry": "Retry",
-      "retry_all_failed": "Retry failed ({{count}})"
+      "retry_all_failed": "Retry failed ({{count}})",
+      "resend": "Resend"
     },
     "manual_dialog": {
       "title": "Add Company",

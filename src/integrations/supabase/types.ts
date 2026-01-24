@@ -132,6 +132,7 @@ export type Database = {
           manual_job_id: string | null
           opened_at: string | null
           processing_started_at: string | null
+          send_count: number
           sent_at: string | null
           status: string
           tracking_id: string
@@ -146,6 +147,7 @@ export type Database = {
           manual_job_id?: string | null
           opened_at?: string | null
           processing_started_at?: string | null
+          send_count?: number
           sent_at?: string | null
           status?: string
           tracking_id?: string
@@ -160,6 +162,7 @@ export type Database = {
           manual_job_id?: string | null
           opened_at?: string | null
           processing_started_at?: string | null
+          send_count?: number
           sent_at?: string | null
           status?: string
           tracking_id?: string
