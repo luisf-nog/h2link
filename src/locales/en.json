@@ -487,6 +487,9 @@
     "toasts": {
       "no_template_title": "No templates found",
       "no_template_desc": "Create at least one template in Settings before sending.",
+      "resume_required_title": "Resume required",
+      "resume_required_desc": "On Diamond, upload your resume in Settings → Resume so we can generate a tailored email for each job.",
+      "diamond_ai_failed_no_fallback": "AI failed to generate the email and there is no fallback template.",
       "bg_started_title": "Sending started",
       "bg_started_desc": "Your sending is running in the background. You can close this page.",
       "bg_started_selected_title": "Sending started",

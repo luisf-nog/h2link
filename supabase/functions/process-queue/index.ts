@@ -504,7 +504,8 @@ async function processOneUser(params: {
     .order("created_at", { ascending: false });
   if (tplErr) throw tplErr;
   const tpls = (templates ?? []) as EmailTemplateRow[];
-  if (tpls.length === 0) {
+  // Templates are required for Free/Gold, optional for Diamond (AI generates per job).
+  if (tpls.length === 0 && p.plan_tier !== "diamond") {
     // Mark first pending as failed
     const { data: one } = await serviceClient
       .from("my_queue")
@@ -669,7 +670,10 @@ async function processOneUser(params: {
       if (!job?.email) throw new Error("Destino (email) ausente");
 
       const visaType = ("visa_type" in job && job.visa_type === "H-2A") ? "H-2A" : "H-2B";
-      const fallbackTpl = tpls[hashToIndex(String(row.tracking_id ?? row.id), tpls.length)] ?? tpls[0];
+      const fallbackTpl =
+        tpls.length > 0
+          ? tpls[hashToIndex(String(row.tracking_id ?? row.id), tpls.length)] ?? tpls[0]
+          : null;
 
       const vars: Record<string, string> = {
         name: p.full_name ?? "",
@@ -684,8 +688,8 @@ async function processOneUser(params: {
         job_phone: ("phone" in job ? (job.phone ?? "") : ""),
       };
 
-      let finalSubject = applyTemplate(fallbackTpl.subject, vars);
-      let htmlBody = applyTemplate(fallbackTpl.body, vars).replace(/\n/g, "<br>");
+      let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
+      let htmlBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars).replace(/\n/g, "<br>") : "";
 
       // Diamond: dynamic generation per job (subject+body). Fallback to templates if AI fails or resume_data missing.
       if (p.plan_tier === "diamond" && row.job_id) {
@@ -695,9 +699,15 @@ async function processOneUser(params: {
           const ai = await generateDiamondEmail({ resumeData: p.resume_data, job: pj, visaType });
           finalSubject = ai.subject;
           htmlBody = ai.body.replace(/\n/g, "<br>");
-        } catch {
-          // keep fallback
+        } catch (e) {
+          // If there's no template fallback, Diamond must fail explicitly.
+          if (!fallbackTpl) throw e;
+          // otherwise keep fallback
         }
+      }
+
+      if (!finalSubject.trim() || !htmlBody.trim()) {
+        throw new Error("no_email_content");
       }
 
       // Open tracking pixel
