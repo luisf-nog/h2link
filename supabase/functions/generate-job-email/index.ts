@@ -42,6 +42,68 @@ function normalizeParagraphs(text: string): string {
   return t;
 }
 
+// Force paragraph breaks if the AI returns a wall of text without proper breaks.
+// Heuristic: If fewer than 3 paragraphs and text > 400 chars, break at sentence boundaries.
+function forceParagraphBreaks(text: string): string {
+  const trimmed = String(text ?? "").trim();
+  if (!trimmed) return trimmed;
+
+  // Count existing paragraphs (double newlines)
+  const existingParagraphs = trimmed.split(/\n\n+/).filter(Boolean);
+  
+  // If already has 3+ paragraphs, it's fine
+  if (existingParagraphs.length >= 3) {
+    return trimmed;
+  }
+  
+  // If short text, don't force breaks
+  if (trimmed.length < 400) {
+    return trimmed;
+  }
+
+  // Flatten to single line for processing
+  const flat = trimmed.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+  
+  // Split by sentences (period followed by space and capital letter, or end of string)
+  const sentencePattern = /(?<=[.!?])\s+(?=[A-Z])/g;
+  const sentences = flat.split(sentencePattern).map(s => s.trim()).filter(Boolean);
+  
+  if (sentences.length < 4) {
+    return trimmed; // Not enough sentences to restructure
+  }
+  
+  // Group sentences into paragraphs (roughly 2-4 sentences each)
+  const paragraphs: string[] = [];
+  let currentParagraph: string[] = [];
+  
+  for (let i = 0; i < sentences.length; i++) {
+    currentParagraph.push(sentences[i]);
+    
+    // Create a new paragraph every 2-3 sentences, or at natural break points
+    const sentenceCount = currentParagraph.length;
+    const isNearEnd = i >= sentences.length - 2;
+    const isSignatureStart = /^(Best regards|Thank you|Sincerely)/i.test(sentences[i]);
+    
+    if (sentenceCount >= 3 || isNearEnd || isSignatureStart) {
+      if (isSignatureStart && currentParagraph.length > 1) {
+        // Put signature on its own paragraph
+        paragraphs.push(currentParagraph.slice(0, -1).join(" "));
+        currentParagraph = [sentences[i]];
+      } else if (sentenceCount >= 2) {
+        paragraphs.push(currentParagraph.join(" "));
+        currentParagraph = [];
+      }
+    }
+  }
+  
+  // Add remaining sentences
+  if (currentParagraph.length > 0) {
+    paragraphs.push(currentParagraph.join(" "));
+  }
+  
+  return paragraphs.join("\n\n");
+}
+
 function normalizePhone(input: unknown): string {
   const s = String(input ?? "").trim();
   if (!s) return "";
@@ -269,9 +331,12 @@ After "Best regards," add on separate lines:
     const raw = String(aiJson?.choices?.[0]?.message?.content ?? "");
     const unfenced = stripMarkdownFences(raw);
     const normalized = normalizeParagraphs(unfenced);
+    
+    // Force paragraph breaks if AI returned a wall of text
+    const withParagraphs = forceParagraphBreaks(normalized);
 
     // Ensure required signature details (then enforce the 280-word cap).
-    const withSignature = ensureSignature({ body: normalized, fullName, phone, email });
+    const withSignature = ensureSignature({ body: withParagraphs, fullName, phone, email });
 
     // Force the 280-word cap even if the model overshoots (4-7 paragraphs).
     const body = limitWords(withSignature, 280);
