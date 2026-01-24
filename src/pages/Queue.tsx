@@ -681,7 +681,9 @@ export default function Queue() {
   };
 
   const pendingCount = pendingItems.length;
-  const sentCount = queue.filter((q) => q.status === 'sent').length;
+  // Use credits_used_today from profile (backend source of truth) instead of counting queue items
+  // This prevents users from gaming the system by deleting sent items
+  const sentCount = creditsUsedToday;
 
   const statusLabel = (status: string) => {
     if (status === 'sent') return t('queue.status.sent');
