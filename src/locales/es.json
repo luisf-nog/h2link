@@ -422,9 +422,10 @@
         "add_error_title": "Error al agregar"
       }
     },
-    "toasts": {
-      "no_template_title": "No se encontraron plantillas",
-      "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar."
+    "smtp_required": {
+      "title": "Configura SMTP primero",
+      "description": "Para enviar emails, necesitas configurar tu cuenta SMTP en Configuración → SMTP.",
+      "actions": { "cancel": "Ahora no", "go_settings": "Abrir configuración SMTP" }
     },
     "stats": {
       "in_queue": "En cola",
@@ -455,6 +456,8 @@
     },
     "status": { "sent": "Enviado", "pending": "Pendiente", "processing": "Procesando", "failed": "Falló", "paused": "Pausado" },
     "toasts": {
+      "no_template_title": "No se encontraron plantillas",
+      "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
       "bg_started_selected_title": "Envío iniciado",
@@ -465,9 +468,8 @@
       "remove_error_title": "Error al eliminar",
       "remove_success_title": "Eliminado de la cola",
       "remove_success_desc": "El empleo fue eliminado de tu cola.",
-      "bulk_premium_title": "Función Premium",
-      "bulk_premium_desc": "El envío masivo (Enviar todas) es exclusivo de planes Premium. Actualiza para enviar todo con un clic.",
-      "bulk_premium_cta": "Ver planes",
+      "daily_limit_reached_title": "Límite diario alcanzado",
+      "daily_limit_reached_desc": "Alcanzaste tu límite diario de envíos. Intenta de nuevo mañana o actualiza tu plan.",
       "sent_title": "¡Emails enviados!",
       "sent_desc": "{{count}} solicitudes fueron enviadas."
     }

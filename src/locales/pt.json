@@ -392,6 +392,11 @@
     }
   },
   "queue": {
+    "smtp_required": {
+      "title": "Configure o SMTP primeiro",
+      "description": "Para enviar emails, você precisa configurar seu SMTP em Configurações → SMTP.",
+      "actions": { "cancel": "Agora não", "go_settings": "Abrir configurações SMTP" }
+    },
     "title": "Minha Fila",
     "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
     "actions": {
@@ -466,6 +471,8 @@
       "remove_error_title": "Erro ao remover",
       "remove_success_title": "Removido da fila",
       "remove_success_desc": "A vaga foi removida da sua fila.",
+      "daily_limit_reached_title": "Limite diário atingido",
+      "daily_limit_reached_desc": "Você atingiu seu limite diário de envios. Tente novamente amanhã ou faça upgrade do plano.",
       "sent_title": "Emails enviados!",
       "sent_desc": "{{count}} aplicações foram enviadas."
     }

@@ -15,14 +15,23 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, Lock, Eye } from 'lucide-react';
+import { Trash2, Send, Loader2, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
-import { ToastAction } from '@/components/ui/toast';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface QueueItem {
   id: string;
@@ -67,10 +76,14 @@ export default function Queue() {
   const [sending, setSending] = useState(false);
   const [sendingOneId, setSendingOneId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
+  const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
 
   const planTier = profile?.plan_tier || 'free';
   const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
   const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
+  const creditsUsedToday = profile?.credits_used_today || 0;
+  const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
   const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
@@ -101,6 +114,30 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!profile?.id) return;
+      const { data, error } = await supabase
+        .from('smtp_credentials')
+        .select('has_password')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        // Best-effort: if we can't read it, don't block UI here.
+        setSmtpReady(null);
+        return;
+      }
+      setSmtpReady(Boolean(data?.has_password));
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -208,7 +245,7 @@ export default function Queue() {
     return out;
   };
 
-  const requirePremiumForBulk = planTier === 'free';
+  const isFree = planTier === 'free';
   const pendingItems = useMemo(() => queue.filter((q) => q.status === 'pending'), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
   const selectedPendingIds = useMemo(
@@ -218,6 +255,40 @@ export default function Queue() {
   const allPendingSelected = pendingItems.length > 0 && selectedPendingIds.length === pendingItems.length;
 
   const ensureCanSend = async () => {
+    if (smtpReady !== true) {
+      // If we don't know yet, verify now (best-effort) so we can show the correct popup.
+      if (profile?.id) {
+        const { data, error } = await supabase
+          .from('smtp_credentials')
+          .select('has_password')
+          .eq('user_id', profile.id)
+          .maybeSingle();
+
+        if (!error) {
+          const ready = Boolean(data?.has_password);
+          setSmtpReady(ready);
+          if (!ready) {
+            setSmtpDialogOpen(true);
+            return { ok: false as const };
+          }
+        }
+      }
+
+      if (smtpReady === false) {
+        setSmtpDialogOpen(true);
+        return { ok: false as const };
+      }
+    }
+
+    if (remainingToday <= 0) {
+      toast({
+        title: t('queue.toasts.daily_limit_reached_title'),
+        description: t('queue.toasts.daily_limit_reached_desc'),
+        variant: 'destructive',
+      });
+      return { ok: false as const };
+    }
+
     if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
       toast({
         title: t('smtp.toasts.profile_incomplete_title'),
@@ -360,16 +431,27 @@ export default function Queue() {
 
   const handleSendAll = async () => {
     if (pendingItems.length === 0) return;
-    if (requirePremiumForBulk) {
-      toast({
-        title: t('queue.toasts.bulk_premium_title'),
-        description: t('queue.toasts.bulk_premium_desc'),
-        action: (
-          <ToastAction altText={t('queue.toasts.bulk_premium_cta')} onClick={() => navigate('/plans')}>
-            {t('queue.toasts.bulk_premium_cta')}
-          </ToastAction>
-        ),
-      });
+
+    // FREE: foreground sending (respects daily limit)
+    if (isFree) {
+      const slice = pendingItems.slice(0, remainingToday);
+      if (slice.length === 0) {
+        toast({
+          title: t('queue.toasts.daily_limit_reached_title'),
+          description: t('queue.toasts.daily_limit_reached_desc'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      setSending(true);
+      try {
+        await sendQueueItems(slice);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+        toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+      } finally {
+        setSending(false);
+      }
       return;
     }
 
@@ -409,19 +491,33 @@ export default function Queue() {
 
   const handleSendSelected = async () => {
     if (selectedPendingIds.length === 0) return;
-    if (requirePremiumForBulk) {
-      toast({
-        title: t('queue.toasts.bulk_premium_title'),
-        description: t('queue.toasts.bulk_premium_desc'),
-        action: (
-          <ToastAction altText={t('queue.toasts.bulk_premium_cta')} onClick={() => navigate('/plans')}>
-            {t('queue.toasts.bulk_premium_cta')}
-          </ToastAction>
-        ),
-      });
+
+    // FREE: foreground sending (respects daily limit)
+    if (isFree) {
+      const items = pendingItems.filter((it) => selectedPendingIds.includes(it.id)).slice(0, remainingToday);
+      if (items.length === 0) {
+        toast({
+          title: t('queue.toasts.daily_limit_reached_title'),
+          description: t('queue.toasts.daily_limit_reached_desc'),
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSending(true);
+      try {
+        await sendQueueItems(items);
+        setSelectedIds({});
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+        toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+      } finally {
+        setSending(false);
+      }
       return;
     }
 
+    // Premium: background processing
     setSending(true);
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -492,6 +588,26 @@ export default function Queue() {
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={smtpDialogOpen} onOpenChange={setSmtpDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('queue.smtp_required.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('queue.smtp_required.description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('queue.smtp_required.actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setSmtpDialogOpen(false);
+                navigate('/settings/email');
+              }}
+            >
+              {t('queue.smtp_required.actions.go_settings')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">{t('queue.title')}</h1>
@@ -503,20 +619,10 @@ export default function Queue() {
         <div className="flex gap-2 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
 
-          {!requirePremiumForBulk && (
-            <Button
-              variant="secondary"
-              onClick={handleSendSelected}
-              disabled={selectedPendingIds.length === 0 || sending}
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              {t('queue.actions.send_selected', { count: selectedPendingIds.length })}
-            </Button>
-          )}
+          <Button variant="secondary" onClick={handleSendSelected} disabled={selectedPendingIds.length === 0 || sending}>
+            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+            {t('queue.actions.send_selected', { count: selectedPendingIds.length })}
+          </Button>
 
           <Button
             onClick={handleSendAll}
@@ -524,8 +630,6 @@ export default function Queue() {
           >
             {sending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : requirePremiumForBulk ? (
-              <Lock className="h-4 w-4 mr-2" />
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}
@@ -622,7 +726,7 @@ export default function Queue() {
                     <TableCell className="w-10">
                       <Checkbox
                         checked={!!selectedIds[item.id]}
-                        disabled={item.status !== 'pending' || requirePremiumForBulk}
+                        disabled={item.status !== 'pending'}
                         onCheckedChange={(v) => {
                           const checked = v === true;
                           setSelectedIds((prev) => ({ ...prev, [item.id]: checked }));
