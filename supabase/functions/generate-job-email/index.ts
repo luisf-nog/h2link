@@ -33,6 +33,15 @@ function limitWords(text: string, maxWords: number): string {
   return words.slice(0, maxWords).join(" ").trim();
 }
 
+function normalizeParagraphs(text: string): string {
+  // Ensure clean paragraph breaks while keeping user-intended newlines.
+  const t = String(text ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return t;
+}
+
 const requestSchema = z.object({
   queueId: z.string().uuid(),
 });
@@ -111,24 +120,25 @@ serve(async (req) => {
 
     const systemPrompt =
       "You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) jobs in the USA. " +
-      "Write a short, professional, and convincing email cover letter based strictly on the user's data. " +
+      "Write a short, professional, and convincing email (cover letter) using ONLY the user's resume_data as the source of truth. " +
       "\n\nSTRICT ANTI-HALLUCINATION RULES: " +
-      "Use ONLY the information in resume_data. Never invent skills, certifications, tools, years, or employers. " +
-      "If the job asks for something not present in resume_data, do NOT lie—focus on physical stamina, fast learning, hard work, reliability, and willingness to learn. " +
-      "\n\nTONE & STYLE: " +
+      "Use ONLY resume_data. Never invent skills, certifications, licenses, tools, years of experience, employers, or locations. " +
+      "If the job requires something not present in resume_data, do NOT claim it—emphasize physical stamina, reliability, fast learning, hard work, and willingness to learn. " +
+      "\n\nTONE & STYLE (Blue Collar Professional): " +
       "Humble, hardworking, reliable, respectful. Simple US English. No corporate speak. " +
-      "Never use: 'I hope this email finds you well' or desperate pleas like 'I really need this job'. " +
-      "\n\nFORMATTING: " +
-      "NO bullet points, hyphens, or numbered lists. Use clean short paragraphs. " +
-      "Max 150 words. " +
-      "Structure: " +
-      "Salutation 'Dear Hiring Manager,'; " +
-      "Opening: one sentence applying for the specific job_title; " +
-      "Experience hook: connect ONLY real experience from resume_data to the job; use **bold** for key skills or years ONLY if explicitly present; " +
-      "Attitude paragraph: physical strength, reliability, sobriety, willingness to learn; " +
-      "Logistics: available for full season and immediate start; " +
-      "Closing: 'My resume is attached. Thank you.' then 'Best regards,' and the user's name (only if present in resume_data). " +
-      "\n\nOUTPUT: Return ONLY the email body. No JSON. No code fences.";
+      "BANNED: 'I hope this email finds you well' and desperate pleas like 'I really need this job'. " +
+      "\n\nFORMATTING & STRUCTURE: " +
+      "Write 3 to 6 short paragraphs, separated by a blank line (double newline). " +
+      "Do NOT use bullet points, hyphens as lists, or numbered lists. " +
+      "Max 230 words. " +
+      "Paragraph guidance: " +
+      "1) Greeting line (can vary: 'Hello,' or 'Dear Hiring Manager,'). " +
+      "2) One sentence: applying for the specific job_title at the company. " +
+      "3) Experience hook: connect ONLY real experience from resume_data to the job. Use **bold** sparingly for key availability/traits or a skill ONLY if explicitly present. " +
+      "4) Availability & work attitude: highlight **full availability** (weekends/holidays/overtime) ONLY if explicitly supported by resume_data; otherwise say you are available for the full season and can start immediately. Mention reliability, sobriety, safety, willingness to learn. " +
+      "5) Closing: 'My resume is attached. Thank you.' then 'Best regards,'. " +
+      "6) Signature block on separate lines: name, phone, email — ONLY if present in resume_data (do not invent). " +
+      "\n\nOUTPUT REQUIREMENT: Return ONLY the email body text (with paragraph breaks). No JSON. No code fences.";
 
     const userPrompt =
       `Job context:\n` +
@@ -163,14 +173,15 @@ serve(async (req) => {
     const aiJson = await aiResp.json();
     const raw = String(aiJson?.choices?.[0]?.message?.content ?? "");
     const unfenced = stripMarkdownFences(raw);
+    const normalized = normalizeParagraphs(unfenced);
 
-    // Force the 150-word cap even if the model overshoots.
-    const body = limitWords(unfenced, 150);
+    // Force the 230-word cap even if the model overshoots.
+    const body = limitWords(normalized, 230);
     if (!body) {
       return json(500, {
         success: false,
         error: "AI returned empty body",
-        details: unfenced.slice(0, 800),
+        details: normalized.slice(0, 800),
       });
     }
 
