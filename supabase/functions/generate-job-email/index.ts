@@ -43,62 +43,98 @@ function normalizeParagraphs(text: string): string {
 }
 
 // Force paragraph breaks if the AI returns a wall of text without proper breaks.
-// Heuristic: If fewer than 3 paragraphs and text > 400 chars, break at sentence boundaries.
+// ALWAYS split long text into 4-6 paragraphs for readability.
 function forceParagraphBreaks(text: string): string {
   const trimmed = String(text ?? "").trim();
   if (!trimmed) return trimmed;
 
-  // Count existing paragraphs (double newlines)
-  const existingParagraphs = trimmed.split(/\n\n+/).filter(Boolean);
+  // Flatten to single line for processing (remove all existing breaks)
+  const flat = trimmed.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
   
-  // If already has 3+ paragraphs, it's fine
-  if (existingParagraphs.length >= 3) {
-    return trimmed;
-  }
-  
-  // If short text, don't force breaks
-  if (trimmed.length < 400) {
+  // If short text (<300 chars), return as-is
+  if (flat.length < 300) {
     return trimmed;
   }
 
-  // Flatten to single line for processing
-  const flat = trimmed.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+  // Split into sentences using multiple end-of-sentence markers
+  // Match: period/exclamation/question followed by space and capital letter OR end
+  const sentences: string[] = [];
+  let current = "";
   
-  // Split by sentences (period followed by space and capital letter, or end of string)
-  const sentencePattern = /(?<=[.!?])\s+(?=[A-Z])/g;
-  const sentences = flat.split(sentencePattern).map(s => s.trim()).filter(Boolean);
-  
-  if (sentences.length < 4) {
-    return trimmed; // Not enough sentences to restructure
+  for (let i = 0; i < flat.length; i++) {
+    current += flat[i];
+    const char = flat[i];
+    const nextChar = flat[i + 1] || "";
+    const charAfter = flat[i + 2] || "";
+    
+    // End of sentence: . ! ? followed by space and capital letter
+    if ((char === "." || char === "!" || char === "?") && nextChar === " " && /[A-Z]/.test(charAfter)) {
+      sentences.push(current.trim());
+      current = "";
+      i++; // skip the space
+    }
   }
   
-  // Group sentences into paragraphs (roughly 2-4 sentences each)
+  // Push remaining text
+  if (current.trim()) {
+    sentences.push(current.trim());
+  }
+  
+  if (sentences.length < 3) {
+    return trimmed; // Not enough sentences
+  }
+
+  // Calculate sentences per paragraph (aim for 4-6 paragraphs)
+  const targetParagraphs = Math.min(6, Math.max(4, Math.floor(sentences.length / 2)));
+  const sentencesPerParagraph = Math.max(2, Math.ceil(sentences.length / targetParagraphs));
+  
   const paragraphs: string[] = [];
   let currentParagraph: string[] = [];
   
   for (let i = 0; i < sentences.length; i++) {
-    currentParagraph.push(sentences[i]);
+    const sentence = sentences[i];
     
-    // Create a new paragraph every 2-3 sentences, or at natural break points
-    const sentenceCount = currentParagraph.length;
-    const isNearEnd = i >= sentences.length - 2;
-    const isSignatureStart = /^(Best regards|Thank you|Sincerely)/i.test(sentences[i]);
+    // Check if this is a signature/closing line
+    const isSignature = /^(Best regards|Thank you|Sincerely|Atenciosamente|Obrigado)/i.test(sentence);
     
-    if (sentenceCount >= 3 || isNearEnd || isSignatureStart) {
-      if (isSignatureStart && currentParagraph.length > 1) {
-        // Put signature on its own paragraph
-        paragraphs.push(currentParagraph.slice(0, -1).join(" "));
-        currentParagraph = [sentences[i]];
-      } else if (sentenceCount >= 2) {
-        paragraphs.push(currentParagraph.join(" "));
-        currentParagraph = [];
-      }
+    if (isSignature && currentParagraph.length > 0) {
+      // Finish current paragraph, put signature in its own
+      paragraphs.push(currentParagraph.join(" "));
+      paragraphs.push(sentence);
+      currentParagraph = [];
+      continue;
+    }
+    
+    currentParagraph.push(sentence);
+    
+    // Break paragraph when we have enough sentences
+    if (currentParagraph.length >= sentencesPerParagraph) {
+      paragraphs.push(currentParagraph.join(" "));
+      currentParagraph = [];
     }
   }
   
   // Add remaining sentences
   if (currentParagraph.length > 0) {
     paragraphs.push(currentParagraph.join(" "));
+  }
+  
+  // Ensure we have at least 4 paragraphs for long content
+  if (paragraphs.length < 4 && flat.length > 600) {
+    // Re-split more aggressively (2 sentences per paragraph)
+    const aggressive: string[] = [];
+    let aggCurrent: string[] = [];
+    for (const s of sentences) {
+      aggCurrent.push(s);
+      if (aggCurrent.length >= 2) {
+        aggressive.push(aggCurrent.join(" "));
+        aggCurrent = [];
+      }
+    }
+    if (aggCurrent.length > 0) {
+      aggressive.push(aggCurrent.join(" "));
+    }
+    return aggressive.join("\n\n");
   }
   
   return paragraphs.join("\n\n");
