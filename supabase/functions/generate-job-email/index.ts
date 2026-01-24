@@ -14,22 +14,23 @@ function json(status: number, payload: unknown) {
   });
 }
 
-function extractJsonObject(text: string): string | null {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-
-  // Strip common Markdown fences.
-  const unfenced = trimmed
-    .replace(/^```(?:json)?\s*/i, "")
+function stripMarkdownFences(text: string): string {
+  return String(text ?? "")
+    .trim()
+    .replace(/^```[a-zA-Z]*\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
+}
 
-  if (unfenced.startsWith("{") && unfenced.endsWith("}")) return unfenced;
+function limitWords(text: string, maxWords: number): string {
+  const cleaned = String(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "";
 
-  const start = unfenced.indexOf("{");
-  const end = unfenced.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-  return unfenced.slice(start, end + 1);
+  const words = cleaned.split(" ");
+  if (words.length <= maxWords) return cleaned;
+  return words.slice(0, maxWords).join(" ").trim();
 }
 
 const requestSchema = z.object({
@@ -109,20 +110,34 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
 
     const systemPrompt =
-      "Return ONLY valid JSON with keys {subject, body}. " +
-      "Write in English. Subject must be short. Body must be a short cover letter. " +
-      "Tone: respectful, direct, humble. No corporate jargon. " +
-      "Do not include Markdown, code fences, or any extra commentary.";
+      "You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) jobs in the USA. " +
+      "Write a short, professional, and convincing email cover letter based strictly on the user's data. " +
+      "\n\nSTRICT ANTI-HALLUCINATION RULES: " +
+      "Use ONLY the information in resume_data. Never invent skills, certifications, tools, years, or employers. " +
+      "If the job asks for something not present in resume_data, do NOT lie—focus on physical stamina, fast learning, hard work, reliability, and willingness to learn. " +
+      "\n\nTONE & STYLE: " +
+      "Humble, hardworking, reliable, respectful. Simple US English. No corporate speak. " +
+      "Never use: 'I hope this email finds you well' or desperate pleas like 'I really need this job'. " +
+      "\n\nFORMATTING: " +
+      "NO bullet points, hyphens, or numbered lists. Use clean short paragraphs. " +
+      "Max 150 words. " +
+      "Structure: " +
+      "Salutation 'Dear Hiring Manager,'; " +
+      "Opening: one sentence applying for the specific job_title; " +
+      "Experience hook: connect ONLY real experience from resume_data to the job; use **bold** for key skills or years ONLY if explicitly present; " +
+      "Attitude paragraph: physical strength, reliability, sobriety, willingness to learn; " +
+      "Logistics: available for full season and immediate start; " +
+      "Closing: 'My resume is attached. Thank you.' then 'Best regards,' and the user's name (only if present in resume_data). " +
+      "\n\nOUTPUT: Return ONLY the email body. No JSON. No code fences.";
 
     const userPrompt =
-      `Write a short job application email (cover letter) for this H-2A/H-2B job.\n` +
+      `Job context:\n` +
       `Visa type: ${visaType}\n` +
       `Company: ${company}\n` +
       `Job title: ${jobTitle}\n\n` +
       `Job description:\n${jobDescription}\n\n` +
       `Job requirements:\n${jobRequirements}\n\n` +
-      `Candidate resume_data (JSON):\n${JSON.stringify(resumeData)}\n\n` +
-      `Cross candidate skills with the job. If there is no strong match, focus on physical effort and willingness to learn.`;
+      `resume_data (JSON, source of truth):\n${JSON.stringify(resumeData)}\n`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -146,21 +161,24 @@ serve(async (req) => {
     }
 
     const aiJson = await aiResp.json();
-    const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
-    let parsed: unknown;
-    try {
-      const extracted = extractJsonObject(content);
-      if (!extracted) throw new Error("no_json_object");
-      parsed = JSON.parse(extracted);
-    } catch {
+    const raw = String(aiJson?.choices?.[0]?.message?.content ?? "");
+    const unfenced = stripMarkdownFences(raw);
+
+    // Force the 150-word cap even if the model overshoots.
+    const body = limitWords(unfenced, 150);
+    if (!body) {
       return json(500, {
         success: false,
-        error: "AI returned invalid JSON",
-        details: content.slice(0, 800),
+        error: "AI returned empty body",
+        details: unfenced.slice(0, 800),
       });
     }
 
-    const validated = responseSchema.safeParse(parsed);
+    // Subject is deterministic to avoid JSON/formatting failures.
+    const subjectBase = jobTitle ? `Application for ${jobTitle}` : "Job application";
+    const subject = subjectBase.slice(0, 78);
+
+    const validated = responseSchema.safeParse({ subject, body });
     if (!validated.success) {
       return json(500, { success: false, error: "AI output validation failed" });
     }
