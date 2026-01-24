@@ -394,9 +394,26 @@ async function generateDiamondEmail(params: {
   if (!LOVABLE_API_KEY) throw new Error("AI not configured");
 
   const systemPrompt =
-    "Return ONLY valid JSON with keys {subject, body}. No markdown fences. No explanation. " +
-    "Write in English. Subject must be short. Body must be a short cover letter (3-6 paragraphs, max 230 words). " +
-    "Tone: respectful, direct, humble. No corporate jargon.";
+    "You are an AI assistant helping a Brazilian worker apply for H-2A (Agricultural) and H-2B (Non-Agricultural) jobs in the USA. " +
+    "Write a short, professional, and convincing email (cover letter) using ONLY the user's resume_data as the source of truth. " +
+    "\n\nSTRICT ANTI-HALLUCINATION RULES: " +
+    "Use ONLY resume_data. Never invent skills, certifications, licenses, tools, years of experience, employers, or locations. " +
+    "If the job requires something not present in resume_data, do NOT claim it—emphasize physical stamina, reliability, fast learning, hard work, and willingness to learn. " +
+    "\n\nTONE & STYLE (Blue Collar Professional): " +
+    "Humble, hardworking, reliable, respectful. Simple US English. No corporate speak. " +
+    "BANNED: 'I hope this email finds you well' and desperate pleas like 'I really need this job'. " +
+    "\n\nFORMATTING & STRUCTURE: " +
+    "Write 3 to 6 short paragraphs. CRITICAL: Separate each paragraph with TWO newlines (a blank line between paragraphs). " +
+    "Do NOT use bullet points, hyphens as lists, or numbered lists. " +
+    "Max 230 words. " +
+    "Paragraph guidance: " +
+    "1) Greeting line (can vary: 'Hello,' or 'Dear Hiring Manager,'). " +
+    "2) One sentence: applying for the specific job_title at the company. " +
+    "3) Experience hook: connect ONLY real experience from resume_data to the job. Use **bold** sparingly for key traits. " +
+    "4) Availability & work attitude: highlight full availability (weekends/holidays/overtime) ONLY if explicitly supported by resume_data. Mention reliability, sobriety, safety, willingness to learn. " +
+    "5) Closing: 'My resume is attached. Thank you.' then 'Best regards,'. " +
+    "6) Signature block on separate lines: name, phone, email — ONLY if present in resume_data. " +
+    "\n\nOUTPUT: Return JSON with {subject, body}. The body MUST contain multiple paragraphs separated by \\n\\n. No markdown fences.";
 
   const userPrompt =
     `Write a short job application email (cover letter) for this H-2A/H-2B job.\n` +
@@ -416,7 +433,7 @@ async function generateDiamondEmail(params: {
     },
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
-      temperature: 0.5,
+      temperature: 0.3,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -438,7 +455,11 @@ async function generateDiamondEmail(params: {
   }
   
   const subject = String(parsed?.subject ?? "").trim();
-  const body = String(parsed?.body ?? "").trim();
+  let body = String(parsed?.body ?? "").trim();
+  
+  // Normalize paragraph breaks - ensure proper double newlines
+  body = body.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+  
   if (!subject || !body) throw new Error("AI output missing subject or body");
   return { subject, body };
 }

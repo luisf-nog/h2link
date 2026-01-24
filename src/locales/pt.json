@@ -432,7 +432,8 @@
       "add_manual": "Adicionar Empresa",
       "send": "Enviar todos ({{pendingCount}})",
       "send_selected": "Enviar selecionados ({{count}})",
-      "retry": "Reenviar"
+      "retry": "Reenviar",
+      "retry_all_failed": "Reenviar falhos ({{count}})"
     },
     "manual_dialog": {
       "title": "Adicionar Empresa",

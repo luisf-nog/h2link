@@ -427,7 +427,8 @@
       "add_manual": "Add Company",
       "send": "Send all ({{pendingCount}})",
       "send_selected": "Send selected ({{count}})",
-      "retry": "Retry"
+      "retry": "Retry",
+      "retry_all_failed": "Retry failed ({{count}})"
     },
     "manual_dialog": {
       "title": "Add Company",
