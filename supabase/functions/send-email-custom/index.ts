@@ -8,12 +8,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type PlanTier = "free" | "gold" | "diamond";
+type PlanTier = "free" | "gold" | "diamond" | "black";
 
 function getDailyEmailLimit(planTier: PlanTier): number {
   // Keep in sync with src/config/plans.config.ts
-  if (planTier === "gold") return 150;
+  if (planTier === "black") return 450;
   if (planTier === "diamond") return 350;
+  if (planTier === "gold") return 150;
   return 5;
 }
 
