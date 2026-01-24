@@ -14,6 +14,24 @@ function json(status: number, payload: unknown) {
   });
 }
 
+function extractJsonObject(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  // Strip common Markdown fences.
+  const unfenced = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  if (unfenced.startsWith("{") && unfenced.endsWith("}")) return unfenced;
+
+  const start = unfenced.indexOf("{");
+  const end = unfenced.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  return unfenced.slice(start, end + 1);
+}
+
 const requestSchema = z.object({
   queueId: z.string().uuid(),
 });
@@ -93,7 +111,8 @@ serve(async (req) => {
     const systemPrompt =
       "Return ONLY valid JSON with keys {subject, body}. " +
       "Write in English. Subject must be short. Body must be a short cover letter. " +
-      "Tone: respectful, direct, humble. No corporate jargon.";
+      "Tone: respectful, direct, humble. No corporate jargon. " +
+      "Do not include Markdown, code fences, or any extra commentary.";
 
     const userPrompt =
       `Write a short job application email (cover letter) for this H-2A/H-2B job.\n` +
@@ -113,7 +132,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        temperature: 0.5,
+        temperature: 0.2,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -130,9 +149,15 @@ serve(async (req) => {
     const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
     let parsed: unknown;
     try {
-      parsed = JSON.parse(content);
+      const extracted = extractJsonObject(content);
+      if (!extracted) throw new Error("no_json_object");
+      parsed = JSON.parse(extracted);
     } catch {
-      return json(500, { success: false, error: "AI returned invalid JSON" });
+      return json(500, {
+        success: false,
+        error: "AI returned invalid JSON",
+        details: content.slice(0, 800),
+      });
     }
 
     const validated = responseSchema.safeParse(parsed);
