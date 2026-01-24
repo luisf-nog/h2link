@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 import { z } from "https://esm.sh/zod@3.25.76";
-// pdf-parse depends on Node's fs, which is not available in the edge runtime.
-// Use pdfjs-dist to extract text from PDFs.
-import * as pdfjs from "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,44 +12,6 @@ function json(status: number, payload: unknown) {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders },
   });
-}
-
-async function extractPdfText(data: Uint8Array): Promise<string> {
-  // Edge runtime (Deno) cannot load a relative worker script.
-  // Even with disableWorker=true, pdfjs may attempt a "fake worker" fallback and
-  // import(workerSrc). Therefore workerSrc MUST be an absolute URL.
-  // Use a CDN that serves the worker file directly as an ES module.
-  // esm.sh doesn't reliably expose internal worker files for pdfjs-dist 4.x.
-  // @ts-ignore - types vary across builds
-  pdfjs.GlobalWorkerOptions.workerSrc =
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs";
-
-  let doc: any;
-  try {
-    // @ts-ignore - disableWorker is supported by pdfjs
-    doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
-  } catch (e) {
-    // Fallback: non-legacy worker path (package structure can differ by build).
-    // @ts-ignore
-    pdfjs.GlobalWorkerOptions.workerSrc =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
-    // @ts-ignore
-    doc = await pdfjs.getDocument({ data, disableWorker: true }).promise;
-  }
-  const maxPages = Math.min(doc.numPages, 25);
-  let out = "";
-  for (let p = 1; p <= maxPages; p++) {
-    const page = await doc.getPage(p);
-    const content = await page.getTextContent();
-    const strings = (content.items ?? [])
-      // @ts-ignore
-      .map((it) => (typeof it?.str === "string" ? it.str : ""))
-      .filter(Boolean);
-    out += strings.join(" ") + "\n";
-    // Avoid overly large prompts
-    if (out.length > 40_000) break;
-  }
-  return out.trim();
 }
 
 const resumeSchema = z.object({
@@ -83,35 +42,21 @@ serve(async (req) => {
     const userId = claimsData?.claims?.sub;
     if (claimsError || !userId) return json(401, { success: false, error: "Unauthorized" });
 
-    const form = await req.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) {
-      return json(400, { success: false, error: "Missing PDF file (field: file)" });
+    // The frontend extracts text from the PDF (client-side parsing) and sends it here.
+    const body = await req.json().catch(() => ({} as any));
+    const resumeText = typeof body?.resumeText === "string" ? body.resumeText : "";
+    if (!resumeText.trim()) {
+      return json(400, { success: false, error: "Missing resumeText" });
     }
 
-    if (file.type && file.type !== "application/pdf") {
-      return json(400, { success: false, error: "Invalid file type. Please upload a PDF." });
+    // Safety: prevent massive prompts / accidental binary-to-string payloads.
+    if (resumeText.length > 200_000) {
+      return json(413, { success: false, error: "resumeText too large" });
     }
 
-    // 20MB client-side limit exists, but enforce a soft limit here too.
-    if (file.size > 20 * 1024 * 1024) {
-      return json(413, { success: false, error: "File too large (max 20MB)" });
-    }
-
-    const buf = new Uint8Array(await file.arrayBuffer());
-
-    console.info("parse-resume: received file", {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
-
-    const text = await extractPdfText(buf);
-    if (!text) return json(400, { success: false, error: "Could not extract text from PDF" });
-
-    console.info("parse-resume: extracted text", {
-      length: text.length,
-      preview: text.slice(0, 200),
+    console.info("parse-resume: received text", {
+      length: resumeText.length,
+      preview: resumeText.slice(0, 200),
     });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -124,7 +69,7 @@ serve(async (req) => {
 
     const userPrompt =
       "Resume text:\n\n" +
-      text.slice(0, 20_000);
+      resumeText.slice(0, 20_000);
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
