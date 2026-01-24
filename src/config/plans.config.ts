@@ -129,12 +129,12 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: "zinc",
     description: "A ferramenta profissional completa",
     price: {
-      brl: 299.00,
-      usd: 59.00,
+      brl: 299.0,
+      usd: 59.0,
       stripe_id_brl: "price_1StC0SKliiuLyRPmACQreqJa",
       stripe_id_usd: "price_1StC0nKliiuLyRPmWnUYg9QN",
     },
-    limits: { daily_emails: 500, max_queue_size: 9999, max_templates: 999 },
+    limits: { daily_emails: 450, max_queue_size: 9999, max_templates: 999 },
     features: {
       cloud_sending: true,
       mask_user_agent: true,
