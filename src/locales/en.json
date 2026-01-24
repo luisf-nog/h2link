@@ -438,7 +438,10 @@
       "empty": "No sends recorded.",
       "status_success": "Success",
       "status_failed": "Failed",
-      "status_skipped": "Skipped"
+      "status_skipped": "Skipped",
+      "sent_at": "Sent",
+      "opened_at": "Opened",
+      "not_opened": "Not opened"
     },
     "manual_dialog": {
       "title": "Add Company",

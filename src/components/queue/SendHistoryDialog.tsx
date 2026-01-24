@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Send, Eye } from 'lucide-react';
 
 interface SendHistoryEntry {
   id: string;
@@ -27,6 +27,7 @@ interface SendHistoryDialogProps {
   queueId: string;
   jobTitle: string;
   company: string;
+  openedAt?: string | null;
 }
 
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
@@ -37,6 +38,7 @@ export function SendHistoryDialog({
   queueId,
   jobTitle,
   company,
+  openedAt,
 }: SendHistoryDialogProps) {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -116,14 +118,11 @@ export function SendHistoryDialog({
               {history.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-start gap-3 rounded-lg border border-border p-3"
+                  className="flex flex-col gap-2 rounded-lg border border-border p-3"
                 >
-                  <div className="mt-0.5">{getStatusIcon(entry.status)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-foreground">
-                        {formatDate(entry.sent_at)}
-                      </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(entry.status)}
                       <Badge
                         variant={entry.status === 'success' ? 'default' : 'secondary'}
                         className={
@@ -137,12 +136,29 @@ export function SendHistoryDialog({
                         {getStatusLabel(entry.status)}
                       </Badge>
                     </div>
-                    {entry.error_message && (
-                      <p className="mt-1 text-xs text-muted-foreground truncate" title={entry.error_message}>
-                        {entry.error_message}
-                      </p>
-                    )}
                   </div>
+                  
+                  <div className="flex flex-col gap-1 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Send className="h-3.5 w-3.5" />
+                      <span>{t('queue.history.sent_at')}:</span>
+                      <span className="font-medium text-foreground">{formatDate(entry.sent_at)}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>{t('queue.history.opened_at')}:</span>
+                      <span className={`font-medium ${openedAt ? 'text-success' : 'text-muted-foreground'}`}>
+                        {openedAt ? formatDate(openedAt) : t('queue.history.not_opened')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {entry.error_message && (
+                    <p className="text-xs text-destructive truncate" title={entry.error_message}>
+                      {entry.error_message}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
