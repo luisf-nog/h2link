@@ -18,6 +18,9 @@ interface EmailRequest {
   xMailer?: string;
   userAgent?: string;
   dedupeId?: string;
+  // optional: used to attach open-tracking pixel to emails sent from the queue
+  queueId?: string;
+  trackingId?: string;
   // optional override; if omitted we use saved values
   provider?: EmailProvider;
   smtpEmail?: string;
@@ -386,6 +389,29 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpConfig = SMTP_CONFIGS[normalizedProvider];
 
     let htmlBody = String(body.body).replace(/\n/g, "<br>");
+
+    // Open tracking pixel (best-effort)
+    try {
+      let trackingId = body.trackingId;
+      if (!trackingId && body.queueId) {
+        const { data: q } = await serviceClient
+          .from("my_queue")
+          .select("tracking_id")
+          .eq("id", String(body.queueId))
+          .eq("user_id", userId)
+          .maybeSingle();
+        trackingId = (q as any)?.tracking_id ?? undefined;
+      }
+
+      if (trackingId) {
+        const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(String(trackingId))}`;
+        htmlBody +=
+          `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
+      }
+    } catch {
+      // ignore
+    }
+
     if (body.dedupeId) {
       const id = String(body.dedupeId).slice(0, 128);
       htmlBody +=

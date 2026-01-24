@@ -25,6 +25,7 @@ interface QueueRow {
   status: string;
   job_id: string | null;
   manual_job_id: string | null;
+  tracking_id: string;
 }
 
 interface ProfileRow {
@@ -514,7 +515,7 @@ async function processOneUser(params: {
 
   let q = serviceClient
     .from("my_queue")
-    .select("id,user_id,status,job_id,manual_job_id")
+    .select("id,user_id,status,job_id,manual_job_id,tracking_id")
     .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: true });
@@ -627,6 +628,12 @@ async function processOneUser(params: {
 
       const finalSubject = applyTemplate(tpl.subject, vars);
       let htmlBody = applyTemplate(tpl.body, vars).replace(/\n/g, "<br>");
+
+      // Open tracking pixel
+      if (row.tracking_id) {
+        const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(String(row.tracking_id))}`;
+        htmlBody += `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
+      }
 
       const sendProfile = pickSendProfile(p.plan_tier);
       const extraHeaders: string[] = [];
@@ -814,3 +821,4 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
+

@@ -441,11 +441,17 @@
         "company": "Company",
         "email": "Email",
         "status": "Status",
+        "open_tracking": "Read",
         "action": "Action"
       },
       "loading": "Loading queue...",
       "empty": "Your queue is empty",
       "go_jobs": "Open Jobs Hub"
+    },
+    "open_tracking": {
+      "waiting": "Awaiting read",
+      "opened_at": "Viewed at: {{date}}",
+      "disclaimer": "Read confirmation depends on the recipient’s privacy settings."
     },
     "status": { "sent": "Sent", "pending": "Pending", "processing": "Processing", "failed": "Failed", "paused": "Paused" },
     "toasts": {

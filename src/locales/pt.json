@@ -437,11 +437,17 @@
         "company": "Empresa",
         "email": "Email",
         "status": "Status",
+        "open_tracking": "Leitura",
         "action": "Ação"
       },
       "loading": "Carregando fila...",
       "empty": "Sua fila está vazia",
       "go_jobs": "Abrir Hub Vagas"
+    },
+    "open_tracking": {
+      "waiting": "Aguardando leitura",
+      "opened_at": "Visualizado em: {{date}}",
+      "disclaimer": "A confirmação de leitura depende das configurações de privacidade do destinatário."
     },
     "status": { "sent": "Enviado", "pending": "Pendente", "processing": "Processando", "failed": "Falhou", "paused": "Pausado" },
     "toasts": {
