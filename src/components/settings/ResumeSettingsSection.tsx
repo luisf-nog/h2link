@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { extractTextFromPDF } from "@/lib/pdf";
 
 type ResumeData = {
   name: string;
@@ -35,6 +36,8 @@ export function ResumeSettingsSection() {
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [resumeText, setResumeText] = useState<string>("");
   const [resume, setResume] = useState<ResumeData>(emptyResume);
 
   const canLoad = useMemo(() => Boolean(profile?.id), [profile?.id]);
@@ -74,13 +77,23 @@ export function ResumeSettingsSection() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error(t("common.errors.no_session"));
 
-      const fd = new FormData();
-      fd.append("file", file);
+      // Ensure we have extracted text (client-side PDF parsing)
+      let text = resumeText;
+      if (!text) {
+        setExtracting(true);
+        try {
+          text = await extractTextFromPDF(file);
+          setResumeText(text);
+        } finally {
+          setExtracting(false);
+        }
+      }
+      if (!text) throw new Error("Could not extract text from PDF");
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-resume`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeText: text }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || payload?.success === false) {
@@ -145,11 +158,31 @@ export function ResumeSettingsSection() {
               <Input
                 type="file"
                 accept="application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={async (e) => {
+                  const next = e.target.files?.[0] ?? null;
+                  setFile(next);
+                  setResumeText("");
+                  if (!next) return;
+
+                  setExtracting(true);
+                  try {
+                    const text = await extractTextFromPDF(next);
+                    setResumeText(text);
+                  } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : t("common.errors.save_failed");
+                    toast({ title: t("resume.toasts.parse_error_title"), description: message, variant: "destructive" });
+                  } finally {
+                    setExtracting(false);
+                  }
+                }}
               />
               <div className="flex gap-2">
-                <Button type="button" variant="secondary" onClick={parseResume} disabled={!file || parsing}>
-                  {parsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                <Button type="button" variant="secondary" onClick={parseResume} disabled={!file || parsing || extracting || !resumeText}>
+                  {parsing || extracting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
                   {t("resume.upload.actions.parse")}
                 </Button>
               </div>
