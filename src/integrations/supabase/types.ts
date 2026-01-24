@@ -361,6 +361,44 @@ export type Database = {
         }
         Relationships: []
       }
+      queue_send_history: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          queue_id: string
+          sent_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          queue_id: string
+          sent_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          queue_id?: string
+          sent_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_send_history_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "my_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referral_links: {
         Row: {
           activated_at: string | null

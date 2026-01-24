@@ -15,10 +15,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, Eye, RefreshCw } from 'lucide-react';
+import { Trash2, Send, Loader2, Eye, RefreshCw, History } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
+import { SendHistoryDialog } from '@/components/queue/SendHistoryDialog';
 import { useNavigate } from 'react-router-dom';
 import { format, type Locale } from 'date-fns';
 import { ptBR, enUS, es } from 'date-fns/locale';
@@ -83,6 +84,8 @@ export default function Queue() {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
 
   const planTier = profile?.plan_tier || 'free';
   const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
@@ -468,14 +471,25 @@ export default function Queue() {
       }
     }
 
-    // Increment send_count for each sent item
+    // Increment send_count and log history for each sent item
     for (const sentId of sentIds) {
       const currentItem = items.find((i) => i.id === sentId);
       const newCount = (currentItem?.send_count ?? 0) + 1;
+      const now = new Date().toISOString();
       await supabase
         .from('my_queue')
-        .update({ status: 'sent', sent_at: new Date().toISOString(), send_count: newCount })
+        .update({ status: 'sent', sent_at: now, send_count: newCount })
         .eq('id', sentId);
+      
+      // Log send history
+      await supabase
+        .from('queue_send_history')
+        .insert({
+          queue_id: sentId,
+          user_id: profile?.id,
+          sent_at: now,
+          status: 'success',
+        });
     }
 
     toast({
@@ -704,6 +718,14 @@ export default function Queue() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <SendHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        queueId={historyItem?.id ?? ''}
+        jobTitle={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.job_title ?? ''}
+        company={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.company ?? ''}
+      />
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">{t('queue.title')}</h1>
@@ -908,6 +930,20 @@ export default function Queue() {
 
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {item.send_count > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setHistoryItem(item);
+                              setHistoryDialogOpen(true);
+                            }}
+                            title={t('queue.actions.view_history')}
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                        )}
+
                         {item.status === 'failed' ? (
                           <Button
                             size="sm"
