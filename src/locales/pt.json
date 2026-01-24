@@ -346,8 +346,16 @@
     "subtitle": "Crie e gerencie templates para acelerar suas aplicações.",
     "actions": {
       "new": "Novo template",
+      "new_fallback": "Criar template de fallback",
       "generate_ai": "Gerar com IA",
       "rewrite_ai": "✨ Reescrever com IA"
+    },
+    "ai_writer": {
+      "title": "IA Dinâmica Ativa",
+      "description": "Seus emails são gerados automaticamente por IA para cada vaga.",
+      "active_title": "Geração automática ativada",
+      "active_desc": "Cada email que você enviar será único, gerado pela IA com base no seu currículo e na descrição da vaga. Não é necessário criar templates.",
+      "fallback_note": "Opcionalmente, você pode criar templates de fallback caso a IA não consiga gerar o email."
     },
     "ai_counter": "Tentativas hoje: {{used}}/{{limit}}",
     "editor": {
@@ -537,8 +545,13 @@
     "lifetime": "(vitalício)",
     "tiers": {
       "free": { "label": "Starter", "description": "Para testar e conhecer" },
-      "gold": { "label": "Gold", "description": "Para quem busca volume" },
-      "diamond": { "label": "Diamond", "description": "A ferramenta profissional completa" }
+      "gold": { "label": "Gold", "description": "Volume com templates salvos" },
+      "diamond": { "label": "Diamond", "description": "Mais volume e visibilidade" },
+      "black": { "label": "Black", "description": "IA dinâmica por vaga" }
+    },
+    "method": {
+      "static": "Templates",
+      "dynamic": "IA Dinâmica"
     },
     "actions": {
       "current": "Plano Atual",
@@ -547,6 +560,12 @@
     },
     "features": {
       "daily_emails": "{{count}} envios/dia",
+      "templates_count": "{{count}} templates",
+      "unlimited_templates": "Templates ilimitados",
+      "static_templates": "Envio via templates salvos",
+      "dynamic_ai": "Email único por vaga (IA)",
+      "resume_parsing": "Extração de currículo (IA)",
+      "spy_pixel": "Rastreamento de abertura",
       "queue_size": "Fila de até {{size}} vagas",
       "unlimited": "ilimitada",
       "cloud_sending": "Envio pela nuvem",

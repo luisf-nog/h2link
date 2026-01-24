@@ -53,6 +53,7 @@ export default {
         },
         "plan-gold": "hsl(var(--plan-gold))",
         "plan-diamond": "hsl(var(--plan-diamond))",
+        "plan-black": "hsl(var(--plan-black))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

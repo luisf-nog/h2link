@@ -49,8 +49,9 @@
     --success-foreground: 210 40% 98%;
 
     /* Plan colors */
-    --plan-gold: 217 91% 60%;
+    --plan-gold: 45 93% 47%;
     --plan-diamond: 263 70% 50%;
+    --plan-black: 0 0% 15%;
 
     /* Borders and inputs */
     --border: 214 32% 91%;
@@ -107,8 +108,9 @@
     --success: 142 76% 36%;
     --success-foreground: 210 40% 98%;
 
-    --plan-gold: 217 91% 60%;
+    --plan-gold: 45 93% 47%;
     --plan-diamond: 263 70% 60%;
+    --plan-black: 0 0% 85%;
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;

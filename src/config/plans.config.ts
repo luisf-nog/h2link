@@ -1,9 +1,11 @@
-export type PlanTier = "free" | "gold" | "diamond";
+export type PlanTier = "free" | "gold" | "diamond" | "black";
+
+export type SendingMethod = "static" | "dynamic";
 
 export interface PlanConfig {
   id: PlanTier;
   label: string;
-  color: "slate" | "blue" | "violet";
+  color: "slate" | "amber" | "violet" | "zinc";
   description: string;
   price: {
     brl: number;
@@ -23,12 +25,15 @@ export interface PlanConfig {
     magic_paste: boolean;
     ai_email_writer: boolean;
     priority_support: boolean;
+    spy_pixel: boolean;
+    resume_parsing: boolean;
   };
   settings: {
     job_db_access: "view_limited" | "text_only" | "visual_premium";
     job_db_blur: boolean;
     show_housing_icons: boolean;
     delay_strategy: "none" | "fixed" | "human";
+    sending_method: SendingMethod;
   };
 }
 
@@ -47,24 +52,27 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
+      spy_pixel: false,
+      resume_parsing: false,
     },
     settings: {
       job_db_access: "view_limited",
       job_db_blur: true,
       show_housing_icons: false,
       delay_strategy: "none",
+      sending_method: "static",
     },
   },
   gold: {
     id: "gold",
     label: "Gold",
-    color: "blue",
+    color: "amber",
     description: "Para quem busca volume",
     price: {
-      brl: 19.9,
-      usd: 4.9,
-      stripe_id_brl: "price_1SsohfKliiuLyRPm2t81CuGj",
-      stripe_id_usd: "price_1SsovLKliiuLyRPmIqN11GXC",
+      brl: 64.99,
+      usd: 12.99,
+      stripe_id_brl: "price_1StBwnKliiuLyRPmIdD8CAlD",
+      stripe_id_usd: "price_1StBwzKliiuLyRPmPz81osBR",
     },
     limits: { daily_emails: 150, max_queue_size: 500, max_templates: 3 },
     features: {
@@ -74,26 +82,59 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
+      spy_pixel: true,
+      resume_parsing: true,
     },
     settings: {
       job_db_access: "text_only",
       job_db_blur: false,
       show_housing_icons: false,
       delay_strategy: "fixed",
+      sending_method: "static",
     },
   },
   diamond: {
     id: "diamond",
     label: "Diamond",
     color: "violet",
+    description: "Volume e visibilidade",
+    price: {
+      brl: 114.99,
+      usd: 22.99,
+      stripe_id_brl: "price_1StBx9KliiuLyRPmUwn0P7Z5",
+      stripe_id_usd: "price_1StBxMKliiuLyRPmFVjreBN0",
+    },
+    limits: { daily_emails: 350, max_queue_size: 9999, max_templates: 10 },
+    features: {
+      cloud_sending: true,
+      mask_user_agent: true,
+      dns_bounce_check: true,
+      magic_paste: false,
+      ai_email_writer: false,
+      priority_support: false,
+      spy_pixel: true,
+      resume_parsing: true,
+    },
+    settings: {
+      job_db_access: "visual_premium",
+      job_db_blur: false,
+      show_housing_icons: true,
+      delay_strategy: "fixed",
+      sending_method: "static",
+    },
+  },
+  black: {
+    id: "black",
+    label: "Black",
+    color: "zinc",
     description: "A ferramenta profissional completa",
     price: {
-      brl: 39.9,
-      usd: 9.9,
-      stripe_id_brl: "price_1SsojDKliiuLyRPmyXXkAI9o",
-      stripe_id_usd: "price_1SsovqKliiuLyRPmqNZclNky",
+      brl: 299.00,
+      usd: 59.00,
+      stripe_id_brl: "price_1StC0SKliiuLyRPmACQreqJa",
+      stripe_id_usd: "price_1StC0nKliiuLyRPmWnUYg9QN",
     },
-    limits: { daily_emails: 350, max_queue_size: 9999, max_templates: 5 },
+    limits: { daily_emails: 500, max_queue_size: 9999, max_templates: 999 },
     features: {
       cloud_sending: true,
       mask_user_agent: true,
@@ -101,12 +142,15 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: true,
       ai_email_writer: true,
       priority_support: true,
+      spy_pixel: true,
+      resume_parsing: true,
     },
     settings: {
       job_db_access: "visual_premium",
       job_db_blur: false,
       show_housing_icons: true,
       delay_strategy: "human",
+      sending_method: "dynamic",
     },
   },
 } as const;
@@ -119,4 +163,8 @@ export const canAccessFeature = (tier: PlanTier, feature: keyof PlanConfig["feat
 
 export const getPlanLimit = (tier: PlanTier, limit: keyof PlanConfig["limits"]): number => {
   return PLANS_CONFIG[tier].limits[limit];
+};
+
+export const usesDynamicAI = (tier: PlanTier): boolean => {
+  return PLANS_CONFIG[tier].settings.sending_method === "dynamic";
 };
