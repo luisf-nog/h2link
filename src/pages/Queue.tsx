@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, Eye } from 'lucide-react';
+import { Trash2, Send, Loader2, Eye, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
@@ -75,6 +75,7 @@ export default function Queue() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendingOneId, setSendingOneId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
@@ -611,6 +612,24 @@ export default function Queue() {
     }
   };
 
+  const handleRetryOne = async (item: QueueItem) => {
+    if (item.status !== 'failed') return;
+    setRetryingId(item.id);
+    try {
+      // Reset status to pending first
+      await supabase.from('my_queue').update({ status: 'pending', last_error: null }).eq('id', item.id);
+      // Refresh the item
+      const updatedItem = { ...item, status: 'pending' };
+      await sendQueueItems([updatedItem]);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+      fetchQueue();
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const pendingCount = pendingItems.length;
   const sentCount = queue.filter((q) => q.status === 'sent').length;
 
@@ -837,18 +856,34 @@ export default function Queue() {
 
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={item.status !== 'pending' || sending || sendingOneId != null}
-                          onClick={() => handleSendOne(item)}
-                        >
-                          {sendingOneId === item.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </Button>
+                        {item.status === 'failed' ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={sending || retryingId != null}
+                            onClick={() => handleRetryOne(item)}
+                            title={t('queue.actions.retry')}
+                          >
+                            {retryingId === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={item.status !== 'pending' || sending || sendingOneId != null}
+                            onClick={() => handleSendOne(item)}
+                          >
+                            {sendingOneId === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
 
                         <Button
                           size="sm"

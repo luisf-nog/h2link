@@ -426,7 +426,8 @@
     "actions": {
       "add_manual": "Agregar empresa",
       "send": "Enviar todas ({{pendingCount}})",
-      "send_selected": "Enviar seleccionados ({{count}})"
+      "send_selected": "Enviar seleccionados ({{count}})",
+      "retry": "Reintentar"
     },
     "manual_dialog": {
       "title": "Agregar empresa",
