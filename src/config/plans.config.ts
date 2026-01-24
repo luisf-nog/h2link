@@ -56,8 +56,8 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       resume_parsing: false,
     },
     settings: {
-      job_db_access: "view_limited",
-      job_db_blur: true,
+      job_db_access: "text_only",
+      job_db_blur: false,
       show_housing_icons: false,
       delay_strategy: "none",
       sending_method: "static",
