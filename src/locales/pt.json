@@ -448,7 +448,10 @@
       "empty": "Nenhum envio registrado.",
       "status_success": "Sucesso",
       "status_failed": "Falhou",
-      "status_skipped": "Pulado"
+      "status_skipped": "Pulado",
+      "sent_at": "Enviado",
+      "opened_at": "Visualizado",
+      "not_opened": "Não visualizado"
     },
     "manual_dialog": {
       "title": "Adicionar Empresa",
