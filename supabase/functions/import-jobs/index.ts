@@ -34,6 +34,10 @@ interface ImportedJob {
   education_required?: string | null;
   worksite_address?: string | null;
   worksite_zip?: string | null;
+  job_duties?: string | null;
+  job_min_special_req?: string | null;
+  wage_additional?: string | null;
+  rec_pay_deductions?: string | null;
 }
 
 serve(async (req) => {
@@ -120,6 +124,10 @@ serve(async (req) => {
       education_required: j.education_required ?? null,
       worksite_address: j.worksite_address ?? null,
       worksite_zip: j.worksite_zip ?? null,
+      job_duties: j.job_duties ?? null,
+      job_min_special_req: j.job_min_special_req ?? null,
+      wage_additional: j.wage_additional ?? null,
+      rec_pay_deductions: j.rec_pay_deductions ?? null,
     }));
 
     // Upsert by (job_id, visa_type)

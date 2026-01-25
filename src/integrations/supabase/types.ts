@@ -284,12 +284,15 @@ export type Database = {
           experience_months: number | null
           housing_info: string | null
           id: string
+          job_duties: string | null
           job_id: string
+          job_min_special_req: string | null
           job_title: string
           openings: number | null
           overtime_salary: number | null
           phone: string | null
           posted_date: string
+          rec_pay_deductions: string | null
           requirements: string | null
           salary: number | null
           source_url: string | null
@@ -298,6 +301,7 @@ export type Database = {
           tools_provided: boolean | null
           transport_provided: boolean | null
           visa_type: string | null
+          wage_additional: string | null
           weekly_hours: number | null
           worksite_address: string | null
           worksite_zip: string | null
@@ -314,12 +318,15 @@ export type Database = {
           experience_months?: number | null
           housing_info?: string | null
           id?: string
+          job_duties?: string | null
           job_id: string
+          job_min_special_req?: string | null
           job_title: string
           openings?: number | null
           overtime_salary?: number | null
           phone?: string | null
           posted_date?: string
+          rec_pay_deductions?: string | null
           requirements?: string | null
           salary?: number | null
           source_url?: string | null
@@ -328,6 +335,7 @@ export type Database = {
           tools_provided?: boolean | null
           transport_provided?: boolean | null
           visa_type?: string | null
+          wage_additional?: string | null
           weekly_hours?: number | null
           worksite_address?: string | null
           worksite_zip?: string | null
@@ -344,12 +352,15 @@ export type Database = {
           experience_months?: number | null
           housing_info?: string | null
           id?: string
+          job_duties?: string | null
           job_id?: string
+          job_min_special_req?: string | null
           job_title?: string
           openings?: number | null
           overtime_salary?: number | null
           phone?: string | null
           posted_date?: string
+          rec_pay_deductions?: string | null
           requirements?: string | null
           salary?: number | null
           source_url?: string | null
@@ -358,6 +369,7 @@ export type Database = {
           tools_provided?: boolean | null
           transport_provided?: boolean | null
           visa_type?: string | null
+          wage_additional?: string | null
           weekly_hours?: number | null
           worksite_address?: string | null
           worksite_zip?: string | null

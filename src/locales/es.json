@@ -773,7 +773,8 @@
       "contact": "Contacto",
       "worksite": "Lugar de trabajo",
       "details": "Detalles",
-      "benefits": "Beneficios"
+      "benefits": "Beneficios",
+      "compensation": "Compensación"
     },
     "fields": {
       "openings": "Vacantes",
@@ -787,10 +788,14 @@
       "job_id": "Job ID",
       "education": "Educación",
       "requirements": "Requisitos",
+      "special_requirements": "Requisitos Especiales",
+      "job_duties": "Tareas del Trabajo",
       "description": "Descripción",
       "housing": "Vivienda",
       "transport": "Transporte",
-      "tools": "Herramientas"
+      "tools": "Herramientas",
+      "wage_additional": "Información Adicional de Salario",
+      "pay_deductions": "Deducciones de Pago"
     },
     "values": {
       "months": "{{count}} meses",

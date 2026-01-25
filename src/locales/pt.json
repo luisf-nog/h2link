@@ -772,7 +772,8 @@
       "contact": "Contato",
       "worksite": "Local de trabalho",
       "details": "Detalhes",
-      "benefits": "Benefícios"
+      "benefits": "Benefícios",
+      "compensation": "Remuneração"
     },
     "fields": {
       "openings": "Aberturas",
@@ -786,10 +787,14 @@
       "job_id": "Job ID",
       "education": "Educação",
       "requirements": "Requisitos",
+      "special_requirements": "Requisitos Especiais",
+      "job_duties": "Tarefas do Trabalho",
       "description": "Descrição",
       "housing": "Moradia",
       "transport": "Transporte",
-      "tools": "Ferramentas"
+      "tools": "Ferramentas",
+      "wage_additional": "Informações Adicionais de Salário",
+      "pay_deductions": "Deduções do Pagamento"
     },
     "values": {
       "months": "{{count}} meses",
