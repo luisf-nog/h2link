@@ -726,17 +726,12 @@
         "openings": "Vacantes",
         "salary": "Salario",
         "visa": "Visa",
-        "requirements": "Requisitos",
         "posted": "Publicada",
         "start": "Inicio",
         "end": "Fin",
         "email": "Email",
         "benefits": "Beneficios",
         "action": "Acción"
-      },
-      "requirements_tooltip": {
-        "available": "Clic para ver requisitos",
-        "none": "Sin requisitos informados"
       },
       "loading": "Cargando empleos...",
       "empty": "No se encontraron empleos"

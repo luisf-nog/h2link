@@ -29,7 +29,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, FileText } from 'lucide-react';
+import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -326,8 +326,8 @@ export default function Jobs() {
     return visaType;
   }, [visaType]);
 
-  // Cargo, Empresa, Local, Qtd. Vagas, Salário, Visto, Requisitos, Postada, Início, Fim, Email, (Benefícios?), Ação
-  const tableColSpan = planSettings.show_housing_icons ? 13 : 12;
+  // Cargo, Empresa, Local, Qtd. Vagas, Salário, Visto, Postada, Início, Fim, Email, (Benefícios?), Ação
+  const tableColSpan = planSettings.show_housing_icons ? 12 : 11;
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return '-';
@@ -651,7 +651,6 @@ export default function Jobs() {
                     {t('jobs.table.headers.visa')} <SortIcon active={sortKey === 'visa_type'} dir={sortDir} />
                   </button>
                 </TableHead>
-                <TableHead className="text-center">{t('jobs.table.headers.requirements')}</TableHead>
                 <TableHead>
                   <button
                     type="button"
@@ -725,27 +724,6 @@ export default function Jobs() {
                       <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
                         {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {job.requirements ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="inline-flex items-center justify-center">
-                              <Badge variant="outline" className="text-xs cursor-pointer">
-                                <FileText className="h-3 w-3 mr-1" />
-                                {t('common.yes')}
-                              </Badge>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs whitespace-pre-wrap line-clamp-4">
-                              {job.requirements.slice(0, 200)}{job.requirements.length > 200 ? '...' : ''}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">-</span>
-                      )}
                     </TableCell>
                     <TableCell>{formatDate(job.posted_date)}</TableCell>
                     <TableCell>{formatDate(job.start_date)}</TableCell>

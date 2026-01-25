@@ -725,17 +725,12 @@
         "openings": "Qtd. Vagas",
         "salary": "Salário",
         "visa": "Visto",
-        "requirements": "Requisitos",
         "posted": "Postada",
         "start": "Início",
         "end": "Fim",
         "email": "Email",
         "benefits": "Benefícios",
         "action": "Ação"
-      },
-      "requirements_tooltip": {
-        "available": "Clique para ver os requisitos",
-        "none": "Nenhum requisito informado"
       },
       "loading": "Carregando vagas...",
       "empty": "Nenhuma vaga encontrada"
