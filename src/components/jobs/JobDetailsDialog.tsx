@@ -40,6 +40,10 @@ export type JobDetails = {
   transport_provided: boolean | null;
   tools_provided: boolean | null;
   weekly_hours: number | null;
+  job_duties?: string | null;
+  job_min_special_req?: string | null;
+  wage_additional?: string | null;
+  rec_pay_deductions?: string | null;
 };
 
 type PlanSettings = {
@@ -199,7 +203,7 @@ export function JobDetailsDialog({
               </>
             )}
 
-            {(job?.description || job?.requirements || job?.education_required) && (
+            {(job?.description || job?.requirements || job?.education_required || job?.job_duties || job?.job_min_special_req) && (
               <>
                 <Separator />
                 <section className="space-y-4">
@@ -219,10 +223,47 @@ export function JobDetailsDialog({
                     </div>
                   )}
 
+                  {job?.job_min_special_req && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.special_requirements")}</p>
+                      <p className="text-sm whitespace-pre-wrap">{job.job_min_special_req}</p>
+                    </div>
+                  )}
+
+                  {job?.job_duties && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.job_duties")}</p>
+                      <p className="text-sm whitespace-pre-wrap">{job.job_duties}</p>
+                    </div>
+                  )}
+
                   {job?.description && (
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">{t("job_details.fields.description")}</p>
                       <p className="text-sm whitespace-pre-wrap">{job.description}</p>
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
+
+            {(job?.wage_additional || job?.rec_pay_deductions) && (
+              <>
+                <Separator />
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold">{t("job_details.sections.compensation")}</h3>
+
+                  {job?.wage_additional && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.wage_additional")}</p>
+                      <p className="text-sm whitespace-pre-wrap">{job.wage_additional}</p>
+                    </div>
+                  )}
+
+                  {job?.rec_pay_deductions && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.pay_deductions")}</p>
+                      <p className="text-sm whitespace-pre-wrap">{job.rec_pay_deductions}</p>
                     </div>
                   )}
                 </section>

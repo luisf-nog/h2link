@@ -773,7 +773,8 @@
       "contact": "Contact",
       "worksite": "Worksite",
       "details": "Details",
-      "benefits": "Benefits"
+      "benefits": "Benefits",
+      "compensation": "Compensation"
     },
     "fields": {
       "openings": "Openings",
@@ -787,10 +788,14 @@
       "job_id": "Job ID",
       "education": "Education",
       "requirements": "Requirements",
+      "special_requirements": "Special Requirements",
+      "job_duties": "Job Duties",
       "description": "Description",
       "housing": "Housing",
       "transport": "Transport",
-      "tools": "Tools"
+      "tools": "Tools",
+      "wage_additional": "Additional Wage Info",
+      "pay_deductions": "Pay Deductions"
     },
     "values": {
       "months": "{{count}} months",

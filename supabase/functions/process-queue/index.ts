@@ -509,10 +509,14 @@ async function generateDiamondEmail(params: {
     `Company: ${job.company}\n` +
     `Job title: ${job.job_title}\n\n` +
     `Job description:\n${String(job.description ?? "").trim()}\n\n` +
+    `Job duties (what the worker will do daily):\n${String((job as any).job_duties ?? "").trim() || "Not provided"}\n\n` +
     `⚠️ JOB REQUIREMENTS (CRITICAL - ADDRESS THESE DIRECTLY):\n${String(job.requirements ?? "").trim()}\n\n` +
+    `Special requirements:\n${String((job as any).job_min_special_req ?? "").trim() || "Not provided"}\n\n` +
+    `Additional wage info:\n${String((job as any).wage_additional ?? "").trim() || "Not provided"}\n\n` +
+    `Pay deductions:\n${String((job as any).rec_pay_deductions ?? "").trim() || "Not provided"}\n\n` +
     `IMPORTANT: The requirements above are what the employer is looking for. Cross-reference with the candidate's resume and highlight matches.\n\n` +
     `Candidate resume_data (JSON):\n${JSON.stringify(resumeData)}\n\n` +
-    `Address the job requirements directly. Highlight matches. If there is no strong match, focus on physical effort and willingness to learn.`;
+    `Address the job requirements and duties directly. Highlight matches. If there is no strong match, focus on physical effort and willingness to learn.`;
 
   const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",

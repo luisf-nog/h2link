@@ -243,7 +243,7 @@ serve(async (req) => {
       .from("my_queue")
       .select(
         `id, user_id, job_id, manual_job_id,
-         public_jobs (company, job_title, visa_type, description, requirements, weekly_hours, salary, start_date, end_date, housing_info),
+         public_jobs (company, job_title, visa_type, description, requirements, weekly_hours, salary, start_date, end_date, housing_info, job_duties, job_min_special_req, wage_additional, rec_pay_deductions),
          manual_jobs (company, job_title)`
       )
       .eq("id", payload.data.queueId)
@@ -264,6 +264,10 @@ serve(async (req) => {
     const startDate = (job as any)?.start_date ?? null;
     const endDate = (job as any)?.end_date ?? null;
     const housingInfo = String((job as any)?.housing_info ?? "").trim();
+    const jobDuties = String((job as any)?.job_duties ?? "").trim();
+    const jobMinSpecialReq = String((job as any)?.job_min_special_req ?? "").trim();
+    const wageAdditional = String((job as any)?.wage_additional ?? "").trim();
+    const recPayDeductions = String((job as any)?.rec_pay_deductions ?? "").trim();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
@@ -364,19 +368,23 @@ NO JSON. NO code fences. NO markdown headers. Maximum 280 words.`;
       startDate ? `Start date: ${startDate}` : null,
       endDate ? `End date: ${endDate}` : null,
       housingInfo ? `Housing: ${housingInfo}` : null,
+      wageAdditional ? `Additional wage info: ${wageAdditional}` : null,
+      recPayDeductions ? `Pay deductions: ${recPayDeductions}` : null,
     ].filter(Boolean).join("\n");
 
     const userPrompt =
       `=== JOB INFORMATION ===\n${jobContext}\n\n` +
       `=== JOB DESCRIPTION ===\n${jobDescription || "Not provided"}\n\n` +
+      `=== JOB DUTIES (What the worker will do daily) ===\n${jobDuties || "Not provided"}\n\n` +
       `=== ⚠️ JOB REQUIREMENTS (CRITICAL - ADDRESS THESE DIRECTLY) ===\n${jobRequirements || "Not provided"}\n\n` +
+      `=== SPECIAL REQUIREMENTS ===\n${jobMinSpecialReq || "Not provided"}\n\n` +
       `IMPORTANT: The requirements above are what the employer is looking for. Cross-reference with the candidate's resume and highlight matches.\n\n` +
       `=== SIGNATURE CONTACT (Use these exact values in sign-off) ===\n` +
       `Full name: ${fullName || "(missing)"}\n` +
       `Phone: ${phone || "(missing)"}\n` +
       `Email: ${email || "(missing)"}\n\n` +
       `=== CANDIDATE RESUME DATA (Source of Truth - JSON) ===\n${JSON.stringify(resumeData, null, 2)}\n\n` +
-      `Write a personalized cover letter email. Address the JOB REQUIREMENTS directly. Each paragraph MUST be separated by double line breaks (\\n\\n).`;
+      `Write a personalized cover letter email. Address the JOB REQUIREMENTS and JOB DUTIES directly. Each paragraph MUST be separated by double line breaks (\\n\\n).`;
 
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

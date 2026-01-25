@@ -45,6 +45,10 @@ type MappedJob = {
   education_required: string | null;
   worksite_address: string | null;
   worksite_zip: string | null;
+  job_duties: string | null;
+  job_min_special_req: string | null;
+  wage_additional: string | null;
+  rec_pay_deductions: string | null;
 };
 
 /**
@@ -101,6 +105,10 @@ const COL_MAP: Record<keyof MappedJob, string[]> = {
   education_required: ["education_required", "EDUCATION_REQUIRED", "Educação", "Educacao"],
   worksite_address: ["worksite_address", "WORKSITE_ADDRESS", "Endereço", "Endereco"],
   worksite_zip: ["worksite_zip", "WORKSITE_ZIP", "CEP", "Zip"],
+  job_duties: ["job_duties", "JOB_DUTIES", "Tarefas", "Duties", "Funções"],
+  job_min_special_req: ["jobMinspecialreq", "job_min_special_req", "JOB_MIN_SPECIAL_REQ", "Requisitos Especiais", "Special Requirements"],
+  wage_additional: ["wageAdditional", "wage_additional", "WAGE_ADDITIONAL", "Salário Adicional", "Additional Wage"],
+  rec_pay_deductions: ["recPayDeductions", "rec_pay_deductions", "REC_PAY_DEDUCTIONS", "Deduções", "Pay Deductions"],
 };
 
 function normalizeHeaderKey(key: string): string {
@@ -228,6 +236,10 @@ function mapRow(row: Record<string, unknown>): MappedJob | null {
     tools_provided: parseBool01(pickValue(row, COL_MAP.tools_provided)),
     worksite_address: String(pickValue(row, COL_MAP.worksite_address) ?? "").trim() || null,
     worksite_zip: String(pickValue(row, COL_MAP.worksite_zip) ?? "").trim() || null,
+    job_duties: String(pickValue(row, COL_MAP.job_duties) ?? "").trim() || null,
+    job_min_special_req: String(pickValue(row, COL_MAP.job_min_special_req) ?? "").trim() || null,
+    wage_additional: String(pickValue(row, COL_MAP.wage_additional) ?? "").trim() || null,
+    rec_pay_deductions: String(pickValue(row, COL_MAP.rec_pay_deductions) ?? "").trim() || null,
   };
 }
 
