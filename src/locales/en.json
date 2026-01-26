@@ -532,8 +532,10 @@
     },
     "open_tracking": {
       "waiting": "Awaiting read",
+      "opened": "Opened",
+      "not_opened": "Not opened",
       "opened_at": "Viewed at: {{date}}",
-      "disclaimer": "Read confirmation depends on the recipient’s privacy settings."
+      "disclaimer": "Read confirmation depends on the recipient's privacy settings."
     },
     "status": { "sent": "Sent", "pending": "Pending", "processing": "Processing", "failed": "Failed", "paused": "Paused", "skipped_invalid_domain": "Invalid domain" },
     "toasts": {

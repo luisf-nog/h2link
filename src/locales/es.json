@@ -532,6 +532,8 @@
     },
     "open_tracking": {
       "waiting": "Esperando lectura",
+      "opened": "Visto",
+      "not_opened": "No visto",
       "opened_at": "Visto en: {{date}}",
       "disclaimer": "La confirmación de lectura depende de la configuración de privacidad del destinatario."
     },

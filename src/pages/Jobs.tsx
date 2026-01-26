@@ -18,6 +18,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { JobDetailsDialog, type JobDetails } from '@/components/jobs/JobDetailsDialog';
 import { JobImportDialog } from '@/components/jobs/JobImportDialog';
+import { MobileJobCard } from '@/components/jobs/MobileJobCard';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -29,6 +30,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +47,7 @@ export default function Jobs() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isAdmin = useIsAdmin();
+  const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
   const formatPlanPrice = (tier: 'gold' | 'diamond') => {
@@ -592,218 +595,250 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('job_title', 'asc')}
-                  >
-                    {t('jobs.table.headers.job_title')} <SortIcon active={sortKey === 'job_title'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('company', 'asc')}
-                  >
-                    {t('jobs.table.headers.company')} <SortIcon active={sortKey === 'company'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('city', 'asc')}
-                  >
-                    {t('jobs.table.headers.location')} <SortIcon active={sortKey === 'city'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('openings', 'desc')}
-                  >
-                    {t('jobs.table.headers.openings')} <SortIcon active={sortKey === 'openings'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('salary', 'desc')}
-                  >
-                    {t('jobs.table.headers.salary')} <SortIcon active={sortKey === 'salary'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('visa_type', 'asc')}
-                  >
-                    {t('jobs.table.headers.visa')} <SortIcon active={sortKey === 'visa_type'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('posted_date', 'desc')}
-                  >
-                    {t('jobs.table.headers.posted')} <SortIcon active={sortKey === 'posted_date'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('start_date', 'asc')}
-                  >
-                    {t('jobs.table.headers.start')} <SortIcon active={sortKey === 'start_date'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 hover:underline"
-                    onClick={() => toggleSort('end_date', 'asc')}
-                  >
-                    {t('jobs.table.headers.end')} <SortIcon active={sortKey === 'end_date'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead>{t('jobs.table.headers.email')}</TableHead>
-                {planSettings.show_housing_icons && (
-                  <TableHead className="text-center">{t('jobs.table.headers.benefits')}</TableHead>
-                )}
-                <TableHead className="text-right">{t('jobs.table.headers.action')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+      {/* Mobile View: Cards */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {loading ? (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                {t('jobs.table.loading')}
+              </CardContent>
+            </Card>
+          ) : jobs.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                {t('jobs.table.empty')}
+              </CardContent>
+            </Card>
+          ) : (
+            jobs.map((job) => (
+              <MobileJobCard
+                key={job.id}
+                job={job}
+                isBlurred={planSettings.job_db_blur}
+                isQueued={queuedJobIds.has(job.id)}
+                showHousingIcons={planSettings.show_housing_icons}
+                onAddToQueue={() => addToQueue(job)}
+                onClick={() => handleRowClick(job)}
+                formatDate={formatDate}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        /* Desktop View: Table */
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={tableColSpan} className="text-center py-8">
-                    {t('jobs.table.loading')}
-                  </TableCell>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('job_title', 'asc')}
+                    >
+                      {t('jobs.table.headers.job_title')} <SortIcon active={sortKey === 'job_title'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('company', 'asc')}
+                    >
+                      {t('jobs.table.headers.company')} <SortIcon active={sortKey === 'company'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('city', 'asc')}
+                    >
+                      {t('jobs.table.headers.location')} <SortIcon active={sortKey === 'city'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('openings', 'desc')}
+                    >
+                      {t('jobs.table.headers.openings')} <SortIcon active={sortKey === 'openings'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('salary', 'desc')}
+                    >
+                      {t('jobs.table.headers.salary')} <SortIcon active={sortKey === 'salary'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('visa_type', 'asc')}
+                    >
+                      {t('jobs.table.headers.visa')} <SortIcon active={sortKey === 'visa_type'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('posted_date', 'desc')}
+                    >
+                      {t('jobs.table.headers.posted')} <SortIcon active={sortKey === 'posted_date'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('start_date', 'asc')}
+                    >
+                      {t('jobs.table.headers.start')} <SortIcon active={sortKey === 'start_date'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 hover:underline"
+                      onClick={() => toggleSort('end_date', 'asc')}
+                    >
+                      {t('jobs.table.headers.end')} <SortIcon active={sortKey === 'end_date'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>{t('jobs.table.headers.email')}</TableHead>
+                  {planSettings.show_housing_icons && (
+                    <TableHead className="text-center">{t('jobs.table.headers.benefits')}</TableHead>
+                  )}
+                  <TableHead className="text-right">{t('jobs.table.headers.action')}</TableHead>
                 </TableRow>
-              ) : jobs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={tableColSpan} className="text-center py-8">
-                    {t('jobs.table.empty')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                jobs.map((job) => (
-                  <TableRow
-                    key={job.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleRowClick(job)}
-                  >
-                    <TableCell className="font-medium">{job.job_title}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          planSettings.job_db_blur && 'blur-sm select-none'
-                        )}
-                      >
-                        {job.company}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {job.city}, {job.state}
-                    </TableCell>
-                    <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
-                    <TableCell>{formatSalary(job.salary)}</TableCell>
-                    <TableCell>
-                      <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
-                        {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(job.posted_date)}</TableCell>
-                    <TableCell>{formatDate(job.start_date)}</TableCell>
-                    <TableCell>{formatDate(job.end_date)}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          planSettings.job_db_blur && 'blur-sm select-none'
-                        )}
-                      >
-                        {job.email}
-                      </span>
-                    </TableCell>
-                    {planSettings.show_housing_icons && (
-                      <TableCell>
-                        <div className="flex justify-center gap-1">
-                          {/* H-2A: Moradia é mandatória, então destacamos o ícone */}
-                          {(job.housing_info || job.visa_type === 'H-2A') && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <Badge
-                                    variant={job.visa_type === 'H-2A' ? 'secondary' : 'outline'}
-                                    className={cn(
-                                      'text-xs',
-                                      job.visa_type === 'H-2A' && 'border-transparent'
-                                    )}
-                                  >
-                                    <Home className="h-3 w-3 mr-1" />
-                                  </Badge>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>
-                                  {job.visa_type === 'H-2A'
-                                    ? t('jobs.benefits.housing_h2a')
-                                    : t('jobs.benefits.housing_available')}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {job.transport_provided && (
-                            <Badge variant="outline" className="text-xs">
-                              <Bus className="h-3 w-3 mr-1" />
-                            </Badge>
-                          )}
-                          {job.tools_provided && (
-                            <Badge variant="outline" className="text-xs">
-                              <Wrench className="h-3 w-3 mr-1" />
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!planSettings.job_db_blur && queuedJobIds.has(job.id)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToQueue(job);
-                        }}
-                      >
-                        {planSettings.job_db_blur ? (
-                          <Lock className="h-4 w-4" />
-                        ) : queuedJobIds.has(job.id) ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Plus className="h-4 w-4" />
-                        )}
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={tableColSpan} className="text-center py-8">
+                      {t('jobs.table.loading')}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : jobs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={tableColSpan} className="text-center py-8">
+                      {t('jobs.table.empty')}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  jobs.map((job) => (
+                    <TableRow
+                      key={job.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleRowClick(job)}
+                    >
+                      <TableCell className="font-medium">{job.job_title}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            planSettings.job_db_blur && 'blur-sm select-none'
+                          )}
+                        >
+                          {job.company}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {job.city}, {job.state}
+                      </TableCell>
+                      <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
+                      <TableCell>{formatSalary(job.salary)}</TableCell>
+                      <TableCell>
+                        <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
+                          {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(job.posted_date)}</TableCell>
+                      <TableCell>{formatDate(job.start_date)}</TableCell>
+                      <TableCell>{formatDate(job.end_date)}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            planSettings.job_db_blur && 'blur-sm select-none'
+                          )}
+                        >
+                          {job.email}
+                        </span>
+                      </TableCell>
+                      {planSettings.show_housing_icons && (
+                        <TableCell>
+                          <div className="flex justify-center gap-1">
+                            {(job.housing_info || job.visa_type === 'H-2A') && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div>
+                                    <Badge
+                                      variant={job.visa_type === 'H-2A' ? 'secondary' : 'outline'}
+                                      className={cn(
+                                        'text-xs',
+                                        job.visa_type === 'H-2A' && 'border-transparent'
+                                      )}
+                                    >
+                                      <Home className="h-3 w-3 mr-1" />
+                                    </Badge>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    {job.visa_type === 'H-2A'
+                                      ? t('jobs.benefits.housing_h2a')
+                                      : t('jobs.benefits.housing_available')}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {job.transport_provided && (
+                              <Badge variant="outline" className="text-xs">
+                                <Bus className="h-3 w-3 mr-1" />
+                              </Badge>
+                            )}
+                            {job.tools_provided && (
+                              <Badge variant="outline" className="text-xs">
+                                <Wrench className="h-3 w-3 mr-1" />
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!planSettings.job_db_blur && queuedJobIds.has(job.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToQueue(job);
+                          }}
+                        >
+                          {planSettings.job_db_blur ? (
+                            <Lock className="h-4 w-4" />
+                          ) : queuedJobIds.has(job.id) ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
        {/* Job Details Dialog (scroll + mais detalhes) */}
        <JobDetailsDialog
