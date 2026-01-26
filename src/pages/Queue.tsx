@@ -20,10 +20,12 @@ import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
 import { SendHistoryDialog } from '@/components/queue/SendHistoryDialog';
+import { MobileQueueCard } from '@/components/queue/MobileQueueCard';
 import { useNavigate } from 'react-router-dom';
 import { format, type Locale } from 'date-fns';
 import { ptBR, enUS, es } from 'date-fns/locale';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +78,7 @@ export default function Queue() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -907,208 +910,271 @@ export default function Queue() {
         </Card>
       </div>
 
-      {/* Queue Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('queue.table.title')}</CardTitle>
-          <CardDescription>
-            {t('queue.table.description')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={allPendingSelected}
-                      onCheckedChange={(v) => {
-                        const checked = v === true;
-                        if (!checked) {
-                          setSelectedIds({});
-                          return;
-                        }
-                        const next: Record<string, boolean> = {};
-                        for (const it of pendingItems) next[it.id] = true;
-                        setSelectedIds(next);
-                      }}
-                      aria-label={t('queue.table.headers.select_all')}
-                    />
-                  </TableHead>
-                  <TableHead>{t('queue.table.headers.job_title')}</TableHead>
-                  <TableHead>{t('queue.table.headers.company')}</TableHead>
-                  <TableHead>{t('queue.table.headers.email')}</TableHead>
-                  <TableHead>{t('queue.table.headers.status')}</TableHead>
-                  <TableHead className="w-14 text-center">{t('queue.table.headers.open_tracking')}</TableHead>
-                  <TableHead className="text-right">{t('queue.table.headers.action')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                      {t('queue.table.loading')}
-                  </TableCell>
-                </TableRow>
-              ) : queue.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="space-y-2">
-                        <p className="text-muted-foreground">{t('queue.table.empty')}</p>
-                      <Button variant="outline" onClick={() => (window.location.href = '/jobs')}>
-                          {t('queue.table.go_jobs')}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                queue.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="w-10">
-                      <Checkbox
-                        checked={!!selectedIds[item.id]}
-                        disabled={item.status !== 'pending'}
-                        onCheckedChange={(v) => {
-                          const checked = v === true;
-                          setSelectedIds((prev) => ({ ...prev, [item.id]: checked }));
-                        }}
-                        aria-label={t('queue.table.headers.select_row')}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {(item.public_jobs ?? item.manual_jobs)?.job_title}
-                    </TableCell>
-                    <TableCell>{(item.public_jobs ?? item.manual_jobs)?.company}</TableCell>
-                    <TableCell>{(item.public_jobs ?? item.manual_jobs)?.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={item.status === 'sent' ? 'default' : 'secondary'}
-                        className={
-                          item.status === 'sent'
-                            ? 'bg-success/10 text-success border-success/30'
-                            : item.status === 'failed'
-                              ? 'bg-destructive/10 text-destructive border-destructive/30'
-                              : item.status === 'paused'
-                                ? 'bg-warning/10 text-warning border-warning/30'
-                                : item.status === 'processing'
-                                  ? 'bg-primary/10 text-primary border-primary/30'
-                                  : item.status === 'skipped_invalid_domain'
-                                    ? 'bg-orange-500/10 text-orange-600 border-orange-500/30'
-                                    : ''
-                        }
-                      >
-                        {item.status === 'sent' && item.sent_at ? (
-                          <span className="flex items-center gap-1">
-                            {item.send_count}x {format(
-                              new Date(item.sent_at),
-                              i18n.language === 'en' ? 'MM/dd hh:mm a' : 'dd/MM HH:mm',
-                              { locale: dateLocaleMap[i18n.language] ?? enUS }
-                            )}
-                          </span>
-                        ) : (
-                          statusLabel(item.status)
-                        )}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center justify-center">
-                            <Eye
-                              className={
-                                item.status === 'sent' && item.opened_at
-                                  ? 'h-4 w-4 text-success'
-                                  : 'h-4 w-4 text-muted-foreground'
-                              }
-                            />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {item.status === 'sent' && item.opened_at ? (
-                            <div className="space-y-1">
-                              <p>
-                                {t('queue.open_tracking.opened_at', {
-                                  date: formatOpenedAt(item.opened_at),
-                                })}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{t('queue.open_tracking.disclaimer')}</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <p>{t('queue.open_tracking.waiting')}</p>
-                              <p className="text-xs text-muted-foreground">{t('queue.open_tracking.disclaimer')}</p>
-                            </div>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {item.send_count > 0 && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setHistoryItem(item);
-                              setHistoryDialogOpen(true);
-                            }}
-                            title={t('queue.actions.view_history')}
-                          >
-                            <History className="h-4 w-4" />
-                          </Button>
-                        )}
-
-                        {item.status === 'failed' ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={sending || retryingId != null}
-                            onClick={() => handleRetryOne(item)}
-                            title={t('queue.actions.retry')}
-                          >
-                            {retryingId === item.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={(item.status !== 'pending' && item.status !== 'sent') || sending || sendingIds.has(item.id)}
-                            onClick={() => handleSendOne(item)}
-                            title={item.status === 'sent' ? t('queue.actions.resend') : undefined}
-                          >
-                            {sendingIds.has(item.id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : item.status === 'sent' ? (
-                              <RefreshCw className="h-4 w-4" />
-                            ) : (
-                              <Send className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => removeFromQueue(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+      {/* Queue List */}
+      <TooltipProvider>
+        {isMobile ? (
+          /* Mobile View: Cards */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">{t('queue.table.title')}</h2>
+              <Checkbox
+                checked={allPendingSelected}
+                onCheckedChange={(v) => {
+                  const checked = v === true;
+                  if (!checked) {
+                    setSelectedIds({});
+                    return;
+                  }
+                  const next: Record<string, boolean> = {};
+                  for (const it of pendingItems) next[it.id] = true;
+                  setSelectedIds(next);
+                }}
+                aria-label={t('queue.table.headers.select_all')}
+              />
+            </div>
+            {loading ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  {t('queue.table.loading')}
+                </CardContent>
+              </Card>
+            ) : queue.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground">{t('queue.table.empty')}</p>
+                    <Button variant="outline" onClick={() => navigate('/jobs')}>
+                      {t('queue.table.go_jobs')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              queue.map((item) => (
+                <MobileQueueCard
+                  key={item.id}
+                  item={item}
+                  isSelected={!!selectedIds[item.id]}
+                  onSelectChange={(checked) => setSelectedIds((prev) => ({ ...prev, [item.id]: checked }))}
+                  onSend={() => handleSendOne(item)}
+                  onRetry={() => handleRetryOne(item)}
+                  onRemove={() => removeFromQueue(item.id)}
+                  onViewHistory={() => {
+                    setHistoryItem(item);
+                    setHistoryDialogOpen(true);
+                  }}
+                  isSending={sendingIds.has(item.id)}
+                  isRetrying={retryingId === item.id}
+                  globalSending={sending}
+                />
+              ))
+            )}
+          </div>
+        ) : (
+          /* Desktop View: Table */
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('queue.table.title')}</CardTitle>
+              <CardDescription>
+                {t('queue.table.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={allPendingSelected}
+                          onCheckedChange={(v) => {
+                            const checked = v === true;
+                            if (!checked) {
+                              setSelectedIds({});
+                              return;
+                            }
+                            const next: Record<string, boolean> = {};
+                            for (const it of pendingItems) next[it.id] = true;
+                            setSelectedIds(next);
+                          }}
+                          aria-label={t('queue.table.headers.select_all')}
+                        />
+                      </TableHead>
+                      <TableHead>{t('queue.table.headers.job_title')}</TableHead>
+                      <TableHead>{t('queue.table.headers.company')}</TableHead>
+                      <TableHead>{t('queue.table.headers.email')}</TableHead>
+                      <TableHead>{t('queue.table.headers.status')}</TableHead>
+                      <TableHead className="w-14 text-center">{t('queue.table.headers.open_tracking')}</TableHead>
+                      <TableHead className="text-right">{t('queue.table.headers.action')}</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                          {t('queue.table.loading')}
+                      </TableCell>
+                    </TableRow>
+                  ) : queue.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="space-y-2">
+                            <p className="text-muted-foreground">{t('queue.table.empty')}</p>
+                          <Button variant="outline" onClick={() => (window.location.href = '/jobs')}>
+                              {t('queue.table.go_jobs')}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    queue.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="w-10">
+                          <Checkbox
+                            checked={!!selectedIds[item.id]}
+                            disabled={item.status !== 'pending'}
+                            onCheckedChange={(v) => {
+                              const checked = v === true;
+                              setSelectedIds((prev) => ({ ...prev, [item.id]: checked }));
+                            }}
+                            aria-label={t('queue.table.headers.select_row')}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {(item.public_jobs ?? item.manual_jobs)?.job_title}
+                        </TableCell>
+                        <TableCell>{(item.public_jobs ?? item.manual_jobs)?.company}</TableCell>
+                        <TableCell>{(item.public_jobs ?? item.manual_jobs)?.email}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.status === 'sent' ? 'default' : 'secondary'}
+                            className={
+                              item.status === 'sent'
+                                ? 'bg-success/10 text-success border-success/30'
+                                : item.status === 'failed'
+                                  ? 'bg-destructive/10 text-destructive border-destructive/30'
+                                  : item.status === 'paused'
+                                    ? 'bg-warning/10 text-warning border-warning/30'
+                                    : item.status === 'processing'
+                                      ? 'bg-primary/10 text-primary border-primary/30'
+                                      : item.status === 'skipped_invalid_domain'
+                                        ? 'bg-orange-500/10 text-orange-600 border-orange-500/30'
+                                        : ''
+                            }
+                          >
+                            {item.status === 'sent' && item.sent_at ? (
+                              <span className="flex items-center gap-1">
+                                {item.send_count}x {format(
+                                  new Date(item.sent_at),
+                                  i18n.language === 'en' ? 'MM/dd hh:mm a' : 'dd/MM HH:mm',
+                                  { locale: dateLocaleMap[i18n.language] ?? enUS }
+                                )}
+                              </span>
+                            ) : (
+                              statusLabel(item.status)
+                            )}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center justify-center">
+                                <Eye
+                                  className={
+                                    item.status === 'sent' && item.opened_at
+                                      ? 'h-4 w-4 text-success'
+                                      : 'h-4 w-4 text-muted-foreground'
+                                  }
+                                />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {item.status === 'sent' && item.opened_at ? (
+                                <div className="space-y-1">
+                                  <p>
+                                    {t('queue.open_tracking.opened_at', {
+                                      date: formatOpenedAt(item.opened_at),
+                                    })}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">{t('queue.open_tracking.disclaimer')}</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <p>{t('queue.open_tracking.waiting')}</p>
+                                  <p className="text-xs text-muted-foreground">{t('queue.open_tracking.disclaimer')}</p>
+                                </div>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {item.send_count > 0 && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setHistoryItem(item);
+                                  setHistoryDialogOpen(true);
+                                }}
+                                title={t('queue.actions.view_history')}
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {item.status === 'failed' ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={sending || retryingId != null}
+                                onClick={() => handleRetryOne(item)}
+                                title={t('queue.actions.retry')}
+                              >
+                                {retryingId === item.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4" />
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={(item.status !== 'pending' && item.status !== 'sent') || sending || sendingIds.has(item.id)}
+                                onClick={() => handleSendOne(item)}
+                                title={item.status === 'sent' ? t('queue.actions.resend') : undefined}
+                              >
+                                {sendingIds.has(item.id) ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : item.status === 'sent' ? (
+                                  <RefreshCw className="h-4 w-4" />
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => removeFromQueue(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </TooltipProvider>
     </div>
   );
 }

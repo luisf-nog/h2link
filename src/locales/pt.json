@@ -532,6 +532,8 @@
     },
     "open_tracking": {
       "waiting": "Aguardando leitura",
+      "opened": "Visualizado",
+      "not_opened": "Não visualizado",
       "opened_at": "Visualizado em: {{date}}",
       "disclaimer": "A confirmação de leitura depende das configurações de privacidade do destinatário."
     },
