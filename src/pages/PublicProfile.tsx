@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
-import { Download, MessageCircle, Loader2, FileText, AlertCircle, Phone } from "lucide-react";
+import { Download, MessageCircle, Loader2, FileText, AlertCircle, Phone, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotFound from "./NotFound";
 
@@ -108,7 +108,13 @@ export default function PublicProfile() {
     }
   };
 
-  // Handle SMS/Call click
+  // Handle SMS/iMessage click
+  const handleSmsClick = () => {
+    if (!profile?.phone_e164) return;
+    window.location.href = `sms:${profile.phone_e164}`;
+  };
+
+  // Handle Call click
   const handleCallClick = () => {
     if (!profile?.phone_e164) return;
     window.location.href = `tel:${profile.phone_e164}`;
@@ -184,7 +190,7 @@ export default function PublicProfile() {
         <div className="max-w-lg mx-auto flex flex-col gap-3">
           {/* Contact Buttons Row */}
           {hasPhone && (
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <Button
                 onClick={handleWhatsAppClick}
                 className={cn(
@@ -196,12 +202,20 @@ export default function PublicProfile() {
                 WhatsApp
               </Button>
               <Button
-                onClick={handleCallClick}
+                onClick={handleSmsClick}
                 variant="outline"
                 className="flex-1 h-12 text-base font-medium"
               >
-                <Phone className="w-5 h-5 mr-2" />
-                SMS / Call
+                <MessageSquare className="w-5 h-5 mr-2" />
+                SMS
+              </Button>
+              <Button
+                onClick={handleCallClick}
+                variant="outline"
+                className="h-12 px-4"
+                title="Call"
+              >
+                <Phone className="w-5 h-5" />
               </Button>
             </div>
           )}
