@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,16 +51,26 @@ export function AppSidebar() {
     }
   };
 
-  // Desktop hover handlers
+  // Desktop hover handlers with debounce for collapse
+  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleMouseEnter = () => {
     if (!isMobile) {
+      // Clear any pending collapse
+      if (collapseTimeoutRef.current) {
+        clearTimeout(collapseTimeoutRef.current);
+        collapseTimeoutRef.current = null;
+      }
       setOpen(true);
     }
   };
 
   const handleMouseLeave = () => {
     if (!isMobile) {
-      setOpen(false);
+      // Debounce collapse by 150ms to prevent accidental closing
+      collapseTimeoutRef.current = setTimeout(() => {
+        setOpen(false);
+      }, 150);
     }
   };
 
