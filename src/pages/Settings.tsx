@@ -150,7 +150,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">{t('settings.title')}</h1>
         <p className="text-muted-foreground mt-1">
@@ -178,7 +178,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile" className="space-y-6">
+        <TabsContent value="profile" className="space-y-6 max-w-2xl">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -254,7 +254,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           <ResumeSettingsSection />
         </TabsContent>
 
-        <TabsContent value="account" className="space-y-6">
+        <TabsContent value="account" className="space-y-6 max-w-2xl">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           ) : null}
         </TabsContent>
 
-        <TabsContent value="email" className="space-y-6">
+        <TabsContent value="email" className="space-y-6 max-w-2xl">
           <EmailSettingsPanel />
         </TabsContent>
 
