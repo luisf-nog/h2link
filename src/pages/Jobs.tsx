@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock } from 'lucide-react';
+import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -60,6 +60,7 @@ export default function Jobs() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
+  const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
 
   // Derive daily limit data for banner
   const planTierCheck = profile?.plan_tier || 'free';
@@ -361,6 +362,8 @@ export default function Jobs() {
 
     // OPTIMISTIC UPDATE: Mark as queued immediately for instant UI feedback
     setQueuedJobIds((prev) => new Set(prev).add(job.id));
+    // Track processing state for spinner
+    setProcessingJobIds((prev) => new Set(prev).add(job.id));
 
     // Run DNS check and insert in background (non-blocking)
     (async () => {
@@ -372,6 +375,11 @@ export default function Jobs() {
           if (!token) {
             // Revert optimistic update
             setQueuedJobIds((prev) => {
+              const next = new Set(prev);
+              next.delete(job.id);
+              return next;
+            });
+            setProcessingJobIds((prev) => {
               const next = new Set(prev);
               next.delete(job.id);
               return next;
@@ -398,6 +406,11 @@ export default function Jobs() {
               next.delete(job.id);
               return next;
             });
+            setProcessingJobIds((prev) => {
+              const next = new Set(prev);
+              next.delete(job.id);
+              return next;
+            });
             toast({
               title: t('queue.toasts.mx_invalid_title'),
               description: t('queue.toasts.mx_invalid_desc', { domain: String(payload?.domain ?? '') }),
@@ -408,6 +421,11 @@ export default function Jobs() {
         } catch (_e) {
           // Revert optimistic update
           setQueuedJobIds((prev) => {
+            const next = new Set(prev);
+            next.delete(job.id);
+            return next;
+          });
+          setProcessingJobIds((prev) => {
             const next = new Set(prev);
             next.delete(job.id);
             return next;
@@ -440,6 +458,11 @@ export default function Jobs() {
             next.delete(job.id);
             return next;
           });
+          setProcessingJobIds((prev) => {
+            const next = new Set(prev);
+            next.delete(job.id);
+            return next;
+          });
           toast({
             title: t('jobs.toasts.add_error_title'),
             description: error.message,
@@ -452,6 +475,12 @@ export default function Jobs() {
           description: t('jobs.toasts.add_success_desc', { jobTitle: job.job_title }),
         });
       }
+      // Clear processing state
+      setProcessingJobIds((prev) => {
+        const next = new Set(prev);
+        next.delete(job.id);
+        return next;
+      });
     })();
   };
 
@@ -858,8 +887,10 @@ export default function Jobs() {
                             addToQueue(job);
                           }}
                         >
-                          {planSettings.job_db_blur ? (
+          {planSettings.job_db_blur ? (
                             <Lock className="h-4 w-4" />
+                          ) : processingJobIds.has(job.id) ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : queuedJobIds.has(job.id) ? (
                             <Check className="h-4 w-4" />
                           ) : (
