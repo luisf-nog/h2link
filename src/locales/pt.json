@@ -730,10 +730,13 @@
         "posted": "Postada",
         "start": "Início",
         "end": "Fim",
+        "experience": "Exp.",
         "email": "Email",
-        "benefits": "Benefícios",
         "action": "Ação"
       },
+      "experience_months": "{{count}}m",
+      "experience_years": "{{count}}a",
+      "experience_years_months": "{{years}}a {{months}}m",
       "loading": "Carregando vagas...",
       "empty": "Nenhuma vaga encontrada"
     },
