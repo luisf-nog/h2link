@@ -731,10 +731,13 @@
         "posted": "Publicada",
         "start": "Inicio",
         "end": "Fin",
+        "experience": "Exp.",
         "email": "Email",
-        "benefits": "Beneficios",
         "action": "Acción"
       },
+      "experience_months": "{{count}}m",
+      "experience_years": "{{count}}a",
+      "experience_years_months": "{{years}}a {{months}}m",
       "loading": "Cargando empleos...",
       "empty": "No se encontraron empleos"
     },

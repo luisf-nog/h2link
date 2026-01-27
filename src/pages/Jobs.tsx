@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Info, Search, Plus, Check, Home, Bus, Wrench, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap } from 'lucide-react';
+import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -329,8 +329,17 @@ export default function Jobs() {
     return visaType;
   }, [visaType]);
 
-  // Cargo, Empresa, Local, Qtd. Vagas, Salário, Visto, Postada, Início, Fim, Email, (Benefícios?), Ação
-  const tableColSpan = planSettings.show_housing_icons ? 12 : 11;
+  // Cargo, Empresa, Local, Qtd. Vagas, Salário, Visto, Postada, Início, Fim, Experiência, Email, Ação
+  const tableColSpan = 12;
+
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return '-';
+    if (months < 12) return t('jobs.table.experience_months', { count: months });
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (remainingMonths === 0) return t('jobs.table.experience_years', { count: years });
+    return t('jobs.table.experience_years_months', { years, months: remainingMonths });
+  };
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return '-';
@@ -617,7 +626,6 @@ export default function Jobs() {
                 job={job}
                 isBlurred={planSettings.job_db_blur}
                 isQueued={queuedJobIds.has(job.id)}
-                showHousingIcons={planSettings.show_housing_icons}
                 onAddToQueue={() => addToQueue(job)}
                 onClick={() => handleRowClick(job)}
                 formatDate={formatDate}
@@ -713,10 +721,13 @@ export default function Jobs() {
                       {t('jobs.table.headers.end')} <SortIcon active={sortKey === 'end_date'} dir={sortDir} />
                     </button>
                   </TableHead>
+                  <TableHead>
+                    <div className="inline-flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      {t('jobs.table.headers.experience')}
+                    </div>
+                  </TableHead>
                   <TableHead>{t('jobs.table.headers.email')}</TableHead>
-                  {planSettings.show_housing_icons && (
-                    <TableHead className="text-center">{t('jobs.table.headers.benefits')}</TableHead>
-                  )}
                   <TableHead className="text-right">{t('jobs.table.headers.action')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -763,6 +774,9 @@ export default function Jobs() {
                       <TableCell>{formatDate(job.posted_date)}</TableCell>
                       <TableCell>{formatDate(job.start_date)}</TableCell>
                       <TableCell>{formatDate(job.end_date)}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {formatExperience(job.experience_months)}
+                      </TableCell>
                       <TableCell>
                         <span
                           className={cn(
@@ -772,50 +786,14 @@ export default function Jobs() {
                           {job.email}
                         </span>
                       </TableCell>
-                      {planSettings.show_housing_icons && (
-                        <TableCell>
-                          <div className="flex justify-center gap-1">
-                            {(job.housing_info || job.visa_type === 'H-2A') && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div>
-                                    <Badge
-                                      variant={job.visa_type === 'H-2A' ? 'secondary' : 'outline'}
-                                      className={cn(
-                                        'text-xs',
-                                        job.visa_type === 'H-2A' && 'border-transparent'
-                                      )}
-                                    >
-                                      <Home className="h-3 w-3 mr-1" />
-                                    </Badge>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>
-                                    {job.visa_type === 'H-2A'
-                                      ? t('jobs.benefits.housing_h2a')
-                                      : t('jobs.benefits.housing_available')}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {job.transport_provided && (
-                              <Badge variant="outline" className="text-xs">
-                                <Bus className="h-3 w-3 mr-1" />
-                              </Badge>
-                            )}
-                            {job.tools_provided && (
-                              <Badge variant="outline" className="text-xs">
-                                <Wrench className="h-3 w-3 mr-1" />
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                      )}
                       <TableCell className="text-right">
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant={!planSettings.job_db_blur && queuedJobIds.has(job.id) ? "default" : "outline"}
+                          className={cn(
+                            !planSettings.job_db_blur && queuedJobIds.has(job.id) && 
+                            "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500"
+                          )}
                           disabled={!planSettings.job_db_blur && queuedJobIds.has(job.id)}
                           onClick={(e) => {
                             e.stopPropagation();

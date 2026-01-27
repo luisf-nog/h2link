@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/number";
-import { Check, Plus, Lock, Home, Bus, Wrench, MapPin, Calendar, DollarSign, Users, Briefcase } from "lucide-react";
+import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface JobData {
@@ -20,16 +20,13 @@ interface JobData {
   posted_date?: string | null;
   start_date?: string | null;
   end_date?: string | null;
-  housing_info?: string | null;
-  transport_provided?: boolean | null;
-  tools_provided?: boolean | null;
+  experience_months?: number | null;
 }
 
 interface MobileJobCardProps {
   job: JobData;
   isBlurred: boolean;
   isQueued: boolean;
-  showHousingIcons: boolean;
   onAddToQueue: () => void;
   onClick: () => void;
   formatDate: (date: string | null | undefined) => string;
@@ -39,7 +36,6 @@ export function MobileJobCard({
   job,
   isBlurred,
   isQueued,
-  showHousingIcons,
   onAddToQueue,
   onClick,
   formatDate,
@@ -49,6 +45,15 @@ export function MobileJobCard({
   const formatSalary = (salary: number | null | undefined) => {
     if (!salary) return "-";
     return `$${salary.toFixed(2)}/h`;
+  };
+
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return null;
+    if (months < 12) return t('jobs.table.experience_months', { count: months });
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (remainingMonths === 0) return t('jobs.table.experience_years', { count: years });
+    return t('jobs.table.experience_years_months', { years, months: remainingMonths });
   };
 
   return (
@@ -74,8 +79,11 @@ export function MobileJobCard({
             </Badge>
             <Button
               size="icon"
-              variant="outline"
-              className="h-8 w-8"
+              variant={!isBlurred && isQueued ? "default" : "outline"}
+              className={cn(
+                "h-8 w-8",
+                !isBlurred && isQueued && "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500"
+              )}
               disabled={!isBlurred && isQueued}
               onClick={(e) => {
                 e.stopPropagation();
@@ -85,7 +93,7 @@ export function MobileJobCard({
               {isBlurred ? (
                 <Lock className="h-4 w-4" />
               ) : isQueued ? (
-                <Check className="h-4 w-4 text-success" />
+                <Check className="h-4 w-4" />
               ) : (
                 <Plus className="h-4 w-4" />
               )}
@@ -106,54 +114,23 @@ export function MobileJobCard({
         </div>
 
         {/* Stats Row */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
-            {typeof job.openings === "number" && (
-              <div className="flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" />
-                <span>{formatNumber(job.openings)} {t("jobs.table.headers.openings")}</span>
-              </div>
-            )}
-            {job.start_date && (
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>{formatDate(job.start_date)}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Benefits Icons */}
-          {showHousingIcons && (
+        <div className="flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
+          {typeof job.openings === "number" && (
             <div className="flex items-center gap-1">
-              {(job.housing_info || job.visa_type === "H-2A") && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant={job.visa_type === "H-2A" ? "secondary" : "outline"}
-                      className="h-6 px-1.5"
-                    >
-                      <Home className="h-3 w-3" />
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      {job.visa_type === "H-2A"
-                        ? t("jobs.benefits.housing_h2a")
-                        : t("jobs.benefits.housing_available")}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              {job.transport_provided && (
-                <Badge variant="outline" className="h-6 px-1.5">
-                  <Bus className="h-3 w-3" />
-                </Badge>
-              )}
-              {job.tools_provided && (
-                <Badge variant="outline" className="h-6 px-1.5">
-                  <Wrench className="h-3 w-3" />
-                </Badge>
-              )}
+              <Users className="h-3.5 w-3.5" />
+              <span>{formatNumber(job.openings)} {t("jobs.table.headers.openings")}</span>
+            </div>
+          )}
+          {job.start_date && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{formatDate(job.start_date)}</span>
+            </div>
+          )}
+          {formatExperience(job.experience_months) && (
+            <div className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{formatExperience(job.experience_months)}</span>
             </div>
           )}
         </div>
