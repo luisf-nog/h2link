@@ -823,7 +823,9 @@
       "already_in_queue_desc": "Este empleo ya está en tu cola.",
       "add_error_title": "Error al agregar",
       "add_success_title": "¡Agregado a la cola!",
-      "add_success_desc": "{{jobTitle}} fue agregado a tu cola."
+      "add_success_desc": "{{jobTitle}} fue agregado a tu cola.",
+      "remove_success_title": "¡Eliminado de la cola!",
+      "remove_success_desc": "{{jobTitle}} fue eliminado de tu cola."
     }
   },
   "not_found": {
@@ -865,7 +867,8 @@
       "not_provided": "No informado."
     },
     "actions": {
-      "add_to_queue": "Agregar a la cola"
+      "add_to_queue": "Agregar a la cola",
+      "remove_from_queue": "Eliminar de la cola"
     }
   },
   "job_import": {

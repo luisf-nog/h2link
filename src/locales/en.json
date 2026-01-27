@@ -823,7 +823,9 @@
       "already_in_queue_desc": "This job is already in your queue.",
       "add_error_title": "Add error",
       "add_success_title": "Added to queue!",
-      "add_success_desc": "{{jobTitle}} was added to your queue."
+      "add_success_desc": "{{jobTitle}} was added to your queue.",
+      "remove_success_title": "Removed from queue!",
+      "remove_success_desc": "{{jobTitle}} was removed from your queue."
     }
   },
   "not_found": {
@@ -865,7 +867,8 @@
       "not_provided": "Not provided."
     },
     "actions": {
-      "add_to_queue": "Add to Queue"
+      "add_to_queue": "Add to Queue",
+      "remove_from_queue": "Remove from Queue"
     }
   },
   "job_import": {

@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Bus, Calendar, Home, Mail, MapPin, Phone, Plus, Wrench } from "lucide-react";
+import { Bus, Calendar, Home, Mail, MapPin, Phone, Plus, Trash2, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export type JobDetails = {
@@ -58,6 +58,8 @@ export function JobDetailsDialog({
   planSettings,
   formatSalary,
   onAddToQueue,
+  onRemoveFromQueue,
+  isInQueue,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -65,6 +67,8 @@ export function JobDetailsDialog({
   planSettings: PlanSettings;
   formatSalary: (salary: number | null) => string;
   onAddToQueue: (job: JobDetails) => void;
+  onRemoveFromQueue?: (job: JobDetails) => void;
+  isInQueue?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const isH2A = job?.visa_type === "H-2A";
@@ -330,10 +334,21 @@ export function JobDetailsDialog({
         </div>
 
         <div className="pt-2">
-          <Button className="w-full" onClick={() => job && onAddToQueue(job)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("job_details.actions.add_to_queue")}
-          </Button>
+          {isInQueue ? (
+            <Button 
+              className="w-full" 
+              variant="destructive"
+              onClick={() => job && onRemoveFromQueue?.(job)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {t("job_details.actions.remove_from_queue")}
+            </Button>
+          ) : (
+            <Button className="w-full" onClick={() => job && onAddToQueue(job)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("job_details.actions.add_to_queue")}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
