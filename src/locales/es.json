@@ -2,6 +2,37 @@
   "app": {
     "name": "H2Link"
   },
+  "onboarding": {
+    "step": "Paso {{current}} de {{total}}",
+    "welcome": {
+      "title": "¡Bienvenido a H2Link!",
+      "description": "Configuremos tu cuenta para empezar a enviar solicitudes de forma segura.",
+      "step1_title": "Conecta tu email",
+      "step1_desc": "Configura SMTP con tu cuenta de Gmail u Outlook.",
+      "step2_title": "Elige tu velocidad de envío",
+      "step2_desc": "Configura el calentamiento de email para proteger tu reputación.",
+      "step3_title": "Empieza a aplicar",
+      "step3_desc": "Explora empleos y envía solicitudes a escala.",
+      "start": "Empecemos"
+    },
+    "smtp": {
+      "title": "Conecta Tu Email",
+      "description": "Usaremos tu email para enviar solicitudes en tu nombre.",
+      "warning": "Usa una Contraseña de Aplicación en lugar de tu contraseña principal. Consulta Configuración → SMTP para instrucciones.",
+      "continue": "Guardar & Continuar"
+    },
+    "warmup": {
+      "continue": "Guardar & Continuar"
+    },
+    "complete": {
+      "title": "¡Todo listo!",
+      "description": "Tu cuenta está lista para enviar solicitudes.",
+      "smtp_ready": "Email configurado exitosamente",
+      "warmup_ready": "Calentamiento inteligente activado",
+      "next_steps": "Siguiente: Explora el Hub de Empleos para encontrar oportunidades, agrégalas a tu cola y empieza a enviar solicitudes.",
+      "go_dashboard": "Ir al Panel"
+    }
+  },
   "common": {
     "loading": "Cargando...",
     "menu": "Menú",

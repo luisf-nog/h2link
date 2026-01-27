@@ -2,6 +2,37 @@
   "app": {
     "name": "H2Link"
   },
+  "onboarding": {
+    "step": "Passo {{current}} de {{total}}",
+    "welcome": {
+      "title": "Bem-vindo ao H2Link!",
+      "description": "Vamos configurar sua conta para começar a enviar candidaturas com segurança.",
+      "step1_title": "Conecte seu email",
+      "step1_desc": "Configure SMTP com sua conta Gmail ou Outlook.",
+      "step2_title": "Escolha sua velocidade de envio",
+      "step2_desc": "Configure o aquecimento de email para proteger sua reputação.",
+      "step3_title": "Comece a se candidatar",
+      "step3_desc": "Navegue pelas vagas e envie candidaturas em escala.",
+      "start": "Vamos começar"
+    },
+    "smtp": {
+      "title": "Conecte Seu Email",
+      "description": "Usaremos seu email para enviar candidaturas em seu nome.",
+      "warning": "Use uma Senha de App em vez da senha principal. Veja Configurações → SMTP para instruções de como gerar uma.",
+      "continue": "Salvar & Continuar"
+    },
+    "warmup": {
+      "continue": "Salvar & Continuar"
+    },
+    "complete": {
+      "title": "Tudo pronto!",
+      "description": "Sua conta está pronta para enviar candidaturas.",
+      "smtp_ready": "Email configurado com sucesso",
+      "warmup_ready": "Aquecimento inteligente ativado",
+      "next_steps": "Próximo: Navegue pelo Hub de Vagas para encontrar oportunidades, adicione à sua fila e comece a enviar candidaturas!",
+      "go_dashboard": "Ir para o Dashboard"
+    }
+  },
   "common": {
     "loading": "Carregando...",
     "menu": "Menu",
