@@ -870,5 +870,48 @@
       "subtitle": "Usa tu código o enlace para invitar amigos.",
       "link_label": "Tu enlace de referido"
     }
+  },
+  "warmup": {
+    "onboarding": {
+      "title": "Configuración de Cuenta de Email",
+      "description": "Ayúdanos a proteger la reputación de tu email informándonos sobre esta cuenta.",
+      "warning": "Seleccionar el perfil incorrecto puede hacer que tus emails se marquen como spam. Sé honesto para mejores resultados.",
+      "confirm": "Confirmar y Continuar"
+    },
+    "profiles": {
+      "conservative": {
+        "title": "Cuenta Nueva (< 3 meses)",
+        "description": "Creé esta cuenta de email recientemente.",
+        "details": "Empieza con 20 emails/día, crece 30% diario"
+      },
+      "standard": {
+        "title": "Cuenta Antigua (Poco Uso)",
+        "description": "Tengo esta cuenta hace tiempo, pero la uso poco.",
+        "details": "Empieza con 50 emails/día, crece 50% diario"
+      },
+      "aggressive": {
+        "title": "Cuenta Antigua (Uso Diario)",
+        "description": "Uso esta cuenta profesionalmente todos los días.",
+        "details": "Empieza con 100 emails/día, se duplica diariamente"
+      }
+    },
+    "widget": {
+      "title": "Estado de Envío",
+      "subtitle": "Calentamiento inteligente protege tu reputación",
+      "remaining": "restantes",
+      "used": "{{used}} / {{limit}} usados",
+      "max_speed": "Velocidad Máxima",
+      "warming_up": "Calentando",
+      "progress_to_increase": "Progreso para aumento de límite",
+      "send_target": "Envía {{target}} emails para aumentar mañana",
+      "days_to_max": "~{{days}}d para máx",
+      "profile_label": "Perfil",
+      "plan_max": "Máximo del Plan",
+      "free_tier_note": "Plan gratis tiene límite fijo. Mejora para calentamiento inteligente."
+    },
+    "toasts": {
+      "profile_saved": "¡Perfil de calentamiento guardado!",
+      "profile_error": "Error al guardar perfil de calentamiento"
+    }
   }
 }

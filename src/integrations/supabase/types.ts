@@ -453,30 +453,49 @@ export type Database = {
       smtp_credentials: {
         Row: {
           created_at: string
+          current_daily_limit: number | null
           email: string
+          emails_sent_today: number
           has_password: boolean
           id: string
+          last_usage_date: string | null
           provider: string
+          risk_profile: Database["public"]["Enums"]["email_risk_profile"] | null
           updated_at: string
           user_id: string
+          warmup_started_at: string | null
         }
         Insert: {
           created_at?: string
+          current_daily_limit?: number | null
           email: string
+          emails_sent_today?: number
           has_password?: boolean
           id?: string
+          last_usage_date?: string | null
           provider: string
+          risk_profile?:
+            | Database["public"]["Enums"]["email_risk_profile"]
+            | null
           updated_at?: string
           user_id: string
+          warmup_started_at?: string | null
         }
         Update: {
           created_at?: string
+          current_daily_limit?: number | null
           email?: string
+          emails_sent_today?: number
           has_password?: boolean
           id?: string
+          last_usage_date?: string | null
           provider?: string
+          risk_profile?:
+            | Database["public"]["Enums"]["email_risk_profile"]
+            | null
           updated_at?: string
           user_id?: string
+          warmup_started_at?: string | null
         }
         Relationships: []
       }
@@ -535,7 +554,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_warmup_limit: {
+        Args: {
+          p_current_limit: number
+          p_emails_sent: number
+          p_plan_tier: Database["public"]["Enums"]["plan_tier"]
+          p_risk_profile: Database["public"]["Enums"]["email_risk_profile"]
+        }
+        Returns: number
+      }
+      downgrade_smtp_warmup: { Args: { p_user_id: string }; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
+      get_effective_daily_limit: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -543,9 +576,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_smtp_email_count: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      update_smtp_warmup_limit: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"
+      email_risk_profile: "conservative" | "standard" | "aggressive"
       plan_tier: "free" | "gold" | "diamond" | "black"
     }
     CompositeTypes: {
@@ -675,6 +714,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      email_risk_profile: ["conservative", "standard", "aggressive"],
       plan_tier: ["free", "gold", "diamond", "black"],
     },
   },

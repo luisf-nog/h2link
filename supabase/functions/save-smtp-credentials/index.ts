@@ -8,11 +8,13 @@ const corsHeaders = {
 };
 
 type Provider = "gmail" | "outlook";
+type RiskProfile = "conservative" | "standard" | "aggressive";
 
 type SaveSmtpRequest = {
   provider: Provider;
   email: string;
   password?: string;
+  risk_profile?: RiskProfile;
 };
 
 function json(status: number, payload: unknown) {
@@ -49,6 +51,9 @@ const handler = async (req: Request): Promise<Response> => {
     const provider: Provider = body.provider === "outlook" ? "outlook" : "gmail";
     const email = String(body.email ?? "").trim();
     const password = typeof body.password === "string" ? body.password.trim() : "";
+    const riskProfile = ["conservative", "standard", "aggressive"].includes(body.risk_profile ?? "")
+      ? body.risk_profile as RiskProfile
+      : null;
 
     if (!email) return json(400, { success: false, error: "Missing email" });
 
@@ -57,9 +62,28 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Build upsert data
+    const upsertData: Record<string, unknown> = { user_id: userId, provider, email };
+    
+    // If risk_profile is provided, set it along with warmup initialization
+    if (riskProfile) {
+      upsertData.risk_profile = riskProfile;
+      upsertData.warmup_started_at = new Date().toISOString().slice(0, 10);
+      
+      // Set initial daily limit based on profile
+      const startLimits: Record<RiskProfile, number> = {
+        conservative: 20,
+        standard: 50,
+        aggressive: 100,
+      };
+      upsertData.current_daily_limit = startLimits[riskProfile];
+      upsertData.emails_sent_today = 0;
+      upsertData.last_usage_date = new Date().toISOString().slice(0, 10);
+    }
+
     const { error: credsError } = await serviceClient
       .from("smtp_credentials")
-      .upsert({ user_id: userId, provider, email }, { onConflict: "user_id" });
+      .upsert(upsertData, { onConflict: "user_id" });
     if (credsError) throw credsError;
 
     if (password.length > 0) {
