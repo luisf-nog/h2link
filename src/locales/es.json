@@ -80,6 +80,8 @@
     "yes": "Sí",
     "no": "No",
     "user": "Usuario",
+    "expand": "Expandir",
+    "collapse": "Contraer",
     "errors": {
       "no_session": "No hay sesión autenticada.",
       "invalid_data": "Datos inválidos.",

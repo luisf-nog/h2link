@@ -1,8 +1,9 @@
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +18,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -28,7 +28,8 @@ import {
 export function AppSidebar() {
   const { profile, smtpStatus, signOut } = useAuth();
   const { t } = useTranslation();
-  const { state } = useSidebar();
+  const { state, setOpen, setOpenMobile } = useSidebar();
+  const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
 
   const needsSmtpSetup = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
@@ -42,50 +43,89 @@ export function AppSidebar() {
     { title: t('nav.settings'), url: '/settings', icon: Settings, needsAttention: needsSmtpSetup },
   ];
 
+  // Close sidebar on mobile when clicking a link
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
+  // Toggle expand/collapse on desktop
+  const handleToggleDesktop = () => {
+    setOpen(!collapsed ? false : true);
+  };
+
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <Sidebar 
+      collapsible="icon" 
+      className="border-r border-sidebar-border"
+    >
       <SidebarHeader className="p-3 border-b border-sidebar-border">
-        <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
-          <div className={cn('min-w-0', collapsed && 'hidden')}>
-            <div className="text-xs font-medium text-sidebar-foreground/70">{t('common.menu')}</div>
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium text-sidebar-foreground/70">{t('common.menu')}</div>
+            </div>
+          )}
+          {/* Desktop: Toggle button */}
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleDesktop}
+              className={cn(
+                "h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0",
+                collapsed && "mx-auto"
+              )}
+              title={collapsed ? t('common.expand') : t('common.collapse')}
+            >
+              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
+          )}
         </div>
       </SidebarHeader>
 
       <SidebarContent className="p-2">
         <SidebarGroup>
-          <SidebarGroupLabel>{t('common.menu')}</SidebarGroupLabel>
+          {!collapsed && <SidebarGroupLabel>{t('common.menu')}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               <TooltipProvider>
                 {menuItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title} className={cn(collapsed && 'mx-auto')}>
+                    <SidebarMenuButton 
+                      asChild 
+                      tooltip={item.title} 
+                      className={cn(
+                        collapsed && !isMobile && "justify-center"
+                      )}
+                    >
                       <NavLink
                         to={item.url}
+                        onClick={handleNavClick}
                         className={cn(
                           'flex items-center gap-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors relative',
-                          collapsed ? 'h-8 w-8 justify-center' : 'w-full px-3 py-2.5'
+                          collapsed && !isMobile ? 'justify-center px-0' : 'w-full px-3 py-2.5'
                         )}
                         activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                       >
                         <div className="relative">
-                          <item.icon className="h-5 w-5" />
-                          {item.needsAttention && collapsed && (
+                          <item.icon className="h-5 w-5 shrink-0" />
+                          {item.needsAttention && collapsed && !isMobile && (
                             <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
                           )}
                         </div>
-                        {!collapsed && (
+                        {(!collapsed || isMobile) && (
                           <>
-                            <span className="flex-1">{item.title}</span>
+                            <span className="flex-1 truncate">{item.title}</span>
                             {item.needsAttention && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <span className="flex items-center">
-                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                    <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
                                   </span>
                                 </TooltipTrigger>
-                              <TooltipContent side="right">
+                                <TooltipContent side="right">
                                   <p>{t('smtp.configureRequired')}</p>
                                 </TooltipContent>
                               </Tooltip>
@@ -104,7 +144,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="flex flex-col gap-2">
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <div className="text-sm text-muted-foreground truncate">
               {profile?.email}
             </div>
@@ -112,17 +152,20 @@ export function AppSidebar() {
 
           <Button
             variant="ghost"
-            size={collapsed ? 'icon' : 'sm'}
-            onClick={signOut}
+            size={collapsed && !isMobile ? 'icon' : 'sm'}
+            onClick={() => {
+              if (isMobile) setOpenMobile(false);
+              signOut();
+            }}
             className={cn(
               'text-muted-foreground hover:text-destructive',
-              collapsed ? 'mx-auto' : 'justify-start'
+              collapsed && !isMobile ? 'mx-auto' : 'justify-start'
             )}
             title={t('common.logout')}
             aria-label={t('common.logout')}
           >
-            <LogOut className={cn('h-4 w-4', !collapsed && 'mr-2')} />
-            {!collapsed && t('common.logout')}
+            <LogOut className={cn('h-4 w-4', (!collapsed || isMobile) && 'mr-2')} />
+            {(!collapsed || isMobile) && t('common.logout')}
           </Button>
         </div>
       </SidebarFooter>

@@ -80,6 +80,8 @@
     "yes": "Yes",
     "no": "No",
     "user": "User",
+    "expand": "Expand",
+    "collapse": "Collapse",
     "errors": {
       "no_session": "No authenticated session.",
       "invalid_data": "Invalid data.",

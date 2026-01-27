@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
 import i18n, { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Menu } from 'lucide-react';
 
 type LanguageOption = { value: SupportedLanguage; label: string };
 
@@ -16,6 +18,8 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { profile, refreshProfile } = useAuth();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  
   const options: LanguageOption[] = useMemo(
     () => [
       { value: 'en', label: t('common.languages.en') },
@@ -64,12 +68,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-w-0">
           <header className="h-14 border-b border-border flex items-center px-4 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-            <SidebarTrigger className="mr-4" />
+            {/* Mobile: Hamburger menu trigger */}
+            {isMobile && (
+              <SidebarTrigger className="mr-3 h-9 w-9">
+                <Menu className="h-5 w-5" />
+              </SidebarTrigger>
+            )}
 
             <div className="flex items-center gap-3 min-w-0">
               <div className="min-w-0">
@@ -95,7 +104,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Select>
             </div>
           </header>
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 p-4 md:p-6 overflow-auto">
             {children}
           </div>
         </main>
