@@ -257,12 +257,20 @@ If candidate lacks a specific requirement:
 - NEVER invent experience
 - Instead emphasize: "Fast Learner", "Hardworking", "Physical Strength", "Reliable", "Eager to Learn"
 
-### ANTI-HALLUCINATION RULES (CRITICAL)
+### ANTI-HALLUCINATION RULES (CRITICAL - FOLLOW STRICTLY)
 - ONLY use information explicitly found in resume_data
 - NEVER invent skills, certifications, employers, years of experience, or job titles
 - NEVER claim specific experience (like "3 years in agriculture") unless it's in the resume
 - If resume lacks specific experience, use transferable qualities instead
 - When in doubt, be vague: "I have experience in physical labor" NOT "I have 5 years of experience"
+
+### BENEFITS RULES (CRITICAL - NO ASSUMPTIONS)
+- NEVER mention housing unless the job context explicitly confirms housing is provided
+- NEVER say "interested in the housing provided" or similar - this is INVENTING information
+- NEVER mention transport/tools benefits unless they are explicitly in the job data
+- If housing_info is empty or null, DO NOT mention housing at all
+- Only mention benefits that are CONFIRMED in the job data
+- If a benefit is mentioned in job data, you may acknowledge it, but don't express "interest" in it
 
 ### SIGNATURE BLOCK
 ${closingInstructions}
@@ -398,7 +406,8 @@ serve(async (req) => {
       salary ? `Salary: $${salary}/hour` : null,
       startDate ? `Start date: ${startDate}` : null,
       endDate ? `End date: ${endDate}` : null,
-      housingInfo ? `Housing: ${housingInfo}` : null,
+      // Only include housing if it's explicitly provided (non-empty)
+      housingInfo && housingInfo.length > 3 ? `Housing CONFIRMED: ${housingInfo}` : `Housing: NOT PROVIDED - DO NOT MENTION`,
       wageAdditional ? `Additional wage info: ${wageAdditional}` : null,
       recPayDeductions ? `Pay deductions: ${recPayDeductions}` : null,
     ].filter(Boolean).join("\n");
@@ -459,13 +468,17 @@ serve(async (req) => {
     // Normalize paragraphs
     body = normalizeParagraphs(body);
     
-    // Ensure signature is present
-    body = ensureSignature({ body, fullName, phone, email });
-
-    // Apply word limit based on paragraph count
+    // Apply word limit BEFORE adding signature to prevent truncation
     const paragraphCount = parseInt(prefs.email_length, 10) || 4;
-    const wordLimit = Math.min(50 + paragraphCount * 40, 350);
-    body = limitWords(body, wordLimit);
+    const linesPerParagraph = prefs.lines_per_paragraph || 3;
+    // More generous limit: ~35 words per sentence, multiply by paragraphs and lines
+    const bodyWordLimit = Math.min(35 * paragraphCount * linesPerParagraph, 500);
+    
+    // Only limit the body content, not the signature
+    const limitedBody = limitWords(body, bodyWordLimit);
+    
+    // THEN ensure signature is present (after word limit)
+    body = ensureSignature({ body: limitedBody, fullName, phone, email });
 
     if (!body) {
       return json(500, { success: false, error: "AI returned empty body" });
