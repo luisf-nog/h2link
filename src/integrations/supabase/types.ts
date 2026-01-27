@@ -50,6 +50,7 @@ export type Database = {
           greeting_style: string
           include_ps_line: boolean
           mention_company_naturally: boolean
+          opening_style: string
           paragraph_style: string
           reference_sector: boolean
           start_with_hook: boolean
@@ -79,6 +80,7 @@ export type Database = {
           greeting_style?: string
           include_ps_line?: boolean
           mention_company_naturally?: boolean
+          opening_style?: string
           paragraph_style?: string
           reference_sector?: boolean
           start_with_hook?: boolean
@@ -108,6 +110,7 @@ export type Database = {
           greeting_style?: string
           include_ps_line?: boolean
           mention_company_naturally?: boolean
+          opening_style?: string
           paragraph_style?: string
           reference_sector?: boolean
           start_with_hook?: boolean
