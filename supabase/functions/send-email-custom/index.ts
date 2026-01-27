@@ -516,6 +516,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     let htmlBody = textToHtmlEmailBody(body.body);
 
+    // Inject public profile link with queue tracking if available
+    try {
+      if (body.queueId) {
+        const { data: profileData } = await serviceClient
+          .from("profiles")
+          .select("public_token, full_name")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        const publicToken = (profileData as any)?.public_token;
+        if (publicToken) {
+          // Get base URL from environment or construct from Supabase URL
+          const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+          // Extract project ID from Supabase URL to build frontend URL
+          const projectMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+          const projectId = projectMatch?.[1];
+          
+          // Construct profile URL with queue tracking parameter
+          // This assumes the frontend is deployed at a known domain
+          // For production, this should be configured via environment variable
+          const profileUrl = `https://h2link.lovable.app/v/${publicToken}?q=${body.queueId}`;
+          
+          // Inject subtle link at the end of the email
+          htmlBody += `<p style="margin:16px 0 0 0;font-size:12px;color:#666;">` +
+            `<a href="${profileUrl}" style="color:#0066cc;text-decoration:none;">📄 View my full resume online</a>` +
+            `</p>`;
+        }
+      }
+    } catch {
+      // ignore - don't break email sending if profile link fails
+    }
+
     // Open tracking pixel (best-effort)
     try {
       let trackingId = body.trackingId;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ interface ProfileData {
 
 export default function PublicProfile() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const queueId = searchParams.get("q"); // Optional queue ID for per-item tracking
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,7 @@ export default function PublicProfile() {
       try {
         const { data, error } = await supabase.rpc("track_profile_view", {
           p_token: token,
+          p_queue_id: queueId || null,
         });
 
         if (error || !data || data.length === 0) {
@@ -50,7 +53,7 @@ export default function PublicProfile() {
     }
 
     trackAndFetch();
-  }, [token, navigate]);
+  }, [token, queueId, navigate]);
 
   // Track WhatsApp click
   const handleWhatsAppClick = () => {
