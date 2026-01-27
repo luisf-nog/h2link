@@ -234,6 +234,7 @@ export type Database = {
           manual_job_id: string | null
           opened_at: string | null
           processing_started_at: string | null
+          profile_viewed_at: string | null
           send_count: number
           sent_at: string | null
           status: string
@@ -249,6 +250,7 @@ export type Database = {
           manual_job_id?: string | null
           opened_at?: string | null
           processing_started_at?: string | null
+          profile_viewed_at?: string | null
           send_count?: number
           sent_at?: string | null
           status?: string
@@ -264,6 +266,7 @@ export type Database = {
           manual_job_id?: string | null
           opened_at?: string | null
           processing_started_at?: string | null
+          profile_viewed_at?: string | null
           send_count?: number
           sent_at?: string | null
           status?: string
@@ -707,16 +710,27 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
-      track_profile_view: {
-        Args: { p_token: string }
-        Returns: {
-          contact_email: string
-          full_name: string
-          id: string
-          phone_e164: string
-          resume_url: string
-        }[]
-      }
+      track_profile_view:
+        | {
+            Args: { p_token: string }
+            Returns: {
+              contact_email: string
+              full_name: string
+              id: string
+              phone_e164: string
+              resume_url: string
+            }[]
+          }
+        | {
+            Args: { p_queue_id?: string; p_token: string }
+            Returns: {
+              contact_email: string
+              full_name: string
+              id: string
+              phone_e164: string
+              resume_url: string
+            }[]
+          }
       track_whatsapp_click: { Args: { p_token: string }; Returns: undefined }
       update_smtp_warmup_limit: { Args: { p_user_id: string }; Returns: number }
     }
