@@ -22,6 +22,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding";
+import { WarmupStatusWidget } from "@/components/dashboard/WarmupStatusWidget";
+import { getPlanLimit } from "@/config/plans.config";
 
 type Provider = "gmail" | "outlook";
 
@@ -45,6 +48,10 @@ export function EmailSettingsPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
+  const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
+  const [currentDailyLimit, setCurrentDailyLimit] = useState<number | null>(null);
+  const [emailsSentToday, setEmailsSentToday] = useState(0);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("none");
@@ -77,7 +84,7 @@ export function EmailSettingsPanel() {
       setLoading(true);
       const { data, error } = await supabase
         .from("smtp_credentials")
-        .select("provider,email,has_password")
+        .select("provider,email,has_password,risk_profile,current_daily_limit,emails_sent_today")
         .eq("user_id", user!.id)
         .maybeSingle();
 
@@ -89,6 +96,9 @@ export function EmailSettingsPanel() {
         setProvider((data.provider as Provider) ?? "gmail");
         setEmail(data.email ?? "");
         setHasPassword(Boolean(data.has_password));
+        setRiskProfile((data as any).risk_profile ?? null);
+        setCurrentDailyLimit((data as any).current_daily_limit ?? null);
+        setEmailsSentToday((data as any).emails_sent_today ?? 0);
       }
       setLoading(false);
     };
@@ -175,6 +185,37 @@ export function EmailSettingsPanel() {
     }
   };
 
+  const handleSaveRiskProfile = async (selectedProfile: RiskProfile) => {
+    if (!user?.id) return;
+    setSavingProfile(true);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error(t("common.errors.no_session"));
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider, email, risk_profile: selectedProfile }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.success === false) throw new Error(payload?.error || `HTTP ${res.status}`);
+
+      setRiskProfile(selectedProfile);
+      const startLimits: Record<RiskProfile, number> = { conservative: 20, standard: 50, aggressive: 100 };
+      setCurrentDailyLimit(startLimits[selectedProfile]);
+      setEmailsSentToday(0);
+      toast({ title: t("warmup.toasts.profile_saved") });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t("common.errors.save_failed");
+      toast({ title: t("warmup.toasts.profile_error"), description: message, variant: "destructive" });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const handleSendTest = async () => {
     if (!user?.id) return;
     if (!to || !subject || !body) {
@@ -253,8 +294,31 @@ export function EmailSettingsPanel() {
     );
   }
 
+  const planTier = profile?.plan_tier || "free";
+  const planMax = getPlanLimit(planTier, "daily_emails");
+  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+
+  // Show onboarding if SMTP is configured but no risk profile set (and not free tier)
+  const needsWarmupOnboarding = hasPassword && !riskProfile && planTier !== "free";
+
   return (
     <div className="space-y-6">
+      {/* Warmup Status Widget - show if risk profile is set */}
+      {riskProfile && planTier !== "free" && (
+        <WarmupStatusWidget
+          planTier={planTier}
+          planMax={planMax}
+          currentDailyLimit={currentDailyLimit ?? 20}
+          emailsSentToday={emailsSentToday}
+          riskProfile={riskProfile}
+          referralBonus={referralBonus}
+        />
+      )}
+
+      {/* Warmup Onboarding - show if SMTP configured but no profile */}
+      {needsWarmupOnboarding && (
+        <EmailWarmupOnboarding onSelect={handleSaveRiskProfile} loading={savingProfile} />
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -870,5 +870,48 @@
       "subtitle": "Use your code or link to invite friends.",
       "link_label": "Your referral link"
     }
+  },
+  "warmup": {
+    "onboarding": {
+      "title": "Email Account Setup",
+      "description": "Help us protect your email reputation by telling us about this account.",
+      "warning": "Selecting the wrong profile may cause your emails to be flagged as spam. Be honest for best results.",
+      "confirm": "Confirm and Continue"
+    },
+    "profiles": {
+      "conservative": {
+        "title": "New Account (< 3 months)",
+        "description": "I recently created this email account.",
+        "details": "Starts at 20 emails/day, grows 30% daily"
+      },
+      "standard": {
+        "title": "Old Account (Low Usage)",
+        "description": "I've had this account for a while but don't use it much.",
+        "details": "Starts at 50 emails/day, grows 50% daily"
+      },
+      "aggressive": {
+        "title": "Old Account (Daily Use)",
+        "description": "I use this account professionally every day.",
+        "details": "Starts at 100 emails/day, doubles daily"
+      }
+    },
+    "widget": {
+      "title": "Sending Status",
+      "subtitle": "Smart warm-up protects your reputation",
+      "remaining": "remaining",
+      "used": "{{used}} / {{limit}} used",
+      "max_speed": "Max Speed",
+      "warming_up": "Warming Up",
+      "progress_to_increase": "Progress to limit increase",
+      "send_target": "Send {{target}} emails to increase tomorrow",
+      "days_to_max": "~{{days}}d to max",
+      "profile_label": "Profile",
+      "plan_max": "Plan Maximum",
+      "free_tier_note": "Free tier has a fixed limit. Upgrade for smart warm-up."
+    },
+    "toasts": {
+      "profile_saved": "Email warm-up profile saved!",
+      "profile_error": "Failed to save warm-up profile"
+    }
   }
 }
