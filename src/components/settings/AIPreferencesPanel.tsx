@@ -49,7 +49,7 @@ const defaultPreferences: AIPreferences = {
   custom_instructions: null,
 };
 
-// Generate sample preview based on preferences
+// Generate sample preview based on preferences - uses placeholders, never invents qualifications
 function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, userName?: string): { subject: string; body: string } {
   const greetings: Record<GreetingStyle, string> = {
     hello: "Hello,",
@@ -67,18 +67,18 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
 
   const greeting = greetings[prefs.greeting_style];
   const closing = closings[prefs.closing_style];
-  const name = userName || "John Doe";
+  const name = userName || "[Your Name]";
 
-  // Build paragraphs based on preferences
+  // Build paragraphs based on preferences - NEVER invent qualifications
   const paragraphs: string[] = [];
 
-  // Opening paragraph
+  // Opening paragraph - uses placeholders for personal data
   if (prefs.formality_level === "casual") {
-    paragraphs.push(`I'm reaching out about the Farm Worker position at Sample Farms. I'm 28 years old with 3 years of experience in agricultural work, and I'm very interested in joining your team.`);
+    paragraphs.push(`I'm reaching out about the [Job Title] position at [Company Name]. I'm [your age] years old, and I'm very interested in joining your team.`);
   } else if (prefs.formality_level === "formal") {
-    paragraphs.push(`I am writing to express my sincere interest in the Farm Worker position at Sample Farms. At 28 years of age, I bring three years of dedicated experience in agricultural operations, and I would be honored to contribute to your esteemed organization.`);
+    paragraphs.push(`I am writing to express my sincere interest in the [Job Title] position at [Company Name]. I would be honored to contribute to your esteemed organization.`);
   } else {
-    paragraphs.push(`I am writing to apply for the Farm Worker position at Sample Farms. I am 28 years old with 3 years of experience in agricultural work, and I am excited about the opportunity to join your team.`);
+    paragraphs.push(`I am writing to apply for the [Job Title] position at [Company Name]. I am excited about the opportunity to join your team.`);
   }
 
   // Availability paragraph
@@ -90,14 +90,14 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
     }
   }
 
-  // Physical strength paragraph
+  // Physical strength paragraph - generic statement, no invented numbers
   if (prefs.emphasize_physical_strength) {
-    paragraphs.push(`I am physically fit and capable of handling demanding labor. I can comfortably lift 50+ lbs and maintain high energy levels throughout long work days. I am known for my punctuality and reliability.`);
+    paragraphs.push(`I am physically fit and capable of handling demanding labor. I am known for my punctuality, reliability, and strong work ethic.`);
   }
 
-  // Languages paragraph
+  // Languages paragraph - placeholder for actual languages
   if (prefs.emphasize_languages) {
-    paragraphs.push(`I am a native Portuguese speaker with intermediate English proficiency, allowing me to communicate effectively with diverse teams and follow instructions accurately.`);
+    paragraphs.push(`I speak [your languages], allowing me to communicate effectively with diverse teams and follow instructions accurately.`);
   }
 
   // Closing paragraph
@@ -113,8 +113,8 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
     finalParagraphs = paragraphs.slice(0, 2);
     finalParagraphs.push(paragraphs[paragraphs.length - 1]);
   } else if (prefs.email_length === "long") {
-    // Add extra detail
-    finalParagraphs.splice(2, 0, `Throughout my career, I have consistently demonstrated a strong work ethic and commitment to excellence. My previous employers have always valued my dedication and positive attitude.`);
+    // Add extra generic detail - no invented qualifications
+    finalParagraphs.splice(2, 0, `I am a dedicated and hardworking individual, always eager to learn and adapt to new challenges. I take pride in delivering quality work consistently.`);
   }
 
   // Format body based on paragraph style
@@ -126,7 +126,7 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
   }
 
   return {
-    subject: `Application for Farm Worker Position - ${name}`,
+    subject: `Application for [Job Title] Position - ${name}`,
     body,
   };
 }
