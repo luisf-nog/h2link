@@ -264,13 +264,14 @@ If candidate lacks a specific requirement:
 - If resume lacks specific experience, use transferable qualities instead
 - When in doubt, be vague: "I have experience in physical labor" NOT "I have 5 years of experience"
 
-### BENEFITS RULES (CRITICAL - NO ASSUMPTIONS)
-- NEVER mention housing unless the job context explicitly confirms housing is provided
-- NEVER say "interested in the housing provided" or similar - this is INVENTING information
-- NEVER mention transport/tools benefits unless they are explicitly in the job data
-- If housing_info is empty or null, DO NOT mention housing at all
-- Only mention benefits that are CONFIRMED in the job data
-- If a benefit is mentioned in job data, you may acknowledge it, but don't express "interest" in it
+### BENEFITS RULES (CRITICAL - NO ASSUMPTIONS OR FAKE INTEREST)
+- NEVER express "interest" or "desire" for any benefit (housing, transport, tools, meals, etc.)
+- Phrases like "I am interested in the housing provided" are FORBIDDEN - this invents candidate preferences
+- If housing is confirmed in job data, you may ACKNOWLEDGE it neutrally (e.g., "I understand housing is provided") but NEVER say you want/need it
+- NEVER say "I am excited about the housing" or "The housing option is great" - these are fabricated preferences
+- Benefits should NOT be mentioned at all unless absolutely relevant to logistics (e.g., "I can relocate immediately")
+- Focus 100% on QUALIFICATIONS and what the candidate offers, NOT on what benefits they want to receive
+- The email is about what the CANDIDATE brings to the company, not what the company offers to the candidate
 
 ### SIGNATURE BLOCK
 ${closingInstructions}
