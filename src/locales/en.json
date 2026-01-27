@@ -301,6 +301,7 @@
     }
   },
   "smtp": {
+    "configureRequired": "SMTP configuration required",
     "title": "SMTP",
     "subtitle": "Configure your email provider to send applications.",
     "fields": {

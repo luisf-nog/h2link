@@ -1,4 +1,4 @@
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -17,12 +17,21 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function AppSidebar() {
-  const { profile, signOut } = useAuth();
+  const { profile, smtpStatus, signOut } = useAuth();
   const { t } = useTranslation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+
+  const needsSmtpSetup = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
 
   const menuItems = [
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard },
@@ -30,7 +39,7 @@ export function AppSidebar() {
     { title: t('nav.queue'), url: '/queue', icon: ListTodo },
     { title: t('nav.referrals'), url: '/referrals', icon: Users },
     { title: t('nav.plans'), url: '/plans', icon: Diamond },
-    { title: t('nav.settings'), url: '/settings', icon: Settings },
+    { title: t('nav.settings'), url: '/settings', icon: Settings, needsAttention: needsSmtpSetup },
   ];
 
   return (
@@ -48,23 +57,46 @@ export function AppSidebar() {
           <SidebarGroupLabel>{t('common.menu')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title} className={cn(collapsed && 'mx-auto')}>
-                    <NavLink
-                      to={item.url}
-                      className={cn(
-                        'flex items-center gap-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors',
-                        collapsed ? 'h-8 w-8 justify-center' : 'w-full px-3 py-2.5'
-                      )}
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <TooltipProvider>
+                {menuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild tooltip={item.title} className={cn(collapsed && 'mx-auto')}>
+                      <NavLink
+                        to={item.url}
+                        className={cn(
+                          'flex items-center gap-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors relative',
+                          collapsed ? 'h-8 w-8 justify-center' : 'w-full px-3 py-2.5'
+                        )}
+                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      >
+                        <div className="relative">
+                          <item.icon className="h-5 w-5" />
+                          {item.needsAttention && collapsed && (
+                            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                          )}
+                        </div>
+                        {!collapsed && (
+                          <>
+                            <span className="flex-1">{item.title}</span>
+                            {item.needsAttention && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center">
+                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                  </span>
+                                </TooltipTrigger>
+                              <TooltipContent side="right">
+                                  <p>{t('smtp.configureRequired')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </TooltipProvider>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
