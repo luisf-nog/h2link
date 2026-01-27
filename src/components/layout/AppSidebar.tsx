@@ -67,10 +67,10 @@ export function AppSidebar() {
 
   const handleMouseLeave = () => {
     if (!isMobile) {
-      // Debounce collapse by 100ms to prevent accidental closing
+      // Debounce collapse by 150ms to prevent accidental closing
       collapseTimeoutRef.current = setTimeout(() => {
         setOpen(false);
-      }, 100);
+      }, 150);
     }
   };
 
