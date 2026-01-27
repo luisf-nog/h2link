@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Send, Loader2, Eye, RefreshCw, History, Mail, Building2, FileText } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Mail, Building2, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format, type Locale } from "date-fns";
 import { ptBR, enUS, es } from "date-fns/locale";
@@ -138,48 +138,9 @@ export function MobileQueueCard({
           <span className="truncate">{job?.email}</span>
         </div>
 
-        {/* Open Tracking + Resume View + Actions */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
           {/* Tracking Icons */}
           <div className="flex items-center gap-3">
-            {/* Email Open Tracking */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Eye
-                    className={cn(
-                      "h-4 w-4",
-                      item.status === "sent" && item.opened_at
-                        ? "text-success"
-                        : "text-muted-foreground"
-                    )}
-                  />
-                  <span className="text-muted-foreground hidden sm:inline">
-                    {item.status === "sent" && item.opened_at
-                      ? t("queue.open_tracking.opened")
-                      : t("queue.open_tracking.not_opened")}
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {item.status === "sent" && item.opened_at ? (
-                  <div className="space-y-1">
-                    <p>
-                      {t("queue.open_tracking.opened_at", {
-                        date: formatOpenedAt(item.opened_at),
-                      })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{t("queue.open_tracking.disclaimer")}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p>{t("queue.open_tracking.waiting")}</p>
-                    <p className="text-xs text-muted-foreground">{t("queue.open_tracking.disclaimer")}</p>
-                  </div>
-                )}
-              </TooltipContent>
-            </Tooltip>
-
             {/* Resume/CV View Tracking */}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -192,8 +153,8 @@ export function MobileQueueCard({
                         : "text-muted-foreground"
                     )}
                   />
-                  <span className="text-muted-foreground hidden sm:inline">
-                    {item.status === "sent" && item.profile_viewed_at ? "CV" : "CV"}
+                  <span className="text-muted-foreground">
+                    {item.status === "sent" && item.profile_viewed_at ? "CV ✓" : "CV"}
                   </span>
                 </div>
               </TooltipTrigger>

@@ -25,7 +25,7 @@ export interface PlanConfig {
     magic_paste: boolean;
     ai_email_writer: boolean;
     priority_support: boolean;
-    spy_pixel: boolean;
+    resume_view_tracking: boolean;
     resume_parsing: boolean;
   };
   settings: {
@@ -52,7 +52,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
-      spy_pixel: false,
+      resume_view_tracking: false,
       resume_parsing: false,
     },
     settings: {
@@ -82,7 +82,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
-      spy_pixel: false,
+      resume_view_tracking: false,
       resume_parsing: true,
     },
     settings: {
@@ -112,7 +112,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
-      spy_pixel: true,
+      resume_view_tracking: true,
       resume_parsing: true,
     },
     settings: {
@@ -142,7 +142,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
       magic_paste: true,
       ai_email_writer: true,
       priority_support: true,
-      spy_pixel: true,
+      resume_view_tracking: true,
       resume_parsing: true,
     },
     settings: {

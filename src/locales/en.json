@@ -651,7 +651,7 @@
       "ai_real_writer": "Real AI Writer (Unique email per job)",
       "resume_basic": "Basic resume extraction",
       "resume_advanced": "Advanced resume extraction (AI)",
-      "spy_pixel": "Open tracking (Spy Pixel)",
+      "resume_view_tracking": "Resume view tracking",
       "cloud_sending": "Cloud sending",
       "mask_user_agent": "Anti-spam protection",
       "antispam_armored": "Armored anti-spam protection",

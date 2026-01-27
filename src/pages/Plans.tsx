@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Crown, Sparkles, Zap, Shield, Eye, Cpu, Mail, FileText, Cloud, Clock, Headphones } from 'lucide-react';
+import { Check, Crown, Sparkles, Zap, Shield, Cpu, Mail, FileText, Cloud, Clock, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -137,11 +137,11 @@ export default function Plans() {
       }
     }
 
-    // Spy pixel - highlight for diamond
-    if (config.features.spy_pixel) {
+    // Resume view tracking - highlight for diamond
+    if (config.features.resume_view_tracking) {
       features.push({ 
-        key: t('plans.features.spy_pixel') as string, 
-        icon: Eye,
+        key: t('plans.features.resume_view_tracking') as string, 
+        icon: FileText,
         highlight: planId === 'diamond'
       });
     }
