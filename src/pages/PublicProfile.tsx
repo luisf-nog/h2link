@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
-import { Download, MessageCircle, Loader2, FileText, AlertCircle } from "lucide-react";
+import { Download, MessageCircle, Loader2, FileText, AlertCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotFound from "./NotFound";
 
@@ -86,10 +86,32 @@ export default function PublicProfile() {
     window.open(`https://wa.me/${phone}`, "_blank");
   };
 
-  // Handle PDF download
-  const handleDownload = () => {
+  // Handle PDF download - force download instead of opening in new tab
+  const handleDownload = async () => {
     if (!profile?.resume_url) return;
-    window.open(profile.resume_url, "_blank");
+    
+    try {
+      const response = await fetch(profile.resume_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${profile.full_name || 'resume'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback to opening in new tab
+      window.open(profile.resume_url, "_blank");
+    }
+  };
+
+  // Handle SMS/Call click
+  const handleCallClick = () => {
+    if (!profile?.phone_e164) return;
+    window.location.href = `tel:${profile.phone_e164}`;
   };
 
   if (loading) {
@@ -159,31 +181,40 @@ export default function PublicProfile() {
 
       {/* Sticky Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-4 safe-area-bottom">
-        <div className="max-w-lg mx-auto flex gap-3">
+        <div className="max-w-lg mx-auto flex flex-col gap-3">
+          {/* Contact Buttons Row */}
           {hasPhone && (
-            <Button
-              onClick={handleWhatsAppClick}
-              className={cn(
-                "flex-1 h-12 text-base font-medium",
-                "bg-[#25D366] hover:bg-[#20BD5A] text-white"
-              )}
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Chat on WhatsApp
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleWhatsAppClick}
+                className={cn(
+                  "flex-1 h-12 text-base font-medium",
+                  "bg-[#25D366] hover:bg-[#20BD5A] text-white"
+                )}
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                WhatsApp
+              </Button>
+              <Button
+                onClick={handleCallClick}
+                variant="outline"
+                className="flex-1 h-12 text-base font-medium"
+              >
+                <Phone className="w-5 h-5 mr-2" />
+                SMS / Call
+              </Button>
+            </div>
           )}
           
+          {/* Download Button Row */}
           {hasResume && (
             <Button
               onClick={handleDownload}
-              variant={hasPhone ? "outline" : "default"}
-              className={cn(
-                "h-12 text-base font-medium",
-                hasPhone ? "flex-1" : "flex-1"
-              )}
+              variant={hasPhone ? "secondary" : "default"}
+              className="w-full h-12 text-base font-medium"
             >
               <Download className="w-5 h-5 mr-2" />
-              Download PDF
+              Download Resume
             </Button>
           )}
 
