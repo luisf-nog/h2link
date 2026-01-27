@@ -1010,6 +1010,10 @@
     "emphasize_languages_hint": "Português nativo, Inglês intermediário",
     "custom_instructions": "Instruções Personalizadas",
     "custom_instructions_placeholder": "Ex: Sempre mencione minha experiência em construção civil. Evite falar de idade.",
-    "custom_instructions_hint": "A IA seguirá estas instruções ao gerar cada email."
+    "custom_instructions_hint": "A IA seguirá estas instruções ao gerar cada email.",
+    "preview_title": "Prévia do Email",
+    "preview_live": "Ao vivo",
+    "preview_description": "Veja como seu email ficará com as configurações atuais",
+    "preview_note": "Esta é uma prévia ilustrativa. O conteúdo real será gerado dinamicamente para cada vaga."
   }
 }
