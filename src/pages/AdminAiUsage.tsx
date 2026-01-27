@@ -67,20 +67,21 @@ const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3
 export default function AdminAiUsage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const isAdmin = useIsAdmin();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
   const [loading, setLoading] = useState(true);
   const [summaryData, setSummaryData] = useState<UsageData[]>([]);
   const [dailyData, setDailyData] = useState<DailyUsageRow[]>([]);
   const [period, setPeriod] = useState<"7d" | "30d" | "month">("7d");
 
   useEffect(() => {
-    if (isAdmin === false) {
+    // Only redirect after admin check is complete
+    if (!adminLoading && isAdmin === false) {
       navigate("/dashboard");
     }
-  }, [isAdmin, navigate]);
+  }, [isAdmin, adminLoading, navigate]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (adminLoading || !isAdmin) return;
     
     async function fetchData() {
       setLoading(true);
@@ -119,7 +120,16 @@ export default function AdminAiUsage() {
     }
 
     fetchData();
-  }, [isAdmin, period]);
+  }, [isAdmin, adminLoading, period]);
+
+  // Show loading while checking admin status
+  if (adminLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (
