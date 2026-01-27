@@ -49,6 +49,7 @@ export type Database = {
           formality_level: string
           greeting_style: string
           include_ps_line: boolean
+          lines_per_paragraph: number
           mention_company_naturally: boolean
           opening_style: string
           paragraph_style: string
@@ -79,6 +80,7 @@ export type Database = {
           formality_level?: string
           greeting_style?: string
           include_ps_line?: boolean
+          lines_per_paragraph?: number
           mention_company_naturally?: boolean
           opening_style?: string
           paragraph_style?: string
@@ -109,6 +111,7 @@ export type Database = {
           formality_level?: string
           greeting_style?: string
           include_ps_line?: boolean
+          lines_per_paragraph?: number
           mention_company_naturally?: boolean
           opening_style?: string
           paragraph_style?: string

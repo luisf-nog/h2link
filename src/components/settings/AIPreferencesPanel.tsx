@@ -25,6 +25,7 @@ type FormalityLevel = "casual" | "professional" | "formal";
 type GreetingStyle = "hello" | "dear_manager" | "dear_team" | "varied";
 type ClosingStyle = "best_regards" | "sincerely" | "thank_you" | "varied";
 type OpeningStyle = "varied" | "question" | "direct_statement" | "company_mention";
+type LinesPerParagraph = 1 | 2 | 3 | 4 | 5;
 
 interface AIPreferences {
   paragraph_style: ParagraphStyle;
@@ -33,6 +34,7 @@ interface AIPreferences {
   greeting_style: GreetingStyle;
   closing_style: ClosingStyle;
   opening_style: OpeningStyle;
+  lines_per_paragraph: LinesPerParagraph;
   emphasize_availability: boolean;
   emphasize_physical_strength: boolean;
   emphasize_languages: boolean;
@@ -46,6 +48,7 @@ const defaultPreferences: AIPreferences = {
   greeting_style: "varied",
   closing_style: "best_regards",
   opening_style: "varied",
+  lines_per_paragraph: 3,
   emphasize_availability: true,
   emphasize_physical_strength: true,
   emphasize_languages: true,
@@ -75,14 +78,31 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
   // Build paragraphs based on preferences - NEVER invent qualifications
   const paragraphs: string[] = [];
 
-  // Opening paragraph - uses placeholders for personal data
-  if (prefs.formality_level === "casual") {
-    paragraphs.push(`I'm reaching out about the [Job Title] position at [Company Name]. I'm [your age] years old, and I'm very interested in joining your team.`);
-  } else if (prefs.formality_level === "formal") {
-    paragraphs.push(`I am writing to express my sincere interest in the [Job Title] position at [Company Name]. I would be honored to contribute to your esteemed organization.`);
-  } else {
-    paragraphs.push(`I am writing to apply for the [Job Title] position at [Company Name]. I am excited about the opportunity to join your team.`);
-  }
+  // Opening paragraph based on opening_style
+  const openingParagraphs: Record<OpeningStyle, Record<FormalityLevel, string>> = {
+    question: {
+      casual: `Are you looking for a dedicated worker for the [Job Title] position at [Company Name]? I'd love to be part of your team!`,
+      professional: `Are you seeking a reliable candidate for the [Job Title] role at [Company Name]? I am confident I can be a great addition to your team.`,
+      formal: `Would you consider a committed professional for the [Job Title] position at [Company Name]? I respectfully submit my candidacy for your consideration.`,
+    },
+    direct_statement: {
+      casual: `I'm the reliable worker you need for the [Job Title] position at [Company Name]. I'm ready to start immediately!`,
+      professional: `I am a hardworking professional ready to excel in the [Job Title] position at [Company Name]. I bring dedication and reliability to every role.`,
+      formal: `I present myself as a qualified candidate for the [Job Title] position at [Company Name]. My work ethic and commitment are exceptional.`,
+    },
+    company_mention: {
+      casual: `I've been following [Company Name] and really admire what you do. I'd love to join as a [Job Title]!`,
+      professional: `[Company Name]'s reputation in the industry has inspired me to apply for the [Job Title] position. I would be honored to contribute to your continued success.`,
+      formal: `Having researched [Company Name]'s distinguished operations, I am compelled to express my interest in the [Job Title] position within your esteemed organization.`,
+    },
+    varied: {
+      casual: `I'm reaching out about the [Job Title] position at [Company Name]. I'm [your age] years old, and I'm very interested in joining your team.`,
+      professional: `I am excited to apply for the [Job Title] position at [Company Name]. I believe my skills and dedication make me a strong candidate.`,
+      formal: `I am writing to express my sincere interest in the [Job Title] position at [Company Name]. I would be honored to contribute to your esteemed organization.`,
+    },
+  };
+
+  paragraphs.push(openingParagraphs[prefs.opening_style][prefs.formality_level]);
 
   // Availability paragraph
   if (prefs.emphasize_availability) {
@@ -136,12 +156,27 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
     finalParagraphs.push(closingParagraph);
   }
 
+  // Adjust lines per paragraph by splitting/combining sentences
+  const linesTarget = prefs.lines_per_paragraph || 3;
+  const adjustedParagraphs = finalParagraphs.map((p) => {
+    const sentences = p.match(/[^.!?]+[.!?]+/g) || [p];
+    if (linesTarget === 1) {
+      // Return just the first sentence
+      return sentences[0]?.trim() || p;
+    } else if (linesTarget >= sentences.length) {
+      return p;
+    } else {
+      // Return only the target number of sentences
+      return sentences.slice(0, linesTarget).join(" ").trim();
+    }
+  });
+
   // Format body based on paragraph style
   let body: string;
   if (prefs.paragraph_style === "single") {
-    body = `${greeting}\n\n${finalParagraphs.join(" ")}\n\n${closing}\n${name}`;
+    body = `${greeting}\n\n${adjustedParagraphs.join(" ")}\n\n${closing}\n${name}`;
   } else {
-    body = `${greeting}\n\n${finalParagraphs.join("\n\n")}\n\n${closing}\n${name}`;
+    body = `${greeting}\n\n${adjustedParagraphs.join("\n\n")}\n\n${closing}\n${name}`;
   }
 
   return {
@@ -191,6 +226,7 @@ export function AIPreferencesPanel() {
           greeting_style: data.greeting_style as GreetingStyle,
           closing_style: data.closing_style as ClosingStyle,
           opening_style: (data as any).opening_style as OpeningStyle || "varied",
+          lines_per_paragraph: ((data as any).lines_per_paragraph as LinesPerParagraph) || 3,
           emphasize_availability: data.emphasize_availability,
           emphasize_physical_strength: data.emphasize_physical_strength,
           emphasize_languages: data.emphasize_languages,
@@ -304,6 +340,27 @@ export function AIPreferencesPanel() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Lines per paragraph */}
+          <div className="space-y-2">
+            <Label>{t("ai_preferences.lines_per_paragraph")}</Label>
+            <Select
+              value={String(prefs.lines_per_paragraph)}
+              onValueChange={(v) => setPrefs({ ...prefs, lines_per_paragraph: Number(v) as LinesPerParagraph })}
+            >
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {t("ai_preferences.lines_count", { count: n })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t("ai_preferences.lines_per_paragraph_hint")}</p>
           </div>
 
           {/* Tone & Formality */}
