@@ -301,6 +301,7 @@
     }
   },
   "smtp": {
+    "configureRequired": "Configuración SMTP requerida",
     "title": "SMTP",
     "subtitle": "Configura tu proveedor de email para enviar solicitudes.",
     "fields": {
