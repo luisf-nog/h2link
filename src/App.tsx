@@ -18,6 +18,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import AdminAiUsage from "./pages/AdminAiUsage";
+import PublicProfile from "./pages/PublicProfile";
 
 const queryClient = new QueryClient();
 
@@ -205,6 +206,7 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+    <Route path="/v/:token" element={<PublicProfile />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

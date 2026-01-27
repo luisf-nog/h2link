@@ -300,9 +300,11 @@ export type Database = {
           full_name: string | null
           id: string
           is_referral_activated: boolean
+          last_viewed_at: string | null
           phone_e164: string | null
           plan_tier: Database["public"]["Enums"]["plan_tier"]
           preferred_language: string
+          public_token: string | null
           referral_bonus_limit: number
           referral_code: string | null
           referred_by: string | null
@@ -312,6 +314,8 @@ export type Database = {
           stripe_subscription_id: string | null
           timezone: string
           updated_at: string
+          views_count: number
+          whatsapp_clicks: number
         }
         Insert: {
           active_referrals_count?: number
@@ -325,9 +329,11 @@ export type Database = {
           full_name?: string | null
           id: string
           is_referral_activated?: boolean
+          last_viewed_at?: string | null
           phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
           preferred_language?: string
+          public_token?: string | null
           referral_bonus_limit?: number
           referral_code?: string | null
           referred_by?: string | null
@@ -337,6 +343,8 @@ export type Database = {
           stripe_subscription_id?: string | null
           timezone?: string
           updated_at?: string
+          views_count?: number
+          whatsapp_clicks?: number
         }
         Update: {
           active_referrals_count?: number
@@ -350,9 +358,11 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_referral_activated?: boolean
+          last_viewed_at?: string | null
           phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
           preferred_language?: string
+          public_token?: string | null
           referral_bonus_limit?: number
           referral_code?: string | null
           referred_by?: string | null
@@ -362,6 +372,8 @@ export type Database = {
           stripe_subscription_id?: string | null
           timezone?: string
           updated_at?: string
+          views_count?: number
+          whatsapp_clicks?: number
         }
         Relationships: [
           {
@@ -695,6 +707,17 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      track_profile_view: {
+        Args: { p_token: string }
+        Returns: {
+          contact_email: string
+          full_name: string
+          id: string
+          phone_e164: string
+          resume_url: string
+        }[]
+      }
+      track_whatsapp_click: { Args: { p_token: string }; Returns: undefined }
       update_smtp_warmup_limit: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {

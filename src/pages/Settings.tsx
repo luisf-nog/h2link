@@ -17,6 +17,7 @@ import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { ResumeSettingsSection } from '@/components/settings/ResumeSettingsSection';
+import { PublicProfileSection } from '@/components/settings/PublicProfileSection';
 
 type SettingsTab = 'profile' | 'account' | 'email' | 'templates';
 
@@ -26,7 +27,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { t, i18n } = useTranslation();
-  const isAdmin = useIsAdmin();
+  const { isAdmin } = useIsAdmin();
 
   const [adminTargetEmail, setAdminTargetEmail] = useState('');
   const [adminLoading, setAdminLoading] = useState(false);
@@ -252,6 +253,14 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           </Card>
 
           <ResumeSettingsSection />
+
+          {/* Public Profile Section */}
+          <PublicProfileSection
+            publicToken={(profile as any)?.public_token ?? null}
+            viewsCount={(profile as any)?.views_count ?? 0}
+            whatsappClicks={(profile as any)?.whatsapp_clicks ?? 0}
+            lastViewedAt={(profile as any)?.last_viewed_at ?? null}
+          />
         </TabsContent>
 
         <TabsContent value="account" className="space-y-6 max-w-2xl">
