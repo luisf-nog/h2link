@@ -359,71 +359,100 @@ export default function Jobs() {
 
     if (queuedJobIds.has(job.id)) return;
 
-    const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check;
-    if (requiresDnsCheck) {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) {
-          toast({ title: t('common.errors.no_session'), variant: 'destructive' });
-          return;
-        }
+    // OPTIMISTIC UPDATE: Mark as queued immediately for instant UI feedback
+    setQueuedJobIds((prev) => new Set(prev).add(job.id));
 
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-dns-mx`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ email: job.email }),
-        });
+    // Run DNS check and insert in background (non-blocking)
+    (async () => {
+      const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check;
+      if (requiresDnsCheck) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          if (!token) {
+            // Revert optimistic update
+            setQueuedJobIds((prev) => {
+              const next = new Set(prev);
+              next.delete(job.id);
+              return next;
+            });
+            toast({ title: t('common.errors.no_session'), variant: 'destructive' });
+            return;
+          }
 
-        const payload = await res.json().catch(() => null);
-        const ok = Boolean(payload?.ok);
-        if (!ok) {
+          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-dns-mx`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ email: job.email }),
+          });
+
+          const payload = await res.json().catch(() => null);
+          const ok = Boolean(payload?.ok);
+          if (!ok) {
+            // Revert optimistic update
+            setQueuedJobIds((prev) => {
+              const next = new Set(prev);
+              next.delete(job.id);
+              return next;
+            });
+            toast({
+              title: t('queue.toasts.mx_invalid_title'),
+              description: t('queue.toasts.mx_invalid_desc', { domain: String(payload?.domain ?? '') }),
+              variant: 'destructive',
+            });
+            return;
+          }
+        } catch (_e) {
+          // Revert optimistic update
+          setQueuedJobIds((prev) => {
+            const next = new Set(prev);
+            next.delete(job.id);
+            return next;
+          });
           toast({
             title: t('queue.toasts.mx_invalid_title'),
-            description: t('queue.toasts.mx_invalid_desc', { domain: String(payload?.domain ?? '') }),
+            description: t('queue.toasts.mx_invalid_desc', { domain: '' }),
             variant: 'destructive',
           });
           return;
         }
-      } catch (_e) {
-        toast({
-          title: t('queue.toasts.mx_invalid_title'),
-          description: t('queue.toasts.mx_invalid_desc', { domain: '' }),
-          variant: 'destructive',
-        });
-        return;
       }
-    }
 
-    const { error } = await supabase.from('my_queue').insert({
-      user_id: profile?.id,
-      job_id: job.id,
-    });
+      const { error } = await supabase.from('my_queue').insert({
+        user_id: profile?.id,
+        job_id: job.id,
+      });
 
-    if (error) {
-      if (error.code === '23505') {
-        setQueuedJobIds((prev) => new Set(prev).add(job.id));
-        toast({
-          title: t('jobs.toasts.already_in_queue_title'),
-          description: t('jobs.toasts.already_in_queue_desc'),
-        });
+      if (error) {
+        if (error.code === '23505') {
+          // Already in queue - keep the optimistic state
+          toast({
+            title: t('jobs.toasts.already_in_queue_title'),
+            description: t('jobs.toasts.already_in_queue_desc'),
+          });
+        } else {
+          // Revert optimistic update on error
+          setQueuedJobIds((prev) => {
+            const next = new Set(prev);
+            next.delete(job.id);
+            return next;
+          });
+          toast({
+            title: t('jobs.toasts.add_error_title'),
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
       } else {
         toast({
-          title: t('jobs.toasts.add_error_title'),
-          description: error.message,
-          variant: 'destructive',
+          title: t('jobs.toasts.add_success_title'),
+          description: t('jobs.toasts.add_success_desc', { jobTitle: job.job_title }),
         });
       }
-    } else {
-      setQueuedJobIds((prev) => new Set(prev).add(job.id));
-      toast({
-        title: t('jobs.toasts.add_success_title'),
-        description: t('jobs.toasts.add_success_desc', { jobTitle: job.job_title }),
-      });
-    }
+    })();
   };
 
   const removeFromQueue = async (job: Job) => {
