@@ -162,12 +162,35 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
 
   return `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B seasonal visa jobs in the USA.
 
-### CRITICAL: UNIQUENESS REQUIREMENTS
-Each email MUST be unique. Vary:
-- Opening phrase structure
-- Sentence order within paragraphs
-- Word choices and synonyms
-- How you present qualifications
+### CRITICAL: UNIQUENESS & ANTI-REPETITION RULES
+Each email MUST be completely unique. NEVER repeat structures or phrases between emails:
+
+1. **NEVER START WITH CLICHÉS** like:
+   - "I am writing to apply for..."
+   - "I am interested in the position..."
+   - "I would like to express my interest..."
+   - "I am reaching out regarding..."
+   Instead, start with something fresh: a statement about the company, a direct qualification match, or enthusiasm for the specific role.
+
+2. **VARY STRUCTURE EVERY TIME:**
+   - Sometimes lead with availability, other times with experience
+   - Alternate between starting with company praise vs direct qualifications
+   - Change paragraph order: skills first, then availability OR availability first, then skills
+
+3. **USE SYNONYMS AND VARIED EXPRESSIONS:**
+   - "position" / "role" / "opportunity" / "job"
+   - "I can" / "I'm able to" / "I'm ready to" / "I'm prepared to"
+   - "experience" / "background" / "track record" / "work history"
+   - "available" / "ready to start" / "free to begin" / "can start immediately"
+
+4. **PERSONALIZE NATURALLY:**
+   - Mention the company name 1-2 times naturally (not forced)
+   - Reference specific job details (hours, location, duties) when relevant
+   - Connect candidate's experience to specific job requirements
+
+5. **VARY CALL-TO-ACTION POSITION:**
+   - Sometimes at the end of body, sometimes in the last paragraph
+   - Use different CTAs: "I look forward to hearing from you" / "Please feel free to contact me" / "I'm available for an interview at your convenience"
 
 ### GREETING RULE
 ${greetingInstructions}
@@ -183,14 +206,21 @@ Use simple English (A2/B1 level). Avoid corporate jargon.
 ### CONTENT PRIORITIES
 ${emphasisParts.join("\n")}
 
-### JOB REQUIREMENTS ARE CRITICAL
-Read the job requirements section carefully. For each requirement the candidate meets, highlight it with **bold text**.
-If the candidate lacks a requirement, emphasize willingness to learn and physical strength instead.
+### JOB REQUIREMENTS MATCHING
+Read the job requirements carefully. When the candidate has matching experience from resume_data:
+- Highlight it with **bold text**
+- Be specific: cite the actual experience from their resume
 
-### ANTI-HALLUCINATION RULES
-- ONLY use information from the provided resume_data
-- NEVER invent skills, certifications, employers, or experiences
-- If unsure, emphasize "Fast Learner", "Hardworking", "Reliable"
+If candidate lacks a specific requirement:
+- NEVER invent experience
+- Instead emphasize: "Fast Learner", "Hardworking", "Physical Strength", "Reliable", "Eager to Learn"
+
+### ANTI-HALLUCINATION RULES (CRITICAL)
+- ONLY use information explicitly found in resume_data
+- NEVER invent skills, certifications, employers, years of experience, or job titles
+- NEVER claim specific experience (like "3 years in agriculture") unless it's in the resume
+- If resume lacks specific experience, use transferable qualities instead
+- When in doubt, be vague: "I have experience in physical labor" NOT "I have 5 years of experience"
 
 ### SIGNATURE BLOCK
 ${closingInstructions}
