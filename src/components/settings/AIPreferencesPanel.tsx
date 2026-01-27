@@ -20,7 +20,7 @@ import { Loader2, Sparkles, Save, RotateCcw, Eye, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 type ParagraphStyle = "single" | "multiple";
-type EmailLength = "short" | "medium" | "long";
+type EmailLength = "1" | "2" | "3" | "4" | "5" | "6" | "7";
 type FormalityLevel = "casual" | "professional" | "formal";
 type GreetingStyle = "hello" | "dear_manager" | "dear_team" | "varied";
 type ClosingStyle = "best_regards" | "sincerely" | "thank_you" | "varied";
@@ -39,7 +39,7 @@ interface AIPreferences {
 
 const defaultPreferences: AIPreferences = {
   paragraph_style: "multiple",
-  email_length: "medium",
+  email_length: "4",
   formality_level: "professional",
   greeting_style: "varied",
   closing_style: "best_regards",
@@ -107,14 +107,30 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
     paragraphs.push(`I would love the opportunity to discuss this position further. Please feel free to contact me anytime.`);
   }
 
-  // Adjust length
+  // Adjust length based on paragraph count
+  const targetParagraphs = parseInt(prefs.email_length, 10) || 4;
   let finalParagraphs = [...paragraphs];
-  if (prefs.email_length === "short") {
-    finalParagraphs = paragraphs.slice(0, 2);
-    finalParagraphs.push(paragraphs[paragraphs.length - 1]);
-  } else if (prefs.email_length === "long") {
-    // Add extra generic detail - no invented qualifications
-    finalParagraphs.splice(2, 0, `I am a dedicated and hardworking individual, always eager to learn and adapt to new challenges. I take pride in delivering quality work consistently.`);
+  
+  // Trim or extend to match target
+  if (finalParagraphs.length > targetParagraphs) {
+    // Keep closing paragraph at the end
+    const closingParagraph = finalParagraphs.pop()!;
+    finalParagraphs = finalParagraphs.slice(0, targetParagraphs - 1);
+    finalParagraphs.push(closingParagraph);
+  } else if (finalParagraphs.length < targetParagraphs) {
+    // Add filler paragraphs - no invented qualifications
+    const fillers = [
+      `I am a dedicated and hardworking individual, always eager to learn and adapt to new challenges.`,
+      `I take pride in delivering quality work consistently and reliably.`,
+      `I am committed to contributing positively to your team and operations.`,
+    ];
+    const closingParagraph = finalParagraphs.pop()!;
+    let fillerIndex = 0;
+    while (finalParagraphs.length < targetParagraphs - 1 && fillerIndex < fillers.length) {
+      finalParagraphs.push(fillers[fillerIndex]);
+      fillerIndex++;
+    }
+    finalParagraphs.push(closingParagraph);
   }
 
   // Format body based on paragraph style
@@ -260,9 +276,11 @@ export function AIPreferencesPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="short">{t("ai_preferences.length_short")}</SelectItem>
-                  <SelectItem value="medium">{t("ai_preferences.length_medium")}</SelectItem>
-                  <SelectItem value="long">{t("ai_preferences.length_long")}</SelectItem>
+                  {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {t("ai_preferences.paragraphs_count", { count: n })}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
