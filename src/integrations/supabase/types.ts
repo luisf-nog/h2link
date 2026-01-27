@@ -710,27 +710,16 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
-      track_profile_view:
-        | {
-            Args: { p_token: string }
-            Returns: {
-              contact_email: string
-              full_name: string
-              id: string
-              phone_e164: string
-              resume_url: string
-            }[]
-          }
-        | {
-            Args: { p_queue_id?: string; p_token: string }
-            Returns: {
-              contact_email: string
-              full_name: string
-              id: string
-              phone_e164: string
-              resume_url: string
-            }[]
-          }
+      track_profile_view: {
+        Args: { p_queue_id?: string; p_token: string }
+        Returns: {
+          contact_email: string
+          full_name: string
+          id: string
+          phone_e164: string
+          resume_url: string
+        }[]
+      }
       track_whatsapp_click: { Args: { p_token: string }; Returns: undefined }
       update_smtp_warmup_limit: { Args: { p_user_id: string }; Returns: number }
     }
