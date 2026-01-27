@@ -32,7 +32,7 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const { state, setOpen, setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
-  const isAdmin = useIsAdmin();
+  const { isAdmin } = useIsAdmin();
   const collapsed = state === 'collapsed';
 
   const needsSmtpSetup = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
