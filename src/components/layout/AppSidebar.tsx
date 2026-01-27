@@ -1,4 +1,4 @@
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -50,15 +50,25 @@ export function AppSidebar() {
     }
   };
 
-  // Toggle expand/collapse on desktop
-  const handleToggleDesktop = () => {
-    setOpen(!collapsed ? false : true);
+  // Desktop hover handlers
+  const handleMouseEnter = () => {
+    if (!isMobile) {
+      setOpen(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      setOpen(false);
+    }
   };
 
   return (
     <Sidebar 
       collapsible="icon" 
       className="border-r border-sidebar-border"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <SidebarHeader className="p-3 border-b border-sidebar-border">
         <div className="flex items-center justify-between gap-2">
@@ -66,21 +76,6 @@ export function AppSidebar() {
             <div className="min-w-0 flex-1">
               <div className="text-xs font-medium text-sidebar-foreground/70">{t('common.menu')}</div>
             </div>
-          )}
-          {/* Desktop: Toggle button */}
-          {!isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleDesktop}
-              className={cn(
-                "h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0",
-                collapsed && "mx-auto"
-              )}
-              title={collapsed ? t('common.expand') : t('common.collapse')}
-            >
-              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
           )}
         </div>
       </SidebarHeader>
