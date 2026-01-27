@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+import AdminAiUsage from "./pages/AdminAiUsage";
 
 const queryClient = new QueryClient();
 
@@ -194,6 +195,14 @@ const AppRoutes = () => (
         <OnboardingRoute>
           <Onboarding />
         </OnboardingRoute>
+      }
+    />
+    <Route
+      path="/admin/ai-usage"
+      element={
+        <ProtectedRoute>
+          <AdminAiUsage />
+        </ProtectedRoute>
       }
     />
     <Route path="*" element={<NotFound />} />

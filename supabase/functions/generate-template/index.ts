@@ -172,16 +172,9 @@ serve(async (req) => {
       return json(500, { success: false, error: "AI output validation failed" });
     }
 
-    // Always increment usage
+    // Increment usage using RPC function (handles both template_generations and tracking)
+    await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "template" });
     const nextUsed = used + 1;
-    await serviceClient
-      .from("ai_daily_usage")
-      .upsert({
-        user_id: userId,
-        usage_date: today,
-        template_generations: nextUsed,
-        updated_at: new Date().toISOString(),
-      } as any);
 
     return json(200, {
       success: true,

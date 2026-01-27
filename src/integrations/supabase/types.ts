@@ -16,18 +16,24 @@ export type Database = {
     Tables: {
       ai_daily_usage: {
         Row: {
+          job_email_generations: number
+          resume_parses: number
           template_generations: number
           updated_at: string
           usage_date: string
           user_id: string
         }
         Insert: {
+          job_email_generations?: number
+          resume_parses?: number
           template_generations?: number
           updated_at?: string
           usage_date?: string
           user_id: string
         }
         Update: {
+          job_email_generations?: number
+          resume_parses?: number
           template_generations?: number
           updated_at?: string
           usage_date?: string
@@ -647,7 +653,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_usage_summary: {
+        Row: {
+          total_job_email_generations: number | null
+          total_resume_parses: number | null
+          total_template_generations: number | null
+          unique_users: number | null
+          usage_date: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_warmup_limit: {
@@ -671,6 +686,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_ai_usage: {
+        Args: { p_function_type: string; p_user_id: string }
+        Returns: undefined
       }
       increment_smtp_email_count: {
         Args: { p_user_id: string }

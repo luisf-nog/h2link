@@ -485,6 +485,9 @@ serve(async (req) => {
       return json(500, { success: false, error: "AI returned empty body" });
     }
 
+    // Track AI usage
+    await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "job_email" });
+
     return json(200, { success: true, subject, body });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
