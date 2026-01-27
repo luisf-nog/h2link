@@ -427,41 +427,7 @@ export function AIPreferencesPanel() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 space-y-4">
-          {/* AI Rules Section */}
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">{t("ai_preferences.ai_rules_title")}</span>
-            </div>
-            <ul className="text-xs text-muted-foreground space-y-1.5 ml-6">
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{t("ai_preferences.ai_rule_1")}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{t("ai_preferences.ai_rule_2")}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{t("ai_preferences.ai_rule_3")}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{t("ai_preferences.ai_rule_4")}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{t("ai_preferences.ai_rule_5")}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>{t("ai_preferences.ai_rule_6")}</span>
-              </li>
-            </ul>
-          </div>
-
+        <CardContent className="pt-0">
           <div className="rounded-lg border bg-card">
             {/* Email Header */}
             <div className="border-b px-4 py-3 space-y-2">
@@ -477,7 +443,7 @@ export function AIPreferencesPanel() {
             </div>
             
             {/* Email Body */}
-            <ScrollArea className="h-[320px]">
+            <ScrollArea className="h-[400px]">
               <div className="p-4">
                 <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed text-foreground/90">
                   {previewEmail.body}
@@ -486,7 +452,7 @@ export function AIPreferencesPanel() {
             </ScrollArea>
           </div>
           
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground mt-3 text-center">
             {t("ai_preferences.preview_note")}
           </p>
         </CardContent>

@@ -1015,13 +1015,6 @@
     "preview_title": "Vista Previa del Email",
     "preview_live": "En vivo",
     "preview_description": "Vea cómo lucirá su email con la configuración actual",
-    "preview_note": "Esta es una vista previa ilustrativa. El contenido real se generará dinámicamente para cada empleo.",
-    "ai_rules_title": "Reglas de generación IA",
-    "ai_rule_1": "Nunca repite estructuras o frases entre emails",
-    "ai_rule_2": "Personaliza con nombre de empresa y detalles del empleo naturalmente",
-    "ai_rule_3": "Usa sinónimos y expresiones variadas",
-    "ai_rule_4": "Evita clichés como \"I am writing to apply\"",
-    "ai_rule_5": "Varía la posición del call-to-action",
-    "ai_rule_6": "Menciona experiencia específica relevante cuando esté disponible"
+    "preview_note": "Esta es una vista previa ilustrativa. El contenido real se generará dinámicamente para cada empleo."
   }
 }

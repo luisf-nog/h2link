@@ -1014,13 +1014,6 @@
     "preview_title": "Prévia do Email",
     "preview_live": "Ao vivo",
     "preview_description": "Veja como seu email ficará com as configurações atuais",
-    "preview_note": "Esta é uma prévia ilustrativa. O conteúdo real será gerado dinamicamente para cada vaga.",
-    "ai_rules_title": "Regras da IA para geração",
-    "ai_rule_1": "Nunca repete estruturas ou frases entre emails",
-    "ai_rule_2": "Personaliza com nome da empresa e detalhes da vaga naturalmente",
-    "ai_rule_3": "Usa sinônimos e expressões variadas",
-    "ai_rule_4": "Evita clichês como \"I am writing to apply\"",
-    "ai_rule_5": "Varia posição da call-to-action",
-    "ai_rule_6": "Menciona experiência específica relevante quando disponível"
+    "preview_note": "Esta é uma prévia ilustrativa. O conteúdo real será gerado dinamicamente para cada vaga."
   }
 }

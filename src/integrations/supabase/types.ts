@@ -37,91 +37,46 @@ export type Database = {
       }
       ai_generation_preferences: {
         Row: {
-          avoid_cliches: boolean
           closing_style: string
           created_at: string
           custom_instructions: string | null
           email_length: string
-          emotional_tone: string
           emphasize_availability: boolean
           emphasize_languages: boolean
           emphasize_physical_strength: boolean
           formality_level: string
           greeting_style: string
-          include_ps_line: boolean
-          mention_company_naturally: boolean
           paragraph_style: string
-          reference_sector: boolean
-          start_with_hook: boolean
           updated_at: string
           user_id: string
-          vary_bullet_points: boolean
-          vary_cta_position: boolean
-          vary_email_headers: boolean
-          vary_job_title_usage: boolean
-          vary_number_format: boolean
-          vary_paragraph_count: boolean
-          vary_paragraph_length: boolean
-          vary_paragraph_order: boolean
-          vary_synonyms: boolean
         }
         Insert: {
-          avoid_cliches?: boolean
           closing_style?: string
           created_at?: string
           custom_instructions?: string | null
           email_length?: string
-          emotional_tone?: string
           emphasize_availability?: boolean
           emphasize_languages?: boolean
           emphasize_physical_strength?: boolean
           formality_level?: string
           greeting_style?: string
-          include_ps_line?: boolean
-          mention_company_naturally?: boolean
           paragraph_style?: string
-          reference_sector?: boolean
-          start_with_hook?: boolean
           updated_at?: string
           user_id: string
-          vary_bullet_points?: boolean
-          vary_cta_position?: boolean
-          vary_email_headers?: boolean
-          vary_job_title_usage?: boolean
-          vary_number_format?: boolean
-          vary_paragraph_count?: boolean
-          vary_paragraph_length?: boolean
-          vary_paragraph_order?: boolean
-          vary_synonyms?: boolean
         }
         Update: {
-          avoid_cliches?: boolean
           closing_style?: string
           created_at?: string
           custom_instructions?: string | null
           email_length?: string
-          emotional_tone?: string
           emphasize_availability?: boolean
           emphasize_languages?: boolean
           emphasize_physical_strength?: boolean
           formality_level?: string
           greeting_style?: string
-          include_ps_line?: boolean
-          mention_company_naturally?: boolean
           paragraph_style?: string
-          reference_sector?: boolean
-          start_with_hook?: boolean
           updated_at?: string
           user_id?: string
-          vary_bullet_points?: boolean
-          vary_cta_position?: boolean
-          vary_email_headers?: boolean
-          vary_job_title_usage?: boolean
-          vary_number_format?: boolean
-          vary_paragraph_count?: boolean
-          vary_paragraph_length?: boolean
-          vary_paragraph_order?: boolean
-          vary_synonyms?: boolean
         }
         Relationships: []
       }
