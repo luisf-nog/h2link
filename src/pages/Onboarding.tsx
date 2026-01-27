@@ -37,7 +37,7 @@ type RiskProfile = "conservative" | "standard" | "aggressive";
 
 export default function Onboarding() {
   const { t } = useTranslation();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, refreshSmtpStatus } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -152,6 +152,7 @@ export default function Onboarding() {
   };
 
   const handleComplete = async () => {
+    await refreshSmtpStatus?.();
     await refreshProfile?.();
     navigate("/dashboard", { replace: true });
   };

@@ -26,10 +26,16 @@ interface Profile {
   created_at: string;
 }
 
+interface SmtpStatus {
+  hasPassword: boolean;
+  hasRiskProfile: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  smtpStatus: SmtpStatus | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
@@ -40,6 +46,7 @@ interface AuthContextType {
   ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshSmtpStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [smtpStatus, setSmtpStatus] = useState<SmtpStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -64,10 +72,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data as Profile | null;
   };
 
+  const fetchSmtpStatus = async (userId: string): Promise<SmtpStatus> => {
+    const { data } = await supabase
+      .from('smtp_credentials')
+      .select('has_password, risk_profile')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    return {
+      hasPassword: Boolean(data?.has_password),
+      hasRiskProfile: Boolean(data?.risk_profile),
+    };
+  };
+
   const refreshProfile = async () => {
     if (user) {
       const profileData = await fetchProfile(user.id);
       setProfile(profileData);
+    }
+  };
+
+  const refreshSmtpStatus = async () => {
+    if (user) {
+      const status = await fetchSmtpStatus(user.id);
+      setSmtpStatus(status);
     }
   };
 
@@ -106,8 +134,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           // Use setTimeout to avoid potential deadlocks
           setTimeout(async () => {
-            const profileData = await fetchProfile(session.user.id);
+            const [profileData, smtp] = await Promise.all([
+              fetchProfile(session.user.id),
+              fetchSmtpStatus(session.user.id),
+            ]);
             setProfile(profileData);
+            setSmtpStatus(smtp);
             if (session && profileData) {
               tryApplyPendingReferral(session, profileData).catch(() => undefined);
             }
@@ -115,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 0);
         } else {
           setProfile(null);
+          setSmtpStatus(null);
           setLoading(false);
         }
       }
@@ -126,8 +159,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        fetchProfile(session.user.id).then((profileData) => {
+        Promise.all([
+          fetchProfile(session.user.id),
+          fetchSmtpStatus(session.user.id),
+        ]).then(([profileData, smtp]) => {
           setProfile(profileData);
+          setSmtpStatus(smtp);
           if (session && profileData) {
             tryApplyPendingReferral(session, profileData).catch(() => undefined);
           }
@@ -198,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setSmtpStatus(null);
   };
 
   return (
@@ -206,11 +244,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         profile,
+        smtpStatus,
         loading,
         signIn,
         signUp,
         signOut,
         refreshProfile,
+        refreshSmtpStatus,
       }}
     >
       {children}
