@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, Plus, Sparkles, Trash2, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PLANS_CONFIG, PlanTier, usesDynamicAI } from "@/config/plans.config";
+import { AIPreferencesPanel } from "@/components/settings/AIPreferencesPanel";
 
 type EmailTemplate = {
   id: string;
@@ -257,10 +258,14 @@ export function TemplatesSettingsPanel() {
     }
   };
 
-  // For Black users: show a special banner indicating AI auto-generation
+  // For Black users: show AI preferences panel + info banner + optional fallback templates
   if (isDynamicPlan) {
     return (
       <div className="space-y-6">
+        {/* AI Preferences Panel */}
+        <AIPreferencesPanel />
+        
+        {/* Info Banner */}
         <Card className="border-plan-black">
           <CardHeader>
             <div className="flex items-center gap-3">

@@ -35,6 +35,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generation_preferences: {
+        Row: {
+          closing_style: string
+          created_at: string
+          custom_instructions: string | null
+          email_length: string
+          emphasize_availability: boolean
+          emphasize_languages: boolean
+          emphasize_physical_strength: boolean
+          formality_level: string
+          greeting_style: string
+          paragraph_style: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closing_style?: string
+          created_at?: string
+          custom_instructions?: string | null
+          email_length?: string
+          emphasize_availability?: boolean
+          emphasize_languages?: boolean
+          emphasize_physical_strength?: boolean
+          formality_level?: string
+          greeting_style?: string
+          paragraph_style?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closing_style?: string
+          created_at?: string
+          custom_instructions?: string | null
+          email_length?: string
+          emphasize_availability?: boolean
+          emphasize_languages?: boolean
+          emphasize_physical_strength?: boolean
+          formality_level?: string
+          greeting_style?: string
+          paragraph_style?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string
