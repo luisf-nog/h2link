@@ -426,6 +426,35 @@ export default function Jobs() {
     }
   };
 
+  const removeFromQueue = async (job: Job) => {
+    if (!profile?.id) return;
+    
+    const { error } = await supabase
+      .from('my_queue')
+      .delete()
+      .eq('user_id', profile.id)
+      .eq('job_id', job.id);
+
+    if (error) {
+      toast({
+        title: t('common.errors.delete_failed'),
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setQueuedJobIds((prev) => {
+        const next = new Set(prev);
+        next.delete(job.id);
+        return next;
+      });
+      setSelectedJob(null);
+      toast({
+        title: t('jobs.toasts.remove_success_title'),
+        description: t('jobs.toasts.remove_success_desc', { jobTitle: job.job_title }),
+      });
+    }
+  };
+
   const handleRowClick = (job: Job) => {
     if (planSettings.job_db_blur) {
       setShowUpgradeDialog(true);
@@ -828,6 +857,8 @@ export default function Jobs() {
          planSettings={planSettings}
          formatSalary={formatSalary}
          onAddToQueue={(job) => addToQueue(job as Job)}
+         onRemoveFromQueue={(job) => removeFromQueue(job as Job)}
+         isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
        />
 
       {/* Upgrade Dialog */}

@@ -822,7 +822,9 @@
       "already_in_queue_desc": "Esta vaga já está na sua fila.",
       "add_error_title": "Erro ao adicionar",
       "add_success_title": "Adicionado à fila!",
-      "add_success_desc": "{{jobTitle}} foi adicionado à sua fila."
+      "add_success_desc": "{{jobTitle}} foi adicionado à sua fila.",
+      "remove_success_title": "Removido da fila!",
+      "remove_success_desc": "{{jobTitle}} foi removido da sua fila."
     }
   },
   "not_found": {
@@ -864,7 +866,8 @@
       "not_provided": "Não informado."
     },
     "actions": {
-      "add_to_queue": "Adicionar à Fila"
+      "add_to_queue": "Adicionar à Fila",
+      "remove_from_queue": "Remover da Fila"
     }
   },
   "job_import": {
