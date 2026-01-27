@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, Eye, RefreshCw, History, Lock, FileText } from 'lucide-react';
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
@@ -1005,7 +1005,6 @@ export default function Queue() {
                       <TableHead>{t('queue.table.headers.company')}</TableHead>
                       <TableHead>{t('queue.table.headers.email')}</TableHead>
                       <TableHead>{t('queue.table.headers.status')}</TableHead>
-                      <TableHead className="w-14 text-center">{t('queue.table.headers.open_tracking')}</TableHead>
                       <TableHead className="w-14 text-center">{t('queue.table.headers.resume_view', 'CV')}</TableHead>
                       <TableHead className="text-right">{t('queue.table.headers.action')}</TableHead>
                   </TableRow>
@@ -1013,13 +1012,13 @@ export default function Queue() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                           {t('queue.table.loading')}
                       </TableCell>
                     </TableRow>
                   ) : queue.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         <div className="space-y-2">
                             <p className="text-muted-foreground">{t('queue.table.empty')}</p>
                           <Button variant="outline" onClick={() => (window.location.href = '/jobs')}>
@@ -1076,39 +1075,6 @@ export default function Queue() {
                               statusLabel(item.status)
                             )}
                           </Badge>
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex items-center justify-center">
-                                <Eye
-                                  className={
-                                    item.status === 'sent' && item.opened_at
-                                      ? 'h-4 w-4 text-success'
-                                      : 'h-4 w-4 text-muted-foreground'
-                                  }
-                                />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {item.status === 'sent' && item.opened_at ? (
-                                <div className="space-y-1">
-                                  <p>
-                                    {t('queue.open_tracking.opened_at', {
-                                      date: formatOpenedAt(item.opened_at),
-                                    })}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">{t('queue.open_tracking.disclaimer')}</p>
-                                </div>
-                              ) : (
-                                <div className="space-y-1">
-                                  <p>{t('queue.open_tracking.waiting')}</p>
-                                  <p className="text-xs text-muted-foreground">{t('queue.open_tracking.disclaimer')}</p>
-                                </div>
-                              )}
-                            </TooltipContent>
-                          </Tooltip>
                         </TableCell>
 
                         {/* Resume View Tracking */}
