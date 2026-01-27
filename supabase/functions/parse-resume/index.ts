@@ -132,6 +132,13 @@ serve(async (req) => {
       return json(500, { success: false, error: "AI output validation failed" });
     }
 
+    // Track AI usage
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "resume" });
+
     return json(200, { success: true, resume_data: validated.data });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
