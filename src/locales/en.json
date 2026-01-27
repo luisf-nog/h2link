@@ -1011,6 +1011,10 @@
     "emphasize_languages_hint": "Native Portuguese, Intermediate English",
     "custom_instructions": "Custom Instructions",
     "custom_instructions_placeholder": "E.g.: Always mention my construction experience. Avoid mentioning age.",
-    "custom_instructions_hint": "AI will follow these instructions when generating each email."
+    "custom_instructions_hint": "AI will follow these instructions when generating each email.",
+    "preview_title": "Email Preview",
+    "preview_live": "Live",
+    "preview_description": "See how your email will look with current settings",
+    "preview_note": "This is an illustrative preview. Actual content will be dynamically generated for each job."
   }
 }
