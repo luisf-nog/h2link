@@ -21,8 +21,9 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -34,13 +35,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Redirect to onboarding if SMTP not fully configured
+  // Skip redirect if already on settings page (allow manual config)
+  const needsOnboarding = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
+  const isSettingsRoute = location.pathname.startsWith("/settings");
+  
+  if (needsOnboarding && !isSettingsRoute) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <AppLayout>{children}</AppLayout>;
 }
 
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
 
   if (loading) {
@@ -53,6 +63,11 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If SMTP is fully configured, redirect to dashboard
+  if (smtpStatus?.hasPassword && smtpStatus?.hasRiskProfile) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
