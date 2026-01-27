@@ -78,12 +78,15 @@ const requestSchema = z.object({
 });
 
 // AI preferences type
+type OpeningStyle = "varied" | "question" | "direct_statement" | "company_mention";
+
 interface AIPreferences {
   paragraph_style: "single" | "multiple";
-  email_length: "short" | "medium" | "long";
+  email_length: string; // Now "1" to "7" for specific paragraph count
   formality_level: "casual" | "professional" | "formal";
   greeting_style: "hello" | "dear_manager" | "dear_team" | "varied";
   closing_style: "best_regards" | "sincerely" | "thank_you" | "varied";
+  opening_style: OpeningStyle;
   emphasize_availability: boolean;
   emphasize_physical_strength: boolean;
   emphasize_languages: boolean;
@@ -92,10 +95,11 @@ interface AIPreferences {
 
 const defaultPreferences: AIPreferences = {
   paragraph_style: "multiple",
-  email_length: "medium",
+  email_length: "4",
   formality_level: "professional",
   greeting_style: "varied",
   closing_style: "best_regards",
+  opening_style: "varied",
   emphasize_availability: true,
   emphasize_physical_strength: true,
   emphasize_languages: true,
@@ -117,6 +121,31 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
     NEVER use "Dear Hiring Manager" - it's overused and generic.`,
   }[prefs.greeting_style];
 
+  // Opening style instructions
+  const openingInstructions = {
+    varied: `CRITICAL: Vary how you START the email body. Randomly choose one approach:
+    - Start with a question: "Are you looking for a reliable worker who...?"
+    - Start with a direct statement: "I am a hardworking professional ready to..."
+    - Start by mentioning the company: "[Company] caught my attention because..."
+    - Start with enthusiasm: "I'm excited about the opportunity to join..."
+    NEVER use the same opening twice in a row.`,
+    question: `Start the email body with a QUESTION that hooks the reader. Examples:
+    - "Are you looking for a dedicated worker who can start immediately?"
+    - "Need someone reliable for the upcoming season?"
+    - "Looking for a hardworking professional with full availability?"
+    Make the question relevant to the specific job.`,
+    direct_statement: `Start with a DIRECT, CONFIDENT statement about your qualifications. Examples:
+    - "I am a dedicated worker with full availability for your ${prefs.formality_level === "casual" ? "team" : "organization"}."
+    - "With my physical stamina and work ethic, I am ready to contribute to your operations."
+    - "I bring reliability, punctuality, and a strong work ethic to every job."
+    Be confident but not arrogant.`,
+    company_mention: `Start by MENTIONING THE COMPANY naturally. Examples:
+    - "[Company] has a reputation for quality, and I want to be part of that."
+    - "I noticed [Company] is hiring, and I believe I would be a great fit."
+    - "The opportunity at [Company] aligns perfectly with my experience."
+    Make it genuine, not forced.`,
+  }[prefs.opening_style];
+
   // Closing variations
   const closingInstructions = {
     best_regards: "End with 'Best regards,'",
@@ -125,12 +154,13 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
     varied: `Vary the closing. Use one of: "Best regards,", "Sincerely,", "Thank you,", "Respectfully,"`,
   }[prefs.closing_style];
 
-  // Length instructions
-  const lengthInstructions = {
-    short: "Keep the email SHORT: 3-4 paragraphs, under 150 words total.",
-    medium: "Keep the email MEDIUM length: 4-5 paragraphs, around 180-220 words.",
-    long: "Write a COMPLETE email: 5-7 paragraphs, around 250-300 words.",
-  }[prefs.email_length];
+  // Paragraph count instructions (1-7)
+  const paragraphCount = parseInt(prefs.email_length, 10) || 4;
+  const lengthInstructions = `Write EXACTLY ${paragraphCount} paragraph${paragraphCount === 1 ? "" : "s"} (not counting greeting and signature). Each paragraph should be 2-4 sentences.`;
+
+  // Word limit based on paragraph count
+  const wordLimit = Math.min(50 + paragraphCount * 40, 350);
+  const wordLimitInstruction = `Keep total word count around ${wordLimit - 30}-${wordLimit} words.`;
 
   // Paragraph style
   const paragraphInstructions = prefs.paragraph_style === "single"
@@ -165,30 +195,32 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
 ### CRITICAL: UNIQUENESS & ANTI-REPETITION RULES
 Each email MUST be completely unique. NEVER repeat structures or phrases between emails:
 
-1. **NEVER START WITH CLICHÉS** like:
+1. **OPENING STYLE (FOLLOW THIS)**
+${openingInstructions}
+
+2. **NEVER START WITH CLICHÉS** like:
    - "I am writing to apply for..."
    - "I am interested in the position..."
    - "I would like to express my interest..."
    - "I am reaching out regarding..."
-   Instead, start with something fresh: a statement about the company, a direct qualification match, or enthusiasm for the specific role.
 
-2. **VARY STRUCTURE EVERY TIME:**
+3. **VARY STRUCTURE EVERY TIME:**
    - Sometimes lead with availability, other times with experience
    - Alternate between starting with company praise vs direct qualifications
    - Change paragraph order: skills first, then availability OR availability first, then skills
 
-3. **USE SYNONYMS AND VARIED EXPRESSIONS:**
+4. **USE SYNONYMS AND VARIED EXPRESSIONS:**
    - "position" / "role" / "opportunity" / "job"
    - "I can" / "I'm able to" / "I'm ready to" / "I'm prepared to"
    - "experience" / "background" / "track record" / "work history"
    - "available" / "ready to start" / "free to begin" / "can start immediately"
 
-4. **PERSONALIZE NATURALLY:**
+5. **PERSONALIZE NATURALLY:**
    - Mention the company name 1-2 times naturally (not forced)
    - Reference specific job details (hours, location, duties) when relevant
    - Connect candidate's experience to specific job requirements
 
-5. **VARY CALL-TO-ACTION POSITION:**
+6. **VARY CALL-TO-ACTION POSITION:**
    - Sometimes at the end of body, sometimes in the last paragraph
    - Use different CTAs: "I look forward to hearing from you" / "Please feel free to contact me" / "I'm available for an interview at your convenience"
 
@@ -197,6 +229,7 @@ ${greetingInstructions}
 
 ### LENGTH & STRUCTURE
 ${lengthInstructions}
+${wordLimitInstruction}
 ${paragraphInstructions}
 
 ### TONE & FORMALITY
@@ -420,9 +453,10 @@ serve(async (req) => {
     // Ensure signature is present
     body = ensureSignature({ body, fullName, phone, email });
 
-    // Apply word limit based on preference
-    const wordLimits = { short: 180, medium: 250, long: 320 };
-    body = limitWords(body, wordLimits[prefs.email_length]);
+    // Apply word limit based on paragraph count
+    const paragraphCount = parseInt(prefs.email_length, 10) || 4;
+    const wordLimit = Math.min(50 + paragraphCount * 40, 350);
+    body = limitWords(body, wordLimit);
 
     if (!body) {
       return json(500, { success: false, error: "AI returned empty body" });

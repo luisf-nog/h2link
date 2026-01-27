@@ -24,6 +24,7 @@ type EmailLength = "1" | "2" | "3" | "4" | "5" | "6" | "7";
 type FormalityLevel = "casual" | "professional" | "formal";
 type GreetingStyle = "hello" | "dear_manager" | "dear_team" | "varied";
 type ClosingStyle = "best_regards" | "sincerely" | "thank_you" | "varied";
+type OpeningStyle = "varied" | "question" | "direct_statement" | "company_mention";
 
 interface AIPreferences {
   paragraph_style: ParagraphStyle;
@@ -31,6 +32,7 @@ interface AIPreferences {
   formality_level: FormalityLevel;
   greeting_style: GreetingStyle;
   closing_style: ClosingStyle;
+  opening_style: OpeningStyle;
   emphasize_availability: boolean;
   emphasize_physical_strength: boolean;
   emphasize_languages: boolean;
@@ -43,6 +45,7 @@ const defaultPreferences: AIPreferences = {
   formality_level: "professional",
   greeting_style: "varied",
   closing_style: "best_regards",
+  opening_style: "varied",
   emphasize_availability: true,
   emphasize_physical_strength: true,
   emphasize_languages: true,
@@ -187,6 +190,7 @@ export function AIPreferencesPanel() {
           formality_level: data.formality_level as FormalityLevel,
           greeting_style: data.greeting_style as GreetingStyle,
           closing_style: data.closing_style as ClosingStyle,
+          opening_style: (data as any).opening_style as OpeningStyle || "varied",
           emphasize_availability: data.emphasize_availability,
           emphasize_physical_strength: data.emphasize_physical_strength,
           emphasize_languages: data.emphasize_languages,
@@ -340,23 +344,43 @@ export function AIPreferencesPanel() {
             </div>
           </div>
 
-          {/* Closing Style */}
-          <div className="space-y-2">
-            <Label>{t("ai_preferences.closing_style")}</Label>
-            <Select
-              value={prefs.closing_style}
-              onValueChange={(v) => setPrefs({ ...prefs, closing_style: v as ClosingStyle })}
-            >
-              <SelectTrigger className="max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="best_regards">{t("ai_preferences.closing_best_regards")}</SelectItem>
-                <SelectItem value="sincerely">{t("ai_preferences.closing_sincerely")}</SelectItem>
-                <SelectItem value="thank_you">{t("ai_preferences.closing_thank_you")}</SelectItem>
-                <SelectItem value="varied">{t("ai_preferences.closing_varied")}</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Opening & Closing Style */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{t("ai_preferences.opening_style")}</Label>
+              <Select
+                value={prefs.opening_style}
+                onValueChange={(v) => setPrefs({ ...prefs, opening_style: v as OpeningStyle })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="varied">{t("ai_preferences.opening_varied")}</SelectItem>
+                  <SelectItem value="question">{t("ai_preferences.opening_question")}</SelectItem>
+                  <SelectItem value="direct_statement">{t("ai_preferences.opening_direct")}</SelectItem>
+                  <SelectItem value="company_mention">{t("ai_preferences.opening_company")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("ai_preferences.closing_style")}</Label>
+              <Select
+                value={prefs.closing_style}
+                onValueChange={(v) => setPrefs({ ...prefs, closing_style: v as ClosingStyle })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="best_regards">{t("ai_preferences.closing_best_regards")}</SelectItem>
+                  <SelectItem value="sincerely">{t("ai_preferences.closing_sincerely")}</SelectItem>
+                  <SelectItem value="thank_you">{t("ai_preferences.closing_thank_you")}</SelectItem>
+                  <SelectItem value="varied">{t("ai_preferences.closing_varied")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Emphasis Toggles */}
