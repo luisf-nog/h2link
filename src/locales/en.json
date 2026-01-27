@@ -2,6 +2,37 @@
   "app": {
     "name": "H2Link"
   },
+  "onboarding": {
+    "step": "Step {{current}} of {{total}}",
+    "welcome": {
+      "title": "Welcome to H2Link!",
+      "description": "Let's set up your account to start sending job applications safely.",
+      "step1_title": "Connect your email",
+      "step1_desc": "Set up SMTP with your Gmail or Outlook account.",
+      "step2_title": "Choose your sending speed",
+      "step2_desc": "Configure email warm-up to protect your reputation.",
+      "step3_title": "Start applying",
+      "step3_desc": "Browse jobs and send applications at scale.",
+      "start": "Let's get started"
+    },
+    "smtp": {
+      "title": "Connect Your Email",
+      "description": "We'll use your email to send job applications on your behalf.",
+      "warning": "Use an App Password instead of your main password. Check Settings → SMTP for instructions on how to generate one.",
+      "continue": "Save & Continue"
+    },
+    "warmup": {
+      "continue": "Save & Continue"
+    },
+    "complete": {
+      "title": "You're all set!",
+      "description": "Your account is ready to start sending applications.",
+      "smtp_ready": "Email configured successfully",
+      "warmup_ready": "Smart warm-up activated",
+      "next_steps": "Next: Browse the Jobs Hub to find opportunities, add them to your queue, and start sending applications!",
+      "go_dashboard": "Go to Dashboard"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "menu": "Menu",

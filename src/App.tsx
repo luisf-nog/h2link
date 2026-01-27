@@ -15,6 +15,7 @@ import Referrals from "./pages/Referrals";
 import Plans from "./pages/Plans";
 import Settings from "./pages/Settings";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,25 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <AppLayout>{children}</AppLayout>;
+}
+
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -151,6 +171,14 @@ const AppRoutes = () => (
         <ProtectedRoute>
           <Settings defaultTab="email" />
         </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/onboarding"
+      element={
+        <OnboardingRoute>
+          <Onboarding />
+        </OnboardingRoute>
       }
     />
     <Route path="*" element={<NotFound />} />
