@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.track-email-open]
 verify_jwt = false
+
+[functions.reset-daily-credits]
+verify_jwt = false
