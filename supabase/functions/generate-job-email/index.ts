@@ -87,6 +87,7 @@ interface AIPreferences {
   greeting_style: "hello" | "dear_manager" | "dear_team" | "varied";
   closing_style: "best_regards" | "sincerely" | "thank_you" | "varied";
   opening_style: OpeningStyle;
+  lines_per_paragraph: number; // 1-5 sentences per paragraph
   emphasize_availability: boolean;
   emphasize_physical_strength: boolean;
   emphasize_languages: boolean;
@@ -100,6 +101,7 @@ const defaultPreferences: AIPreferences = {
   greeting_style: "varied",
   closing_style: "best_regards",
   opening_style: "varied",
+  lines_per_paragraph: 3,
   emphasize_availability: true,
   emphasize_physical_strength: true,
   emphasize_languages: true,
@@ -156,16 +158,23 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
 
   // Paragraph count instructions (1-7)
   const paragraphCount = parseInt(prefs.email_length, 10) || 4;
-  const lengthInstructions = `Write EXACTLY ${paragraphCount} paragraph${paragraphCount === 1 ? "" : "s"} (not counting greeting and signature). Each paragraph should be 2-4 sentences.`;
+  
+  // Lines per paragraph (1-5)
+  const linesPerParagraph = prefs.lines_per_paragraph || 3;
+  const linesInstruction = linesPerParagraph === 1 
+    ? "Each paragraph should be exactly 1 sentence."
+    : `Each paragraph should be ${linesPerParagraph} sentences.`;
+  
+  const lengthInstructions = `Write EXACTLY ${paragraphCount} paragraph${paragraphCount === 1 ? "" : "s"} (not counting greeting and signature). ${linesInstruction}`;
 
-  // Word limit based on paragraph count
-  const wordLimit = Math.min(50 + paragraphCount * 40, 350);
-  const wordLimitInstruction = `Keep total word count around ${wordLimit - 30}-${wordLimit} words.`;
+  // Word limit based on paragraph count and lines per paragraph
+  const wordLimit = Math.min(30 * paragraphCount * linesPerParagraph, 400);
+  const wordLimitInstruction = `Keep total word count around ${Math.max(wordLimit - 50, 50)}-${wordLimit} words.`;
 
   // Paragraph style
   const paragraphInstructions = prefs.paragraph_style === "single"
     ? "Write in a SINGLE flowing paragraph with minimal breaks."
-    : "Use MULTIPLE short paragraphs. Each paragraph should be 2-3 sentences. Insert \\n\\n between paragraphs.";
+    : `Use MULTIPLE short paragraphs. Each paragraph should be ${linesPerParagraph} sentence${linesPerParagraph === 1 ? "" : "s"}. Insert \\n\\n between paragraphs.`;
 
   // Formality
   const formalityInstructions = {
