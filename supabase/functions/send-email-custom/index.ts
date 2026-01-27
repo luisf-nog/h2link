@@ -10,8 +10,8 @@ const corsHeaders = {
 
 type PlanTier = "free" | "gold" | "diamond" | "black";
 
-function getDailyEmailLimit(planTier: PlanTier): number {
-  // Keep in sync with src/config/plans.config.ts
+function getPlanHardCap(planTier: PlanTier): number {
+  // Hard caps per plan (fallback if warm-up not available)
   if (planTier === "black") return 450;
   if (planTier === "diamond") return 350;
   if (planTier === "gold") return 150;
@@ -425,7 +425,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // ===== DAILY LIMIT ENFORCEMENT =====
+    // ===== DAILY LIMIT ENFORCEMENT (with warm-up integration) =====
     const { data: profile, error: profileError } = await serviceClient
       .from("profiles")
       .select("plan_tier, credits_used_today, credits_reset_date, referral_bonus_limit")
@@ -448,13 +448,31 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("id", userId);
     }
 
-    const dailyLimit = getDailyEmailLimit(profile.plan_tier as PlanTier) + Number(profile.referral_bonus_limit ?? 0);
+    // Get effective daily limit using warm-up logic
+    // This function considers risk_profile, current_daily_limit, and plan caps
+    const planTier = profile.plan_tier as PlanTier;
+    const referralBonus = Number(profile.referral_bonus_limit ?? 0);
+    
+    let effectiveLimit: number;
+    
+    // For paid tiers, use the warm-up system
+    if (planTier !== "free") {
+      // First, trigger warm-up progression check (updates limit if new day)
+      const { data: warmupResult } = await serviceClient.rpc("update_smtp_warmup_limit", { p_user_id: userId });
+      
+      // Then get the effective limit (includes referral bonus)
+      const { data: limitResult } = await serviceClient.rpc("get_effective_daily_limit", { p_user_id: userId });
+      effectiveLimit = limitResult ?? getPlanHardCap(planTier) + referralBonus;
+    } else {
+      // Free tier uses fixed limit
+      effectiveLimit = 5 + referralBonus;
+    }
 
-    if (creditsUsed >= dailyLimit) {
+    if (creditsUsed >= effectiveLimit) {
       return json(429, { 
         success: false, 
         error: "daily_limit_reached",
-        limit: dailyLimit,
+        limit: effectiveLimit,
         used: creditsUsed 
       });
     }
@@ -582,6 +600,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ===== INCREMENT CREDITS AFTER SUCCESSFUL SEND =====
+    // Increment profile credits
     await serviceClient
       .from("profiles")
       .update({ 
@@ -589,6 +608,11 @@ const handler = async (req: Request): Promise<Response> => {
         credits_reset_date: today 
       } as any)
       .eq("id", userId);
+    
+    // Increment SMTP warm-up counter (for paid tiers)
+    if (planTier !== "free") {
+      await serviceClient.rpc("increment_smtp_email_count", { p_user_id: userId });
+    }
     // ===== END INCREMENT CREDITS =====
 
     return json(200, { success: true, message: "Email sent" });
