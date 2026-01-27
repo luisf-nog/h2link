@@ -1015,6 +1015,13 @@
     "preview_title": "Email Preview",
     "preview_live": "Live",
     "preview_description": "See how your email will look with current settings",
-    "preview_note": "This is an illustrative preview. Actual content will be dynamically generated for each job."
+    "preview_note": "This is an illustrative preview. Actual content will be dynamically generated for each job.",
+    "ai_rules_title": "AI generation rules",
+    "ai_rule_1": "Never repeats structures or phrases between emails",
+    "ai_rule_2": "Personalizes with company name and job details naturally",
+    "ai_rule_3": "Uses synonyms and varied expressions",
+    "ai_rule_4": "Avoids clichés like \"I am writing to apply\"",
+    "ai_rule_5": "Varies call-to-action position",
+    "ai_rule_6": "Mentions specific relevant experience when available"
   }
 }
