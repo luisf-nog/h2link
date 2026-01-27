@@ -28,6 +28,40 @@ export default function Dashboard() {
   const [topCategories, setTopCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [topStates, setTopStates] = useState<Array<{ name: string; count: number }>>([]);
   const [bestPaidState, setBestPaidState] = useState<{ name: string; avgSalary: number } | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
+  const [sentThisMonth, setSentThisMonth] = useState(0);
+
+  // Fetch queue count and monthly sent stats
+  useEffect(() => {
+    if (!profile?.id) return;
+    
+    const fetchQueueStats = async () => {
+      // Get pending queue count
+      const { count: pendingCount } = await supabase
+        .from('my_queue')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .eq('status', 'pending');
+      
+      setQueueCount(pendingCount ?? 0);
+
+      // Get emails sent this month from queue_send_history
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { count: monthCount } = await supabase
+        .from('queue_send_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .eq('status', 'sent')
+        .gte('sent_at', startOfMonth.toISOString());
+      
+      setSentThisMonth(monthCount ?? 0);
+    };
+    
+    fetchQueueStats();
+  }, [profile?.id]);
 
   useEffect(() => {
     // Silent timezone auto-detect -> persist to profile
@@ -55,7 +89,7 @@ export default function Dashboard() {
     },
     {
       title: t('dashboard.stats.in_queue'),
-      value: 0,
+      value: queueCount,
       subtitle: t('dashboard.stats.in_queue_subtitle'),
       icon: ListTodo,
       color: 'text-plan-gold',
@@ -69,7 +103,7 @@ export default function Dashboard() {
     },
     {
       title: t('dashboard.stats.this_month'),
-      value: 0,
+      value: sentThisMonth,
       subtitle: t('dashboard.stats.this_month_subtitle'),
       icon: TrendingUp,
       color: 'text-plan-diamond',

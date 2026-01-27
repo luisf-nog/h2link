@@ -69,6 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching profile:', error);
       return null;
     }
+    
+    if (data) {
+      // Check if credits_reset_date is from a previous day - if so, credits should be 0
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      if (data.credits_reset_date && data.credits_reset_date < today) {
+        // The backend hasn't reset yet, so treat credits_used_today as 0 in the UI
+        return { ...data, credits_used_today: 0 } as Profile;
+      }
+    }
+    
     return data as Profile | null;
   };
 
