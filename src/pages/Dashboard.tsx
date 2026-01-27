@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/number';
 import { Button } from '@/components/ui/button';
+import { WarmupStatusWidget } from '@/components/dashboard/WarmupStatusWidget';
 
 
 export default function Dashboard() {
@@ -214,6 +215,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Warmup Status Widget (only for paid tiers with SMTP) */}
+      {planTier !== 'free' && <WarmupStatusWidget />}
 
       {/* Free warning (kamikaze mode) */}
       {planTier === 'free' && usagePercent >= 60 ? (

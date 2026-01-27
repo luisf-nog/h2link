@@ -305,14 +305,7 @@ export function EmailSettingsPanel() {
     <div className="space-y-6">
       {/* Warmup Status Widget - show if risk profile is set */}
       {riskProfile && planTier !== "free" && (
-        <WarmupStatusWidget
-          planTier={planTier}
-          planMax={planMax}
-          currentDailyLimit={currentDailyLimit ?? 20}
-          emailsSentToday={emailsSentToday}
-          riskProfile={riskProfile}
-          referralBonus={referralBonus}
-        />
+        <WarmupStatusWidget />
       )}
 
       {/* Warmup Onboarding - show if SMTP configured but no profile */}
