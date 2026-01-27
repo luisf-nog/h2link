@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,10 @@ import {
   Rocket,
   Settings,
   FileText,
+  ExternalLink,
+  Info,
+  TrendingUp,
+  Star,
 } from "lucide-react";
 
 type Provider = "gmail" | "outlook";
@@ -279,9 +284,13 @@ export default function Onboarding() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-sm text-muted-foreground">{t("onboarding.smtp.warning")}</p>
+                {/* Why App Password */}
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground">{t("onboarding.smtp.why_app_password_title")}</p>
+                    <p className="mt-1">{t("onboarding.smtp.why_app_password_desc")}</p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -295,6 +304,53 @@ export default function Onboarding() {
                       <SelectItem value="outlook">Outlook</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Provider-specific help card */}
+                <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+                  {provider === "gmail" ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        <span className="font-medium">{t("onboarding.smtp.gmail_guide_title")}</span>
+                      </div>
+                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+                        <li>{t("onboarding.smtp.gmail_step1")}</li>
+                        <li>{t("onboarding.smtp.gmail_step2")}</li>
+                        <li>{t("onboarding.smtp.gmail_step3")}</li>
+                      </ol>
+                      <a
+                        href="https://myaccount.google.com/apppasswords"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium"
+                      >
+                        {t("onboarding.smtp.gmail_link")}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        <span className="font-medium">{t("onboarding.smtp.outlook_guide_title")}</span>
+                      </div>
+                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+                        <li>{t("onboarding.smtp.outlook_step1")}</li>
+                        <li>{t("onboarding.smtp.outlook_step2")}</li>
+                        <li>{t("onboarding.smtp.outlook_step3")}</li>
+                      </ol>
+                      <a
+                        href="https://account.microsoft.com/security"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium"
+                      >
+                        {t("onboarding.smtp.outlook_link")}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -315,7 +371,7 @@ export default function Onboarding() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={t("smtp.placeholders.password")}
                   />
-                  <p className="text-xs text-muted-foreground">{t("smtp.password_note.empty")}</p>
+                  <p className="text-xs text-muted-foreground">{t("onboarding.smtp.password_hint")}</p>
                 </div>
 
                 <div className="flex gap-3 pt-4">
@@ -342,17 +398,38 @@ export default function Onboarding() {
                     <Shield className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>{t("warmup.onboarding.title")}</CardTitle>
-                    <CardDescription>{t("warmup.onboarding.description")}</CardDescription>
+                    <CardTitle>{t("onboarding.warmup.title")}</CardTitle>
+                    <CardDescription>{t("onboarding.warmup.subtitle")}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-sm text-muted-foreground">{t("warmup.onboarding.warning")}</p>
+              <CardContent className="space-y-5">
+                {/* Educational section: Why warmup matters */}
+                <div className="space-y-3 p-4 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold">{t("onboarding.warmup.why_title")}</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t("onboarding.warmup.why_desc")}
+                  </p>
+                  <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside pl-1">
+                    <li>{t("onboarding.warmup.why_point1")}</li>
+                    <li>{t("onboarding.warmup.why_point2")}</li>
+                    <li>{t("onboarding.warmup.why_point3")}</li>
+                  </ul>
                 </div>
 
+                {/* Recommendation banner */}
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                  <Star className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-emerald-600 dark:text-emerald-400">{t("onboarding.warmup.recommendation_title")}</p>
+                    <p className="text-muted-foreground mt-0.5">{t("onboarding.warmup.recommendation_desc")}</p>
+                  </div>
+                </div>
+
+                {/* Profile options */}
                 <div className="space-y-3">
                   {profiles.map((p) => (
                     <div
@@ -366,7 +443,14 @@ export default function Onboarding() {
                         <p.icon className={`h-5 w-5 ${p.color}`} />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{p.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{p.title}</p>
+                          {p.id === "standard" && (
+                            <Badge variant="secondary" className="text-xs bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                              {t("onboarding.warmup.recommended_badge")}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">{p.description}</p>
                         <p className="text-xs text-muted-foreground/80 mt-2 italic">{p.details}</p>
                       </div>
@@ -377,7 +461,13 @@ export default function Onboarding() {
                   ))}
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                {/* How it works note */}
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-xs text-muted-foreground">{t("onboarding.warmup.how_it_works")}</p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
                   <Button variant="outline" onClick={() => setStep(2)}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t("common.previous")}
