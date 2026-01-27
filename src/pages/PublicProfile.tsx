@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Download, MessageCircle, Loader2, FileText, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NotFound from "./NotFound";
 
 interface ProfileData {
   id: string;
@@ -18,42 +19,54 @@ export default function PublicProfile() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   const queueId = searchParams.get("q"); // Optional queue ID for per-item tracking
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pdfError, setPdfError] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   // Track view and fetch profile data
   useEffect(() => {
     if (!token) {
-      navigate("/404", { replace: true });
+      setNotFound(true);
+      setLoading(false);
       return;
     }
 
     async function trackAndFetch() {
       try {
-        const { data, error } = await supabase.rpc("track_profile_view", {
+        // Pass undefined instead of null when queueId is not present
+        const rpcParams: { p_token: string; p_queue_id?: string } = {
           p_token: token,
-          p_queue_id: queueId || null,
-        });
+        };
+        if (queueId) {
+          rpcParams.p_queue_id = queueId;
+        }
 
-        if (error || !data || data.length === 0) {
-          console.error("Profile not found:", error);
-          navigate("/404", { replace: true });
+        const { data, error } = await supabase.rpc("track_profile_view", rpcParams);
+
+        if (error) {
+          console.error("RPC error:", error);
+          setNotFound(true);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.error("Profile not found for token:", token);
+          setNotFound(true);
           return;
         }
 
         setProfile(data[0] as ProfileData);
       } catch (err) {
         console.error("Error fetching profile:", err);
-        navigate("/404", { replace: true });
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
     }
 
     trackAndFetch();
-  }, [token, queueId, navigate]);
+  }, [token, queueId]);
 
   // Track WhatsApp click
   const handleWhatsAppClick = () => {
@@ -87,8 +100,8 @@ export default function PublicProfile() {
     );
   }
 
-  if (!profile) {
-    return null; // Will redirect to 404
+  if (notFound || !profile) {
+    return <NotFound />;
   }
 
   const hasResume = !!profile.resume_url;
