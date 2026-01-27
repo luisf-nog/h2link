@@ -14,14 +14,6 @@ function json(status: number, payload: unknown) {
   });
 }
 
-function stripMarkdownFences(text: string): string {
-  return String(text ?? "")
-    .trim()
-    .replace(/^```[a-zA-Z]*\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-}
-
 function limitWords(text: string, maxWords: number): string {
   const cleaned = String(text ?? "")
     .replace(/\s+/g, " ")
@@ -34,110 +26,11 @@ function limitWords(text: string, maxWords: number): string {
 }
 
 function normalizeParagraphs(text: string): string {
-  // Ensure clean paragraph breaks while keeping user-intended newlines.
   const t = String(text ?? "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
   return t;
-}
-
-// Force paragraph breaks if the AI returns a wall of text without proper breaks.
-// ALWAYS split long text into 4-6 paragraphs for readability.
-function forceParagraphBreaks(text: string): string {
-  const trimmed = String(text ?? "").trim();
-  if (!trimmed) return trimmed;
-
-  // Flatten to single line for processing (remove all existing breaks)
-  const flat = trimmed.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
-  
-  // If short text (<300 chars), return as-is
-  if (flat.length < 300) {
-    return trimmed;
-  }
-
-  // Split into sentences using multiple end-of-sentence markers
-  // Match: period/exclamation/question followed by space and capital letter OR end
-  const sentences: string[] = [];
-  let current = "";
-  
-  for (let i = 0; i < flat.length; i++) {
-    current += flat[i];
-    const char = flat[i];
-    const nextChar = flat[i + 1] || "";
-    const charAfter = flat[i + 2] || "";
-    
-    // End of sentence: . ! ? followed by space and capital letter
-    if ((char === "." || char === "!" || char === "?") && nextChar === " " && /[A-Z]/.test(charAfter)) {
-      sentences.push(current.trim());
-      current = "";
-      i++; // skip the space
-    }
-  }
-  
-  // Push remaining text
-  if (current.trim()) {
-    sentences.push(current.trim());
-  }
-  
-  if (sentences.length < 3) {
-    return trimmed; // Not enough sentences
-  }
-
-  // Calculate sentences per paragraph (aim for 4-6 paragraphs)
-  const targetParagraphs = Math.min(6, Math.max(4, Math.floor(sentences.length / 2)));
-  const sentencesPerParagraph = Math.max(2, Math.ceil(sentences.length / targetParagraphs));
-  
-  const paragraphs: string[] = [];
-  let currentParagraph: string[] = [];
-  
-  for (let i = 0; i < sentences.length; i++) {
-    const sentence = sentences[i];
-    
-    // Check if this is a signature/closing line
-    const isSignature = /^(Best regards|Thank you|Sincerely|Atenciosamente|Obrigado)/i.test(sentence);
-    
-    if (isSignature && currentParagraph.length > 0) {
-      // Finish current paragraph, put signature in its own
-      paragraphs.push(currentParagraph.join(" "));
-      paragraphs.push(sentence);
-      currentParagraph = [];
-      continue;
-    }
-    
-    currentParagraph.push(sentence);
-    
-    // Break paragraph when we have enough sentences
-    if (currentParagraph.length >= sentencesPerParagraph) {
-      paragraphs.push(currentParagraph.join(" "));
-      currentParagraph = [];
-    }
-  }
-  
-  // Add remaining sentences
-  if (currentParagraph.length > 0) {
-    paragraphs.push(currentParagraph.join(" "));
-  }
-  
-  // Ensure we have at least 4 paragraphs for long content
-  if (paragraphs.length < 4 && flat.length > 600) {
-    // Re-split more aggressively (2 sentences per paragraph)
-    const aggressive: string[] = [];
-    let aggCurrent: string[] = [];
-    for (const s of sentences) {
-      aggCurrent.push(s);
-      if (aggCurrent.length >= 2) {
-        aggressive.push(aggCurrent.join(" "));
-        aggCurrent = [];
-      }
-    }
-    if (aggCurrent.length > 0) {
-      aggressive.push(aggCurrent.join(" "));
-    }
-    return aggressive.join("\n\n");
-  }
-  
-  return paragraphs.join("\n\n");
 }
 
 function normalizePhone(input: unknown): string {
@@ -157,8 +50,7 @@ function ensureSignature(params: { body: string; fullName: string; phone: string
   const trimmed = String(body ?? "").trim();
   if (!trimmed) return trimmed;
 
-  // If the model didn't include the required signature details, enforce them deterministically.
-  const hasBestRegards = /\bBest regards\b/i.test(trimmed);
+  const hasBestRegards = /\b(Best regards|Sincerely|Thank you)\b/i.test(trimmed);
   const hasName = fullName ? new RegExp(fullName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(trimmed) : false;
   const hasEmail = email ? new RegExp(email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(trimmed) : false;
   const hasPhone = phone ? trimmed.includes(phone) : false;
@@ -174,7 +66,6 @@ function ensureSignature(params: { body: string; fullName: string; phone: string
     email || "",
   ].filter(Boolean);
 
-  // Avoid duplicating sign-off: if it already has Best regards, just append missing lines.
   if (hasBestRegards) {
     return normalizeParagraphs(`${trimmed}\n${sigLines.slice(1).join("\n")}`);
   }
@@ -186,10 +77,153 @@ const requestSchema = z.object({
   queueId: z.string().uuid(),
 });
 
-const responseSchema = z.object({
-  subject: z.string().min(1),
-  body: z.string().min(1),
-});
+// AI preferences type
+interface AIPreferences {
+  paragraph_style: "single" | "multiple";
+  email_length: "short" | "medium" | "long";
+  formality_level: "casual" | "professional" | "formal";
+  greeting_style: "hello" | "dear_manager" | "dear_team" | "varied";
+  closing_style: "best_regards" | "sincerely" | "thank_you" | "varied";
+  emphasize_availability: boolean;
+  emphasize_physical_strength: boolean;
+  emphasize_languages: boolean;
+  custom_instructions: string | null;
+}
+
+const defaultPreferences: AIPreferences = {
+  paragraph_style: "multiple",
+  email_length: "medium",
+  formality_level: "professional",
+  greeting_style: "varied",
+  closing_style: "best_regards",
+  emphasize_availability: true,
+  emphasize_physical_strength: true,
+  emphasize_languages: true,
+  custom_instructions: null,
+};
+
+function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: string, email: string): string {
+  // Greeting variations based on preference
+  const greetingInstructions = {
+    hello: "Always start with 'Hello,' - simple and direct.",
+    dear_manager: "Always start with 'Dear Hiring Manager,'",
+    dear_team: "Always start with 'Dear [Company] Team,' using the company name.",
+    varied: `CRITICAL: Vary the greeting EVERY time. Use one of these randomly:
+    - "Hello,"
+    - "Good day,"
+    - "Dear [Company] Team,"
+    - "Dear Hiring Team,"
+    - "Greetings,"
+    NEVER use "Dear Hiring Manager" - it's overused and generic.`,
+  }[prefs.greeting_style];
+
+  // Closing variations
+  const closingInstructions = {
+    best_regards: "End with 'Best regards,'",
+    sincerely: "End with 'Sincerely,'",
+    thank_you: "End with 'Thank you for your consideration,'",
+    varied: `Vary the closing. Use one of: "Best regards,", "Sincerely,", "Thank you,", "Respectfully,"`,
+  }[prefs.closing_style];
+
+  // Length instructions
+  const lengthInstructions = {
+    short: "Keep the email SHORT: 3-4 paragraphs, under 150 words total.",
+    medium: "Keep the email MEDIUM length: 4-5 paragraphs, around 180-220 words.",
+    long: "Write a COMPLETE email: 5-7 paragraphs, around 250-300 words.",
+  }[prefs.email_length];
+
+  // Paragraph style
+  const paragraphInstructions = prefs.paragraph_style === "single"
+    ? "Write in a SINGLE flowing paragraph with minimal breaks."
+    : "Use MULTIPLE short paragraphs. Each paragraph should be 2-3 sentences. Insert \\n\\n between paragraphs.";
+
+  // Formality
+  const formalityInstructions = {
+    casual: "Use a casual, friendly tone. Be approachable but still respectful.",
+    professional: "Use a professional but warm tone. Be direct and confident.",
+    formal: "Use a formal, respectful tone. Be courteous and traditional.",
+  }[prefs.formality_level];
+
+  // Emphasis sections
+  const emphasisParts: string[] = [];
+  if (prefs.emphasize_availability) {
+    emphasisParts.push("EMPHASIZE: Full availability for weekends, holidays, overtime. State this clearly.");
+  }
+  if (prefs.emphasize_physical_strength) {
+    emphasisParts.push("EMPHASIZE: Physical stamina, ability to lift 50lb+, endurance for long work days.");
+  }
+  if (prefs.emphasize_languages) {
+    emphasisParts.push("MENTION: Language skills - Native Portuguese, Intermediate/Basic English.");
+  }
+
+  const customNote = prefs.custom_instructions 
+    ? `\n\nUSER'S CUSTOM INSTRUCTIONS (FOLLOW THESE):\n${prefs.custom_instructions}`
+    : "";
+
+  return `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B seasonal visa jobs in the USA.
+
+### CRITICAL: UNIQUENESS REQUIREMENTS
+Each email MUST be unique. Vary:
+- Opening phrase structure
+- Sentence order within paragraphs
+- Word choices and synonyms
+- How you present qualifications
+
+### GREETING RULE
+${greetingInstructions}
+
+### LENGTH & STRUCTURE
+${lengthInstructions}
+${paragraphInstructions}
+
+### TONE & FORMALITY
+${formalityInstructions}
+Use simple English (A2/B1 level). Avoid corporate jargon.
+
+### CONTENT PRIORITIES
+${emphasisParts.join("\n")}
+
+### JOB REQUIREMENTS ARE CRITICAL
+Read the job requirements section carefully. For each requirement the candidate meets, highlight it with **bold text**.
+If the candidate lacks a requirement, emphasize willingness to learn and physical strength instead.
+
+### ANTI-HALLUCINATION RULES
+- ONLY use information from the provided resume_data
+- NEVER invent skills, certifications, employers, or experiences
+- If unsure, emphasize "Fast Learner", "Hardworking", "Reliable"
+
+### SIGNATURE BLOCK
+${closingInstructions}
+Then on separate lines:
+- ${fullName || "[Name]"}
+- ${phone || "[Phone]"}
+- ${email || "[Email]"}
+${customNote}`;
+}
+
+// Tool definition for structured output
+const emailToolDefinition = {
+  type: "function" as const,
+  function: {
+    name: "generate_email",
+    description: "Generate a job application email with subject and body",
+    parameters: {
+      type: "object",
+      properties: {
+        subject: {
+          type: "string",
+          description: "Email subject line, max 78 characters",
+        },
+        body: {
+          type: "string",
+          description: "Email body with paragraphs separated by \\n\\n",
+        },
+      },
+      required: ["subject", "body"],
+      additionalProperties: false,
+    },
+  },
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -234,7 +268,16 @@ serve(async (req) => {
       return json(400, { success: false, error: "resume_data_missing" });
     }
 
-    // Signature sources of truth (prefer profile fields; fall back to resume_data keys if present)
+    // Fetch user's AI preferences
+    const { data: prefsRow } = await serviceClient
+      .from("ai_generation_preferences")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    
+    const prefs: AIPreferences = prefsRow ? { ...defaultPreferences, ...prefsRow } : defaultPreferences;
+
+    // Signature sources of truth
     const fullName = String((profile as any)?.full_name ?? (resumeData as any)?.full_name ?? (resumeData as any)?.name ?? "").trim();
     const phone = normalizePhone((profile as any)?.phone_e164 ?? (resumeData as any)?.phone_e164 ?? (resumeData as any)?.phone ?? "");
     const email = normalizeEmail((profile as any)?.contact_email ?? (profile as any)?.email ?? (resumeData as any)?.email ?? "");
@@ -272,92 +315,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
 
-    // Enhanced prompt with strict visual layout rules
-    const systemPrompt = `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B manual labor jobs.
-
-Your goal is to write a high-converting, professional email based on resume_data, job_description, and ESPECIALLY the JOB REQUIREMENTS.
-
-### 0. JOB REQUIREMENTS ARE CRITICAL ⚠️
-
-* **REQUIREMENTS FIRST:** The job requirements section is the MOST IMPORTANT part. Read them carefully and address how the candidate meets each requirement.
-* **Direct Match:** If the candidate's resume_data shows experience matching a requirement, highlight it with **bold**.
-* **Honest Gaps:** If the candidate lacks a specific requirement, emphasize willingness to learn, physical strength, and reliability instead. NEVER invent skills.
-
-### 1. DYNAMIC VARIATION RULES (CRITICAL) ⚠️
-
-* **Avoid Repetition:** You must NOT generate the exact same text every time. Vary your vocabulary and sentence structure while keeping the meaning.
-
-* **Tone:** Humble, hardworking, direct, and polite. Use simple English (A2/B1 level). Avoid complex corporate jargon.
-
-### 2. STRICT VISUAL LAYOUT RULES
-
-* **NO WALLS OF TEXT:** Break the email into short, distinct paragraphs.
-
-* **SPACING:** You MUST insert a double line break (\\n\\n) between EVERY paragraph. This is CRITICAL.
-
-* **NO BULLET POINTS:** Write in full sentences only.
-
-### 3. CONTENT STRUCTURE (Follow this exact sequence with paragraph breaks)
-
-**Block 1: Salutation & Opening**
-- Start with "Hello," or "Dear Hiring Manager,"
-- Vary the opening: "I am writing to apply...", "I am expressing my strong interest...", "I wish to submit my application..."
-- Mention the specific **Job Title** and **Company Name** in bold.
-- Mention age and years of experience (e.g., "At **25 years old**, I have 4 years of experience...").
-
-[INSERT DOUBLE LINE BREAK HERE]
-
-**Block 2: Requirements Match (MOST IMPORTANT)**
-- This is the KEY paragraph. Address the JOB REQUIREMENTS directly.
-- For each requirement the candidate meets, state it clearly with **bold**.
-- Example: "I have **3 years of landscaping experience** as required, and I am **comfortable operating power tools**."
-- If the job requires something not in resume, say "I am a **fast learner** and ready to be trained."
-
-[INSERT DOUBLE LINE BREAK HERE]
-
-**Block 3: The "Hook" (Availability)**
-- CRUCIAL: State clearly that you are available for **Weekends, Holidays, and Overtime**.
-- Variation: Sometimes say "fully available for weekends", other times "ready to work 7 days a week", or "willing to work long hours and holidays".
-
-[INSERT DOUBLE LINE BREAK HERE]
-
-**Block 4: Hard Skills & Reliability**
-- Mention physical stamina (lifting 50lb+).
-- Mention reliability ("I show up on time").
-- Mention languages (Native Portuguese, Intermediate English).
-
-[INSERT DOUBLE LINE BREAK HERE]
-
-**Block 5: Closing**
-- "I am ready to start immediately." or "I can join the team right away."
-- "Thank you for your time."
-
-[INSERT DOUBLE LINE BREAK HERE]
-
-**Block 6: Sign-off**
-- "Best regards," or "Sincerely,"
-- [User Name]
-- [Phone Number]
-- [Email]
-
-### 4. ANTI-HALLUCINATION
-
-* If the resume lacks specific skills for the job, emphasize "Fast Learner", "Hardworking", and "Physical Strength" instead of inventing skills.
-* NEVER invent certifications, licenses, employers, or skills not in resume_data.
-
-### 5. BOLD TEXT USAGE
-
-Use **bold** (double asterisks) to highlight:
-- Job title and company name
-- Age (e.g., "At **25 years old**")
-- Requirements the candidate meets (e.g., "**3 years of landscaping experience**")
-- Availability (e.g., "**weekends, holidays, and overtime**")
-- Key traits like **physically fit**, **quick learner**, **reliable**
-
-### 6. OUTPUT FORMAT
-
-Return ONLY the email body text. Each paragraph MUST be separated by exactly two newlines (\\n\\n).
-NO JSON. NO code fences. NO markdown headers. Maximum 280 words.`;
+    // Build dynamic system prompt based on user preferences
+    const systemPrompt = buildDynamicPrompt(prefs, fullName, phone, email);
 
     const jobContext = [
       `Visa type: ${visaType}`,
@@ -373,20 +332,15 @@ NO JSON. NO code fences. NO markdown headers. Maximum 280 words.`;
     ].filter(Boolean).join("\n");
 
     const userPrompt =
+      `Generate a job application email for this position.\n\n` +
       `=== JOB INFORMATION ===\n${jobContext}\n\n` +
       `=== JOB DESCRIPTION ===\n${jobDescription || "Not provided"}\n\n` +
-      `=== JOB DUTIES (What the worker will do daily) ===\n${jobDuties || "Not provided"}\n\n` +
-      `=== ⚠️ JOB REQUIREMENTS (CRITICAL - ADDRESS THESE DIRECTLY) ===\n${jobRequirements || "Not provided"}\n\n` +
+      `=== JOB DUTIES ===\n${jobDuties || "Not provided"}\n\n` +
+      `=== JOB REQUIREMENTS (ADDRESS THESE DIRECTLY) ===\n${jobRequirements || "Not provided"}\n\n` +
       `=== SPECIAL REQUIREMENTS ===\n${jobMinSpecialReq || "Not provided"}\n\n` +
-      `IMPORTANT: The requirements above are what the employer is looking for. Cross-reference with the candidate's resume and highlight matches.\n\n` +
-      `=== SIGNATURE CONTACT (Use these exact values in sign-off) ===\n` +
-      `Full name: ${fullName || "(missing)"}\n` +
-      `Phone: ${phone || "(missing)"}\n` +
-      `Email: ${email || "(missing)"}\n\n` +
-      `=== CANDIDATE RESUME DATA (Source of Truth - JSON) ===\n${JSON.stringify(resumeData, null, 2)}\n\n` +
-      `Write a personalized cover letter email. Address the JOB REQUIREMENTS and JOB DUTIES directly. Each paragraph MUST be separated by double line breaks (\\n\\n).`;
+      `=== CANDIDATE RESUME (Source of Truth) ===\n${JSON.stringify(resumeData, null, 2)}`;
 
-
+    // Use tool calling for structured output - LOW TEMPERATURE for consistency
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -395,11 +349,13 @@ NO JSON. NO code fences. NO markdown headers. Maximum 280 words.`;
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        temperature: 0.7,
+        temperature: 0.3, // LOW temperature for consistency
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        tools: [emailToolDefinition],
+        tool_choice: { type: "function", function: { name: "generate_email" } },
       }),
     });
 
@@ -409,36 +365,40 @@ NO JSON. NO code fences. NO markdown headers. Maximum 280 words.`;
     }
 
     const aiJson = await aiResp.json();
-    const raw = String(aiJson?.choices?.[0]?.message?.content ?? "");
-    const unfenced = stripMarkdownFences(raw);
-    const normalized = normalizeParagraphs(unfenced);
     
-    // Force paragraph breaks if AI returned a wall of text
-    const withParagraphs = forceParagraphBreaks(normalized);
+    // Extract from tool call response
+    const toolCall = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.function?.name !== "generate_email") {
+      // Fallback: try to parse content as before
+      const raw = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
+      return json(500, { success: false, error: "AI did not use tool calling", details: raw.slice(0, 500) });
+    }
 
-    // Ensure required signature details (then enforce the 280-word cap).
-    const withSignature = ensureSignature({ body: withParagraphs, fullName, phone, email });
+    let parsed: { subject?: string; body?: string };
+    try {
+      parsed = JSON.parse(toolCall.function.arguments);
+    } catch {
+      return json(500, { success: false, error: "AI returned invalid JSON in tool call" });
+    }
 
-    // Force the 280-word cap even if the model overshoots (4-7 paragraphs).
-    const body = limitWords(withSignature, 280);
+    const subject = String(parsed?.subject ?? "").trim().slice(0, 78) || `Application for ${jobTitle}`;
+    let body = String(parsed?.body ?? "").trim();
+    
+    // Normalize paragraphs
+    body = normalizeParagraphs(body);
+    
+    // Ensure signature is present
+    body = ensureSignature({ body, fullName, phone, email });
+
+    // Apply word limit based on preference
+    const wordLimits = { short: 180, medium: 250, long: 320 };
+    body = limitWords(body, wordLimits[prefs.email_length]);
+
     if (!body) {
-      return json(500, {
-        success: false,
-        error: "AI returned empty body",
-        details: normalized.slice(0, 800),
-      });
+      return json(500, { success: false, error: "AI returned empty body" });
     }
 
-    // Subject is deterministic to avoid JSON/formatting failures.
-    const subjectBase = jobTitle ? `Application for ${jobTitle}` : "Job application";
-    const subject = subjectBase.slice(0, 78);
-
-    const validated = responseSchema.safeParse({ subject, body });
-    if (!validated.success) {
-      return json(500, { success: false, error: "AI output validation failed" });
-    }
-
-    return json(200, { success: true, ...validated.data });
+    return json(200, { success: true, subject, body });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return json(500, { success: false, error: message });
