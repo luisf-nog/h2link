@@ -229,11 +229,11 @@ export function AIPreferencesPanel() {
       
       if (data) {
         setPrefs({
-          paragraph_style: data.paragraph_style as ParagraphStyle,
-          email_length: data.email_length as EmailLength,
-          formality_level: data.formality_level as FormalityLevel,
+          paragraph_style: (data.paragraph_style as ParagraphStyle) || "multiple",
+          email_length: (data.email_length as EmailLength) || "medium",
+          formality_level: (data.formality_level as FormalityLevel) || "professional",
           emotional_tone: (data.emotional_tone as EmotionalTone) || "professional",
-          greeting_style: data.greeting_style as GreetingStyle,
+          greeting_style: (data.greeting_style as GreetingStyle) || "varied",
           closing_style: data.closing_style as ClosingStyle,
           emphasize_availability: data.emphasize_availability,
           emphasize_physical_strength: data.emphasize_physical_strength,
