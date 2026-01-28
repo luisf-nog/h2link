@@ -677,8 +677,12 @@
       "antispam_armored_tooltip": "Advanced protection layer with multiple obfuscation techniques for maximum deliverability.",
       "dns_bounce_check": "DNS verification",
       "dns_bounce_check_tooltip": "Validates the domain's MX record before sending. Prevents bounces and protects your sender reputation.",
-      "human_delay": "Smart human-like delay",
-      "human_delay_tooltip": "Random intervals between sends that mimic real human behavior, avoiding detection as automation.",
+      "delay_gold": "Fixed 15s delay",
+      "delay_gold_tooltip": "Fixed 15-second interval between each send to protect your reputation.",
+      "delay_diamond": "Random 15-45s delay",
+      "delay_diamond_tooltip": "Random interval between 15 and 45 seconds between sends, varying naturally for greater security.",
+      "delay_black": "Human delay 1-5 min",
+      "delay_black_tooltip": "Random interval between 1 and 5 minutes between sends, simulating real human behavior for maximum protection against detection.",
       "priority_support": "Priority support"
     },
     "toasts": {

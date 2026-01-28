@@ -193,13 +193,25 @@ export default function Plans() {
       });
     }
 
-    // Human delay - only for black
-    if (config.settings.delay_strategy === 'human') {
+    // Delay per plan - show for all paid plans
+    if (planId === 'black') {
       features.push({ 
-        key: t('plans.features.human_delay') as string, 
+        key: t('plans.features.delay_black') as string, 
         icon: Clock,
         highlight: true,
-        tooltipKey: 'plans.features.human_delay_tooltip'
+        tooltipKey: 'plans.features.delay_black_tooltip'
+      });
+    } else if (planId === 'diamond') {
+      features.push({ 
+        key: t('plans.features.delay_diamond') as string, 
+        icon: Clock,
+        tooltipKey: 'plans.features.delay_diamond_tooltip'
+      });
+    } else if (planId === 'gold') {
+      features.push({ 
+        key: t('plans.features.delay_gold') as string, 
+        icon: Clock,
+        tooltipKey: 'plans.features.delay_gold_tooltip'
       });
     }
 
