@@ -111,7 +111,8 @@
     },
     "errors": {
       "email_rate_limit_title": "Too many confirmation emails",
-      "email_rate_limit_desc": "Please wait a few minutes and try again. We temporarily limited new confirmation emails to protect deliverability."
+      "email_rate_limit_desc": "Please wait a few minutes and try again. We temporarily limited new confirmation emails to protect deliverability.",
+      "weak_password_desc": "This password is too common and easy to guess. Please choose a stronger one."
     },
     "recovery": {
       "link": "Forgot password?",

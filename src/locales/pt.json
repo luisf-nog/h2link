@@ -111,7 +111,8 @@
     },
     "errors": {
       "email_rate_limit_title": "Muitos e-mails de confirmação",
-      "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente. Limitamos temporariamente novos e-mails de confirmação para proteger a entrega."
+      "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente. Limitamos temporariamente novos e-mails de confirmação para proteger a entrega.",
+      "weak_password_desc": "Esta senha é muito comum e fácil de adivinhar. Por favor, escolha uma senha mais forte."
     },
     "recovery": {
       "link": "Esqueci minha senha",

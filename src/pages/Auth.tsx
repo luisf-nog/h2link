@@ -408,9 +408,12 @@ export default function Auth() {
       const code = String(anyErr?.code ?? '');
       const msg = String(error.message ?? '');
       const isRateLimit = code === 'over_email_send_rate_limit' || /rate limit/i.test(msg);
+      const isWeakPassword = code === 'weak_password' || /weak.*password|password.*weak/i.test(msg);
 
       if (isRateLimit) {
         openError(t('auth.errors.email_rate_limit_title'), t('auth.errors.email_rate_limit_desc'));
+      } else if (isWeakPassword) {
+        openError(t('auth.toasts.signup_error_title'), t('auth.errors.weak_password_desc'));
       } else {
         openError(t('auth.toasts.signup_error_title'), error.message);
       }
