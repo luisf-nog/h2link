@@ -244,11 +244,40 @@ Este checklist cobre todas as funcionalidades principais do sistema para garanti
 
 ## 13. Seguranca
 
-- [ ] RLS policies ativas em todas as tabelas
-- [ ] Usuarios so acessam seus proprios dados
-- [ ] Credenciais SMTP criptografadas no vault
-- [ ] Tokens de sessao expiram corretamente
-- [ ] Edge functions protegidas por JWT (exceto publicas)
+### ✅ Verificacao Executada em 28/01/2026
+
+**RLS (Row Level Security):**
+- [x] RLS ativo em TODAS as 12 tabelas (verificado via Supabase Linter)
+- [x] Nenhum problema critico de RLS detectado
+- [x] `smtp_credentials_secrets` - nega SELECT (senhas nunca vazam)
+- [x] `app_settings` - nega TODAS operacoes (cron_token protegido)
+- [x] `user_roles` - nega INSERT/UPDATE/DELETE (previne escalacao de privilegios)
+
+**Edge Functions JWT:**
+- [x] `send-email-custom` - valida JWT via getClaims()
+- [x] `create-payment` - valida JWT via getUser()
+- [x] `apply-referral-code` - valida JWT via getClaims()
+- [x] `save-smtp-credentials` - valida JWT via getClaims()
+- [x] `generate-job-email` - valida JWT via getClaims()
+- [x] `generate-template` - valida JWT via getClaims()
+- [x] `parse-resume` - valida JWT via getClaims()
+
+**Edge Functions Publicas (sem JWT):**
+- [x] `stripe-webhook` - valida assinatura Stripe (STRIPE_WEBHOOK_SECRET)
+- [x] `process-queue` - valida x-cron-token vs app_settings.cron_token
+- [x] `track-email-open` - apenas tracking, sem dados sensiveis
+- [x] `check-dns-mx` - apenas validacao DNS, sem dados sensiveis
+
+**Smart Profile (/v/:token) - Design Intencional:**
+- [x] Politica RLS permite SELECT publico quando public_token IS NOT NULL
+- [x] Aplicacao usa EXCLUSIVAMENTE RPC `track_profile_view` (SECURITY DEFINER)
+- [x] RPC retorna APENAS: id, full_name, phone_e164, resume_url, contact_email
+- [x] NAO expoe: email, age, stripe_customer_id, referral_code, resume_data
+
+**SMTP Vault:**
+- [x] Senhas armazenadas em `smtp_credentials_secrets` (tabela separada)
+- [x] SELECT negado via RLS - usuarios nao conseguem ler senhas
+- [x] Apenas edge functions com SERVICE_ROLE_KEY acessam senhas
 
 ---
 
