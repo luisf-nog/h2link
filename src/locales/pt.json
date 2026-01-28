@@ -234,6 +234,11 @@
   "dashboard": {
     "greeting": "Olá, {{name}}!",
     "subtitle": "Aqui está o resumo da sua conta {{plan}}",
+    "promo": {
+      "title": "🔥 Promoção de Lançamento!",
+      "subtitle": "Planos com até 67% de desconto. Garanta agora antes que acabe!",
+      "cta": "Ver Planos"
+    },
     "credits": {
       "title": "Créditos de Envio",
       "description": "Seu limite diário de emails é resetado à meia-noite",
