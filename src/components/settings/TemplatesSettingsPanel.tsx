@@ -63,6 +63,7 @@ export function TemplatesSettingsPanel() {
   const [aiOptionsOpen, setAiOptionsOpen] = useState(false);
   const [aiLength, setAiLength] = useState<AILength>("medium");
   const [aiTone, setAiTone] = useState<AITone>("direct");
+  const [aiLinesPerParagraph, setAiLinesPerParagraph] = useState<number>(3);
 
   const canLoad = useMemo(() => Boolean(user?.id), [user?.id]);
 
@@ -216,7 +217,7 @@ export function TemplatesSettingsPanel() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ length: aiLength, tone: aiTone }),
+        body: JSON.stringify({ length: aiLength, tone: aiTone, lines_per_paragraph: aiLinesPerParagraph }),
       });
 
       const payload = await res.json().catch(() => ({}));
@@ -419,6 +420,23 @@ export function TemplatesSettingsPanel() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">{t("templates.ai_options.tone_hint")}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("templates.ai_options.lines_per_paragraph_label")}</Label>
+            <Select value={String(aiLinesPerParagraph)} onValueChange={(v) => setAiLinesPerParagraph(Number(v))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {t("ai_preferences.lines_count", { count: n })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t("templates.ai_options.lines_per_paragraph_hint")}</p>
           </div>
         </div>
 

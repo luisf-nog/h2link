@@ -429,6 +429,8 @@
       "tone_professional": "Formal e profissional",
       "tone_friendly": "Amigável e acolhedor",
       "tone_hint": "Recomendamos o tom direto para vagas H-2A/H-2B.",
+      "lines_per_paragraph_label": "Linhas por parágrafo",
+      "lines_per_paragraph_hint": "Quantas frases cada parágrafo deve ter.",
       "generate_button": "Gerar com IA"
     },
     "editor": {
