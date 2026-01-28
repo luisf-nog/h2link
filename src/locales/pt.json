@@ -2,6 +2,9 @@
   "app": {
     "name": "H2 Linker"
   },
+  "footer": {
+    "tagline": "Conexões inteligentes. Oportunidades reais."
+  },
   "onboarding": {
     "step": "Passo {{current}} de {{total}}",
     "welcome": {
