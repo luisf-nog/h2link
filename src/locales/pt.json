@@ -893,6 +893,8 @@
       "not_provided": "Não informado."
     },
     "contact": {
+      "message": "Enviar Mensagem",
+      "call": "Ligar",
       "whatsapp": "Abrir WhatsApp",
       "landline": "Fixo",
       "landline_tooltip": "Este é um número fixo (não WhatsApp)"

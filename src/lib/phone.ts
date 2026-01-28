@@ -161,3 +161,20 @@ export function getPhoneCallUrl(phone: string): string | null {
     return null;
   }
 }
+
+/**
+ * Generates an sms: URL for sending text messages.
+ * On iOS, this opens iMessage if the recipient has it enabled.
+ */
+export function getSmsUrl(phone: string): string | null {
+  if (!phone) return null;
+  
+  try {
+    const parsed = parsePhoneNumberFromString(phone);
+    if (!parsed || !parsed.isValid()) return null;
+    
+    return `sms:${parsed.format("E.164")}`;
+  } catch {
+    return null;
+  }
+}

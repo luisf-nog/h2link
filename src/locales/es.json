@@ -894,6 +894,8 @@
       "not_provided": "No informado."
     },
     "contact": {
+      "message": "Enviar Mensaje",
+      "call": "Llamar",
       "whatsapp": "Abrir WhatsApp",
       "landline": "Fijo",
       "landline_tooltip": "Este es un número fijo (no WhatsApp)"

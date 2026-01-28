@@ -894,6 +894,8 @@
       "not_provided": "Not provided."
     },
     "contact": {
+      "message": "Send Message",
+      "call": "Call",
       "whatsapp": "Open WhatsApp",
       "landline": "Landline",
       "landline_tooltip": "This is a landline number (not WhatsApp)"

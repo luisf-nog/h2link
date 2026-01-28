@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { isMobileNumber, getWhatsAppUrl } from "@/lib/phone";
-import { Bus, Calendar, Home, Mail, MapPin, Phone, Plus, Trash2, Wrench } from "lucide-react";
+import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
+import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export type JobDetails = {
@@ -183,9 +183,45 @@ export function JobDetailsDialog({
                   </div>
 
                   {job?.phone && (
-                    <div className="inline-flex items-center gap-2">
+                    <div className="inline-flex items-center gap-2 flex-wrap">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{job.phone}</span>
+                      
+                      {/* SMS/iMessage button - works on all phones, uses iMessage on iOS if available */}
+                      {getSmsUrl(job.phone) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <a
+                              href={getSmsUrl(job.phone)!}
+                              className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary hover:bg-primary/80 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 text-primary-foreground" />
+                            </a>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("job_details.contact.message")}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {/* Call button */}
+                      {getPhoneCallUrl(job.phone) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <a
+                              href={getPhoneCallUrl(job.phone)!}
+                              className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <PhoneCall className="h-3.5 w-3.5 text-muted-foreground" />
+                            </a>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t("job_details.contact.call")}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       
                       {/* WhatsApp icon - only for countries where WhatsApp is common */}
                       {isMobileNumber(job.phone) && getWhatsAppUrl(job.phone) && (
