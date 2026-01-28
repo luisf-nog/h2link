@@ -4,7 +4,7 @@ import { Clock, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Promotion end date - adjust as needed
-const PROMO_END_DATE = new Date('2025-02-28T23:59:59-03:00');
+const PROMO_END_DATE = new Date('2026-02-28T23:59:59-03:00');
 
 interface TimeLeft {
   days: number;

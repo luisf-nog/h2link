@@ -9,14 +9,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/number';
 import { Button } from '@/components/ui/button';
 import { WarmupStatusWidget } from '@/components/dashboard/WarmupStatusWidget';
+import { PromoBanner } from '@/components/dashboard/PromoBanner';
+import { getCurrencyForLanguage } from '@/lib/pricing';
 
 
 export default function Dashboard() {
   const { profile } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const planTier = profile?.plan_tier || 'free';
-  const creditsUsed = profile?.credits_used_today || 0;
   const isFreeUser = planTier === 'free';
+  const currency = getCurrencyForLanguage(i18n.resolvedLanguage || i18n.language);
+  const creditsUsed = profile?.credits_used_today || 0;
   // Referral bonus only applies to free users
   const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
   const dailyLimit = getPlanLimit(planTier, 'daily_emails') + referralBonus;
@@ -214,6 +217,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Promo Banner for Free BRL users */}
+      {isFreeUser && currency === 'BRL' && <PromoBanner />}
+
       <div>
         <h1 className="text-3xl font-bold text-foreground">
           {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.user') })} 👋
@@ -222,8 +228,6 @@ export default function Dashboard() {
           {t('dashboard.subtitle', { plan: t(`plans.tiers.${planTier}.label`) })}
         </p>
       </div>
-
-      
 
       {/* Credits Card */}
       <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
