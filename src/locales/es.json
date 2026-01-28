@@ -429,6 +429,8 @@
       "tone_professional": "Formal y profesional",
       "tone_friendly": "Amigable y cálido",
       "tone_hint": "Recomendamos el tono directo para empleos H-2A/H-2B.",
+      "lines_per_paragraph_label": "Líneas por párrafo",
+      "lines_per_paragraph_hint": "Cuántas frases debe tener cada párrafo.",
       "generate_button": "Generar con IA"
     },
     "editor": {

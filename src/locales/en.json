@@ -429,6 +429,8 @@
       "tone_professional": "Formal and professional",
       "tone_friendly": "Warm and friendly",
       "tone_hint": "We recommend the direct tone for H-2A/H-2B jobs.",
+      "lines_per_paragraph_label": "Lines per paragraph",
+      "lines_per_paragraph_hint": "How many sentences each paragraph should have.",
       "generate_button": "Generate with AI"
     },
     "editor": {

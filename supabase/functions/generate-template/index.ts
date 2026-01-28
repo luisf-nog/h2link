@@ -43,6 +43,7 @@ function extractFirstJsonObject(text: string): string {
 const requestSchema = z.object({
   length: z.enum(["short", "medium", "long"]).optional().default("medium"),
   tone: z.enum(["professional", "friendly", "direct"]).optional().default("direct"),
+  lines_per_paragraph: z.number().min(1).max(5).optional(),
 }).optional();
 
 serve(async (req) => {
@@ -68,9 +69,10 @@ serve(async (req) => {
     // Parse request body for options
     const rawBody = await req.json().catch(() => ({}));
     const optionsParsed = requestSchema.safeParse(rawBody);
-    const options = optionsParsed.success ? optionsParsed.data : { length: "medium", tone: "direct" };
+    const options = optionsParsed.success ? optionsParsed.data : { length: "medium", tone: "direct", lines_per_paragraph: undefined };
     const length = options?.length ?? "medium";
     const tone = options?.tone ?? "direct";
+    const linesPerParagraph = options?.lines_per_paragraph;
 
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -123,9 +125,15 @@ serve(async (req) => {
       direct: "Use a humble, direct, no-nonsense tone focused on hard work.",
     }[tone];
 
+    // Lines per paragraph instruction
+    const linesGuide = linesPerParagraph
+      ? `Each paragraph should have exactly ${linesPerParagraph} sentence${linesPerParagraph > 1 ? "s" : ""}.`
+      : "";
+
     const systemPrompt =
       "Return ONLY valid JSON with keys {subject, body}. " +
       "Write in English. " + toneGuide + " " + lengthGuide + " " +
+      (linesGuide ? linesGuide + " " : "") +
       "Context: user is applying to H-2A/H-2B seasonal visa jobs in the USA.";
 
     const userPrompt =
