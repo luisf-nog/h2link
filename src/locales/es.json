@@ -677,8 +677,12 @@
       "antispam_armored_tooltip": "Capa avanzada de protección con múltiples técnicas de ofuscación para máxima entregabilidad.",
       "dns_bounce_check": "Verificación DNS",
       "dns_bounce_check_tooltip": "Valida el MX del dominio antes de enviar. Evita bounces y protege tu reputación de remitente.",
-      "human_delay": "Delay humano inteligente",
-      "human_delay_tooltip": "Intervalos aleatorios entre envíos que imitan comportamiento humano real, evitando detección como automatización.",
+      "delay_gold": "Delay fijo de 15s",
+      "delay_gold_tooltip": "Intervalo fijo de 15 segundos entre cada envío para proteger tu reputación.",
+      "delay_diamond": "Delay aleatorio 15-45s",
+      "delay_diamond_tooltip": "Intervalo aleatorio entre 15 y 45 segundos entre envíos, variando naturalmente para mayor seguridad.",
+      "delay_black": "Delay humano 1-5 min",
+      "delay_black_tooltip": "Intervalo aleatorio entre 1 y 5 minutos entre envíos, simulando comportamiento humano real para máxima protección contra detección.",
       "priority_support": "Soporte prioritario"
     },
     "toasts": {
