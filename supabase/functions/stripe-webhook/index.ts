@@ -13,14 +13,17 @@ const supabase = createClient(
 
 // Map price IDs to plan tiers
 const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
-  // Gold BRL/USD
+  // Gold BRL (original + promo) / USD
   "price_1StBwnKliiuLyRPmIdD8CAlD": "gold",
+  "price_1Such7KliiuLyRPmmyi7fpoD": "gold", // Promo BRL
   "price_1StBwzKliiuLyRPmPz81osBR": "gold",
-  // Diamond BRL/USD
+  // Diamond BRL (original + promo) / USD
   "price_1StBx9KliiuLyRPmUwn0P7Z5": "diamond",
+  "price_1Suci8KliiuLyRPmHhtSI3WW": "diamond", // Promo BRL
   "price_1StBxMKliiuLyRPmFVjreBN0": "diamond",
-  // Black BRL/USD
+  // Black BRL (original + promo) / USD
   "price_1StC0SKliiuLyRPmACQreqJa": "black",
+  "price_1Sucj5KliiuLyRPmnedz5Pod": "black", // Promo BRL
   "price_1StC0nKliiuLyRPmWnUYg9QN": "black",
 };
 
