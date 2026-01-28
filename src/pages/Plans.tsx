@@ -108,7 +108,7 @@ export default function Plans() {
       key: string;
       icon: React.ElementType;
       highlight?: boolean;
-      hasTooltip?: boolean;
+      tooltipKey?: string;
     };
     
     const features: FeatureItem[] = [];
@@ -131,7 +131,12 @@ export default function Plans() {
     // Sending method - only for paid plans
     if (planId !== 'free') {
       if (usesDynamicAI(planId)) {
-        features.push({ key: t('plans.features.ai_real_writer') as string, icon: Cpu, highlight: true });
+        features.push({ 
+          key: t('plans.features.ai_real_writer') as string, 
+          icon: Cpu, 
+          highlight: true,
+          tooltipKey: 'plans.features.ai_real_writer_tooltip'
+        });
       } else {
         features.push({ key: t('plans.features.auto_fill_templates') as string, icon: FileText });
       }
@@ -152,7 +157,7 @@ export default function Plans() {
         key: t('plans.features.resume_view_tracking') as string, 
         icon: Eye,
         highlight: true,
-        hasTooltip: true
+        tooltipKey: 'plans.features.resume_view_tracking_tooltip'
       });
     }
 
@@ -164,20 +169,38 @@ export default function Plans() {
     // Anti-spam protection
     if (config.features.mask_user_agent) {
       if (planId === 'black') {
-        features.push({ key: t('plans.features.antispam_armored') as string, icon: Shield, highlight: true });
+        features.push({ 
+          key: t('plans.features.antispam_armored') as string, 
+          icon: Shield, 
+          highlight: true,
+          tooltipKey: 'plans.features.antispam_armored_tooltip'
+        });
       } else {
-        features.push({ key: t('plans.features.mask_user_agent') as string, icon: Shield });
+        features.push({ 
+          key: t('plans.features.mask_user_agent') as string, 
+          icon: Shield,
+          tooltipKey: 'plans.features.mask_user_agent_tooltip'
+        });
       }
     }
 
     // DNS check
     if (config.features.dns_bounce_check) {
-      features.push({ key: t('plans.features.dns_bounce_check') as string, icon: Shield });
+      features.push({ 
+        key: t('plans.features.dns_bounce_check') as string, 
+        icon: Shield,
+        tooltipKey: 'plans.features.dns_bounce_check_tooltip'
+      });
     }
 
     // Human delay - only for black
     if (config.settings.delay_strategy === 'human') {
-      features.push({ key: t('plans.features.human_delay') as string, icon: Clock });
+      features.push({ 
+        key: t('plans.features.human_delay') as string, 
+        icon: Clock,
+        highlight: true,
+        tooltipKey: 'plans.features.human_delay_tooltip'
+      });
     }
 
     // Priority support - only for black
@@ -301,11 +324,12 @@ export default function Plans() {
                 <ul className="space-y-2.5">
                 {features.map((feature, index) => {
                     const Icon = feature.icon;
+                    const hasTooltip = !!feature.tooltipKey;
                     const content = (
                       <li key={index} className={cn(
                         "flex items-start gap-2.5 text-sm",
                         feature.highlight && 'font-medium',
-                        feature.hasTooltip && 'cursor-help'
+                        hasTooltip && 'cursor-help'
                       )}>
                         <Icon
                           className={cn(
@@ -317,21 +341,21 @@ export default function Plans() {
                         />
                         <span className={cn(
                           feature.highlight && getPlanColorClass(plan.id, 'text'),
-                          feature.hasTooltip && 'underline decoration-dotted underline-offset-2'
+                          hasTooltip && 'underline decoration-dotted underline-offset-2'
                         )}>
                           {feature.key}
                         </span>
                       </li>
                     );
                     
-                    if (feature.hasTooltip) {
+                    if (hasTooltip) {
                       return (
                         <Tooltip key={index}>
                           <TooltipTrigger asChild>
                             {content}
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs text-center">
-                            <p>{t('plans.features.resume_view_tracking_tooltip')}</p>
+                            <p>{t(feature.tooltipKey!)}</p>
                           </TooltipContent>
                         </Tooltip>
                       );
