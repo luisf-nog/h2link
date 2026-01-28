@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { isMobileNumber, getWhatsAppUrl, isLandline } from "@/lib/phone";
+import { isMobileNumber, getWhatsAppUrl } from "@/lib/phone";
 import { Bus, Calendar, Home, Mail, MapPin, Phone, Plus, Trash2, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -187,7 +187,7 @@ export function JobDetailsDialog({
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{job.phone}</span>
                       
-                      {/* WhatsApp icon for mobile numbers */}
+                      {/* WhatsApp icon - only for countries where WhatsApp is common */}
                       {isMobileNumber(job.phone) && getWhatsAppUrl(job.phone) && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -208,20 +208,6 @@ export function JobDetailsDialog({
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>{t("job_details.contact.whatsapp")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      
-                      {/* Landline indicator */}
-                      {isLandline(job.phone) && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {t("job_details.contact.landline")}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t("job_details.contact.landline_tooltip")}</p>
                           </TooltipContent>
                         </Tooltip>
                       )}
