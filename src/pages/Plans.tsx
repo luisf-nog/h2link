@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { PromotionCountdown } from '@/components/plans/PromotionCountdown';
 
 export default function Plans() {
   const { profile, refreshProfile } = useAuth();
@@ -204,6 +205,9 @@ export default function Plans() {
 
   return (
     <div className="space-y-8">
+      {/* Countdown Timer - only for BRL users */}
+      {currency === 'BRL' && <PromotionCountdown />}
+
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold font-brand text-foreground">{t('plans.title')}</h1>
         <p className="text-muted-foreground mt-2">

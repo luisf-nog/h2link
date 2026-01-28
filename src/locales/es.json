@@ -628,6 +628,14 @@
     "subtitle": "Desbloquea todo el potencial de H2Link y acelera tus solicitudes",
     "recommended": "Recomendado",
     "promo_badge": "Lanzamiento",
+    "promo": {
+      "title": "🔥 Promoción de Lanzamiento - ¡Tiempo Limitado!",
+      "subtitle": "¡Obtén tu plan con descuento especial antes de que termine!",
+      "days": "días",
+      "hours": "horas",
+      "minutes": "min",
+      "seconds": "seg"
+    },
     "free": "Gratis",
     "lifetime": "(de por vida)",
     "tiers": {
