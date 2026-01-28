@@ -13,6 +13,8 @@ const supabase = createClient(
 
 // Map price IDs to plan tiers (Production)
 const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
+  // TEST (R$1,00) - upgrades to gold for testing
+  "price_1Suek1KliiuLyRPmSG0MMBGH": "gold",
   // Gold BRL / USD
   "price_1SueZyKliiuLyRPmL9R7Sdxm": "gold",
   "price_1Suea8KliiuLyRPmQjhJrZdA": "gold",

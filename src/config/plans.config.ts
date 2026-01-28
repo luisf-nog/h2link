@@ -38,6 +38,9 @@ export interface PlanConfig {
   };
 }
 
+// Test price ID for R$1.00 payment flow validation
+export const TEST_PRICE_ID = "price_1Suek1KliiuLyRPmSG0MMBGH";
+
 export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
   free: {
     id: "free",
