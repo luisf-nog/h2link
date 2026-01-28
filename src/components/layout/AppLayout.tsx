@@ -84,7 +84,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <div className="min-w-0">
                 <div className="text-xl md:text-2xl leading-none truncate font-brand tracking-[-0.03em]">
                   <span className="font-bold brand-title-mark">H2</span>
-                  <span className="font-medium tracking-[-0.02em]"> Link</span>
+                  <span className="font-medium tracking-[-0.02em]"> Linker</span>
                 </div>
               </div>
             </div>

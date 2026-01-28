@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "H2Link"
+    "name": "H2 Linker"
   },
   "onboarding": {
     "step": "Paso {{current}} de {{total}}",
     "welcome": {
-      "title": "¡Bienvenido a H2Link!",
+      "title": "¡Bienvenido a H2 Linker!",
       "description": "Configuremos tu cuenta para empezar a enviar solicitudes de forma segura.",
       "step1_title": "Conecta tu email",
       "step1_desc": "Configura SMTP con tu cuenta de Gmail u Outlook.",
@@ -22,7 +22,7 @@
       "why_app_password_desc": "Por seguridad, Google y Microsoft no permiten que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails y puedes revocarla cuando quieras.",
       "gmail_guide_title": "Cómo crear en Gmail",
       "gmail_step1": "Activa la verificación en dos pasos (2FA) en tu cuenta Google",
-      "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2Link\"",
+      "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2 Linker\"",
       "gmail_step3": "Copia la contraseña de 16 caracteres generada",
       "gmail_link": "Abrir Contraseñas de App de Google →",
       "outlook_guide_title": "Cómo crear en Outlook",
@@ -189,7 +189,7 @@
       "password_mismatch": "Las contraseñas no coinciden.",
       "accept_required": "Debes aceptar los términos para crear una cuenta."
     },
-    "disclaimer": "Aviso: H2Link te ayuda a enviar solicitudes con eficiencia, pero no garantiza ninguna oferta de empleo ni aprobación de visa.",
+    "disclaimer": "Aviso: H2 Linker te ayuda a enviar solicitudes con eficiencia, pero no garantiza ninguna oferta de empleo ni aprobación de visa.",
     "accept_terms": "Acepto los términos y entiendo que el sistema no garantiza ninguna oferta de empleo.",
     "marketing": {
       "q1": "¿Cuántas horas dedicas a buscar empleos que encajan con tu perfil?",
@@ -228,7 +228,7 @@
       "session_timeout": "Tu confirmación fue recibida, pero la sesión tardó demasiado en iniciar. Vuelve e inicia sesión nuevamente.",
       "brand_tagline": "Confirmación segura",
       "brand_title": "Acceso habilitado",
-      "brand_desc": "Estás a un paso de volver a H2Link — estamos sincronizando tu sesión."
+      "brand_desc": "Estás a un paso de volver a H2 Linker — estamos sincronizando tu sesión."
     }
   },
   "dashboard": {
@@ -355,7 +355,7 @@
       "security_body": "Google y Microsoft requieren una contraseña de aplicación: un código especial para permitir envíos sin revelar tu contraseña principal.",
       "gmail_title": "Gmail (Google)",
       "gmail_warning": "Atención: para que aparezca esta opción, debes tener activada la verificación en dos pasos (2FA).",
-      "gmail_steps": "Abre tu cuenta de Google (myaccount.google.com) y ve a Seguridad.\nVerifica que la verificación en dos pasos esté ACTIVADA (actívala si es necesario).\nUsa la búsqueda y escribe: Contraseñas de aplicaciones.\nAbre Contraseñas de aplicaciones (Google puede pedir tu contraseña nuevamente).\nEn Seleccionar app, elige Otra (Nombre personalizado).\nEscribe: H2Link.\nHaz clic en Generar y copia la contraseña de 16 caracteres.",
+      "gmail_steps": "Abre tu cuenta de Google (myaccount.google.com) y ve a Seguridad.\nVerifica que la verificación en dos pasos esté ACTIVADA (actívala si es necesario).\nUsa la búsqueda y escribe: Contraseñas de aplicaciones.\nAbre Contraseñas de aplicaciones (Google puede pedir tu contraseña nuevamente).\nEn Seleccionar app, elige Otra (Nombre personalizado).\nEscribe: H2 Linker.\nHaz clic en Generar y copia la contraseña de 16 caracteres.",
       "gmail_tip": "Consejo: puedes pegarla sin espacios.",
       "outlook_title": "Outlook / Hotmail (Microsoft)",
       "outlook_steps": "Abre tu cuenta Microsoft (account.microsoft.com) y ve a Seguridad.\nEntra en Opciones de seguridad avanzadas.\nActiva la verificación en dos pasos (2FA) si está desactivada.\nBusca Contraseñas de aplicaciones.\nHaz clic en Crear una nueva contraseña de aplicación.\nCopia la contraseña generada y pégala en el sistema.",
@@ -630,7 +630,7 @@
   },
   "plans": {
     "title": "Elige tu plan",
-    "subtitle": "Desbloquea todo el potencial de H2Link y acelera tus solicitudes",
+    "subtitle": "Desbloquea todo el potencial de H2 Linker y acelera tus solicitudes",
     "recommended": "Recomendado",
     "promo_badge": "Lanzamiento",
     "promo": {

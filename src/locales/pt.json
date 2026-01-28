@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "H2Link"
+    "name": "H2 Linker"
   },
   "onboarding": {
     "step": "Passo {{current}} de {{total}}",
     "welcome": {
-      "title": "Bem-vindo ao H2Link!",
+      "title": "Bem-vindo ao H2 Linker!",
       "description": "Vamos configurar sua conta para começar a enviar candidaturas com segurança.",
       "step1_title": "Conecte seu email",
       "step1_desc": "Configure SMTP com sua conta Gmail ou Outlook.",
@@ -22,7 +22,7 @@
       "why_app_password_desc": "Por segurança, Google e Microsoft não permitem que apps externos usem sua senha principal. Você precisa criar uma \"Senha de App\" especial — ela funciona apenas para enviar emails e pode ser revogada a qualquer momento.",
       "gmail_guide_title": "Como criar no Gmail",
       "gmail_step1": "Ative a verificação em duas etapas (2FA) na sua conta Google",
-      "gmail_step2": "Acesse Senhas de App e crie uma com o nome \"H2Link\"",
+      "gmail_step2": "Acesse Senhas de App e crie uma com o nome \"H2 Linker\"",
       "gmail_step3": "Copie a senha de 16 caracteres gerada",
       "gmail_link": "Abrir Senhas de App do Google →",
       "outlook_guide_title": "Como criar no Outlook",
@@ -189,7 +189,7 @@
       "password_mismatch": "As senhas não conferem.",
       "accept_required": "Você precisa aceitar os termos para criar a conta."
     },
-    "disclaimer": "Aviso: o H2Link ajuda a enviar aplicações com eficiência, mas não garante nenhuma vaga ou aprovação de visto.",
+    "disclaimer": "Aviso: o H2 Linker ajuda a enviar aplicações com eficiência, mas não garante nenhuma vaga ou aprovação de visto.",
     "accept_terms": "Li e concordo com os termos e entendo que o sistema não garante nenhuma vaga.",
     "marketing": {
       "q1": "Quantas horas você gasta procurando por vagas no seu perfil?",
@@ -228,7 +228,7 @@
       "session_timeout": "Sua confirmação foi recebida, mas a sessão demorou para iniciar. Volte e tente entrar novamente.",
       "brand_tagline": "Confirmação segura",
       "brand_title": "Acesso liberado",
-      "brand_desc": "Você está a um passo de voltar ao H2Link — estamos sincronizando sua sessão."
+      "brand_desc": "Você está a um passo de voltar ao H2 Linker — estamos sincronizando sua sessão."
     }
   },
   "dashboard": {
@@ -355,7 +355,7 @@
       "security_body": "Google e Microsoft exigem uma Senha de Aplicativo: um código usado para permitir envios sem revelar sua senha principal.",
       "gmail_title": "Gmail (Google)",
       "gmail_warning": "Atenção: para a opção aparecer, você precisa estar com a Verificação em duas etapas (2FA) ativada.",
-      "gmail_steps": "Acesse sua conta Google (myaccount.google.com) e clique em Segurança.\nVerifique se a Verificação em duas etapas está ATIVADA (ative se necessário).\nUse a busca e digite: Senhas de app.\nAbra Senhas de app (o Google pode pedir sua senha novamente).\nEm Selecionar app, escolha Outro (Nome personalizado).\nDigite o nome: H2Link.\nClique em Gerar e copie a senha de 16 caracteres.",
+      "gmail_steps": "Acesse sua conta Google (myaccount.google.com) e clique em Segurança.\nVerifique se a Verificação em duas etapas está ATIVADA (ative se necessário).\nUse a busca e digite: Senhas de app.\nAbra Senhas de app (o Google pode pedir sua senha novamente).\nEm Selecionar app, escolha Outro (Nome personalizado).\nDigite o nome: H2 Linker.\nClique em Gerar e copie a senha de 16 caracteres.",
       "gmail_tip": "Dica: você pode colar a senha toda junta, sem espaços.",
       "outlook_title": "Outlook / Hotmail (Microsoft)",
       "outlook_steps": "Acesse sua conta Microsoft (account.microsoft.com) e vá em Segurança.\nAbra Opções de segurança avançadas.\nAtive a Verificação em duas etapas (2FA), se estiver desligada.\nProcure por Senhas de aplicativos.\nClique em Criar uma nova senha de aplicativo.\nCopie a senha gerada e cole no sistema.",
@@ -629,7 +629,7 @@
   },
   "plans": {
     "title": "Escolha seu Plano",
-    "subtitle": "Desbloqueie todo o potencial do H2Link e acelere suas aplicações",
+    "subtitle": "Desbloqueie todo o potencial do H2 Linker e acelere suas aplicações",
     "recommended": "Recomendado",
     "promo_badge": "Lançamento",
     "promo": {
