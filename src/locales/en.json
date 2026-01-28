@@ -3,7 +3,9 @@
     "name": "H2 Linker"
   },
   "footer": {
-    "tagline": "Smart connections. Real opportunities."
+    "tagline": "Smart connections. Real opportunities.",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy"
   },
   "onboarding": {
     "step": "Step {{current}} of {{total}}",

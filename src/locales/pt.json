@@ -3,7 +3,9 @@
     "name": "H2 Linker"
   },
   "footer": {
-    "tagline": "Conexões inteligentes. Oportunidades reais."
+    "tagline": "Conexões inteligentes. Oportunidades reais.",
+    "terms": "Termos de Uso",
+    "privacy": "Política de Privacidade"
   },
   "onboarding": {
     "step": "Passo {{current}} de {{total}}",

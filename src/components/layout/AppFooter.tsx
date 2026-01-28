@@ -8,21 +8,41 @@ export function AppFooter() {
 
   return (
     <footer className="border-t border-border bg-card/50 backdrop-blur-sm py-4 px-4 md:px-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <span>© {currentYear}</span>
-          <span className="font-brand font-semibold text-foreground">H2 Linker</span>
-          <span className="hidden sm:inline">—</span>
-          <span className="hidden sm:inline">{t('footer.tagline', 'Smart connections. Real opportunities.')}</span>
+      <div className="flex flex-col gap-4">
+        {/* Main row */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <span>© {currentYear}</span>
+            <span className="font-brand font-semibold text-foreground">H2 Linker</span>
+            <span className="hidden sm:inline">—</span>
+            <span className="hidden sm:inline">{t('footer.tagline', 'Smart connections. Real opportunities.')}</span>
+          </div>
+
+          <a
+            href={`mailto:${HELP_EMAIL}`}
+            className="flex items-center gap-2 hover:text-foreground transition-colors"
+          >
+            <Mail className="h-4 w-4" />
+            <span>{t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}</span>
+          </a>
         </div>
 
-        <a
-          href={`mailto:${HELP_EMAIL}`}
-          className="flex items-center gap-2 hover:text-foreground transition-colors"
-        >
-          <Mail className="h-4 w-4" />
-          <span>{t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}</span>
-        </a>
+        {/* Legal links */}
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <a
+            href="/terms"
+            className="hover:text-foreground transition-colors hover:underline"
+          >
+            {t('footer.terms', 'Termos de Uso')}
+          </a>
+          <span className="text-border">|</span>
+          <a
+            href="/privacy"
+            className="hover:text-foreground transition-colors hover:underline"
+          >
+            {t('footer.privacy', 'Política de Privacidade')}
+          </a>
+        </div>
       </div>
     </footer>
   );
