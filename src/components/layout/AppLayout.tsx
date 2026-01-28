@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
+import { AppFooter } from './AppFooter';
 import { HelpButton } from './HelpButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,6 +109,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex-1 p-4 md:p-6 overflow-auto">
             {children}
           </div>
+          <AppFooter />
         </main>
         <HelpButton />
       </div>
