@@ -671,6 +671,7 @@
       "updated_title": "Plan updated!",
       "updated_desc": "You are now {{plan}}! 🎉"
     },
+    "referral_note": "💡 The referral program is exclusive to Free plan users. Accumulated bonuses do not carry over when upgrading to a premium plan.",
     "footer": {
       "line1": "One-time payment. Lifetime access.",
       "line2": "Payments securely processed via Stripe."

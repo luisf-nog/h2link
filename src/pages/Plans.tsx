@@ -328,8 +328,17 @@ export default function Plans() {
         })}
       </div>
 
+      {/* Referral bonus note */}
+      <div className="max-w-2xl mx-auto">
+        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            {t('plans.referral_note')}
+          </p>
+        </div>
+      </div>
+
       {/* Footer */}
-      <div className="max-w-2xl mx-auto text-center pt-8">
+      <div className="max-w-2xl mx-auto text-center pt-4">
         <p className="text-sm text-muted-foreground">
           {t('plans.footer.line1')}
           {t('plans.footer.line2') ? (

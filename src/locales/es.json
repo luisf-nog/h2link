@@ -671,6 +671,7 @@
       "updated_title": "¡Plan actualizado!",
       "updated_desc": "Ahora eres {{plan}}! 🎉"
     },
+    "referral_note": "💡 El programa de referidos es exclusivo para usuarios del plan gratuito. Los bonos acumulados no se transfieren al adquirir un plan premium.",
     "footer": {
       "line1": "Pago único. Acceso de por vida.",
       "line2": "Pagos procesados de forma segura vía Stripe."
