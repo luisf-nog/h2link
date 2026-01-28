@@ -72,9 +72,9 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     price: {
       brl: 47.99,
       brl_original: 64.99,
-      usd: 12.99,
-      stripe_id_brl: "price_1Such7KliiuLyRPmmyi7fpoD",
-      stripe_id_usd: "price_1StBwzKliiuLyRPmPz81osBR",
+      usd: 19.99,
+      stripe_id_brl: "price_1SueZyKliiuLyRPmL9R7Sdxm",
+      stripe_id_usd: "price_1Suea8KliiuLyRPmQjhJrZdA",
     },
     limits: { daily_emails: 150, max_queue_size: 500, max_templates: 3 },
     features: {
@@ -103,9 +103,9 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     price: {
       brl: 69.99,
       brl_original: 114.99,
-      usd: 22.99,
-      stripe_id_brl: "price_1Suci8KliiuLyRPmHhtSI3WW",
-      stripe_id_usd: "price_1StBxMKliiuLyRPmFVjreBN0",
+      usd: 34.99,
+      stripe_id_brl: "price_1Suea9KliiuLyRPmrRCXm6TP",
+      stripe_id_usd: "price_1SueaAKliiuLyRPmo48RI0R9",
     },
     limits: { daily_emails: 350, max_queue_size: 9999, max_templates: 10 },
     features: {
@@ -134,9 +134,9 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     price: {
       brl: 97.99,
       brl_original: 299.0,
-      usd: 59.0,
-      stripe_id_brl: "price_1Sucj5KliiuLyRPmnedz5Pod",
-      stripe_id_usd: "price_1StC0nKliiuLyRPmWnUYg9QN",
+      usd: 89.99,
+      stripe_id_brl: "price_1SueaCKliiuLyRPmevGCARiq",
+      stripe_id_usd: "price_1SueaDKliiuLyRPmjqiMMWAs",
     },
     limits: { daily_emails: 450, max_queue_size: 9999, max_templates: 999 },
     features: {

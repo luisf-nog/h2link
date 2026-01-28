@@ -11,20 +11,17 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
-// Map price IDs to plan tiers
+// Map price IDs to plan tiers (Production)
 const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
-  // Gold BRL (original + promo) / USD
-  "price_1StBwnKliiuLyRPmIdD8CAlD": "gold",
-  "price_1Such7KliiuLyRPmmyi7fpoD": "gold", // Promo BRL
-  "price_1StBwzKliiuLyRPmPz81osBR": "gold",
-  // Diamond BRL (original + promo) / USD
-  "price_1StBx9KliiuLyRPmUwn0P7Z5": "diamond",
-  "price_1Suci8KliiuLyRPmHhtSI3WW": "diamond", // Promo BRL
-  "price_1StBxMKliiuLyRPmFVjreBN0": "diamond",
-  // Black BRL (original + promo) / USD
-  "price_1StC0SKliiuLyRPmACQreqJa": "black",
-  "price_1Sucj5KliiuLyRPmnedz5Pod": "black", // Promo BRL
-  "price_1StC0nKliiuLyRPmWnUYg9QN": "black",
+  // Gold BRL / USD
+  "price_1SueZyKliiuLyRPmL9R7Sdxm": "gold",
+  "price_1Suea8KliiuLyRPmQjhJrZdA": "gold",
+  // Diamond BRL / USD
+  "price_1Suea9KliiuLyRPmrRCXm6TP": "diamond",
+  "price_1SueaAKliiuLyRPmo48RI0R9": "diamond",
+  // Black BRL / USD
+  "price_1SueaCKliiuLyRPmevGCARiq": "black",
+  "price_1SueaDKliiuLyRPmjqiMMWAs": "black",
 };
 
 serve(async (req) => {
