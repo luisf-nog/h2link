@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, CheckCircle2, Loader2, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { BrandLogo } from '@/components/brand/BrandLogo';
+import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { z } from 'zod';
 import { PhoneE164Input } from '@/components/inputs/PhoneE164Input';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
 import { getBaseUrl } from '@/config/app.config';
-import authWordmark from '@/assets/h2link-logo-wordmark.png';
+
 import { supabase } from '@/integrations/supabase/client';
 import {
   AlertDialog,
@@ -499,7 +499,7 @@ export default function Auth() {
               <Card className="border border-border bg-card/95 shadow-2xl backdrop-blur">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-4">
-                    <BrandLogo src={authWordmark} height={44} className="max-w-[220px]" />
+                    <BrandWordmark height={44} className="max-w-[220px]" />
 
                     {confirmFlow.state === 'processing' ? (
                       <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
@@ -590,7 +590,7 @@ export default function Auth() {
         <section className="flex items-center justify-center bg-auth-left px-6 py-16 text-auth-left-foreground md:px-14">
           <div className="w-full max-w-md">
             <div className="mb-10">
-              <BrandLogo src={authWordmark} height={76} className="max-w-[320px]" />
+              <BrandWordmark height={76} className="max-w-[320px]" />
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v === 'signup' ? 'signup' : 'signin')} className="w-full">
