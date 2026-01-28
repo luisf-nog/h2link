@@ -17,7 +17,7 @@ export function HelpButton() {
       aria-label={t('common.help', 'Ajuda')}
     >
       <Mail className="h-5 w-5 shrink-0" />
-      <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-[200px] group-hover:opacity-100 group-hover:ml-2 transition-all duration-300 ease-out text-sm">
+      <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-[280px] group-hover:opacity-100 group-hover:ml-2 transition-all duration-300 ease-out text-sm">
         {t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}
       </span>
     </Button>
