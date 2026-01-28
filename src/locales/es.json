@@ -893,6 +893,11 @@
       "housing_required_h2a": "Obligatoria (detalles no informados).",
       "not_provided": "No informado."
     },
+    "contact": {
+      "whatsapp": "Abrir WhatsApp",
+      "landline": "Fijo",
+      "landline_tooltip": "Este es un número fijo (no WhatsApp)"
+    },
     "actions": {
       "add_to_queue": "Agregar a la cola",
       "remove_from_queue": "Eliminar de la cola"

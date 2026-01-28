@@ -893,6 +893,11 @@
       "housing_required_h2a": "Required (details not provided).",
       "not_provided": "Not provided."
     },
+    "contact": {
+      "whatsapp": "Open WhatsApp",
+      "landline": "Landline",
+      "landline_tooltip": "This is a landline number (not WhatsApp)"
+    },
     "actions": {
       "add_to_queue": "Add to Queue",
       "remove_from_queue": "Remove from Queue"
