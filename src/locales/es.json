@@ -111,7 +111,8 @@
     },
     "errors": {
       "email_rate_limit_title": "Demasiados emails de confirmación",
-      "email_rate_limit_desc": "Espera unos minutos y vuelve a intentarlo. Limitamos temporalmente nuevos emails de confirmación para proteger la entregabilidad."
+      "email_rate_limit_desc": "Espera unos minutos y vuelve a intentarlo. Limitamos temporalmente nuevos emails de confirmación para proteger la entregabilidad.",
+      "weak_password_desc": "Esta contraseña es muy común y fácil de adivinar. Por favor, elige una más segura."
     },
     "recovery": {
       "link": "¿Olvidaste tu contraseña?",
