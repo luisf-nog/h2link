@@ -628,6 +628,14 @@
     "subtitle": "Unlock H2Link and accelerate your applications",
     "recommended": "Recommended",
     "promo_badge": "Launch",
+    "promo": {
+      "title": "🔥 Launch Promotion - Limited Time!",
+      "subtitle": "Get your plan with a special discount before it ends!",
+      "days": "days",
+      "hours": "hours",
+      "minutes": "min",
+      "seconds": "sec"
+    },
     "free": "Free",
     "lifetime": "(lifetime)",
     "tiers": {
