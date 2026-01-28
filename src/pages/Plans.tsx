@@ -1,11 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { PLANS_CONFIG, PlanTier, usesDynamicAI } from '@/config/plans.config';
+import { PLANS_CONFIG, PlanTier, usesDynamicAI, TEST_PRICE_ID } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Crown, Sparkles, Zap, Shield, Cpu, Mail, FileText, Cloud, Clock, Headphones, Eye } from 'lucide-react';
+import { Check, Crown, Sparkles, Zap, Shield, Cpu, Mail, FileText, Cloud, Clock, Headphones, Eye, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -23,6 +23,7 @@ export default function Plans() {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
+  const [loadingTest, setLoadingTest] = useState(false);
   const currentPlan = (profile?.plan_tier || 'free') as PlanTier;
 
   const locale = i18n.resolvedLanguage || i18n.language;
@@ -97,6 +98,32 @@ export default function Plans() {
       });
     } finally {
       setLoadingPlan(null);
+    }
+  };
+
+  // Test checkout handler for R$1 test plan
+  const handleTestCheckout = async () => {
+    setLoadingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { priceId: TEST_PRICE_ID },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Test checkout error:', error);
+      toast({
+        title: 'Erro no teste',
+        description: error instanceof Error ? error.message : 'Failed to create test checkout',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingTest(false);
     }
   };
 
@@ -243,6 +270,30 @@ export default function Plans() {
 
   return (
     <div className="space-y-8">
+      {/* TEST BUTTON - TEMPORARY */}
+      <div className="max-w-md mx-auto">
+        <Card className="border-dashed border-2 border-yellow-500 bg-yellow-500/5">
+          <CardContent className="p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5 text-yellow-500" />
+              <div>
+                <p className="font-medium text-sm">Teste de Pagamento</p>
+                <p className="text-xs text-muted-foreground">R$ 1,00 → Upgrade para Gold</p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-yellow-500 text-yellow-600 hover:bg-yellow-500/10"
+              onClick={handleTestCheckout}
+              disabled={loadingTest}
+            >
+              {loadingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Testar R$1'}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Countdown Timer - only for BRL users */}
       {currency === 'BRL' && <PromotionCountdown />}
 
