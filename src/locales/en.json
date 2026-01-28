@@ -668,6 +668,7 @@
       "resume_basic": "Basic resume extraction",
       "resume_advanced": "Advanced resume extraction (AI)",
       "resume_view_tracking": "Resume view tracking",
+      "resume_view_tracking_tooltip": "Know when recruiters view your public profile with resume. Track real interest from each company.",
       "cloud_sending": "Cloud sending",
       "mask_user_agent": "Anti-spam protection",
       "antispam_armored": "Armored anti-spam protection",
