@@ -13,7 +13,7 @@ export function WarmupStatusWidget() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const planTier = profile?.plan_tier || "free";
-  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  // Widget only shows for paid tiers, no referral bonus applies
 
   const {
     riskProfile,

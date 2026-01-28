@@ -94,7 +94,9 @@ export default function Queue() {
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
 
   const planTier = profile?.plan_tier || 'free';
-  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  const isFreeUser = planTier === 'free';
+  // Referral bonus only applies to free users
+  const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
   const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);

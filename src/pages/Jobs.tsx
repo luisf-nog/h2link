@@ -64,10 +64,12 @@ export default function Jobs() {
 
   // Derive daily limit data for banner
   const planTierCheck = profile?.plan_tier || 'free';
-  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  const isFreeUser = planTierCheck === 'free';
+  // Referral bonus only applies to free users
+  const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
   const dailyLimitTotal = (PLANS_CONFIG[planTierCheck]?.limits?.daily_emails ?? 0) + referralBonus;
   const creditsUsedToday = profile?.credits_used_today || 0;
-  const isFreeLimitReached = planTierCheck === 'free' && creditsUsedToday >= dailyLimitTotal;
+  const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
 
   const [visaType, setVisaType] = useState<'all' | 'H-2B' | 'H-2A'>(() => {
     const v = searchParams.get('visa');

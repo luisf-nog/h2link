@@ -37,11 +37,14 @@ export function AppSidebar() {
 
   const needsSmtpSetup = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
 
+  const isFreeUser = profile?.plan_tier === 'free' || !profile?.plan_tier;
+
   const menuItems = [
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard },
     { title: t('nav.jobs'), url: '/jobs', icon: Search },
     { title: t('nav.queue'), url: '/queue', icon: ListTodo },
-    { title: t('nav.referrals'), url: '/referrals', icon: Users },
+    // Referrals only visible for free users
+    ...(isFreeUser ? [{ title: t('nav.referrals'), url: '/referrals', icon: Users }] : []),
     { title: t('nav.plans'), url: '/plans', icon: Diamond },
     { title: t('nav.settings'), url: '/settings', icon: Settings, needsAttention: needsSmtpSetup },
   ];

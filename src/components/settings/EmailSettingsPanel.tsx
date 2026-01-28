@@ -296,7 +296,7 @@ export function EmailSettingsPanel() {
 
   const planTier = profile?.plan_tier || "free";
   const planMax = getPlanLimit(planTier, "daily_emails");
-  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  // No referral bonus for paid tiers (this panel is for paid users only)
 
   // Show onboarding if SMTP is configured but no risk profile set (and not free tier)
   const needsWarmupOnboarding = hasPassword && !riskProfile && planTier !== "free";

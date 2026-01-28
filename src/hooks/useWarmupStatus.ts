@@ -39,7 +39,7 @@ export function useWarmupStatus(): WarmupStatus {
   } | null>(null);
 
   const planTier = profile?.plan_tier || "free";
-  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  // Warmup is only for paid tiers, no referral bonus applies
   const planMax = getPlanLimit(planTier, "daily_emails");
 
   const fetchStatus = async () => {
@@ -84,8 +84,8 @@ export function useWarmupStatus(): WarmupStatus {
     currentDailyLimit = 20; // Default conservative start
   }
 
-  // Cap at plan max + referral bonus
-  const effectiveLimit = Math.min(currentDailyLimit, planMax) + referralBonus;
+  // Cap at plan max (no referral bonus for paid tiers)
+  const effectiveLimit = Math.min(currentDailyLimit, planMax);
   
   const emailsSentToday = smtpData?.emails_sent_today ?? 0;
   const isMaxSpeed = currentDailyLimit >= planMax;
