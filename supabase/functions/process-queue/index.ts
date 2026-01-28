@@ -451,9 +451,10 @@ function pickSendProfile(planTier: PlanTier): { xMailer?: string; userAgent?: st
 }
 
 function getDelayMs(planTier: PlanTier): number {
-  if (planTier === "gold") return 15_000;
-  if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15s..45s
-  return 0;
+  if (planTier === "gold") return 15_000; // 15s fixo
+  if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s
+  if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 minutos
+  return 0; // free: sem delay
 }
 
 function hashToIndex(s: string, mod: number): number {
