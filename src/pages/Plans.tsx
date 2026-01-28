@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Crown, Sparkles, Zap, Shield, Cpu, Mail, FileText, Cloud, Clock, Headphones } from 'lucide-react';
+import { Check, Crown, Sparkles, Zap, Shield, Cpu, Mail, FileText, Cloud, Clock, Headphones, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -15,6 +15,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { PromotionCountdown } from '@/components/plans/PromotionCountdown';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function Plans() {
   const { profile, refreshProfile } = useAuth();
@@ -107,6 +108,7 @@ export default function Plans() {
       key: string;
       icon: React.ElementType;
       highlight?: boolean;
+      hasTooltip?: boolean;
     };
     
     const features: FeatureItem[] = [];
@@ -144,12 +146,13 @@ export default function Plans() {
       }
     }
 
-    // Resume view tracking - highlight for diamond
+    // Resume view tracking - highlight for diamond and black
     if (config.features.resume_view_tracking) {
       features.push({ 
         key: t('plans.features.resume_view_tracking') as string, 
-        icon: FileText,
-        highlight: planId === 'diamond'
+        icon: Eye,
+        highlight: true,
+        hasTooltip: true
       });
     }
 
@@ -296,12 +299,13 @@ export default function Plans() {
 
               <CardContent className="flex-1 pt-4 space-y-4">
                 <ul className="space-y-2.5">
-                  {features.map((feature, index) => {
+                {features.map((feature, index) => {
                     const Icon = feature.icon;
-                    return (
+                    const content = (
                       <li key={index} className={cn(
                         "flex items-start gap-2.5 text-sm",
-                        feature.highlight && 'font-medium'
+                        feature.highlight && 'font-medium',
+                        feature.hasTooltip && 'cursor-help'
                       )}>
                         <Icon
                           className={cn(
@@ -312,12 +316,28 @@ export default function Plans() {
                           )}
                         />
                         <span className={cn(
-                          feature.highlight && getPlanColorClass(plan.id, 'text')
+                          feature.highlight && getPlanColorClass(plan.id, 'text'),
+                          feature.hasTooltip && 'underline decoration-dotted underline-offset-2'
                         )}>
                           {feature.key}
                         </span>
                       </li>
                     );
+                    
+                    if (feature.hasTooltip) {
+                      return (
+                        <Tooltip key={index}>
+                          <TooltipTrigger asChild>
+                            {content}
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-center">
+                            <p>{t('plans.features.resume_view_tracking_tooltip')}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+                    
+                    return content;
                   })}
                 </ul>
               </CardContent>

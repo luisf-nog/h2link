@@ -667,6 +667,7 @@
       "resume_basic": "Extração de currículo básica",
       "resume_advanced": "Extração de currículo avançada (IA)",
       "resume_view_tracking": "Rastreamento de visualização do currículo",
+      "resume_view_tracking_tooltip": "Saiba quando recrutadores visualizam seu perfil público com currículo. Acompanhe o interesse real de cada empresa.",
       "cloud_sending": "Envio pela nuvem",
       "mask_user_agent": "Proteção anti-spam",
       "antispam_armored": "Proteção anti-spam Blindada",
