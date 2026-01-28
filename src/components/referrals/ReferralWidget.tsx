@@ -32,6 +32,7 @@ export function ReferralWidget() {
   const [copied, setCopied] = useState(false);
 
   const referralCode = String((profile as any)?.referral_code ?? "");
+  const referralLink = referralCode ? `https://h2linker.com/?ref=${referralCode}` : "";
   const activeCount = Number((profile as any)?.active_referrals_count ?? 0);
   const bonus = Number((profile as any)?.referral_bonus_limit ?? 0);
   const progress = Math.min(100, Math.max(0, (activeCount / 10) * 100));
@@ -85,19 +86,19 @@ export function ReferralWidget() {
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-sm text-muted-foreground">{t("referrals.bonus_label")}</p>
             <p className="mt-1 text-2xl font-bold text-foreground">+{bonus}</p>
-            <p className="mt-3 text-sm text-muted-foreground">{t("referrals.your_code")}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{t("referrals.your_link")}</p>
             <div className="mt-2 flex items-center gap-2">
-              <code className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm font-semibold text-foreground">
-                {referralCode || "—"}
+              <code className="flex-1 truncate rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground">
+                {referralLink || "—"}
               </code>
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                disabled={!referralCode}
+                disabled={!referralLink}
                 onClick={async () => {
                   try {
-                    await navigator.clipboard.writeText(referralCode);
+                    await navigator.clipboard.writeText(referralLink);
                     setCopied(true);
                     window.setTimeout(() => setCopied(false), 1200);
                   } catch {
