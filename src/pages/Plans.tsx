@@ -47,9 +47,15 @@ export default function Plans() {
   const renderPlanPrice = (planId: PlanTier) => {
     const plan = PLANS_CONFIG[planId];
     const amount = getPlanAmountForCurrency(plan, currency);
+    const originalBrl = plan.price.brl_original;
+    const hasPromo = currency === 'BRL' && originalBrl && originalBrl > amount;
 
-    if (amount === 0) return t('plans.free');
-    return formatCurrency(amount, currency, locale);
+    if (amount === 0) return { current: t('plans.free'), original: null };
+    
+    return {
+      current: formatCurrency(amount, currency, locale),
+      original: hasPromo ? formatCurrency(originalBrl, currency, locale) : null
+    };
   };
 
   const handleCheckout = async (planId: PlanTier) => {
@@ -251,17 +257,34 @@ export default function Plans() {
                 </CardDescription>
 
                 <div className="pt-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className={cn(
-                      "text-4xl font-bold",
-                      isBlack ? 'text-foreground' : 'text-foreground'
-                    )}>
-                      {renderPlanPrice(plan.id)}
-                    </span>
-                    {plan.id !== 'free' && (
-                      <span className="text-sm text-muted-foreground">{t('plans.lifetime')}</span>
-                    )}
-                  </div>
+                  {(() => {
+                    const priceInfo = renderPlanPrice(plan.id);
+                    return (
+                      <div className="flex flex-col">
+                        {priceInfo.original && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg text-muted-foreground line-through">
+                              {priceInfo.original}
+                            </span>
+                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                              {t('plans.promo_badge')}
+                            </Badge>
+                          </div>
+                        )}
+                        <div className="flex items-baseline gap-1">
+                          <span className={cn(
+                            "text-4xl font-bold text-foreground",
+                            priceInfo.original && 'text-primary'
+                          )}>
+                            {priceInfo.current}
+                          </span>
+                          {plan.id !== 'free' && (
+                            <span className="text-sm text-muted-foreground">{t('plans.lifetime')}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardHeader>
 

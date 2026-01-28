@@ -9,6 +9,7 @@ export interface PlanConfig {
   description: string;
   price: {
     brl: number;
+    brl_original?: number; // Original price for promotional display
     usd: number;
     stripe_id_brl: string | null;
     stripe_id_usd: string | null;
@@ -69,7 +70,8 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: "amber",
     description: "Para quem busca volume",
     price: {
-      brl: 64.99,
+      brl: 47.99,
+      brl_original: 64.99,
       usd: 12.99,
       stripe_id_brl: "price_1StBwnKliiuLyRPmIdD8CAlD",
       stripe_id_usd: "price_1StBwzKliiuLyRPmPz81osBR",
@@ -99,7 +101,8 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: "violet",
     description: "Volume e visibilidade",
     price: {
-      brl: 114.99,
+      brl: 69.99,
+      brl_original: 114.99,
       usd: 22.99,
       stripe_id_brl: "price_1StBx9KliiuLyRPmUwn0P7Z5",
       stripe_id_usd: "price_1StBxMKliiuLyRPmFVjreBN0",
@@ -129,7 +132,8 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     color: "zinc",
     description: "IA dinâmica por vaga",
     price: {
-      brl: 299.0,
+      brl: 97.99,
+      brl_original: 299.0,
       usd: 59.0,
       stripe_id_brl: "price_1StC0SKliiuLyRPmACQreqJa",
       stripe_id_usd: "price_1StC0nKliiuLyRPmWnUYg9QN",
