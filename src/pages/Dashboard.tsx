@@ -16,7 +16,9 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const planTier = profile?.plan_tier || 'free';
   const creditsUsed = profile?.credits_used_today || 0;
-  const referralBonus = Number((profile as any)?.referral_bonus_limit ?? 0);
+  const isFreeUser = planTier === 'free';
+  // Referral bonus only applies to free users
+  const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
   const dailyLimit = getPlanLimit(planTier, 'daily_emails') + referralBonus;
   const creditsRemaining = dailyLimit - creditsUsed;
   const usagePercent = dailyLimit > 0 ? (creditsUsed / dailyLimit) * 100 : 0;

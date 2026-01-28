@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Users, Gift, Link2, CheckCircle2 } from "lucide-react";
@@ -28,10 +29,20 @@ function maskEmail(email: string) {
 export default function Referrals() {
   const { profile } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [links, setLinks] = useState<ReferralLinkRow[]>([]);
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Redirect paid users away from referrals page
+  const isFreeUser = profile?.plan_tier === 'free' || !profile?.plan_tier;
+  
+  useEffect(() => {
+    if (profile && !isFreeUser) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [profile, isFreeUser, navigate]);
 
   const referralCode = String((profile as any)?.referral_code ?? "");
   const activeCount = Number((profile as any)?.active_referrals_count ?? 0);
