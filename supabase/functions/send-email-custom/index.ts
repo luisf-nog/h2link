@@ -534,9 +534,8 @@ const handler = async (req: Request): Promise<Response> => {
           const projectId = projectMatch?.[1];
           
           // Construct profile URL with queue tracking parameter
-          // This assumes the frontend is deployed at a known domain
-          // For production, this should be configured via environment variable
-          const profileUrl = `https://h2link.lovable.app/v/${publicToken}?q=${body.queueId}`;
+          // Production domain: h2linker.com
+          const profileUrl = `https://h2linker.com/v/${publicToken}?q=${body.queueId}`;
           
           // Inject subtle link at the end of the email
           htmlBody += `<p style="margin:16px 0 0 0;font-size:12px;color:#666;">` +

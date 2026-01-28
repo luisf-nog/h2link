@@ -14,7 +14,7 @@ type BrandLogoProps = {
 export function BrandLogo({
   height = 40,
   className,
-  alt = "H2Link",
+  alt = "H2 Linker",
   src
 }: BrandLogoProps) {
   return <img src={src ?? h2linkLogo} alt={alt} loading="eager" decoding="async" style={{

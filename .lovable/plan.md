@@ -1,5 +1,5 @@
 
-# Checklist de Go-Live - H2Link
+# Checklist de Go-Live - H2 Linker
 
 Este checklist cobre todas as funcionalidades principais do sistema para garantir que está 100% funcional no lançamento.
 
