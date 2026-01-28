@@ -55,6 +55,68 @@ const defaultPreferences: AIPreferences = {
   custom_instructions: null,
 };
 
+// Sentence bank for building paragraphs with exact line counts
+const sentenceBank = {
+  opening: {
+    question: [
+      "Are you looking for a dedicated worker for the [Job Title] position?",
+      "I believe my skills and work ethic would be a great fit for [Company Name].",
+      "I am eager to contribute to your team and learn new skills.",
+      "I can start immediately and am available for any schedule.",
+      "My strong work ethic and reliability make me an excellent candidate.",
+    ],
+    direct_statement: [
+      "I am a hardworking professional ready to excel in the [Job Title] position.",
+      "I bring dedication, reliability, and a strong work ethic to every role.",
+      "I am confident I can contribute positively to [Company Name].",
+      "I am available to start immediately and work any schedule needed.",
+      "My punctuality and commitment are qualities I take pride in.",
+    ],
+    company_mention: [
+      "[Company Name]'s reputation has inspired me to apply for this position.",
+      "I would be honored to contribute to your continued success.",
+      "I believe my qualifications align well with your team's needs.",
+      "I am ready to bring my dedication to [Company Name].",
+      "I look forward to the opportunity to prove my worth.",
+    ],
+    varied: [
+      "I am excited to apply for the [Job Title] position at [Company Name].",
+      "I believe my skills and dedication make me a strong candidate.",
+      "I am ready to work hard and contribute to your team.",
+      "I can adapt quickly to new environments and challenges.",
+      "My availability and commitment are my greatest strengths.",
+    ],
+  },
+  availability: [
+    "I am fully available to work weekends, holidays, and overtime as needed.",
+    "I am ready to begin immediately upon your convenience.",
+    "I have no scheduling conflicts and can commit to any hours required.",
+    "I am flexible with my schedule and can adapt to your needs.",
+    "I am prepared to work extended hours whenever necessary.",
+  ],
+  strength: [
+    "I am physically fit and capable of handling demanding labor.",
+    "I am known for my punctuality, reliability, and strong work ethic.",
+    "I can handle heavy lifting and extended periods of physical work.",
+    "My stamina and endurance allow me to maintain productivity throughout long shifts.",
+    "I take pride in completing tasks efficiently and thoroughly.",
+  ],
+  languages: [
+    "I speak [your languages], allowing me to communicate effectively.",
+    "I can follow instructions accurately in multiple languages.",
+    "My language skills help me work well with diverse teams.",
+    "I am committed to clear communication in all my work.",
+    "I continuously work to improve my English skills.",
+  ],
+  closing: [
+    "I would love the opportunity to discuss this position further.",
+    "Please feel free to contact me anytime.",
+    "Thank you for considering my application.",
+    "I look forward to hearing from you soon.",
+    "I am eager to demonstrate my qualifications in an interview.",
+  ],
+};
+
 // Generate sample preview based on preferences - uses placeholders, never invents qualifications
 function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, userName?: string): { subject: string; body: string } {
   const greetings: Record<GreetingStyle, string> = {
@@ -75,108 +137,70 @@ function generatePreviewEmail(prefs: AIPreferences, t: (key: string) => string, 
   const closing = closings[prefs.closing_style];
   const name = userName || "[Your Name]";
 
-  // Build paragraphs based on preferences - NEVER invent qualifications
-  const paragraphs: string[] = [];
+  const linesTarget = prefs.lines_per_paragraph || 3;
+  const targetParagraphs = parseInt(prefs.email_length, 10) || 4;
 
-  // Opening paragraph based on opening_style
-  const openingParagraphs: Record<OpeningStyle, Record<FormalityLevel, string>> = {
-    question: {
-      casual: `Are you looking for a dedicated worker for the [Job Title] position at [Company Name]? I'd love to be part of your team!`,
-      professional: `Are you seeking a reliable candidate for the [Job Title] role at [Company Name]? I am confident I can be a great addition to your team.`,
-      formal: `Would you consider a committed professional for the [Job Title] position at [Company Name]? I respectfully submit my candidacy for your consideration.`,
-    },
-    direct_statement: {
-      casual: `I'm the reliable worker you need for the [Job Title] position at [Company Name]. I'm ready to start immediately!`,
-      professional: `I am a hardworking professional ready to excel in the [Job Title] position at [Company Name]. I bring dedication and reliability to every role.`,
-      formal: `I present myself as a qualified candidate for the [Job Title] position at [Company Name]. My work ethic and commitment are exceptional.`,
-    },
-    company_mention: {
-      casual: `I've been following [Company Name] and really admire what you do. I'd love to join as a [Job Title]!`,
-      professional: `[Company Name]'s reputation in the industry has inspired me to apply for the [Job Title] position. I would be honored to contribute to your continued success.`,
-      formal: `Having researched [Company Name]'s distinguished operations, I am compelled to express my interest in the [Job Title] position within your esteemed organization.`,
-    },
-    varied: {
-      casual: `I'm reaching out about the [Job Title] position at [Company Name]. I'm [your age] years old, and I'm very interested in joining your team.`,
-      professional: `I am excited to apply for the [Job Title] position at [Company Name]. I believe my skills and dedication make me a strong candidate.`,
-      formal: `I am writing to express my sincere interest in the [Job Title] position at [Company Name]. I would be honored to contribute to your esteemed organization.`,
-    },
+  // Helper to build a paragraph with exact number of sentences
+  const buildParagraph = (sentences: string[]): string => {
+    return sentences.slice(0, linesTarget).join(" ");
   };
 
-  paragraphs.push(openingParagraphs[prefs.opening_style][prefs.formality_level]);
+  // Build paragraphs based on preferences
+  const paragraphs: string[] = [];
+
+  // Opening paragraph
+  const openingSentences = sentenceBank.opening[prefs.opening_style] || sentenceBank.opening.varied;
+  paragraphs.push(buildParagraph(openingSentences));
 
   // Availability paragraph
-  if (prefs.emphasize_availability) {
-    if (prefs.formality_level === "casual") {
-      paragraphs.push(`I'm fully available for any schedule you need — weekends, holidays, overtime, you name it. I can start right away whenever you're ready.`);
-    } else {
-      paragraphs.push(`I am fully available to work weekends, holidays, and overtime as needed. I am ready to begin immediately upon your convenience.`);
-    }
+  if (prefs.emphasize_availability && paragraphs.length < targetParagraphs) {
+    paragraphs.push(buildParagraph(sentenceBank.availability));
   }
 
-  // Physical strength paragraph - generic statement, no invented numbers
-  if (prefs.emphasize_physical_strength) {
-    paragraphs.push(`I am physically fit and capable of handling demanding labor. I am known for my punctuality, reliability, and strong work ethic.`);
+  // Physical strength paragraph
+  if (prefs.emphasize_physical_strength && paragraphs.length < targetParagraphs) {
+    paragraphs.push(buildParagraph(sentenceBank.strength));
   }
 
-  // Languages paragraph - placeholder for actual languages
-  if (prefs.emphasize_languages) {
-    paragraphs.push(`I speak [your languages], allowing me to communicate effectively with diverse teams and follow instructions accurately.`);
+  // Languages paragraph
+  if (prefs.emphasize_languages && paragraphs.length < targetParagraphs) {
+    paragraphs.push(buildParagraph(sentenceBank.languages));
   }
 
-  // Closing paragraph
-  if (prefs.formality_level === "formal") {
-    paragraphs.push(`I would greatly appreciate the opportunity to discuss how my qualifications align with your requirements. Please do not hesitate to contact me at your earliest convenience.`);
-  } else {
-    paragraphs.push(`I would love the opportunity to discuss this position further. Please feel free to contact me anytime.`);
+  // Add closing paragraph if we have room
+  if (paragraphs.length < targetParagraphs) {
+    paragraphs.push(buildParagraph(sentenceBank.closing));
   }
 
-  // Adjust length based on paragraph count
-  const targetParagraphs = parseInt(prefs.email_length, 10) || 4;
+  // Adjust to exact paragraph count
   let finalParagraphs = [...paragraphs];
   
-  // Trim or extend to match target
+  // Add filler paragraphs if needed
+  const fillerSentences = [
+    "I am a dedicated and hardworking individual.",
+    "I am always eager to learn and adapt to new challenges.",
+    "I take pride in delivering quality work consistently.",
+    "I am committed to contributing positively to your team.",
+    "I believe in going above and beyond expectations.",
+  ];
+  
+  while (finalParagraphs.length < targetParagraphs) {
+    finalParagraphs.splice(finalParagraphs.length - 1, 0, buildParagraph(fillerSentences));
+  }
+
+  // Trim if too many
   if (finalParagraphs.length > targetParagraphs) {
-    // Keep closing paragraph at the end
     const closingParagraph = finalParagraphs.pop()!;
     finalParagraphs = finalParagraphs.slice(0, targetParagraphs - 1);
     finalParagraphs.push(closingParagraph);
-  } else if (finalParagraphs.length < targetParagraphs) {
-    // Add filler paragraphs - no invented qualifications
-    const fillers = [
-      `I am a dedicated and hardworking individual, always eager to learn and adapt to new challenges.`,
-      `I take pride in delivering quality work consistently and reliably.`,
-      `I am committed to contributing positively to your team and operations.`,
-    ];
-    const closingParagraph = finalParagraphs.pop()!;
-    let fillerIndex = 0;
-    while (finalParagraphs.length < targetParagraphs - 1 && fillerIndex < fillers.length) {
-      finalParagraphs.push(fillers[fillerIndex]);
-      fillerIndex++;
-    }
-    finalParagraphs.push(closingParagraph);
   }
-
-  // Adjust lines per paragraph by splitting/combining sentences
-  const linesTarget = prefs.lines_per_paragraph || 3;
-  const adjustedParagraphs = finalParagraphs.map((p) => {
-    const sentences = p.match(/[^.!?]+[.!?]+/g) || [p];
-    if (linesTarget === 1) {
-      // Return just the first sentence
-      return sentences[0]?.trim() || p;
-    } else if (linesTarget >= sentences.length) {
-      return p;
-    } else {
-      // Return only the target number of sentences
-      return sentences.slice(0, linesTarget).join(" ").trim();
-    }
-  });
 
   // Format body based on paragraph style
   let body: string;
   if (prefs.paragraph_style === "single") {
-    body = `${greeting}\n\n${adjustedParagraphs.join(" ")}\n\n${closing}\n${name}`;
+    body = `${greeting}\n\n${finalParagraphs.join(" ")}\n\n${closing}\n${name}`;
   } else {
-    body = `${greeting}\n\n${adjustedParagraphs.join("\n\n")}\n\n${closing}\n${name}`;
+    body = `${greeting}\n\n${finalParagraphs.join("\n\n")}\n\n${closing}\n${name}`;
   }
 
   return {
