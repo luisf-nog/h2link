@@ -892,6 +892,11 @@
       "housing_required_h2a": "Obrigatória (detalhes não informados).",
       "not_provided": "Não informado."
     },
+    "contact": {
+      "whatsapp": "Abrir WhatsApp",
+      "landline": "Fixo",
+      "landline_tooltip": "Este é um número fixo (não WhatsApp)"
+    },
     "actions": {
       "add_to_queue": "Adicionar à Fila",
       "remove_from_queue": "Remover da Fila"
