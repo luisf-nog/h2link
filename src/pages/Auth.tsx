@@ -16,6 +16,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
+import { getBaseUrl } from '@/config/app.config';
 import authWordmark from '@/assets/h2link-logo-wordmark.png';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -284,7 +285,7 @@ export default function Auth() {
       return;
     }
 
-     const redirectTo = `${window.location.origin}/reset-password?type=recovery`;
+     const redirectTo = `${getBaseUrl()}/reset-password?type=recovery`;
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo });
 
     if (error) {

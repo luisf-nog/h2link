@@ -2,8 +2,7 @@ import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from 'react-i18next';
-
-const HELP_EMAIL = 'help@h2linker.com';
+import { HELP_EMAIL } from '@/config/app.config';
 
 export function HelpButton() {
   const { t } = useTranslation();
