@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getBaseUrl } from "@/config/app.config";
 import { Copy, Users, Gift, Link2, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +52,7 @@ export default function Referrals() {
 
   const referralLink = useMemo(() => {
     if (!referralCode) return "";
-    return `${window.location.origin}/auth?ref=${referralCode}`;
+    return `${getBaseUrl()}/auth?ref=${referralCode}`;
   }, [referralCode]);
 
   useEffect(() => {
