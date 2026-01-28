@@ -82,6 +82,7 @@
     "user": "User",
     "expand": "Expand",
     "collapse": "Collapse",
+    "helpExpanded": "Questions or suggestions? Get in touch",
     "errors": {
       "no_session": "No authenticated session.",
       "invalid_data": "Invalid data.",
