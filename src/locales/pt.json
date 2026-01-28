@@ -670,6 +670,7 @@
       "updated_title": "Plano atualizado!",
       "updated_desc": "Você agora é {{plan}}! 🎉"
     },
+    "referral_note": "💡 O programa de indicações é exclusivo para usuários do plano gratuito. Bônus acumulados não são transferidos ao adquirir um plano premium.",
     "footer": {
       "line1": "Pagamento único. Acesso vitalício.",
       "line2": "Pagamentos processados com segurança via Stripe."
