@@ -82,6 +82,7 @@
     "user": "Usuário",
     "expand": "Expandir",
     "collapse": "Recolher",
+    "helpExpanded": "Dúvidas ou sugestões? Entre em contato",
     "errors": {
       "no_session": "Sem sessão autenticada.",
       "invalid_data": "Dados inválidos.",
