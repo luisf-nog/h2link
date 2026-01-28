@@ -25,7 +25,7 @@ export function BrandWordmark({
         className="font-brand font-bold tracking-tight text-foreground"
         style={{ fontSize }}
       >
-        H2 <span className="text-primary">Linker</span>
+        <span className="text-primary">H2</span> Linker
       </span>
     </div>
   );
