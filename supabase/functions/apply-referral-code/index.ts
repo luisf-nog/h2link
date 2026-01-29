@@ -37,9 +37,9 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    const userId = claimsData?.claims?.sub;
-    if (claimsError || !userId) return json(401, { ok: false, error: "Unauthorized" });
+    const { data: userData, error: userError } = await authClient.auth.getUser(token);
+    const userId = userData?.user?.id;
+    if (userError || !userId) return json(401, { ok: false, error: "Unauthorized" });
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return json(400, { ok: false, error: "Invalid request" });

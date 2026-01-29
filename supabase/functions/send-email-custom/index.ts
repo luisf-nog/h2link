@@ -408,11 +408,11 @@ const handler = async (req: Request): Promise<Response> => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: userError } = await authClient.auth.getUser(token);
+    if (userError || !userData?.user?.id) {
       return json(401, { success: false, error: "Unauthorized" });
     }
-    const userId = claimsData.claims.sub;
+    const userId = userData.user.id;
 
     const body: EmailRequest = await req.json();
     if (!body?.to || !body?.subject || !body?.body) {
@@ -675,8 +675,8 @@ const handler = async (req: Request): Promise<Response> => {
           );
           
           const token = authHeader.replace("Bearer ", "");
-          const { data: claimsData } = await authClient.auth.getClaims(token);
-          const userId = claimsData?.claims?.sub;
+          const { data: userData } = await authClient.auth.getUser(token);
+          const userId = userData?.user?.id;
           
           if (userId) {
             // Increment consecutive errors
