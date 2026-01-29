@@ -543,6 +543,15 @@ function buildDynamicPromptForQueue(prefs: AIPreferences): string {
 
   return `You are an AI assistant helping a Brazilian worker apply for H-2A/H-2B jobs in the USA.
 
+### ABSOLUTELY CRITICAL: NO MARKDOWN FORMATTING (ZERO TOLERANCE)
+This is a PLAIN TEXT email. Email clients do NOT render markdown.
+- NEVER use **text** or *text* - asterisks will appear literally in the email
+- NEVER use _text_ or __text__ - underscores will appear literally
+- NEVER use # headers, bullet points with -, or any markdown syntax
+- Write in plain, clean text only
+- If you want to emphasize something, use CAPITAL LETTERS or simply state it clearly
+- This is a STRICT RULE - any markdown in the output is a critical error
+
 ### UNIQUENESS: Vary vocabulary and structure each time.
 
 ### GREETING: ${greetingInstructions}
@@ -555,7 +564,7 @@ function buildDynamicPromptForQueue(prefs: AIPreferences): string {
 ### EMPHASIS:
 ${emphasisParts.join("\n")}
 
-### JOB REQUIREMENTS: Address them directly. Highlight matches with **bold**. If no match, emphasize willingness to learn.
+### JOB REQUIREMENTS: Address them directly. If candidate matches requirements, state it clearly in plain text. If no match, emphasize willingness to learn.
 
 ### ANTI-HALLUCINATION: Use ONLY resume_data. Never invent skills or experiences.
 
@@ -658,6 +667,15 @@ async function generateDiamondEmail(params: {
   
   // Normalize paragraph breaks
   body = body.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+  
+  // CRITICAL: Strip any markdown formatting the AI might have included
+  // This ensures no asterisks or other markdown syntax appears in the final email
+  body = body.replace(/\*\*([^*]+)\*\*/g, "$1"); // Remove **bold**
+  body = body.replace(/\*([^*]+)\*/g, "$1");     // Remove *italic*
+  body = body.replace(/__([^_]+)__/g, "$1");     // Remove __underline__
+  body = body.replace(/_([^_]+)_/g, "$1");       // Remove _italic_
+  body = body.replace(/^#+\s*/gm, "");           // Remove # headers
+  body = body.replace(/^\s*[-*]\s+/gm, "");      // Remove bullet points
   
   if (!subject || !body) throw new Error("AI output missing subject or body");
   return { subject, body };
@@ -995,26 +1013,30 @@ async function processOneUser(params: {
           `</div>`;
       }
 
-      // Fetch resume PDF attachment if available
-      let attachment: { name: string; content: Uint8Array; mimeType: string } | undefined;
-      if (p.resume_url) {
-        try {
-          const resumeResp = await withTimeout(fetch(p.resume_url), 15000, "fetch resume");
-          if (resumeResp.ok) {
-            const arrayBuffer = await withTimeout(resumeResp.arrayBuffer(), 20000, "read resume");
-            // Extract filename from URL or use default
-            const urlParts = p.resume_url.split("/");
-            const fileName = urlParts[urlParts.length - 1]?.split("?")[0] || "resume.pdf";
-            attachment = {
-              name: fileName,
-              content: new Uint8Array(arrayBuffer),
-              mimeType: "application/pdf",
-            };
-          }
-        } catch (_e) {
-          // Non-fatal: continue without attachment
-          console.warn(`[RESUME-ATTACH] Failed to fetch resume for user ${userId}: ${_e}`);
+      // Resume attachment removed - we now only include the Smart Profile link
+      // which provides better tracking and a richer experience for recruiters
+      // The link is injected below with the open tracking pixel
+
+      // Inject Smart Profile link for resume viewing
+      try {
+        const { data: profileData } = await serviceClient
+          .from("profiles")
+          .select("public_token")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        const publicToken = (profileData as any)?.public_token;
+        if (publicToken) {
+          // Construct profile URL with queue tracking parameter
+          const profileUrl = `https://h2linker.com/v/${publicToken}?q=${row.id}`;
+          
+          // Inject subtle link at the end of the email
+          htmlBody += `<p style="margin:16px 0 0 0;font-size:12px;color:#666;">` +
+            `<a href="${profileUrl}" style="color:#0066cc;text-decoration:none;">📄 View Candidate Informations</a>` +
+            `</p>`;
         }
+      } catch {
+        // ignore - don't break email sending if profile link fails
       }
 
       const rawMessage = createMimeMessage({
@@ -1023,7 +1045,7 @@ async function processOneUser(params: {
         subject: finalSubject,
         htmlBody,
         extraHeaders,
-        attachment,
+        // No attachment - resume is accessed via Smart Profile link
       });
 
       if (smtpConfig.useStartTls) {
