@@ -86,25 +86,44 @@ export default function PublicProfile() {
     window.open(`https://wa.me/${phone}`, "_blank");
   };
 
-  // Handle PDF download - force download instead of opening in new tab
+  // Handle PDF download - force download with CORS handling
   const handleDownload = async () => {
     if (!profile?.resume_url) return;
     
     try {
-      const response = await fetch(profile.resume_url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Try to fetch and download as blob
+      const response = await fetch(profile.resume_url, { mode: 'cors' });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        // Clean filename
+        const safeName = (profile.full_name || 'resume').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+        link.download = `${safeName}.pdf`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      } else {
+        throw new Error('Fetch failed');
+      }
+    } catch (error) {
+      console.error('Download failed, trying direct link:', error);
+      // Fallback: create a direct link with download attribute
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `${profile.full_name || 'resume'}.pdf`;
+      link.href = profile.resume_url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      const safeName = (profile.full_name || 'resume').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+      link.download = `${safeName}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
-      // Fallback to opening in new tab
-      window.open(profile.resume_url, "_blank");
     }
   };
 
@@ -150,19 +169,28 @@ export default function PublicProfile() {
       </header>
 
       {/* PDF Viewer Area */}
-      <main className="flex-1 flex flex-col p-4 pb-24">
+      <main className="flex-1 flex flex-col p-4 pb-48">
         <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
           {hasResume ? (
-            <div className="flex-1 min-h-[70vh] bg-background rounded-lg border shadow-sm overflow-hidden">
+            <div className="flex-1 bg-background rounded-lg border shadow-sm overflow-hidden" style={{ minHeight: 'calc(100vh - 200px)' }}>
               {!pdfError ? (
-                <iframe
-                  src={`${profile.resume_url}#toolbar=0&navpanes=0`}
-                  className="w-full h-full min-h-[70vh]"
-                  title="Resume PDF"
-                  onError={() => setPdfError(true)}
-                />
+                <object
+                  data={`${profile.resume_url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
+                  type="application/pdf"
+                  className="w-full h-full"
+                  style={{ minHeight: 'calc(100vh - 200px)' }}
+                >
+                  {/* Fallback for browsers that don't support object tag */}
+                  <iframe
+                    src={`${profile.resume_url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
+                    className="w-full h-full"
+                    style={{ minHeight: 'calc(100vh - 200px)' }}
+                    title="Resume PDF"
+                    onError={() => setPdfError(true)}
+                  />
+                </object>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[70vh] p-6 text-center">
+                <div className="flex flex-col items-center justify-center h-full p-6 text-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
                   <FileText className="w-16 h-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Preview Unavailable</h3>
                   <p className="text-sm text-muted-foreground mb-4">
@@ -174,7 +202,7 @@ export default function PublicProfile() {
               )}
             </div>
           ) : (
-            <div className="flex-1 min-h-[70vh] bg-background rounded-lg border shadow-sm flex flex-col items-center justify-center p-6 text-center">
+            <div className="flex-1 bg-background rounded-lg border shadow-sm flex flex-col items-center justify-center p-6 text-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
               <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No Resume Available</h3>
               <p className="text-sm text-muted-foreground">

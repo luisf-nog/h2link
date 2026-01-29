@@ -539,7 +539,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           // Inject subtle link at the end of the email
           htmlBody += `<p style="margin:16px 0 0 0;font-size:12px;color:#666;">` +
-            `<a href="${profileUrl}" style="color:#0066cc;text-decoration:none;">📄 View my full resume online</a>` +
+            `<a href="${profileUrl}" style="color:#0066cc;text-decoration:none;">📄 View Candidate Informations</a>` +
             `</p>`;
         }
       }
@@ -581,25 +581,8 @@ const handler = async (req: Request): Promise<Response> => {
     if (body.xMailer) extraHeaders.push(`X-Mailer: ${String(body.xMailer).slice(0, 128)}`);
     if (body.userAgent) extraHeaders.push(`User-Agent: ${String(body.userAgent).slice(0, 128)}`);
 
-    let attachment:
-      | { name: string; content: Uint8Array; mimeType: string }
-      | undefined;
-
-    if (body.resumeUrl && body.resumeName) {
-      try {
-        const resp = await withTimeout(fetch(body.resumeUrl), 15000, "fetch attachment");
-        if (resp.ok) {
-          const arrayBuffer = await withTimeout(resp.arrayBuffer(), 20000, "read attachment");
-          attachment = {
-            name: body.resumeName,
-            content: new Uint8Array(arrayBuffer),
-            mimeType: "application/pdf",
-          };
-        }
-      } catch (_e) {
-        // ignore attachment errors (non-fatal)
-      }
-    }
+    // Resume attachment removed - now we only include the Smart Profile link
+    // which provides better tracking and a richer experience for recruiters
 
     const rawMessage = createMimeMessage({
       from: smtpEmail!,
@@ -607,7 +590,6 @@ const handler = async (req: Request): Promise<Response> => {
       subject: body.subject,
       htmlBody,
       extraHeaders,
-      attachment,
     });
 
     if (smtpConfig.useStartTls) {
