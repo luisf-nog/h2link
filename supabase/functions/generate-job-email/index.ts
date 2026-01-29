@@ -203,12 +203,14 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
 
 ### ABSOLUTELY CRITICAL: NO MARKDOWN FORMATTING (ZERO TOLERANCE)
 You are generating a PLAIN TEXT EMAIL. Email clients do NOT render markdown.
-- NEVER use **text** or *text* - this will appear literally as asterisks in the email
-- NEVER use _text_ or __text__ - underscores will appear literally
+- NEVER use **text** or *text* - asterisks will appear LITERALLY as ** in the recipient's inbox
+- NEVER use _text_ or __text__ - underscores will appear LITERALLY in the email
 - NEVER use # headers, bullet points with -, or any markdown syntax
-- Write in plain, clean text only
-- If you want to emphasize something, use CAPITAL LETTERS or simply state it clearly
-- This is a STRICT RULE - any markdown in the output is a critical error
+- Write in plain, clean text ONLY - no formatting whatsoever
+- If you want to emphasize something, use CAPITAL LETTERS or simply state it more clearly
+- VIOLATION OF THIS RULE IS A CRITICAL ERROR - the email will look unprofessional with literal asterisks
+- Example of WRONG: "I have **6 years** of experience" 
+- Example of CORRECT: "I have 6 years of experience" or "I have SIX YEARS of experience"
 
 ### CRITICAL: UNIQUENESS & ANTI-REPETITION RULES
 Each email MUST be completely unique. NEVER repeat structures or phrases between emails:
@@ -477,6 +479,15 @@ serve(async (req) => {
     
     // Normalize paragraphs
     body = normalizeParagraphs(body);
+    
+    // CRITICAL: Strip any markdown formatting the AI might have included
+    // This ensures no asterisks or other markdown syntax appears in the final email
+    body = body.replace(/\*\*([^*]+)\*\*/g, "$1"); // Remove **bold**
+    body = body.replace(/\*([^*]+)\*/g, "$1");     // Remove *italic*
+    body = body.replace(/__([^_]+)__/g, "$1");     // Remove __underline__
+    body = body.replace(/_([^_]+)_/g, "$1");       // Remove _italic_
+    body = body.replace(/^#+\s*/gm, "");           // Remove # headers
+    body = body.replace(/^\s*[-*]\s+/gm, "");      // Remove bullet points
     
     // Apply word limit BEFORE adding signature to prevent truncation
     const paragraphCount = parseInt(prefs.email_length, 10) || 4;
