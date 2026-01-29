@@ -1179,11 +1179,11 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: userError } = await authClient.auth.getUser(token);
+    if (userError || !userData?.user?.id) {
       return json(401, { ok: false, error: "Unauthorized" });
     }
-    const userId = claimsData.claims.sub;
+    const userId = userData.user.id;
 
     const { data: profile } = await serviceClient
       .from("profiles")
