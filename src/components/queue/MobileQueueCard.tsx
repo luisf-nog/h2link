@@ -119,7 +119,7 @@ export function MobileQueueCard({
             variant={item.status === "sent" ? "default" : "secondary"}
             className={cn("shrink-0 text-xs", getStatusBadgeClasses(item.status))}
           >
-            {item.status === "sent" && item.sent_at ? (
+            {item.status === "sent" && item.sent_at && item.send_count > 0 ? (
               <span className="flex items-center gap-1">
                 {item.send_count}x {format(
                   new Date(item.sent_at),
