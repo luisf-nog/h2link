@@ -596,6 +596,14 @@
       "description": "Alcanzaste tu límite de {{limit}} envíos por día. Actualiza tu plan para enviar más.",
       "actions": { "cancel": "Volver", "view_plans": "Ver planes premium" }
     },
+    "sending_status": {
+      "title": "Enviando...",
+      "description": "{{processing}} enviando ahora • {{pending}} esperando",
+      "delay_gold": "Intervalo: 15 segundos entre cada email",
+      "delay_diamond": "Intervalo: 15-45 segundos entre cada email",
+      "delay_black": "Intervalo: 1-5 minutos entre cada email (modo humano)",
+      "can_close": "Puedes cerrar esta página"
+    },
     "stats": {
       "in_queue": "En cola",
       "sent_today": "Enviadas hoy",

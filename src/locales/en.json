@@ -596,6 +596,14 @@
       "description": "You've reached your limit of {{limit}} emails per day. Upgrade to send more.",
       "actions": { "cancel": "Go back", "view_plans": "View premium plans" }
     },
+    "sending_status": {
+      "title": "Sending...",
+      "description": "{{processing}} sending now • {{pending}} waiting",
+      "delay_gold": "Interval: 15 seconds between each email",
+      "delay_diamond": "Interval: 15-45 seconds between each email",
+      "delay_black": "Interval: 1-5 minutes between each email (human mode)",
+      "can_close": "You can close this page"
+    },
     "stats": {
       "in_queue": "In Queue",
       "sent_today": "Sent Today",
