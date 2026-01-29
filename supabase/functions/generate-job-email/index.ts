@@ -201,6 +201,15 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
 
   return `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B seasonal visa jobs in the USA.
 
+### ABSOLUTELY CRITICAL: NO MARKDOWN FORMATTING (ZERO TOLERANCE)
+You are generating a PLAIN TEXT EMAIL. Email clients do NOT render markdown.
+- NEVER use **text** or *text* - this will appear literally as asterisks in the email
+- NEVER use _text_ or __text__ - underscores will appear literally
+- NEVER use # headers, bullet points with -, or any markdown syntax
+- Write in plain, clean text only
+- If you want to emphasize something, use CAPITAL LETTERS or simply state it clearly
+- This is a STRICT RULE - any markdown in the output is a critical error
+
 ### CRITICAL: UNIQUENESS & ANTI-REPETITION RULES
 Each email MUST be completely unique. NEVER repeat structures or phrases between emails:
 
@@ -250,7 +259,7 @@ ${emphasisParts.join("\n")}
 
 ### JOB REQUIREMENTS MATCHING
 Read the job requirements carefully. When the candidate has matching experience from resume_data:
-- Highlight it with **bold text**
+- State it clearly and specifically (do NOT use bold, asterisks, or any formatting)
 - Be specific: cite the actual experience from their resume
 
 If candidate lacks a specific requirement:
