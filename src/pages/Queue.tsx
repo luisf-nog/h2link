@@ -15,7 +15,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText } from 'lucide-react';
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, Flag } from 'lucide-react';
+import { ReportJobButton } from '@/components/queue/ReportJobButton';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
@@ -1110,6 +1111,11 @@ export default function Queue() {
 
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
+                            {/* Report button - only for public jobs */}
+                            {item.public_jobs?.id && (
+                              <ReportJobButton jobId={item.public_jobs.id} />
+                            )}
+
                             {item.send_count > 0 && (
                               <Button
                                 size="sm"

@@ -7,6 +7,23 @@
     "terms": "Terms of Use",
     "privacy": "Privacy Policy"
   },
+  "reports": {
+    "button": "Report issue",
+    "reasons": {
+      "invalid_email": "Invalid email",
+      "inactive_job": "Inactive job",
+      "wrong_info": "Wrong information",
+      "spam": "Spam/Scam",
+      "other": "Other issue"
+    },
+    "warning_tooltip": "⚠️ Caution: {{count}} user(s) reported: {{reasons}}",
+    "toasts": {
+      "success_title": "Thanks for the feedback!",
+      "success_desc": "Your report was sent and helps us maintain job quality.",
+      "already_reported_title": "Already reported",
+      "already_reported_desc": "You have already flagged an issue with this job."
+    }
+  },
   "onboarding": {
     "step": "Step {{current}} of {{total}}",
     "welcome": {

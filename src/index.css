@@ -48,6 +48,10 @@
     --success: 142 76% 36%;
     --success-foreground: 210 40% 98%;
 
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
     /* Plan colors */
     --plan-gold: 45 93% 47%;
     --plan-diamond: 263 70% 50%;
@@ -107,6 +111,10 @@
 
     --success: 142 76% 36%;
     --success-foreground: 210 40% 98%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
 
     --plan-gold: 45 93% 47%;
     --plan-diamond: 263 70% 60%;

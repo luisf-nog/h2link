@@ -188,6 +188,38 @@ export type Database = {
         }
         Relationships: []
       }
+      job_reports: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "public_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_jobs: {
         Row: {
           company: string
@@ -401,6 +433,7 @@ export type Database = {
           experience_months: number | null
           housing_info: string | null
           id: string
+          is_banned: boolean
           job_duties: string | null
           job_id: string
           job_min_special_req: string | null
@@ -435,6 +468,7 @@ export type Database = {
           experience_months?: number | null
           housing_info?: string | null
           id?: string
+          is_banned?: boolean
           job_duties?: string | null
           job_id: string
           job_min_special_req?: string | null
@@ -469,6 +503,7 @@ export type Database = {
           experience_months?: number | null
           housing_info?: string | null
           id?: string
+          is_banned?: boolean
           job_duties?: string | null
           job_id?: string
           job_min_special_req?: string | null
@@ -677,6 +712,22 @@ export type Database = {
           usage_date: string | null
         }
         Relationships: []
+      }
+      job_report_summary: {
+        Row: {
+          job_id: string | null
+          reasons: string[] | null
+          report_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "public_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

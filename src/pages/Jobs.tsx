@@ -31,7 +31,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2 } from 'lucide-react';
+import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2, AlertTriangle } from 'lucide-react';
+import { JobWarningBadge } from '@/components/jobs/JobWarningBadge';
+import type { ReportReason } from '@/components/queue/ReportJobButton';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
@@ -61,6 +63,7 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
+  const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
 
   // Derive daily limit data for banner
   const planTierCheck = profile?.plan_tier || 'free';
@@ -175,6 +178,7 @@ export default function Jobs() {
     let query = supabase
       .from('public_jobs')
       .select('*', { count: 'exact' })
+      .eq('is_banned', false) // Exclude banned jobs
       .order(sortKey, { ascending: sortDir === 'asc', nullsFirst: false })
       .range(from, to);
 
@@ -230,8 +234,33 @@ export default function Jobs() {
         } else {
           setQueuedJobIds(new Set((queueRows ?? []).map((r) => r.job_id)));
         }
+
+        // Fetch job reports for these jobs
+        const { data: reportRows, error: reportErr } = await supabase
+          .from('job_reports')
+          .select('job_id, reason')
+          .in('job_id', ids);
+
+        if (reportErr) {
+          console.warn('Error fetching job reports:', reportErr);
+          setJobReports({});
+        } else {
+          // Aggregate reports by job_id
+          const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
+          for (const row of reportRows ?? []) {
+            if (!reportsMap[row.job_id]) {
+              reportsMap[row.job_id] = { count: 0, reasons: [] };
+            }
+            reportsMap[row.job_id].count++;
+            if (!reportsMap[row.job_id].reasons.includes(row.reason as ReportReason)) {
+              reportsMap[row.job_id].reasons.push(row.reason as ReportReason);
+            }
+          }
+          setJobReports(reportsMap);
+        }
       } else {
         setQueuedJobIds(new Set());
+        setJobReports({});
       }
     }
 
@@ -718,6 +747,7 @@ export default function Jobs() {
                 onAddToQueue={() => addToQueue(job)}
                 onClick={() => handleRowClick(job)}
                 formatDate={formatDate}
+                reportData={jobReports[job.id]}
               />
             ))
           )}
@@ -840,7 +870,17 @@ export default function Jobs() {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => handleRowClick(job)}
                     >
-                      <TableCell className="font-medium">{job.job_title}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {jobReports[job.id] && (
+                            <JobWarningBadge
+                              reportCount={jobReports[job.id].count}
+                              reasons={jobReports[job.id].reasons}
+                            />
+                          )}
+                          {job.job_title}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span
                           className={cn(
