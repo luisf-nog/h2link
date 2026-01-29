@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Send, Loader2, RefreshCw, History, Mail, Building2, FileText } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Mail, Building2, FileText, Flag } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { format, type Locale } from "date-fns";
 import { ptBR, enUS, es } from "date-fns/locale";
 
@@ -175,6 +176,11 @@ export function MobileQueueCard({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
+            {/* Report button - only for public jobs */}
+            {item.public_jobs?.id && (
+              <ReportJobButton jobId={item.public_jobs.id} />
+            )}
+
             {item.send_count > 0 && (
               <Button
                 size="icon"

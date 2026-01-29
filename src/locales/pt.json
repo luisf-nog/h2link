@@ -7,6 +7,23 @@
     "terms": "Termos de Uso",
     "privacy": "Política de Privacidade"
   },
+  "reports": {
+    "button": "Sinalizar erro",
+    "reasons": {
+      "invalid_email": "E-mail inválido",
+      "inactive_job": "Vaga inativa",
+      "wrong_info": "Informações incorretas",
+      "spam": "Spam/Golpe",
+      "other": "Outro problema"
+    },
+    "warning_tooltip": "⚠️ Cuidado: {{count}} usuário(s) reportaram: {{reasons}}",
+    "toasts": {
+      "success_title": "Obrigado pelo feedback!",
+      "success_desc": "Seu relatório foi enviado e nos ajuda a manter a qualidade das vagas.",
+      "already_reported_title": "Já reportado",
+      "already_reported_desc": "Você já sinalizou um problema com esta vaga."
+    }
+  },
   "onboarding": {
     "step": "Passo {{current}} de {{total}}",
     "welcome": {

@@ -4,8 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/number";
-import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock } from "lucide-react";
+import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
+import type { ReportReason } from "@/components/queue/ReportJobButton";
 
 interface JobData {
   id: string;
@@ -30,6 +32,7 @@ interface MobileJobCardProps {
   onAddToQueue: () => void;
   onClick: () => void;
   formatDate: (date: string | null | undefined) => string;
+  reportData?: { count: number; reasons: ReportReason[] };
 }
 
 export function MobileJobCard({
@@ -39,6 +42,7 @@ export function MobileJobCard({
   onAddToQueue,
   onClick,
   formatDate,
+  reportData,
 }: MobileJobCardProps) {
   const { t } = useTranslation();
 
@@ -65,7 +69,15 @@ export function MobileJobCard({
         {/* Header: Title + Visa Badge + Action */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate">{job.job_title}</h3>
+            <div className="flex items-center gap-2">
+              {reportData && (
+                <JobWarningBadge
+                  reportCount={reportData.count}
+                  reasons={reportData.reasons}
+                />
+              )}
+              <h3 className="font-semibold text-foreground truncate">{job.job_title}</h3>
+            </div>
             <p className={cn(
               "text-sm text-muted-foreground truncate",
               isBlurred && "blur-sm select-none"
