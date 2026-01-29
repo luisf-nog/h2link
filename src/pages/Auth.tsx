@@ -998,6 +998,13 @@ export default function Auth() {
           </div>
         </section>
       </div>
+
+      {/* Footer with help email */}
+      <footer className="border-t border-border bg-card/50 backdrop-blur-sm py-4 px-4 text-center">
+        <p className="text-sm text-muted-foreground">
+          {t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}: help@h2linker.com
+        </p>
+      </footer>
     </div>
   );
 }
