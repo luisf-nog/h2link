@@ -656,7 +656,10 @@
       "daily_limit_reached_title": "Limite diário atingido",
       "daily_limit_reached_desc": "Você atingiu seu limite diário de envios. Tente novamente amanhã ou faça upgrade do plano.",
       "sent_title": "Emails enviados!",
-      "sent_desc": "{{count}} aplicações foram enviadas."
+      "sent_desc": "{{count}} aplicações foram enviadas.",
+      "partial_success_title": "Sucesso parcial",
+      "partial_success_desc": "{{sent}} emails enviados, {{failed}} falharam. Verifique os itens com falha e tente novamente.",
+      "all_failed_desc": "Todos os {{count}} emails falharam. Verifique suas configurações SMTP."
     }
   },
   "plans": {
