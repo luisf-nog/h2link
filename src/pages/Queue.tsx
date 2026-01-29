@@ -1059,7 +1059,7 @@ export default function Queue() {
                                         : ''
                             }
                           >
-                            {item.status === 'sent' && item.sent_at ? (
+                          {item.status === 'sent' && item.sent_at && item.send_count > 0 ? (
                               <span className="flex items-center gap-1">
                                 {item.send_count}x {format(
                                   new Date(item.sent_at),
