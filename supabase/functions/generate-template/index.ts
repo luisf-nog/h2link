@@ -29,14 +29,11 @@ function stripMarkdownFences(text: string): string {
 
 function extractFirstJsonObject(text: string): string {
   const t = stripMarkdownFences(text);
-
-  // Try to grab the first JSON object even if the model added prose around it.
   const start = t.indexOf("{");
   const end = t.lastIndexOf("}");
   if (start !== -1 && end !== -1 && end > start) {
     return t.slice(start, end + 1).trim();
   }
-
   return t;
 }
 
@@ -51,11 +48,25 @@ serve(async (req) => {
   if (req.method !== "POST") return json(405, { success: false, error: "Method not allowed" });
 
   try {
+    // 1. Auth validation
     const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) return json(401, { success: false, error: "Unauthorized" });
+    if (!authHeader.startsWith("Bearer ")) {
+      console.error("[generate-template] Missing or invalid Authorization header");
+      return json(401, { success: false, error: "Unauthorized" });
+    }
 
     const token = authHeader.replace("Bearer ", "");
 
+    // 2. Parse body ONCE (before creating auth client)
+    let rawBody: Record<string, unknown> = {};
+    try {
+      rawBody = await req.json();
+    } catch {
+      rawBody = {};
+    }
+    console.log("[generate-template] Request body:", JSON.stringify(rawBody));
+
+    // 3. Validate user
     const authClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -64,16 +75,22 @@ serve(async (req) => {
 
     const { data: userData, error: userError } = await authClient.auth.getUser(token);
     const userId = userData?.user?.id;
-    if (userError || !userId) return json(401, { success: false, error: "Unauthorized" });
+    
+    if (userError || !userId) {
+      console.error("[generate-template] Auth failed:", userError?.message ?? "No user ID");
+      return json(401, { success: false, error: "Unauthorized" });
+    }
+    console.log("[generate-template] Authenticated user:", userId);
 
-    // Parse request body for options
-    const rawBody = await req.json().catch(() => ({}));
+    // 4. Parse options from already-parsed body
     const optionsParsed = requestSchema.safeParse(rawBody);
     const options = optionsParsed.success ? optionsParsed.data : { length: "medium", tone: "direct", lines_per_paragraph: undefined };
     const length = options?.length ?? "medium";
     const tone = options?.tone ?? "direct";
     const linesPerParagraph = options?.lines_per_paragraph;
+    console.log("[generate-template] Options:", { length, tone, linesPerParagraph });
 
+    // 5. Check daily usage
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -81,26 +98,39 @@ serve(async (req) => {
 
     const today = new Date().toISOString().slice(0, 10);
 
-    // Get usage
-    const { data: usageRow, error: usageErr } = await serviceClient
+    // Use limit(1) instead of maybeSingle() to avoid "multiple rows" error
+    const { data: usageRows, error: usageErr } = await serviceClient
       .from("ai_daily_usage")
       .select("user_id,usage_date,template_generations")
       .eq("user_id", userId)
-      .maybeSingle();
-    if (usageErr) throw usageErr;
+      .order("usage_date", { ascending: false })
+      .limit(1);
+    
+    if (usageErr) {
+      console.error("[generate-template] Usage query error:", usageErr.message);
+      // Don't throw - continue with default values
+    }
+    
+    const usageRow = usageRows?.[0] ?? null;
 
     const currentDate = String((usageRow as any)?.usage_date ?? "");
     let used = currentDate === today ? Number((usageRow as any)?.template_generations ?? 0) : 0;
+    console.log("[generate-template] Current usage:", { currentDate, today, used });
 
     // Reset if date changed
     if (currentDate !== today) {
-      await serviceClient
+      const { error: upsertErr } = await serviceClient
         .from("ai_daily_usage")
         .upsert({ user_id: userId, usage_date: today, template_generations: 0, updated_at: new Date().toISOString() } as any);
+      
+      if (upsertErr) {
+        console.error("[generate-template] Upsert error:", upsertErr.message);
+      }
     }
 
     const LIMIT = 3;
     if (used >= LIMIT) {
+      console.log("[generate-template] Daily limit reached:", used);
       return json(429, {
         success: false,
         error: "Limite diário de IA atingido. Tente amanhã.",
@@ -109,10 +139,15 @@ serve(async (req) => {
       });
     }
 
+    // 6. Check AI API key
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
+    if (!LOVABLE_API_KEY) {
+      console.error("[generate-template] LOVABLE_API_KEY not configured");
+      return json(500, { success: false, error: "AI not configured" });
+    }
+    console.log("[generate-template] LOVABLE_API_KEY present:", LOVABLE_API_KEY.slice(0, 10) + "...");
 
-    // Dynamic prompt based on options
+    // 7. Build prompts
     const lengthGuide = {
       short: "Keep it very short (3-4 sentences max, under 80 words).",
       medium: "Keep it concise (5-7 sentences, around 120 words).",
@@ -125,7 +160,6 @@ serve(async (req) => {
       direct: "Use a humble, direct, no-nonsense tone focused on hard work.",
     }[tone];
 
-    // Lines per paragraph instruction
     const linesGuide = linesPerParagraph
       ? `Each paragraph should have exactly ${linesPerParagraph} sentence${linesPerParagraph > 1 ? "s" : ""}.`
       : "";
@@ -143,6 +177,8 @@ serve(async (req) => {
       "Include placeholders: {{company}}, {{position}}, {{name}}, {{phone}}, {{contact_email}}. " +
       "The email should feel genuine and personalized.";
 
+    // 8. Call AI Gateway
+    console.log("[generate-template] Calling AI gateway...");
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -159,30 +195,51 @@ serve(async (req) => {
       }),
     });
 
+    console.log("[generate-template] AI response status:", aiResp.status);
+
     if (!aiResp.ok) {
-      const t = await aiResp.text().catch(() => "");
-      return json(aiResp.status, { success: false, error: `AI error (${aiResp.status})`, details: t.slice(0, 500) });
+      const errText = await aiResp.text().catch(() => "");
+      console.error("[generate-template] AI error response:", errText.slice(0, 500));
+      
+      if (aiResp.status === 429) {
+        return json(429, { success: false, error: "AI rate limit exceeded. Please try again later." });
+      }
+      if (aiResp.status === 402) {
+        return json(402, { success: false, error: "AI credits exhausted. Please contact support." });
+      }
+      
+      return json(aiResp.status, { success: false, error: `AI error (${aiResp.status})`, details: errText.slice(0, 500) });
     }
 
+    // 9. Parse AI response
     const aiJson = await aiResp.json();
     const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
+    console.log("[generate-template] AI content length:", content.length);
+
     let parsed: unknown;
     try {
       const jsonCandidate = extractFirstJsonObject(content);
       parsed = JSON.parse(jsonCandidate);
-    } catch {
-      const snippet = content.slice(0, 500);
-      return json(500, { success: false, error: "AI returned invalid JSON", snippet });
+    } catch (parseErr) {
+      console.error("[generate-template] JSON parse error:", parseErr);
+      console.error("[generate-template] Raw content:", content.slice(0, 500));
+      return json(500, { success: false, error: "AI returned invalid JSON", snippet: content.slice(0, 300) });
     }
 
     const validated = responseSchema.safeParse(parsed);
     if (!validated.success) {
+      console.error("[generate-template] Validation error:", validated.error);
       return json(500, { success: false, error: "AI output validation failed" });
     }
 
-    // Increment usage using RPC function (handles both template_generations and tracking)
-    await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "template" });
+    // 10. Increment usage
+    const { error: rpcErr } = await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "template" });
+    if (rpcErr) {
+      console.error("[generate-template] RPC error (non-blocking):", rpcErr.message);
+    }
+    
     const nextUsed = used + 1;
+    console.log("[generate-template] Success! New usage:", nextUsed);
 
     return json(200, {
       success: true,
@@ -193,6 +250,9 @@ serve(async (req) => {
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
+    const stack = e instanceof Error ? e.stack : undefined;
+    console.error("[generate-template] Unhandled error:", message);
+    console.error("[generate-template] Stack:", stack);
     return json(500, { success: false, error: message });
   }
 });
