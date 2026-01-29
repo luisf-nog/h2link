@@ -16,13 +16,10 @@ export function AppFooter() {
           <span className="hidden sm:inline">{t('footer.tagline', 'Smart connections. Real opportunities.')}</span>
         </div>
 
-        <a
-          href={`mailto:${HELP_EMAIL}`}
-          className="flex items-center gap-2 hover:text-foreground transition-colors"
-        >
+        <div className="flex items-center gap-2">
           <Mail className="h-4 w-4" />
-          <span>{t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}</span>
-        </a>
+          <span>{t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}: {HELP_EMAIL}</span>
+        </div>
       </div>
     </footer>
   );
