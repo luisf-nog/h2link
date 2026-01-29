@@ -596,6 +596,14 @@
         "add_error_title": "Erro ao adicionar"
       }
     },
+    "sending_status": {
+      "title": "Enviando...",
+      "description": "{{processing}} enviando agora • {{pending}} aguardando",
+      "delay_gold": "Intervalo: 15 segundos entre cada email",
+      "delay_diamond": "Intervalo: 15-45 segundos entre cada email",
+      "delay_black": "Intervalo: 1-5 minutos entre cada email (modo humano)",
+      "can_close": "Você pode fechar esta página"
+    },
     "stats": {
       "in_queue": "Na Fila",
       "sent_today": "Enviados Hoje",

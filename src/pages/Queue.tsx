@@ -22,6 +22,7 @@ import { formatNumber } from '@/lib/number';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
 import { SendHistoryDialog } from '@/components/queue/SendHistoryDialog';
 import { MobileQueueCard } from '@/components/queue/MobileQueueCard';
+import { SendingStatusCard } from '@/components/queue/SendingStatusCard';
 import { useNavigate } from 'react-router-dom';
 import { format, type Locale } from 'date-fns';
 import { ptBR, enUS, es } from 'date-fns/locale';
@@ -273,6 +274,7 @@ export default function Queue() {
 
   const isFree = planTier === 'free';
   const pendingItems = useMemo(() => queue.filter((q) => q.status === 'pending'), [queue]);
+  const processingItems = useMemo(() => queue.filter((q) => q.status === 'processing'), [queue]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === 'failed'), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
   const selectedPendingIds = useMemo(
@@ -868,6 +870,15 @@ export default function Queue() {
           )}
         </div>
       </div>
+
+      {/* Sending Status Card - shows when items are processing */}
+      {(processingItems.length > 0 || (sending && pendingItems.length > 0)) && (
+        <SendingStatusCard
+          processingCount={processingItems.length}
+          pendingCount={pendingItems.length}
+          planTier={planTier}
+        />
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
