@@ -369,18 +369,62 @@ export default function Queue() {
     });
   }, [pendingIds]);
 
+  // Helper: fetch with retry for network errors
+  const fetchWithRetry = async (
+    url: string,
+    options: RequestInit,
+    maxRetries = 3
+  ): Promise<Response> => {
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await fetch(url, options);
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error('Network error');
+        // Only retry on network errors (Failed to fetch), not HTTP errors
+        if (attempt < maxRetries - 1) {
+          const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000); // 1s, 2s, 4s... max 10s
+          await sleep(backoffMs);
+        }
+      }
+    }
+    throw lastError ?? new Error('Failed to fetch');
+  };
+
   const sendQueueItems = async (items: QueueItem[]) => {
     const guard = await ensureCanSend();
     if (!guard.ok) return;
 
     const { templates, token } = guard;
     const sentIds: string[] = [];
-    // Resume is now accessed via Smart Profile link - no attachment needed
+    const failedIds: string[] = [];
+    let creditsRemaining = remainingToday;
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
+      
+      // Stop if daily limit reached
+      if (creditsRemaining <= 0) {
+        // Mark remaining items as pending (unchanged) - they can be sent tomorrow
+        toast({
+          title: t('queue.toasts.daily_limit_reached_title'),
+          description: t('queue.toasts.daily_limit_reached_desc'),
+          variant: 'destructive',
+        });
+        break;
+      }
+
       const job = item.public_jobs ?? item.manual_jobs;
-      if (!job?.email) continue;
+      if (!job?.email) {
+        // Skip items without email, mark as failed
+        await supabase.from('my_queue').update({ 
+          status: 'failed', 
+          last_error: 'Email ausente',
+          last_attempt_at: new Date().toISOString(),
+        }).eq('id', item.id);
+        failedIds.push(item.id);
+        continue;
+      }
 
       const to = job.email;
       const visaType = item.public_jobs?.visa_type === 'H-2A' ? ('H-2A' as const) : ('H-2B' as const);
@@ -406,84 +450,118 @@ export default function Queue() {
       let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : '';
       let finalBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars) : '';
 
-      // Black: dynamic AI generation per job (subject+body). Fallback to template if AI fails.
-      if (planTier === 'black') {
-        try {
-          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-job-email`, {
+      try {
+        // Black: dynamic AI generation per job (subject+body). Fallback to template if AI fails.
+        if (planTier === 'black') {
+          try {
+            const res = await fetchWithRetry(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-job-email`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ queueId: item.id }),
+              }
+            );
+            const payload = await res.json().catch(() => ({}));
+            if (res.ok && payload?.success !== false && payload?.subject && payload?.body) {
+              finalSubject = String(payload.subject);
+              finalBody = String(payload.body);
+            } else if (payload?.error === 'resume_data_missing') {
+              toast({
+                title: t('queue.toasts.resume_required_title'),
+                description: t('queue.toasts.resume_required_desc'),
+                variant: 'destructive',
+              });
+              navigate('/settings?tab=resume');
+              throw new Error('resume_data_missing');
+            }
+          } catch (e) {
+            // If AI fails for Black, use template as fallback if available
+            if (!finalSubject.trim() || !finalBody.trim()) {
+              throw new Error(t('queue.toasts.black_ai_failed_no_fallback'));
+            }
+          }
+        }
+
+        // Black without templates must have AI output; otherwise fail with a clear message.
+        if (planTier === 'black' && (!finalSubject.trim() || !finalBody.trim())) {
+          throw new Error(t('queue.toasts.black_ai_failed_no_fallback'));
+        }
+
+        const sendProfile = pickSendProfile();
+        const dedupeId = planTier === 'black' ? crypto.randomUUID() : undefined;
+
+        const res = await fetchWithRetry(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`,
+          {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ queueId: item.id }),
-          });
-          const payload = await res.json().catch(() => ({}));
-          if (res.ok && payload?.success !== false && payload?.subject && payload?.body) {
-            finalSubject = String(payload.subject);
-            finalBody = String(payload.body);
-          } else if (payload?.error === 'resume_data_missing') {
-            toast({
-              title: t('queue.toasts.resume_required_title'),
-              description: t('queue.toasts.resume_required_desc'),
-              variant: 'destructive',
-            });
-            navigate('/settings?tab=resume');
-            throw new Error('resume_data_missing');
+            body: JSON.stringify({
+              to,
+              subject: finalSubject,
+              body: finalBody,
+              queueId: item.id,
+              ...sendProfile,
+              dedupeId,
+            }),
           }
-        } catch (e) {
-          // If AI fails for Black, use template as fallback if available
-          if (!finalSubject.trim() || !finalBody.trim()) {
-            throw new Error(t('queue.toasts.black_ai_failed_no_fallback'));
+        );
+
+        const text = await res.text();
+        const payload = (() => {
+          try {
+            return JSON.parse(text);
+          } catch {
+            return { error: text };
           }
+        })();
+
+        if (!res.ok || payload?.success === false) {
+          // Handle daily limit reached specifically
+          if (res.status === 429 || payload?.error === 'daily_limit_reached') {
+            setUpgradeDialogOpen(true);
+            // Mark this item as pending still, don't fail it
+            break; // Stop processing, user needs to upgrade
+          }
+          throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
         }
+
+        sentIds.push(item.id);
+        creditsRemaining -= 1;
+      } catch (e: unknown) {
+        // Item failed, but continue with next item
+        const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+        const now = new Date().toISOString();
+        
+        // Update queue status to failed
+        await supabase.from('my_queue').update({ 
+          status: 'failed', 
+          last_error: message,
+          last_attempt_at: now,
+        }).eq('id', item.id);
+        
+        // Log failed history
+        await supabase.from('queue_send_history').insert({
+          queue_id: item.id,
+          user_id: profile?.id,
+          sent_at: now,
+          status: 'failed',
+          error_message: message,
+        });
+        
+        failedIds.push(item.id);
+        
+        // Continue to next item (don't break the loop!)
       }
-
-      // Black without templates must have AI output; otherwise fail with a clear message.
-      if (planTier === 'black' && (!finalSubject.trim() || !finalBody.trim())) {
-        throw new Error(t('queue.toasts.black_ai_failed_no_fallback'));
-      }
-
-      const sendProfile = pickSendProfile();
-      const dedupeId = planTier === 'black' ? crypto.randomUUID() : undefined;
-
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          to,
-          subject: finalSubject,
-          body: finalBody,
-          queueId: item.id,
-          ...sendProfile,
-          dedupeId,
-        }),
-      });
-
-      const text = await res.text();
-      const payload = (() => {
-        try {
-          return JSON.parse(text);
-        } catch {
-          return { error: text };
-        }
-      })();
-
-      if (!res.ok || payload?.success === false) {
-        // Handle daily limit reached specifically
-        if (res.status === 429 || payload?.error === 'daily_limit_reached') {
-          setUpgradeDialogOpen(true);
-          throw new Error('daily_limit_reached');
-        }
-        throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
-      }
-
-      sentIds.push(item.id);
 
       // Throttling by tier (FREE = 0s, GOLD = 15s fixed, DIAMOND = jitter 15-45s)
-      if (idx < items.length - 1) {
+      if (idx < items.length - 1 && sentIds.length > 0) {
         const ms = getDelayMs();
         if (ms > 0) await sleep(ms);
       }
@@ -510,10 +588,28 @@ export default function Queue() {
         });
     }
 
-    toast({
-      title: t('queue.toasts.sent_title'),
-      description: String(t('queue.toasts.sent_desc', { count: formatNumber(sentIds.length) } as any)),
-    });
+    // Show appropriate toast based on results
+    if (sentIds.length > 0 && failedIds.length === 0) {
+      toast({
+        title: t('queue.toasts.sent_title'),
+        description: String(t('queue.toasts.sent_desc', { count: formatNumber(sentIds.length) } as any)),
+      });
+    } else if (sentIds.length > 0 && failedIds.length > 0) {
+      toast({
+        title: String(t('queue.toasts.partial_success_title')),
+        description: String(t('queue.toasts.partial_success_desc', { 
+          sent: formatNumber(sentIds.length), 
+          failed: formatNumber(failedIds.length) 
+        } as any)),
+        variant: 'default',
+      });
+    } else if (sentIds.length === 0 && failedIds.length > 0) {
+      toast({
+        title: String(t('common.errors.send_failed')),
+        description: String(t('queue.toasts.all_failed_desc', { count: formatNumber(failedIds.length) } as any)),
+        variant: 'destructive',
+      });
+    }
 
     // Refresh profile to get updated credits_used_today
     await refreshProfile();
@@ -554,13 +650,16 @@ export default function Queue() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error(t('common.errors.no_session'));
 
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetchWithRetry(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const payload = await res.json().catch(() => null);
       if (!res.ok || payload?.ok === false) {
@@ -574,7 +673,7 @@ export default function Queue() {
       fetchQueue();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+      toast({ title: String(t('common.errors.send_failed')), description: String(message), variant: 'destructive' });
     } finally {
       setSending(false);
     }
@@ -616,14 +715,17 @@ export default function Queue() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error(t('common.errors.no_session'));
 
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ ids: selectedPendingIds }),
-      });
+      const res = await fetchWithRetry(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ids: selectedPendingIds }),
+        }
+      );
 
       const payload = await res.json().catch(() => null);
       if (!res.ok || payload?.ok === false) {
@@ -631,15 +733,15 @@ export default function Queue() {
       }
 
       toast({
-        title: t('queue.toasts.bg_started_selected_title'),
-        description: t('queue.toasts.bg_started_selected_desc', { count: selectedPendingIds.length }),
+        title: String(t('queue.toasts.bg_started_selected_title')),
+        description: String(t('queue.toasts.bg_started_selected_desc', { count: selectedPendingIds.length })),
       });
 
       setSelectedIds({});
       fetchQueue();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+      toast({ title: String(t('common.errors.send_failed')), description: String(message), variant: 'destructive' });
     } finally {
       setSending(false);
     }
@@ -656,32 +758,8 @@ export default function Queue() {
     // Update local state to show "processing" immediately
     setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'processing' } : q));
     
-    // Fire and forget - don't await, let it run in background
+    // Fire and forget - sendQueueItems now handles errors internally
     sendQueueItems([item])
-      .catch(async (e: unknown) => {
-        const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-        toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
-        
-        // Log the error in send history (preserve history, don't clear it)
-        const now = new Date().toISOString();
-        await supabase.from('queue_send_history').insert({
-          queue_id: item.id,
-          user_id: profile?.id,
-          sent_at: now,
-          status: 'failed',
-          error_message: message,
-        });
-        
-        // Update queue status to failed with error message
-        await supabase.from('my_queue').update({ 
-          status: 'failed', 
-          last_error: message,
-          last_attempt_at: now,
-        }).eq('id', item.id);
-        
-        // Update local state
-        setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'failed', last_error: message } : q));
-      })
       .finally(() => {
         setSendingIds(prev => {
           const next = new Set(prev);
@@ -700,10 +778,6 @@ export default function Queue() {
       // Refresh the item
       const updatedItem = { ...item, status: 'pending' };
       await sendQueueItems([updatedItem]);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
-      fetchQueue();
     } finally {
       setRetryingId(null);
     }
@@ -720,10 +794,6 @@ export default function Queue() {
       // Re-fetch and send
       const updatedItems = failedItems.map((it) => ({ ...it, status: 'pending' }));
       await sendQueueItems(updatedItems.slice(0, remainingToday));
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-      toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
-      fetchQueue();
     } finally {
       setSending(false);
     }

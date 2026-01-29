@@ -657,7 +657,10 @@
       "daily_limit_reached_title": "Daily limit reached",
       "daily_limit_reached_desc": "You’ve reached your daily sending limit. Try again tomorrow or upgrade your plan.",
       "sent_title": "Emails sent!",
-      "sent_desc": "{{count}} applications were sent."
+      "sent_desc": "{{count}} applications were sent.",
+      "partial_success_title": "Partial success",
+      "partial_success_desc": "{{sent}} emails sent, {{failed}} failed. Check the failed items and retry.",
+      "all_failed_desc": "All {{count}} emails failed to send. Check your SMTP settings."
     }
   },
   "plans": {
