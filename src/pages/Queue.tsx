@@ -373,23 +373,7 @@ export default function Queue() {
 
     const { templates, token } = guard;
     const sentIds: string[] = [];
-
-    // Get resume URL for attachment
-    let resumeUrl: string | undefined;
-    let resumeName: string | undefined;
-    if (profile?.id) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('resume_url')
-        .eq('id', profile.id)
-        .maybeSingle();
-      if ((profileData as any)?.resume_url) {
-        resumeUrl = (profileData as any).resume_url;
-        // Extract filename from URL
-        const urlParts = resumeUrl!.split('/');
-        resumeName = urlParts[urlParts.length - 1]?.split('?')[0] || 'resume.pdf';
-      }
-    }
+    // Resume is now accessed via Smart Profile link - no attachment needed
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
@@ -473,8 +457,6 @@ export default function Queue() {
           queueId: item.id,
           ...sendProfile,
           dedupeId,
-          resumeUrl,
-          resumeName,
         }),
       });
 
