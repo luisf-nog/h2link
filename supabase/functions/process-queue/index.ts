@@ -4,8 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-token",
+    "authorization, x-client-info, apikey, content-type, x-cron-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 type PlanTier = "free" | "gold" | "diamond" | "black";
@@ -1230,7 +1231,21 @@ const handler = async (req: Request): Promise<Response> => {
     const safeIds = ids ? (ids as string[]).slice(0, 50) : undefined;
     const maxItems = safeIds ? safeIds.length : 5;
 
-    const r = await processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
+    // Fire-and-forget: start processing in the background and return immediately.
+    // This prevents the browser from timing out (which shows up as "Failed to fetch").
+    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
+    const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
+    if (typeof waitUntil === "function") {
+      waitUntil(
+        work.catch((e) => {
+          console.error("process-queue background error", e);
+        }),
+      );
+      return json(200, { ok: true, mode: "user", queued: true, maxItems });
+    }
+
+    // Fallback (if EdgeRuntime.waitUntil isn't available): process synchronously.
+    const r = await work;
     return json(200, { ok: true, mode: "user", ...r });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

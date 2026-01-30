@@ -658,6 +658,7 @@ export default function Queue() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
+           body: JSON.stringify({}),
         }
       );
 
