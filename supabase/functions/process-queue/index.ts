@@ -13,16 +13,25 @@ type PlanTier = "free" | "gold" | "diamond" | "black";
 type SendingMethod = "static" | "dynamic";
 
 function getDailyEmailLimit(planTier: PlanTier): number {
-  // Keep in sync with src/config/plans.config.ts
-  if (planTier === "black") return 500;
+  if (planTier === "black") return 450;
   if (planTier === "diamond") return 350;
   if (planTier === "gold") return 150;
   return 5;
 }
 
 function getSendingMethod(planTier: PlanTier): SendingMethod {
-  // Only Black uses dynamic AI generation
   return planTier === "black" ? "dynamic" : "static";
+}
+
+/**
+ * Returns delay in MILLISECONDS for scheduling the next email
+ * Gold: 15s fixed | Diamond: 15-45s random | Black: 1-5min random
+ */
+function getDelayMs(planTier: PlanTier): number {
+  if (planTier === "gold") return 15_000;
+  if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001);
+  if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001);
+  return 0;
 }
 
 type EmailProvider = "gmail" | "outlook";
@@ -34,6 +43,7 @@ interface QueueRow {
   job_id: string | null;
   manual_job_id: string | null;
   tracking_id: string;
+  scheduled_for: string;
 }
 
 interface ProfileRow {
@@ -50,68 +60,6 @@ interface ProfileRow {
   timezone?: string | null;
   consecutive_errors?: number | null;
   referral_bonus_limit?: number | null;
-}
-
-function getLocalHour(params: { timeZone: string; now?: Date }): number {
-  const { timeZone, now } = params;
-  const dt = now ?? new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour: "2-digit",
-    hour12: false,
-  }).formatToParts(dt);
-  const hourPart = parts.find((p) => p.type === "hour")?.value ?? "0";
-  const hour = Number(hourPart);
-  return Number.isFinite(hour) ? hour : 0;
-}
-
-function isCircuitBreakerError(message: string): boolean {
-  const m = message.toLowerCase();
-  // Auth / credentials
-  if (m.includes("auth") || m.includes("authentication") || m.includes("senha") || m.includes("password")) return true;
-  if (m.includes("535") || m.includes("534") || m.includes("530")) return true;
-  // Typical bounces / hard fails
-  if (m.includes("550") || m.includes("551") || m.includes("552") || m.includes("553") || m.includes("554")) return true;
-  if (m.includes("mailbox") || m.includes("recipient") || m.includes("unknown user") || m.includes("user unknown")) return true;
-  return false;
-}
-
-// ============ EMAIL VALIDATION ============
-
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
-
-function extractDomain(email: string): string | null {
-  const s = String(email).trim().toLowerCase();
-  const at = s.lastIndexOf("@");
-  if (at <= 0 || at === s.length - 1) return null;
-  const domain = s.slice(at + 1).trim();
-  if (!domain || domain.length < 3) return null;
-  return domain;
-}
-
-async function validateEmailDNS(email: string): Promise<{ valid: boolean; reason?: string }> {
-  // Step A: Syntax validation
-  if (!EMAIL_REGEX.test(email)) {
-    return { valid: false, reason: "Formato de e-mail inválido" };
-  }
-
-  // Step B: Extract domain
-  const domain = extractDomain(email);
-  if (!domain) {
-    return { valid: false, reason: "Domínio de e-mail inválido" };
-  }
-
-  // Step C: MX Lookup
-  try {
-    const mx = await Deno.resolveDns(domain, "MX");
-    if (!Array.isArray(mx) || mx.length === 0) {
-      return { valid: false, reason: `Domínio ${domain} sem servidor de e-mail (MX)` };
-    }
-    return { valid: true };
-  } catch (_e) {
-    // DNS resolution failed - domain doesn't exist or has no MX records
-    return { valid: false, reason: `Domínio ${domain} inativo ou inexistente` };
-  }
 }
 
 interface PublicJobRow {
@@ -172,10 +120,6 @@ function json(status: number, payload: unknown) {
   });
 }
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
@@ -198,7 +142,6 @@ async function writeAll(conn: Deno.Conn, data: Uint8Array) {
 
 async function readResponse(conn: Deno.Conn, expectedCode?: string): Promise<string> {
   let buf = "";
-
   while (true) {
     const chunk = new Uint8Array(4096);
     const n = await conn.read(chunk);
@@ -210,7 +153,6 @@ async function readResponse(conn: Deno.Conn, expectedCode?: string): Promise<str
 
     for (const line of lines) {
       if (!line) continue;
-
       if (expectedCode) {
         if (line.startsWith(expectedCode + " ") || line.startsWith(expectedCode + "-")) {
           // ok
@@ -218,7 +160,6 @@ async function readResponse(conn: Deno.Conn, expectedCode?: string): Promise<str
           throw new Error(`SMTP erro: ${line}`);
         }
       }
-
       if (/^\d{3} /.test(line)) {
         return line;
       }
@@ -237,9 +178,7 @@ async function sendCommand(conn: Deno.Conn, cmd: string, expectedCode: string) {
 
 function utf8ToBase64(str: string): string {
   const bytes = encoder.encode(str);
-  return base64Encode(
-    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
-  );
+  return base64Encode(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 }
 
 function nowRfc2822(): string {
@@ -252,10 +191,8 @@ function createMimeMessage(params: {
   subject: string;
   htmlBody: string;
   extraHeaders?: string[];
-  attachment?: { name: string; content: Uint8Array; mimeType: string };
 }): string {
-  const { from, to, subject, htmlBody, extraHeaders, attachment } = params;
-  const boundary = `----=_Part_${crypto.randomUUID()}`;
+  const { from, to, subject, htmlBody, extraHeaders } = params;
   const subjectEncoded = `=?UTF-8?B?${utf8ToBase64(subject)}?=`;
 
   const baseHeaders = [
@@ -268,50 +205,13 @@ function createMimeMessage(params: {
 
   const safeExtraHeaders = (extraHeaders ?? []).filter(Boolean);
 
-  const htmlPart = [
+  return [
+    ...baseHeaders,
+    ...safeExtraHeaders,
     `Content-Type: text/html; charset=UTF-8`,
     `Content-Transfer-Encoding: base64`,
     ``,
     utf8ToBase64(`<div style="font-family: Calibri, sans-serif; font-size: 14px;">${htmlBody}</div>`),
-  ].join("\r\n");
-
-  if (!attachment) {
-    return [
-      ...baseHeaders,
-      ...safeExtraHeaders,
-      `Content-Type: text/html; charset=UTF-8`,
-      `Content-Transfer-Encoding: base64`,
-      ``,
-      utf8ToBase64(`<div style="font-family: Calibri, sans-serif; font-size: 14px;">${htmlBody}</div>`),
-    ].join("\r\n");
-  }
-
-  const attachmentB64 = base64Encode(
-    attachment.content.buffer.slice(
-      attachment.content.byteOffset,
-      attachment.content.byteOffset + attachment.content.byteLength,
-    ) as ArrayBuffer,
-  );
-
-  const attachmentPart = [
-    `Content-Type: ${attachment.mimeType}; name="${attachment.name}"`,
-    `Content-Transfer-Encoding: base64`,
-    `Content-Disposition: attachment; filename="${attachment.name}"`,
-    ``,
-    attachmentB64,
-  ].join("\r\n");
-
-  return [
-    ...baseHeaders,
-    ...safeExtraHeaders,
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
-    ``,
-    `--${boundary}`,
-    htmlPart,
-    `--${boundary}`,
-    attachmentPart,
-    `--${boundary}--`,
-    ``,
   ].join("\r\n");
 }
 
@@ -333,20 +233,12 @@ async function sendEmailSMTPTls(params: {
     const userBytes = encoder.encode(user);
     const passBytes = encoder.encode(password);
     await withTimeout(
-      sendCommand(
-        conn,
-        base64Encode(userBytes.buffer.slice(userBytes.byteOffset, userBytes.byteOffset + userBytes.byteLength)),
-        "334",
-      ),
+      sendCommand(conn, base64Encode(userBytes.buffer.slice(userBytes.byteOffset, userBytes.byteOffset + userBytes.byteLength)), "334"),
       15000,
       "AUTH user",
     );
     await withTimeout(
-      sendCommand(
-        conn,
-        base64Encode(passBytes.buffer.slice(passBytes.byteOffset, passBytes.byteOffset + passBytes.byteLength)),
-        "235",
-      ),
+      sendCommand(conn, base64Encode(passBytes.buffer.slice(passBytes.byteOffset, passBytes.byteOffset + passBytes.byteLength)), "235"),
       15000,
       "AUTH pass",
     );
@@ -359,11 +251,7 @@ async function sendEmailSMTPTls(params: {
     await withTimeout(readResponse(conn, "250"), 20000, "DATA accept");
     await writeAll(conn, encoder.encode("QUIT\r\n"));
   } finally {
-    try {
-      conn.close();
-    } catch {
-      // ignore
-    }
+    try { conn.close(); } catch { /* ignore */ }
   }
 }
 
@@ -391,20 +279,12 @@ async function sendEmailSMTPStartTls(params: {
     const userBytes = encoder.encode(user);
     const passBytes = encoder.encode(password);
     await withTimeout(
-      sendCommand(
-        tlsConn,
-        base64Encode(userBytes.buffer.slice(userBytes.byteOffset, userBytes.byteOffset + userBytes.byteLength)),
-        "334",
-      ),
+      sendCommand(tlsConn, base64Encode(userBytes.buffer.slice(userBytes.byteOffset, userBytes.byteOffset + userBytes.byteLength)), "334"),
       15000,
       "AUTH user",
     );
     await withTimeout(
-      sendCommand(
-        tlsConn,
-        base64Encode(passBytes.buffer.slice(passBytes.byteOffset, passBytes.byteOffset + passBytes.byteLength)),
-        "235",
-      ),
+      sendCommand(tlsConn, base64Encode(passBytes.buffer.slice(passBytes.byteOffset, passBytes.byteOffset + passBytes.byteLength)), "235"),
       15000,
       "AUTH pass",
     );
@@ -417,11 +297,7 @@ async function sendEmailSMTPStartTls(params: {
     await withTimeout(readResponse(tlsConn, "250"), 20000, "DATA accept");
     await writeAll(tlsConn, encoder.encode("QUIT\r\n"));
   } finally {
-    try {
-      tcpConn.close();
-    } catch {
-      // ignore
-    }
+    try { tcpConn.close(); } catch { /* ignore */ }
   }
 }
 
@@ -451,13 +327,6 @@ function pickSendProfile(planTier: PlanTier): { xMailer?: string; userAgent?: st
   return {};
 }
 
-function getDelayMs(planTier: PlanTier): number {
-  if (planTier === "gold") return 15_000; // 15s fixo
-  if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s
-  if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 minutos
-  return 0; // free: sem delay
-}
-
 function hashToIndex(s: string, mod: number): number {
   if (mod <= 1) return 0;
   let h = 0;
@@ -471,7 +340,51 @@ function stripMarkdownFences(text: string): string {
   return t.trim();
 }
 
-// AI preferences type
+function isCircuitBreakerError(message: string): boolean {
+  const m = message.toLowerCase();
+  if (m.includes("auth") || m.includes("authentication") || m.includes("senha") || m.includes("password")) return true;
+  if (m.includes("535") || m.includes("534") || m.includes("530")) return true;
+  if (m.includes("550") || m.includes("551") || m.includes("552") || m.includes("553") || m.includes("554")) return true;
+  if (m.includes("mailbox") || m.includes("recipient") || m.includes("unknown user") || m.includes("user unknown")) return true;
+  return false;
+}
+
+// ============ EMAIL VALIDATION (RADAR) ============
+
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+function extractDomain(email: string): string | null {
+  const s = String(email).trim().toLowerCase();
+  const at = s.lastIndexOf("@");
+  if (at <= 0 || at === s.length - 1) return null;
+  const domain = s.slice(at + 1).trim();
+  if (!domain || domain.length < 3) return null;
+  return domain;
+}
+
+async function validateEmailDNS(email: string): Promise<{ valid: boolean; reason?: string }> {
+  if (!EMAIL_REGEX.test(email)) {
+    return { valid: false, reason: "Formato de e-mail inválido" };
+  }
+
+  const domain = extractDomain(email);
+  if (!domain) {
+    return { valid: false, reason: "Domínio de e-mail inválido" };
+  }
+
+  try {
+    const mx = await Deno.resolveDns(domain, "MX");
+    if (!Array.isArray(mx) || mx.length === 0) {
+      return { valid: false, reason: `Domínio ${domain} sem servidor de e-mail (MX)` };
+    }
+    return { valid: true };
+  } catch (_e) {
+    return { valid: false, reason: `Domínio ${domain} inativo ou inexistente` };
+  }
+}
+
+// ============ AI PREFERENCES ============
+
 interface AIPreferences {
   paragraph_style: "single" | "multiple";
   email_length: "short" | "medium" | "long";
@@ -528,19 +441,11 @@ function buildDynamicPromptForQueue(prefs: AIPreferences): string {
   }[prefs.formality_level];
 
   const emphasisParts: string[] = [];
-  if (prefs.emphasize_availability) {
-    emphasisParts.push("EMPHASIZE availability for weekends, holidays, overtime.");
-  }
-  if (prefs.emphasize_physical_strength) {
-    emphasisParts.push("EMPHASIZE physical stamina, lifting 50lb+.");
-  }
-  if (prefs.emphasize_languages) {
-    emphasisParts.push("MENTION languages: Native Portuguese, Intermediate English.");
-  }
+  if (prefs.emphasize_availability) emphasisParts.push("EMPHASIZE availability for weekends, holidays, overtime.");
+  if (prefs.emphasize_physical_strength) emphasisParts.push("EMPHASIZE physical stamina, lifting 50lb+.");
+  if (prefs.emphasize_languages) emphasisParts.push("MENTION languages: Native Portuguese, Intermediate English.");
 
-  const customNote = prefs.custom_instructions 
-    ? `\n\nUSER INSTRUCTIONS: ${prefs.custom_instructions}`
-    : "";
+  const customNote = prefs.custom_instructions ? `\n\nUSER INSTRUCTIONS: ${prefs.custom_instructions}` : "";
 
   return `You are an AI assistant helping a Brazilian worker apply for H-2A/H-2B jobs in the USA.
 
@@ -573,7 +478,6 @@ ${emphasisParts.join("\n")}
 ${customNote}`;
 }
 
-// Tool definition for structured output
 const emailToolDefinition = {
   type: "function" as const,
   function: {
@@ -582,14 +486,8 @@ const emailToolDefinition = {
     parameters: {
       type: "object",
       properties: {
-        subject: {
-          type: "string",
-          description: "Email subject line, max 78 characters",
-        },
-        body: {
-          type: "string",
-          description: "Email body with paragraphs separated by \\n\\n",
-        },
+        subject: { type: "string", description: "Email subject line, max 78 characters" },
+        body: { type: "string", description: "Email body with paragraphs separated by \\n\\n" },
       },
       required: ["subject", "body"],
       additionalProperties: false,
@@ -597,7 +495,7 @@ const emailToolDefinition = {
   },
 };
 
-async function generateDiamondEmail(params: {
+async function generateDynamicEmail(params: {
   resumeData: unknown;
   job: PublicJobRow;
   visaType: string;
@@ -629,7 +527,7 @@ async function generateDiamondEmail(params: {
     },
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
-      temperature: 0.3, // LOW temperature for consistency
+      temperature: 0.3,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -641,11 +539,10 @@ async function generateDiamondEmail(params: {
 
   if (!aiResp.ok) throw new Error(`AI error (${aiResp.status})`);
   const aiJson = await aiResp.json();
-  
-  // Extract from tool call
+
   const toolCall = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
   let parsed: { subject?: string; body?: string };
-  
+
   if (toolCall && toolCall.function?.name === "generate_email") {
     try {
       parsed = JSON.parse(toolCall.function.arguments);
@@ -653,7 +550,6 @@ async function generateDiamondEmail(params: {
       throw new Error("AI returned invalid JSON in tool call");
     }
   } else {
-    // Fallback: try to parse content as JSON
     const rawContent = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
     const cleanContent = stripMarkdownFences(rawContent);
     try {
@@ -662,35 +558,42 @@ async function generateDiamondEmail(params: {
       throw new Error(`AI returned invalid JSON: ${cleanContent.slice(0, 200)}`);
     }
   }
-  
+
   const subject = String(parsed?.subject ?? "").trim();
   let body = String(parsed?.body ?? "").trim();
-  
-  // Normalize paragraph breaks
+
   body = body.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
-  
-  // CRITICAL: Strip any markdown formatting the AI might have included
-  // This ensures no asterisks or other markdown syntax appears in the final email
-  body = body.replace(/\*\*([^*]+)\*\*/g, "$1"); // Remove **bold**
-  body = body.replace(/\*([^*]+)\*/g, "$1");     // Remove *italic*
-  body = body.replace(/__([^_]+)__/g, "$1");     // Remove __underline__
-  body = body.replace(/_([^_]+)_/g, "$1");       // Remove _italic_
-  body = body.replace(/^#+\s*/gm, "");           // Remove # headers
-  body = body.replace(/^\s*[-*]\s+/gm, "");      // Remove bullet points
-  
+  body = body.replace(/\*\*([^*]+)\*\*/g, "$1");
+  body = body.replace(/\*([^*]+)\*/g, "$1");
+  body = body.replace(/__([^_]+)__/g, "$1");
+  body = body.replace(/_([^_]+)_/g, "$1");
+  body = body.replace(/^#+\s*/gm, "");
+  body = body.replace(/^\s*[-*]\s+/gm, "");
+
   if (!subject || !body) throw new Error("AI output missing subject or body");
   return { subject, body };
 }
 
-async function processOneUser(params: {
+// ============ SINGLE-ITEM PROCESSOR ============
+
+interface ProcessResult {
+  processed: boolean;
+  sent: boolean;
+  failed: boolean;
+  skipped: boolean;
+  error?: string;
+  queueId?: string;
+  nextScheduledFor?: string;
+}
+
+async function processSingleItem(params: {
   serviceClient: any;
   userId: string;
-  maxItems: number;
-  queueIds?: string[];
-}): Promise<{ processed: number; sent: number; failed: number }>
-{
-  const { serviceClient, userId, maxItems, queueIds } = params;
+  queueId?: string;
+}): Promise<ProcessResult> {
+  const { serviceClient, userId, queueId } = params;
 
+  // 1. Fetch profile
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
     .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors")
@@ -699,121 +602,59 @@ async function processOneUser(params: {
 
   if (profileErr) throw profileErr;
   const p = profile as ProfileRow;
-  if (p.plan_tier === "free") return { processed: 0, sent: 0, failed: 0 };
 
-  // Daily limit enforcement (backend)
+  if (p.plan_tier === "free") {
+    return { processed: false, sent: false, failed: false, skipped: true, error: "Free plan" };
+  }
+
+  // 2. Daily credit check
   const today = new Date().toISOString().slice(0, 10);
   let creditsUsed = Number(p.credits_used_today ?? 0);
   const resetDate = String(p.credits_reset_date ?? "");
   if (resetDate !== today) {
     creditsUsed = 0;
-    await (serviceClient
-      .from("profiles")
-      .update({ credits_used_today: 0, credits_reset_date: today } as any)
-      .eq("id", userId)) as any;
+    await serviceClient.from("profiles").update({ credits_used_today: 0, credits_reset_date: today }).eq("id", userId);
   }
   const dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
 
-  // Diamond: timezone awareness (send only during daytime)
-  if (p.plan_tier === "diamond") {
-    const tz = String(p.timezone ?? "UTC");
-    const localHour = getLocalHour({ timeZone: tz });
-    const withinWindow = localHour >= 8 && localHour < 19;
-    if (!withinWindow) {
-      return { processed: 0, sent: 0, failed: 0 };
-    }
+  if (creditsUsed >= dailyLimit) {
+    return { processed: false, sent: false, failed: false, skipped: true, error: "Daily limit reached" };
   }
 
-  let consecutiveErrors = Number(p.consecutive_errors ?? 0);
+  // 3. Circuit breaker check
+  const consecutiveErrors = Number(p.consecutive_errors ?? 0);
+  if (consecutiveErrors >= 3) {
+    return { processed: false, sent: false, failed: false, skipped: true, error: "Paused: 3 consecutive errors" };
+  }
 
-  // No retry: if profile is incomplete, mark first pending as failed and stop
+  // 4. Profile completeness check
   if (!p.full_name || p.age == null || !p.phone_e164 || !p.contact_email) {
-    const { data: one } = await serviceClient
-      .from("my_queue")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(1);
-
-    const row = (one ?? [])[0] as { id: string } | undefined;
-    if (row?.id) {
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "failed",
-          last_error: "Perfil incompleto (nome/idade/telefone/email de contato)",
-          last_attempt_at: new Date().toISOString(),
-        } as any)
-        .eq("id", row.id)) as any;
-      return { processed: 1, sent: 0, failed: 1 };
-    }
-    return { processed: 0, sent: 0, failed: 0 };
+    return { processed: false, sent: false, failed: false, skipped: true, error: "Incomplete profile" };
   }
 
-  const { data: templates, error: tplErr } = await serviceClient
+  // 5. Fetch templates
+  const { data: templates } = await serviceClient
     .from("email_templates")
     .select("id,subject,body,created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
-  if (tplErr) throw tplErr;
   const tpls = (templates ?? []) as EmailTemplateRow[];
-  // Templates are required for Static plans (Free/Gold/Diamond). Black (Dynamic) can work without templates.
-  const userSendingMethod = getSendingMethod(p.plan_tier);
-  if (tpls.length === 0 && userSendingMethod === "static") {
-    // Mark first pending as failed
-    const { data: one } = await serviceClient
-      .from("my_queue")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(1);
 
-    const row = (one ?? [])[0] as { id: string } | undefined;
-    if (row?.id) {
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "failed",
-          last_error: "Nenhum template encontrado",
-          last_attempt_at: new Date().toISOString(),
-        } as any)
-        .eq("id", row.id)) as any;
-      return { processed: 1, sent: 0, failed: 1 };
-    }
-    return { processed: 0, sent: 0, failed: 0 };
+  const sendingMethod = getSendingMethod(p.plan_tier);
+  if (tpls.length === 0 && sendingMethod === "static") {
+    return { processed: false, sent: false, failed: false, skipped: true, error: "No templates" };
   }
 
-  const { data: creds, error: credsErr } = await serviceClient
+  // 6. Fetch SMTP credentials
+  const { data: creds } = await serviceClient
     .from("smtp_credentials")
     .select("provider,email,has_password")
     .eq("user_id", userId)
     .maybeSingle();
-  if (credsErr) throw credsErr;
   const c = creds as SmtpCredsRow | null;
 
   if (!c || !c.has_password) {
-    const { data: one } = await serviceClient
-      .from("my_queue")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(1);
-    const row = (one ?? [])[0] as { id: string } | undefined;
-    if (row?.id) {
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "failed",
-          last_error: "SMTP não configurado",
-          last_attempt_at: new Date().toISOString(),
-        } as any)
-        .eq("id", row.id)) as any;
-      return { processed: 1, sent: 0, failed: 1 };
-    }
-    return { processed: 0, sent: 0, failed: 0 };
+    return { processed: false, sent: false, failed: false, skipped: true, error: "SMTP not configured" };
   }
 
   const { data: secret, error: secretErr } = await serviceClient
@@ -829,368 +670,296 @@ async function processOneUser(params: {
   const smtpPassword = s.password;
   const smtpConfig = SMTP_CONFIGS[provider];
 
+  // 7. Pick ONE queue item (scheduled_for <= now)
   let q = serviceClient
     .from("my_queue")
-    .select("id,user_id,status,job_id,manual_job_id,tracking_id")
+    .select("id,user_id,status,job_id,manual_job_id,tracking_id,scheduled_for")
     .eq("user_id", userId)
     .eq("status", "pending")
-    .order("created_at", { ascending: true });
+    .lte("scheduled_for", new Date().toISOString())
+    .order("scheduled_for", { ascending: true })
+    .limit(1);
 
-  if (queueIds && Array.isArray(queueIds) && queueIds.length > 0) {
-    q = q.in("id", queueIds);
+  if (queueId) {
+    q = serviceClient
+      .from("my_queue")
+      .select("id,user_id,status,job_id,manual_job_id,tracking_id,scheduled_for")
+      .eq("id", queueId)
+      .eq("status", "pending")
+      .limit(1);
   }
 
-  const { data: pending, error: qErr } = await q.limit(maxItems);
-  if (qErr) throw qErr;
+  const { data: pending } = await q;
   const rows = (pending ?? []) as QueueRow[];
 
-  let processed = 0;
-  let sent = 0;
-  let failed = 0;
-
-  for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows[idx];
-
-    // Circuit breaker: pause remaining queue if too many consecutive errors
-    if (consecutiveErrors >= 3) {
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "paused",
-          last_error: "Pausado por 3 erros consecutivos. Verifique SMTP e tente novamente.",
-        } as any)
-        .eq("user_id", userId)
-        .eq("status", "pending")) as any;
-      break;
-    }
-
-    if (creditsUsed >= dailyLimit) {
-      // Mark the current row as failed and stop processing further rows
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "failed",
-          processing_started_at: null,
-          last_error: `Limite diário atingido (${dailyLimit}/dia)`,
-          last_attempt_at: new Date().toISOString(),
-        } as any)
-        .eq("id", row.id)) as any;
-      processed += 1;
-      failed += 1;
-      break;
-    }
-
-    // lock row
-    const { data: locked, error: lockErr } = await serviceClient
-      .from("my_queue")
-      .update({
-        status: "processing",
-        processing_started_at: new Date().toISOString(),
-        last_attempt_at: new Date().toISOString(),
-        last_error: null,
-      } as any)
-      .eq("id", row.id)
-      .eq("status", "pending")
-      .select("id")
-      .maybeSingle();
-    if (lockErr) throw lockErr;
-    if (!locked) continue;
-
-    processed += 1;
-    
-    // Generate unique tracking_id for this specific send (declared outside try for error handling scope)
-    const historyTrackingId = crypto.randomUUID();
-
-    try {
-      let job:
-        | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
-        | (ManualJobRow & { visa_type?: string | null })
-        | null = null;
-
-      if (row.job_id) {
-        const { data: pj, error: pjErr } = await serviceClient
-          .from("public_jobs")
-          .select("id,company,job_title,email,visa_type,description,requirements")
-          .eq("id", row.job_id)
-          .maybeSingle();
-        if (pjErr) throw pjErr;
-        job = pj as PublicJobRow | null;
-      } else if (row.manual_job_id) {
-        const { data: mj, error: mjErr } = await serviceClient
-          .from("manual_jobs")
-          .select("id,company,job_title,email,eta_number,phone")
-          .eq("id", row.manual_job_id)
-          .maybeSingle();
-        if (mjErr) throw mjErr;
-        job = mj as ManualJobRow | null;
-      }
-
-      if (!job?.email) throw new Error("Destino (email) ausente");
-
-      // Validate email domain before sending (prevent hard bounces)
-      const emailValidation = await validateEmailDNS(job.email);
-      if (!emailValidation.valid) {
-        await (serviceClient
-          .from("my_queue")
-          .update({
-            status: "skipped_invalid_domain",
-            processing_started_at: null,
-            last_error: emailValidation.reason ?? "Domínio de e-mail inválido",
-            last_attempt_at: new Date().toISOString(),
-          } as any)
-          .eq("id", row.id)) as any;
-        failed += 1;
-        console.log(`[MX-SKIP] user=${userId} queue=${row.id} email=${job.email} reason=${emailValidation.reason}`);
-        continue;
-      }
-
-      const visaType = ("visa_type" in job && job.visa_type === "H-2A") ? "H-2A" : "H-2B";
-      const fallbackTpl =
-        tpls.length > 0
-          ? tpls[hashToIndex(String(row.tracking_id ?? row.id), tpls.length)] ?? tpls[0]
-          : null;
-
-      const vars: Record<string, string> = {
-        name: p.full_name ?? "",
-        age: String(p.age ?? ""),
-        phone: p.phone_e164 ?? "",
-        contact_email: p.contact_email ?? "",
-        company: (job as any).company ?? "",
-        position: (job as any).job_title ?? "",
-        visa_type: visaType,
-        eta_number: ("eta_number" in job ? (job.eta_number ?? "") : ""),
-        company_phone: ("phone" in job ? (job.phone ?? "") : ""),
-        job_phone: ("phone" in job ? (job.phone ?? "") : ""),
-      };
-
-      let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
-      let htmlBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars).replace(/\n/g, "<br>") : "";
-
-      // Black (Dynamic method): AI generates unique email per job. Fallback to templates if AI fails or resume_data missing.
-      const sendingMethod = getSendingMethod(p.plan_tier);
-      if (sendingMethod === "dynamic" && row.job_id) {
-        try {
-          if (!p.resume_data) throw new Error("resume_data_missing");
-          
-          // Fetch user's AI preferences
-          const { data: prefsRow } = await serviceClient
-            .from("ai_generation_preferences")
-            .select("*")
-            .eq("user_id", userId)
-            .maybeSingle();
-          
-          const userPrefs: AIPreferences = prefsRow 
-            ? { ...defaultPreferences, ...prefsRow } 
-            : defaultPreferences;
-          
-          const pj = job as PublicJobRow;
-          const ai = await generateDiamondEmail({ resumeData: p.resume_data, job: pj, visaType, prefs: userPrefs });
-          finalSubject = ai.subject;
-          htmlBody = ai.body.replace(/\n/g, "<br>");
-        } catch (e) {
-          // If there's no template fallback, Black must fail explicitly.
-          if (!fallbackTpl) throw e;
-          // otherwise keep fallback
-        }
-      }
-
-      if (!finalSubject.trim() || !htmlBody.trim()) {
-        throw new Error("no_email_content");
-      }
-
-
-      // Open tracking pixel - uses history-specific tracking_id for per-send tracking
-      const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(historyTrackingId)}`;
-      htmlBody += `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
-
-      const sendProfile = pickSendProfile(p.plan_tier);
-      const extraHeaders: string[] = [];
-      if (sendProfile.xMailer) extraHeaders.push(`X-Mailer: ${sendProfile.xMailer}`);
-      if (sendProfile.userAgent) extraHeaders.push(`User-Agent: ${sendProfile.userAgent}`);
-      if (sendProfile.dedupeId) {
-        htmlBody +=
-          `<div style="display:none; opacity:0; height:0; width:0; overflow:hidden;">` +
-          `${sendProfile.dedupeId}` +
-          `</div>`;
-      }
-
-      // Resume attachment removed - we now only include the Smart Profile link
-      // which provides better tracking and a richer experience for recruiters
-      // The link is injected below with the open tracking pixel
-
-      // Inject Smart Profile link for resume viewing
-      try {
-        const { data: profileData } = await serviceClient
-          .from("profiles")
-          .select("public_token")
-          .eq("id", userId)
-          .maybeSingle();
-        
-        const publicToken = (profileData as any)?.public_token;
-        if (publicToken) {
-          // Construct profile URL with queue tracking parameter
-          const profileUrl = `https://h2linker.com/v/${publicToken}?q=${row.id}`;
-          
-          // Inject subtle link at the end of the email
-          htmlBody += `<p style="margin:16px 0 0 0;font-size:12px;color:#666;">` +
-            `<a href="${profileUrl}" style="color:#0066cc;text-decoration:none;">📄 View Candidate Informations</a>` +
-            `</p>`;
-        }
-      } catch {
-        // ignore - don't break email sending if profile link fails
-      }
-
-      const rawMessage = createMimeMessage({
-        from: smtpEmail,
-        to: job.email,
-        subject: finalSubject,
-        htmlBody,
-        extraHeaders,
-        // No attachment - resume is accessed via Smart Profile link
-      });
-
-      if (smtpConfig.useStartTls) {
-        await sendEmailSMTPStartTls({
-          host: smtpConfig.host,
-          port: smtpConfig.port,
-          user: smtpEmail,
-          password: smtpPassword,
-          to: job.email,
-          rawMessage,
-        });
-      } else {
-        await sendEmailSMTPTls({
-          host: smtpConfig.host,
-          port: smtpConfig.port,
-          user: smtpEmail,
-          password: smtpPassword,
-          to: job.email,
-          rawMessage,
-        });
-      }
-
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "sent",
-          sent_at: new Date().toISOString(),
-          processing_started_at: null,
-          last_error: null,
-        } as any)
-        .eq("id", row.id)) as any;
-
-      // Log send history with unique tracking_id for this specific send
-      await (serviceClient
-        .from("queue_send_history")
-        .insert({
-          queue_id: row.id,
-          user_id: userId,
-          sent_at: new Date().toISOString(),
-          status: "success",
-          tracking_id: historyTrackingId,
-        } as any)) as any;
-
-      sent += 1;
-      creditsUsed += 1;
-      await (serviceClient
-        .from("profiles")
-        .update({ credits_used_today: creditsUsed, credits_reset_date: today, consecutive_errors: 0 } as any)
-        .eq("id", userId)) as any;
-
-      consecutiveErrors = 0;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Falha ao enviar";
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "failed",
-          processing_started_at: null,
-          last_error: message,
-          last_attempt_at: new Date().toISOString(),
-        } as any)
-        .eq("id", row.id)) as any;
-
-      // Log failed send history with tracking_id for consistency
-      await (serviceClient
-        .from("queue_send_history")
-        .insert({
-          queue_id: row.id,
-          user_id: userId,
-          sent_at: new Date().toISOString(),
-          status: "failed",
-          error_message: message,
-          tracking_id: historyTrackingId,
-        } as any)) as any;
-
-      failed += 1;
-
-      if (isCircuitBreakerError(message)) {
-        consecutiveErrors += 1;
-        await (serviceClient
-          .from("profiles")
-          .update({ consecutive_errors: consecutiveErrors } as any)
-          .eq("id", userId)) as any;
-      }
-    }
-
-    if (idx < rows.length - 1) {
-      const ms = getDelayMs(p.plan_tier);
-      if (ms > 0) await sleep(ms);
-    }
+  if (rows.length === 0) {
+    return { processed: false, sent: false, failed: false, skipped: true, error: "No items ready" };
   }
 
-  return { processed, sent, failed };
+  const row = rows[0];
+  const historyTrackingId = crypto.randomUUID();
+
+  // 8. Lock the row
+  const { data: locked } = await serviceClient
+    .from("my_queue")
+    .update({
+      status: "processing",
+      processing_started_at: new Date().toISOString(),
+      last_attempt_at: new Date().toISOString(),
+      last_error: null,
+    })
+    .eq("id", row.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (!locked) {
+    return { processed: false, sent: false, failed: false, skipped: true, error: "Row already locked" };
+  }
+
+  try {
+    // 9. Fetch job data
+    let job:
+      | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
+      | (ManualJobRow & { visa_type?: string | null })
+      | null = null;
+
+    if (row.job_id) {
+      const { data: pj } = await serviceClient
+        .from("public_jobs")
+        .select("id,company,job_title,email,visa_type,description,requirements")
+        .eq("id", row.job_id)
+        .maybeSingle();
+      job = pj as PublicJobRow | null;
+    } else if (row.manual_job_id) {
+      const { data: mj } = await serviceClient
+        .from("manual_jobs")
+        .select("id,company,job_title,email,eta_number,phone")
+        .eq("id", row.manual_job_id)
+        .maybeSingle();
+      job = mj as ManualJobRow | null;
+    }
+
+    if (!job?.email) throw new Error("Destino (email) ausente");
+
+    // 10. DNS VALIDATION (RADAR)
+    const emailValidation = await validateEmailDNS(job.email);
+    if (!emailValidation.valid) {
+      // Mark queue as failed
+      await serviceClient.from("my_queue").update({
+        status: "failed",
+        processing_started_at: null,
+        last_error: emailValidation.reason ?? "Domínio de e-mail inválido",
+        last_attempt_at: new Date().toISOString(),
+      }).eq("id", row.id);
+
+      // RADAR: Flag public_jobs if it's a public job
+      if (row.job_id) {
+        await serviceClient.from("public_jobs").update({ email_invalid_dns: true }).eq("id", row.job_id);
+        console.log(`[RADAR] Flagged job ${row.job_id} email=${job.email} reason=${emailValidation.reason}`);
+      }
+
+      // Credit NOT consumed for invalid email
+      console.log(`[MX-SKIP] user=${userId} queue=${row.id} email=${job.email} reason=${emailValidation.reason}`);
+      return { processed: true, sent: false, failed: true, skipped: false, queueId: row.id, error: emailValidation.reason };
+    }
+
+    // 11. Prepare email content
+    const visaType = ("visa_type" in job && job.visa_type === "H-2A") ? "H-2A" : "H-2B";
+    const fallbackTpl = tpls.length > 0 ? tpls[hashToIndex(String(row.tracking_id ?? row.id), tpls.length)] ?? tpls[0] : null;
+
+    const vars: Record<string, string> = {
+      name: p.full_name ?? "",
+      age: String(p.age ?? ""),
+      phone: p.phone_e164 ?? "",
+      contact_email: p.contact_email ?? "",
+      company: (job as any).company ?? "",
+      position: (job as any).job_title ?? "",
+      visa_type: visaType,
+      eta_number: ("eta_number" in job ? (job.eta_number ?? "") : ""),
+      company_phone: ("phone" in job ? (job.phone ?? "") : ""),
+      job_phone: ("phone" in job ? (job.phone ?? "") : ""),
+    };
+
+    let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
+    let htmlBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars).replace(/\n/g, "<br>") : "";
+
+    // Black (Dynamic AI)
+    if (sendingMethod === "dynamic" && row.job_id) {
+      try {
+        if (!p.resume_data) throw new Error("resume_data_missing");
+
+        const { data: prefsRow } = await serviceClient
+          .from("ai_generation_preferences")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const userPrefs: AIPreferences = prefsRow ? { ...defaultPreferences, ...prefsRow } : defaultPreferences;
+
+        const aiEmail = await generateDynamicEmail({
+          resumeData: p.resume_data,
+          job: job as PublicJobRow,
+          visaType,
+          prefs: userPrefs,
+        });
+
+        finalSubject = aiEmail.subject;
+        htmlBody = aiEmail.body.replace(/\n/g, "<br>");
+
+        // Track AI usage
+        await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "job_email" });
+      } catch (aiErr) {
+        console.error(`[AI-FALLBACK] user=${userId} job=${row.job_id} error=${aiErr}`);
+        if (!fallbackTpl) throw aiErr;
+      }
+    }
+
+    // 12. Open tracking pixel
+    const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(historyTrackingId)}`;
+    htmlBody += `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
+
+    // 13. Send profile (headers)
+    const sendProfile = pickSendProfile(p.plan_tier);
+    const extraHeaders: string[] = [];
+    if (sendProfile.xMailer) extraHeaders.push(`X-Mailer: ${sendProfile.xMailer}`);
+    if (sendProfile.userAgent) extraHeaders.push(`User-Agent: ${sendProfile.userAgent}`);
+    if (sendProfile.dedupeId) {
+      htmlBody += `<div style="display:none; opacity:0; height:0; width:0; overflow:hidden;">${sendProfile.dedupeId}</div>`;
+    }
+
+    // 14. Smart Profile link
+    try {
+      const { data: profileData } = await serviceClient.from("profiles").select("public_token").eq("id", userId).maybeSingle();
+      const publicToken = (profileData as any)?.public_token;
+      if (publicToken) {
+        const profileUrl = `https://h2linker.com/v/${publicToken}?q=${row.id}`;
+        htmlBody += `<p style="margin:16px 0 0 0;font-size:12px;color:#666;"><a href="${profileUrl}" style="color:#0066cc;text-decoration:none;">📄 View Candidate Informations</a></p>`;
+      }
+    } catch { /* ignore */ }
+
+    const rawMessage = createMimeMessage({ from: smtpEmail, to: job.email, subject: finalSubject, htmlBody, extraHeaders });
+
+    // 15. SEND EMAIL
+    if (smtpConfig.useStartTls) {
+      await sendEmailSMTPStartTls({ host: smtpConfig.host, port: smtpConfig.port, user: smtpEmail, password: smtpPassword, to: job.email, rawMessage });
+    } else {
+      await sendEmailSMTPTls({ host: smtpConfig.host, port: smtpConfig.port, user: smtpEmail, password: smtpPassword, to: job.email, rawMessage });
+    }
+
+    // 16. Mark as sent
+    await serviceClient.from("my_queue").update({
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      processing_started_at: null,
+      last_error: null,
+    }).eq("id", row.id);
+
+    // 17. Log history
+    await serviceClient.from("queue_send_history").insert({
+      queue_id: row.id,
+      user_id: userId,
+      sent_at: new Date().toISOString(),
+      status: "success",
+      tracking_id: historyTrackingId,
+    });
+
+    // 18. Consume credit & reset errors
+    creditsUsed += 1;
+    await serviceClient.from("profiles").update({
+      credits_used_today: creditsUsed,
+      credits_reset_date: today,
+      consecutive_errors: 0,
+    }).eq("id", userId);
+
+    // 19. Schedule NEXT pending item with delay
+    const delayMs = getDelayMs(p.plan_tier);
+    const nextScheduledFor = new Date(Date.now() + delayMs).toISOString();
+
+    if (delayMs > 0) {
+      const { data: nextItem } = await serviceClient
+        .from("my_queue")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      if (nextItem && nextItem.length > 0) {
+        await serviceClient.from("my_queue").update({ scheduled_for: nextScheduledFor }).eq("id", nextItem[0].id);
+      }
+    }
+
+    return { processed: true, sent: true, failed: false, skipped: false, queueId: row.id, nextScheduledFor };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Falha ao enviar";
+
+    await serviceClient.from("my_queue").update({
+      status: "failed",
+      processing_started_at: null,
+      last_error: message,
+      last_attempt_at: new Date().toISOString(),
+    }).eq("id", row.id);
+
+    await serviceClient.from("queue_send_history").insert({
+      queue_id: row.id,
+      user_id: userId,
+      sent_at: new Date().toISOString(),
+      status: "failed",
+      error_message: message,
+      tracking_id: historyTrackingId,
+    });
+
+    if (isCircuitBreakerError(message)) {
+      await serviceClient.from("profiles").update({ consecutive_errors: consecutiveErrors + 1 }).eq("id", userId);
+    }
+
+    return { processed: true, sent: false, failed: true, skipped: false, queueId: row.id, error: message };
+  }
 }
+
+// ============ HANDLER ============
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const serviceClient: any = createClient(
+    const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     const cronToken = req.headers.get("x-cron-token");
 
-    // Mode A: cron calls without user session -> process multiple premium users
+    // Mode A: CRON - process one item per user
     if (cronToken) {
-      const { data: settings, error: settingsErr } = await serviceClient
-        .from("app_settings")
-        .select("cron_token")
-        .eq("id", 1)
-        .single();
-      if (settingsErr) throw settingsErr;
-
+      const { data: settings } = await serviceClient.from("app_settings").select("cron_token").eq("id", 1).single();
       const expected = String((settings as { cron_token: string }).cron_token);
       if (String(cronToken) !== expected) {
         return json(401, { ok: false, error: "Unauthorized" });
       }
 
-      const { data: users, error: uErr } = await serviceClient
+      const { data: users } = await serviceClient
         .from("profiles")
         .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond"])
+        .in("plan_tier", ["gold", "diamond", "black"])
         .limit(200);
-      if (uErr) throw uErr;
 
-      let usersTouched = 0;
       let processed = 0;
       let sent = 0;
       let failed = 0;
 
       for (const u of (users ?? []) as Array<{ id: string }>) {
-        const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2 });
-        if (r.processed > 0) usersTouched += 1;
-        processed += r.processed;
-        sent += r.sent;
-        failed += r.failed;
+        const r = await processSingleItem({ serviceClient, userId: u.id });
+        if (r.processed) processed += 1;
+        if (r.sent) sent += 1;
+        if (r.failed) failed += 1;
       }
 
-      return json(200, { ok: true, mode: "cron", usersTouched, processed, sent, failed });
+      return json(200, { ok: true, mode: "cron", processed, sent, failed });
     }
 
-    // Mode B: authenticated user request -> process only their own queue (premium only)
+    // Mode B: User request - process their queue
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return json(401, { ok: false, error: "Unauthorized" });
@@ -1208,44 +977,53 @@ const handler = async (req: Request): Promise<Response> => {
     }
     const userId = userData.user.id;
 
-    const { data: profile } = await serviceClient
-      .from("profiles")
-      .select("plan_tier")
-      .eq("id", userId)
-      .maybeSingle();
+    const { data: profile } = await serviceClient.from("profiles").select("plan_tier").eq("id", userId).maybeSingle();
     const tier = (profile as { plan_tier?: PlanTier } | null)?.plan_tier ?? "free";
     if (tier === "free") {
       return json(403, { ok: false, error: "Free plan must keep the browser open" });
     }
 
     let body: any = null;
-    try {
-      body = await req.json();
-    } catch {
-      body = null;
+    try { body = await req.json(); } catch { body = null; }
+
+    // If specific IDs provided, process them one by one
+    const ids = Array.isArray(body?.ids) ? (body.ids as unknown[]).filter((x) => typeof x === "string") : null;
+    
+    if (ids && ids.length > 0) {
+      // Process each ID sequentially (respecting delays)
+      const work = async () => {
+        let processed = 0;
+        let sent = 0;
+        let failed = 0;
+
+        for (const qId of ids.slice(0, 50) as string[]) {
+          const r = await processSingleItem({ serviceClient, userId, queueId: qId });
+          if (r.processed) processed += 1;
+          if (r.sent) sent += 1;
+          if (r.failed) failed += 1;
+
+          // Apply delay between sends
+          if (r.sent) {
+            const delayMs = getDelayMs(tier);
+            if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+          }
+        }
+
+        return { processed, sent, failed };
+      };
+
+      const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
+      if (typeof waitUntil === "function") {
+        waitUntil(work().catch((e) => console.error("process-queue background error", e)));
+        return json(200, { ok: true, mode: "user", queued: true, count: ids.length });
+      }
+
+      const r = await work();
+      return json(200, { ok: true, mode: "user", ...r });
     }
 
-    const ids = Array.isArray(body?.ids)
-      ? (body.ids as unknown[]).filter((x) => typeof x === "string")
-      : null;
-    const safeIds = ids ? (ids as string[]).slice(0, 50) : undefined;
-    const maxItems = safeIds ? safeIds.length : 5;
-
-    // Fire-and-forget: start processing in the background and return immediately.
-    // This prevents the browser from timing out (which shows up as "Failed to fetch").
-    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
-    const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
-    if (typeof waitUntil === "function") {
-      waitUntil(
-        work.catch((e) => {
-          console.error("process-queue background error", e);
-        }),
-      );
-      return json(200, { ok: true, mode: "user", queued: true, maxItems });
-    }
-
-    // Fallback (if EdgeRuntime.waitUntil isn't available): process synchronously.
-    const r = await work;
+    // No specific IDs - process one ready item
+    const r = await processSingleItem({ serviceClient, userId });
     return json(200, { ok: true, mode: "user", ...r });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -1254,4 +1032,3 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
-
