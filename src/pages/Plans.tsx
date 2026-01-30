@@ -49,14 +49,27 @@ export default function Plans() {
   const renderPlanPrice = (planId: PlanTier) => {
     const plan = PLANS_CONFIG[planId];
     const amount = getPlanAmountForCurrency(plan, currency);
+    
+    // Check for promo in both currencies
     const originalBrl = plan.price.brl_original;
-    const hasPromo = currency === 'BRL' && originalBrl && originalBrl > amount;
+    const originalUsd = plan.price.usd_original;
+    
+    let hasPromo = false;
+    let originalAmount: number | undefined;
+    
+    if (currency === 'BRL' && originalBrl && originalBrl > amount) {
+      hasPromo = true;
+      originalAmount = originalBrl;
+    } else if (currency === 'USD' && originalUsd && originalUsd > amount) {
+      hasPromo = true;
+      originalAmount = originalUsd;
+    }
 
     if (amount === 0) return { current: t('plans.free'), original: null };
     
     return {
       current: formatCurrency(amount, currency, locale),
-      original: hasPromo ? formatCurrency(originalBrl, currency, locale) : null
+      original: hasPromo && originalAmount ? formatCurrency(originalAmount, currency, locale) : null
     };
   };
 
@@ -242,8 +255,8 @@ export default function Plans() {
 
   return (
     <div className="space-y-8">
-      {/* Countdown Timer - only for BRL users */}
-      {currency === 'BRL' && <PromotionCountdown />}
+      {/* Countdown Timer - show for all promo currencies */}
+      <PromotionCountdown />
 
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold font-brand text-foreground">{t('plans.title')}</h1>
