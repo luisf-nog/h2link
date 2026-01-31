@@ -5,7 +5,18 @@
   "footer": {
     "tagline": "Conexiones inteligentes. Oportunidades reales.",
     "terms": "Términos de Uso",
-    "privacy": "Política de Privacidad"
+    "privacy": "Política de Privacidad",
+    "rights": "Todos los derechos reservados."
+  },
+  "public": {
+    "jobs": {
+      "title": "Empleos H-2A & H-2B",
+      "jobs_available": "empleos disponibles",
+      "loading": "Cargando empleos...",
+      "cta_title": "Automatiza tus candidaturas",
+      "cta_description": "Crea una cuenta gratis para agregar empleos a tu cola y enviar cientos de candidaturas personalizadas con IA.",
+      "cta_button": "Crear cuenta gratis"
+    }
   },
   "reports": {
     "button": "Reportar problema",
@@ -111,7 +122,8 @@
       "save_failed": "Error al guardar.",
       "send_failed": "Error al enviar.",
       "delete_failed": "Error al eliminar."
-    }
+    },
+    "page_of": "Página {{page}} de {{total}}"
   },
   "nav": {
     "dashboard": "Panel",
@@ -122,6 +134,18 @@
     "settings": "Configuración"
   },
   "auth": {
+    "sign_in": "Iniciar sesión",
+    "sign_up": "Crear cuenta",
+    "dialog": {
+      "title": "Crea tu cuenta para continuar",
+      "description": "Para agregar empleos a tu cola de envío, necesitas iniciar sesión.",
+      "benefit1_title": "Envío masivo",
+      "benefit1_desc": "Envía cientos de candidaturas por día automáticamente.",
+      "benefit2_title": "IA personalizada",
+      "benefit2_desc": "Cada email se personaliza para el empleo usando inteligencia artificial.",
+      "benefit3_title": "Seguimiento de aperturas",
+      "benefit3_desc": "Sabe cuándo el reclutador abrió tu email."
+    },
     "hero_tagline": "Aplica a empleos H-2A y H-2B a escala y con seguridad",
     "tabs": { "signin": "Iniciar sesión", "signup": "Crear cuenta" },
     "signin": {
@@ -888,6 +912,47 @@
       "add_success_desc": "{{jobTitle}} fue agregado a tu cola.",
       "remove_success_title": "¡Eliminado de la cola!",
       "remove_success_desc": "{{jobTitle}} fue eliminado de tu cola."
+    },
+    "details": {
+      "back": "Volver a empleos",
+      "share": "Compartir",
+      "add_to_queue": "Agregar a cola",
+      "added": "Agregado",
+      "salary": "Salario",
+      "openings": "Vacantes",
+      "start_date": "Fecha de inicio",
+      "experience": "Experiencia",
+      "no_experience": "No requerida",
+      "contact": "Contacto",
+      "description": "Descripción",
+      "duties": "Responsabilidades",
+      "requirements": "Requisitos",
+      "benefits": "Beneficios",
+      "housing": "Vivienda",
+      "transport": "Transporte incluido",
+      "tools": "Herramientas incluidas",
+      "source": "Fuente del empleo",
+      "view_original": "Ver original",
+      "posted_on": "Publicado el {{date}}"
+    },
+    "share": {
+      "copied_title": "¡Enlace copiado!",
+      "copied_desc": "El enlace del empleo fue copiado.",
+      "error_title": "Error al copiar",
+      "error_desc": "No se pudo copiar el enlace."
+    },
+    "actions": {
+      "add_to_queue": "Agregar a cola",
+      "already_added": "Ya agregado"
+    },
+    "empty": "No se encontraron empleos con los filtros seleccionados.",
+    "filters": {
+      "search_placeholder": "Buscar empleos...",
+      "visa_type": "Tipo de visa",
+      "all_visas": "Todas las visas",
+      "state_placeholder": "Estado",
+      "city_placeholder": "Ciudad",
+      "salary": "Salario"
     }
   },
   "not_found": {
