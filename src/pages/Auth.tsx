@@ -968,7 +968,7 @@ export default function Auth() {
               <img 
                 src="https://images.unsplash.com/photo-1662142299036-b05cc590b0f3"
                 alt="Agriculture H2A"
-                className="h-full w-full object-cover opacity-25"
+                className="h-full w-full object-cover opacity-40"
               />
             </div>
             {/* Construction - H2B */}
@@ -976,7 +976,7 @@ export default function Auth() {
               <img 
                 src="https://images.unsplash.com/photo-1504307651254-35680f356dfd"
                 alt="Construction H2B"
-                className="h-full w-full object-cover opacity-25"
+                className="h-full w-full object-cover opacity-40"
               />
             </div>
             {/* Hospitality/Resort - H2B */}
@@ -984,11 +984,11 @@ export default function Auth() {
               <img 
                 src="https://images.unsplash.com/photo-1566073771259-6a8506099945"
                 alt="Hospitality H2B"
-                className="h-full w-full object-cover opacity-25"
+                className="h-full w-full object-cover opacity-40"
               />
             </div>
-            {/* Dark overlay to maintain brand color */}
-            <div className="absolute inset-0 bg-gradient-to-br from-auth-right/95 via-auth-right/93 to-auth-right/90" />
+            {/* Lighter overlay to show images better */}
+            <div className="absolute inset-0 bg-gradient-to-br from-auth-right/80 via-auth-right/75 to-auth-right/70" />
           </div>
 
           <div className="relative w-full max-w-lg">
