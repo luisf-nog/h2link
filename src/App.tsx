@@ -19,9 +19,6 @@ import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import AdminAiUsage from "./pages/AdminAiUsage";
 import PublicProfile from "./pages/PublicProfile";
-import PublicJobs from "./pages/PublicJobs";
-import JobDetails from "./pages/JobDetails";
-
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -137,10 +134,10 @@ const AppRoutes = () => (
       }
     />
     {/* Public Jobs Routes (no auth required) */}
-    <Route path="/jobs" element={<PublicJobs />} />
-    <Route path="/vaga/:id" element={<JobDetails />} />
+    <Route path="/jobs" element={<Jobs />} />
+    <Route path="/vaga/:id" element={<Jobs />} />
     
-    {/* Protected Jobs Route (authenticated version) */}
+    {/* Protected Jobs Route (authenticated version with full features) */}
     <Route
       path="/my-jobs"
       element={
