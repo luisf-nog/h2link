@@ -122,7 +122,7 @@
     "settings": "Configuración"
   },
   "auth": {
-    "hero_tagline": "Aplica a empleos H-2A y H-2B a escala y con seguridad",
+    "hero_tagline": "Ahorra tiempo y encuentra oportunidades H-2A y H-2B reales",
     "tabs": { "signin": "Iniciar sesión", "signup": "Crear cuenta" },
     "signin": {
       "title": "Bienvenido de nuevo",
@@ -216,13 +216,13 @@
     "disclaimer": "Aviso: H2 Linker te ayuda a enviar solicitudes con eficiencia, pero no garantiza ninguna oferta de empleo ni aprobación de visa.",
     "accept_terms": "Acepto los términos y entiendo que el sistema no garantiza ninguna oferta de empleo.",
     "marketing": {
-      "q1": "¿Cuántas horas dedicas a buscar empleos que encajan con tu perfil?",
-      "q2": "¿Cuántas horas pierdes escribiendo un email a la vez?",
-      "solution_prefix": "Haz todo eso en",
+      "q1": "¿Cuántas horas dedicas buscando empleos H-2A/H-2B en agricultura, construcción y hostelería?",
+      "q2": "¿Cuántas horas pierdes escribiendo emails personalizados para cada empleador?",
+      "solution_prefix": "Automatiza todo en",
       "solution_emphasis": "3 clics",
-      "solution_suffix": "con nuestro sistema.",
-      "subline": "Menos trabajo manual. Más solicitudes enviadas.",
-      "footer": "Eficiencia, solidez corporativa y modernidad — desde el primer inicio de sesión hasta el último envío."
+      "solution_suffix": "y multiplica tus oportunidades.",
+      "subline": "Menos trabajo manual. Más solicitudes enviadas. Más oportunidades.",
+      "footer": "Conectándote con empleadores H-2A/H-2B verificados desde el primer envío."
     },
     "actions": {
       "signin": "Iniciar sesión",

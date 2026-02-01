@@ -961,7 +961,15 @@ export default function Auth() {
 
         {/* Right: Marketing */}
         <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
-          <div className="absolute inset-0" aria-hidden="true" />
+          {/* Background Image - Agriculture/Construction theme */}
+          <div className="absolute inset-0">
+            <img 
+              src="https://images.unsplash.com/photo-1662142299036-b05cc590b0f3"
+              alt="H2A H2B Workers"
+              className="h-full w-full object-cover opacity-20"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-auth-right/95 to-auth-right/90" />
+          </div>
 
           <div className="relative w-full max-w-lg">
             <div className="relative overflow-hidden rounded-2xl border border-auth-right-border bg-auth-right-card p-10 shadow-2xl backdrop-blur-md">
