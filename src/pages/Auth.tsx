@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, Users, TrendingUp, Briefcase, Building2, Hotel } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { z } from 'zod';
@@ -67,7 +67,6 @@ export default function Auth() {
   };
 
   const okLabel = useMemo(() => {
-    // fallback safety: don't ever render an empty button label
     const label = t('common.ok');
     return label === 'common.ok' ? 'OK' : label;
   }, [t]);
@@ -88,7 +87,6 @@ export default function Auth() {
     []
   );
 
-  // Handle email-confirmation redirect (OTP / PKCE) and send user straight to dashboard.
   useEffect(() => {
     let cancelled = false;
 
@@ -103,13 +101,11 @@ export default function Auth() {
 
       const isRecovery = type === 'recovery';
 
-      // New dedicated flow: move recovery callbacks to /reset-password to avoid any route guards.
       if (isRecovery && window.location.pathname === '/auth') {
         navigate(`/reset-password${window.location.search}`, { replace: true });
         return;
       }
 
-      // If auth provider redirected with an error (common for expired recovery links), show a friendly message.
       if (authError) {
         setTab('signin');
         setSigninPanel(isRecovery ? 'forgot' : 'signin');
@@ -124,12 +120,10 @@ export default function Auth() {
           openError(t('auth.toasts.signin_error_title'), String(authErrorDesc ?? authError));
         }
 
-        // Clean the URL to avoid re-processing on refresh.
         window.history.replaceState({}, document.title, window.location.pathname);
         return;
       }
 
-      // Nothing to handle
       if (!code && !(type && tokenHash)) return;
 
       setIsLoading(true);
@@ -156,8 +150,7 @@ export default function Auth() {
           }
         }
 
-        // Wait a bit for the session to become available (fallback for slower auth propagation).
-        const maxAttempts = 20; // ~6s
+        const maxAttempts = 20;
         for (let i = 0; i < maxAttempts; i++) {
           const { data } = await supabase.auth.getSession();
           if (data.session) break;
@@ -176,13 +169,11 @@ export default function Auth() {
           return;
         }
 
-        // Clean the URL to avoid re-processing on refresh.
         window.history.replaceState({}, document.title, window.location.pathname);
 
         if (!cancelled) setConfirmFlow({ active: true, state: 'success' });
 
         if (isRecovery) {
-          // Small branded moment, then show the reset password panel (stay on /auth).
           await new Promise((r) => setTimeout(r, 900));
           if (!cancelled) {
             setTab('signin');
@@ -192,7 +183,6 @@ export default function Auth() {
           return;
         }
 
-        // Small branded confirmation moment (~2s)
         await new Promise((r) => setTimeout(r, 2000));
         if (!cancelled) navigate('/dashboard', { replace: true });
       } finally {
@@ -285,7 +275,7 @@ export default function Auth() {
       return;
     }
 
-     const redirectTo = `${getBaseUrl()}/reset-password?type=recovery`;
+    const redirectTo = `${getBaseUrl()}/reset-password?type=recovery`;
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo });
 
     if (error) {
@@ -321,7 +311,6 @@ export default function Auth() {
 
     const parsed = resetPasswordSchema.safeParse(resetState);
     if (!parsed.success) {
-      // We only surface a single friendly message (consistent w/ rest of page)
       openError(t('auth.recovery.errors.reset_error_title'), t('auth.validation.password_mismatch'));
       setIsLoading(false);
       return;
@@ -341,7 +330,6 @@ export default function Auth() {
       return;
     }
 
-    // Force a clean return-to-login flow (user preference)
     await supabase.auth.signOut();
     setResetState({ password: '', confirmPassword: '' });
     setSigninPanel('signin');
@@ -380,13 +368,13 @@ export default function Auth() {
           ? t('auth.validation.invalid_age')
           : field === 'phone' || code === 'invalid_phone'
             ? t('auth.validation.invalid_phone')
-              : field === 'referralCode' || code === 'invalid_referral_code'
-                ? t('auth.validation.invalid_referral_code')
-            : field === 'confirmPassword' || code === 'password_mismatch'
-              ? t('auth.validation.password_mismatch')
-              : field === 'acceptTerms' || code === 'accept_required'
-                ? t('auth.validation.accept_required')
-                : t('auth.validation.invalid_contact_email');
+            : field === 'referralCode' || code === 'invalid_referral_code'
+              ? t('auth.validation.invalid_referral_code')
+              : field === 'confirmPassword' || code === 'password_mismatch'
+                ? t('auth.validation.password_mismatch')
+                : field === 'acceptTerms' || code === 'accept_required'
+                  ? t('auth.validation.accept_required')
+                  : t('auth.validation.invalid_contact_email');
 
       openError(t('auth.toasts.signup_error_title'), description);
       setIsLoading(false);
@@ -418,8 +406,6 @@ export default function Auth() {
         openError(t('auth.toasts.signup_error_title'), error.message);
       }
     } else {
-      // If auto-confirm is enabled (or user already has a session), go to dashboard.
-      // Otherwise show a clear confirmation-needed message.
       const { data: sessionData } = await supabase.auth.getSession();
       const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
 
@@ -435,7 +421,7 @@ export default function Auth() {
               body: JSON.stringify({ code: normalizedReferral }),
             });
           } catch {
-            // ignore (will retry on next session load)
+            // ignore
           }
         }
         navigate('/dashboard');
@@ -453,7 +439,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0a1628] via-[#0f1e35] to-[#152842]">
       <AlertDialog
         open={errorDialog.open}
         onOpenChange={(open) => setErrorDialog((prev) => ({ ...prev, open }))}
@@ -484,204 +470,215 @@ export default function Auth() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <header className="fixed right-4 top-4 z-20 md:right-6 md:top-6">
+      {/* Language Switcher - Top Right */}
+      <header className="fixed right-6 top-6 z-20">
         <LanguageSwitcher
           value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
           onChange={handleChangeLanguage}
-          className="h-9 w-[168px] border border-auth-right-border bg-auth-right-card text-auth-right-foreground backdrop-blur-md"
+          className="h-9 w-[168px] border-white/20 bg-white/10 text-white backdrop-blur-md"
         />
       </header>
 
+      {/* Background Images - Subtle */}
+      <div className="absolute inset-0 grid grid-cols-3 opacity-10">
+        <div className="relative">
+          <img 
+            src="https://images.unsplash.com/photo-1758390283027-78cf31e42cd2"
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="relative">
+          <img 
+            src="https://images.unsplash.com/photo-1640101086894-7d70c3e70179"
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="relative">
+          <img 
+            src="https://images.unsplash.com/photo-1764168798776-2a531b7d6621"
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
+      </div>
+
+      {/* Confirmation Flow Screen */}
       {confirmFlow.active && (
-        <main className="fixed inset-0 z-30 grid grid-cols-1 md:grid-cols-2">
-          <section className="flex items-center justify-center bg-auth-left px-6 py-16 text-auth-left-foreground md:px-14">
-            <div className="w-full max-w-md">
-              <Card className="border border-border bg-card/95 shadow-2xl backdrop-blur">
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-4">
-                    <BrandWordmark height={44} className="max-w-[220px]" />
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0f1e35] to-[#152842] px-6">
+          <Card className="w-full max-w-md border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <BrandWordmark height={44} className="max-w-[220px]" />
 
-                    {confirmFlow.state === 'processing' ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
-                    ) : confirmFlow.state === 'success' ? (
-                      <CheckCircle2 className="h-6 w-6 text-primary" aria-hidden="true" />
-                    ) : (
-                      <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
-                    )}
-                  </div>
+                {confirmFlow.state === 'processing' ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+                ) : confirmFlow.state === 'success' ? (
+                  <CheckCircle2 className="h-6 w-6 text-primary" aria-hidden="true" />
+                ) : (
+                  <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
+                )}
+              </div>
 
-                  <CardTitle className="mt-6 text-2xl">
-                    {confirmKind === 'recovery'
-                      ? confirmFlow.state === 'success'
-                        ? t('auth.recovery.confirmation.success_title')
-                        : confirmFlow.state === 'processing'
-                          ? t('auth.recovery.confirmation.processing_title')
-                          : t('auth.recovery.confirmation.error_title')
-                      : confirmFlow.state === 'success'
-                        ? t('auth.confirmation.success_title')
-                        : confirmFlow.state === 'processing'
-                          ? t('auth.confirmation.processing_title')
-                          : t('auth.confirmation.error_title')}
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground">
-                    {confirmKind === 'recovery'
-                      ? confirmFlow.state === 'success'
-                        ? t('auth.recovery.confirmation.success_desc')
-                        : confirmFlow.state === 'processing'
-                          ? t('auth.recovery.confirmation.processing_desc')
-                          : t('auth.recovery.confirmation.error_desc')
-                      : confirmFlow.state === 'success'
-                        ? t('auth.confirmation.success_desc')
-                        : confirmFlow.state === 'processing'
-                          ? t('auth.confirmation.processing_desc')
-                          : t('auth.confirmation.error_desc')}
-                  </CardDescription>
-                </CardHeader>
+              <CardTitle className="mt-6 text-2xl text-white">
+                {confirmKind === 'recovery'
+                  ? confirmFlow.state === 'success'
+                    ? t('auth.recovery.confirmation.success_title')
+                    : confirmFlow.state === 'processing'
+                      ? t('auth.recovery.confirmation.processing_title')
+                      : t('auth.recovery.confirmation.error_title')
+                  : confirmFlow.state === 'success'
+                    ? t('auth.confirmation.success_title')
+                    : confirmFlow.state === 'processing'
+                      ? t('auth.confirmation.processing_title')
+                      : t('auth.confirmation.error_title')}
+              </CardTitle>
+              <CardDescription className="text-white/70">
+                {confirmKind === 'recovery'
+                  ? confirmFlow.state === 'success'
+                    ? t('auth.recovery.confirmation.success_desc')
+                    : confirmFlow.state === 'processing'
+                      ? t('auth.recovery.confirmation.processing_desc')
+                      : t('auth.recovery.confirmation.error_desc')
+                  : confirmFlow.state === 'success'
+                    ? t('auth.confirmation.success_desc')
+                    : confirmFlow.state === 'processing'
+                      ? t('auth.confirmation.processing_desc')
+                      : t('auth.confirmation.error_desc')}
+              </CardDescription>
+            </CardHeader>
 
-                <CardContent>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
-                    <p className="text-sm text-muted-foreground">
-                      {confirmKind === 'recovery'
-                        ? confirmFlow.state === 'success'
-                          ? t('auth.recovery.confirmation.redirecting')
-                          : t('auth.recovery.confirmation.finalizing')
-                        : confirmFlow.state === 'success'
-                          ? t('auth.confirmation.redirecting')
-                          : t('auth.confirmation.finalizing')}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-                      <span className="inline-flex h-2 w-2 rounded-full bg-primary/60" aria-hidden="true" />
-                      <span className="inline-flex h-2 w-2 rounded-full bg-primary/30" aria-hidden="true" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
-            <div className="absolute inset-0" aria-hidden="true" />
-            <div className="relative w-full max-w-lg">
-              <div className="relative overflow-hidden rounded-2xl border border-auth-right-border bg-auth-right-card p-10 shadow-2xl backdrop-blur-md">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="inline-flex items-center gap-2">
-                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                      <Zap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium tracking-wide text-auth-right-foreground">{t('app.name')}</p>
-                      <p className="text-xs text-auth-right-foreground/70">{t('auth.confirmation.brand_tagline')}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-8 space-y-2">
-                  <h2 className="text-2xl font-semibold tracking-tight">{t('auth.confirmation.brand_title')}</h2>
-                  <p className="text-sm text-auth-right-foreground/70">{t('auth.confirmation.brand_desc')}</p>
+            <CardContent>
+              <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-sm text-white/70">
+                  {confirmKind === 'recovery'
+                    ? confirmFlow.state === 'success'
+                      ? t('auth.recovery.confirmation.redirecting')
+                      : t('auth.recovery.confirmation.finalizing')
+                    : confirmFlow.state === 'success'
+                      ? t('auth.confirmation.redirecting')
+                      : t('auth.confirmation.finalizing')}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                  <span className="inline-flex h-2 w-2 rounded-full bg-primary/60" aria-hidden="true" />
+                  <span className="inline-flex h-2 w-2 rounded-full bg-primary/30" aria-hidden="true" />
                 </div>
               </div>
-            </div>
-          </section>
-        </main>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* Left: Form */}
-        <section className="flex items-center justify-center bg-auth-left px-6 py-16 text-auth-left-foreground md:px-14">
-          <div className="w-full max-w-md">
-            <div className="mb-10">
-              <BrandWordmark height={76} className="max-w-[320px]" />
+      {/* Main Content - Centered Layout */}
+      <div className="flex min-h-screen items-center justify-center px-6 py-12">
+        <div className="grid w-full max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[1.2fr_1fr]">
+          
+          {/* Left: Hero Content */}
+          <div className="space-y-8 text-white">
+            <BrandWordmark height={60} className="max-w-[280px]" />
+            
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm">
+                <Zap className="h-4 w-4 text-ring" />
+                <span className="text-sm font-medium">{t('auth.hero_tagline')}</span>
+              </div>
+              
+              <h1 className="text-4xl font-bold leading-tight lg:text-5xl">
+                {t('auth.marketing.q1')}
+              </h1>
+              
+              <p className="text-lg text-white/80 lg:text-xl">
+                {t('auth.marketing.q2')}
+              </p>
             </div>
 
-            <Tabs value={tab} onValueChange={(v) => setTab(v === 'signup' ? 'signup' : 'signin')} className="w-full">
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {tab === 'signup' ? t('auth.signup.title') : t('auth.signin.title')}
-                </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {tab === 'signup' ? t('auth.signup.description') : t('auth.signin.description')}
-                </p>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                <Clock className="mb-2 h-5 w-5 text-ring" />
+                <div className="text-2xl font-bold">3min</div>
+                <div className="text-xs text-white/60">Tempo médio</div>
               </div>
+              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                <Send className="mb-2 h-5 w-5 text-ring" />
+                <div className="text-2xl font-bold">100+</div>
+                <div className="text-xs text-white/60">Candidaturas</div>
+              </div>
+              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                <TrendingUp className="mb-2 h-5 w-5 text-ring" />
+                <div className="text-2xl font-bold">5x</div>
+                <div className="text-xs text-white/60">Mais chances</div>
+              </div>
+            </div>
 
-              <TabsList className="grid h-11 w-full grid-cols-2 rounded-lg bg-secondary">
-                <TabsTrigger value="signin" className="rounded-md">
-                  {t('auth.tabs.signin')}
-                </TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-md">
-                  {t('auth.tabs.signup')}
-                </TabsTrigger>
-              </TabsList>
+            {/* Sectors */}
+            <div className="flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+                <Sprout className="h-4 w-4" />
+                <span className="text-sm">Agricultura H-2A</span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+                <Building className="h-4 w-4" />
+                <span className="text-sm">Construção H-2B</span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+                <Hotel className="h-4 w-4" />
+                <span className="text-sm">Hotelaria H-2B</span>
+              </div>
+            </div>
+          </div>
 
-              <div className="mt-8">
-                <TabsContent value="signin" className="mt-0">
-                  <Card className="border-0 bg-transparent shadow-none">
-                    <CardHeader className="px-0 pb-6">
-                      <CardTitle className="text-lg">{t('auth.signin.description')}</CardTitle>
-                      <CardDescription className="text-sm text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent className="px-0">
+          {/* Right: Auth Card */}
+          <Card className="border-white/10 bg-white shadow-2xl">
+            <CardHeader className="space-y-4">
+              <Tabs value={tab} onValueChange={(v) => setTab(v === 'signup' ? 'signup' : 'signin')}>
+                <TabsList className="grid h-11 w-full grid-cols-2 bg-muted">
+                  <TabsTrigger value="signin">{t('auth.tabs.signin')}</TabsTrigger>
+                  <TabsTrigger value="signup">{t('auth.tabs.signup')}</TabsTrigger>
+                </TabsList>
+
+                <div className="mt-6">
+                  <TabsContent value="signin" className="mt-0">
+                    <div className="space-y-2">
+                      <CardTitle>{t('auth.signin.title')}</CardTitle>
+                      <CardDescription>{t('auth.signin.description')}</CardDescription>
+                    </div>
+
+                    <div className="mt-6">
                       {signupNotice.visible && (
-                        <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                              <CheckCircle2 className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-foreground">
-                                {t('auth.signup_notice.title')}
-                              </p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {t('auth.signup_notice.desc', { email: signupNotice.email ?? '' })}
-                              </p>
+                        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 p-3">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <div className="text-sm">
+                              <p className="font-semibold">{t('auth.signup_notice.title')}</p>
+                              <p className="mt-1 text-muted-foreground">{t('auth.signup_notice.desc', { email: signupNotice.email ?? '' })}</p>
                             </div>
                           </div>
                         </div>
                       )}
 
                       {signinPanel === 'signin' && (
-                        <form onSubmit={handleSignIn} className="space-y-5">
+                        <form onSubmit={handleSignIn} className="space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="signin-email">{t('auth.fields.email')}</Label>
-                            <Input
-                              id="signin-email"
-                              name="email"
-                              type="email"
-                              placeholder={t('auth.placeholders.email')}
-                              defaultValue={forgotState.email}
-                              required
-                              className="h-11 rounded-lg"
-                            />
+                            <Input id="signin-email" name="email" type="email" placeholder={t('auth.placeholders.email')} required />
                           </div>
-
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center justify-between">
                               <Label htmlFor="signin-password">{t('auth.fields.password')}</Label>
                               <button
                                 type="button"
-                                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                                onClick={() => {
-                                  setSigninPanel('forgot');
-                                  setForgotState((prev) => ({ ...prev, sent: false }));
-                                }}
+                                className="text-sm text-primary hover:underline"
+                                onClick={() => setSigninPanel('forgot')}
                               >
                                 {t('auth.recovery.link')}
                               </button>
                             </div>
-                            <Input
-                              id="signin-password"
-                              name="password"
-                              type="password"
-                              placeholder="••••••••"
-                              required
-                              className="h-11 rounded-lg"
-                            />
+                            <Input id="signin-password" name="password" type="password" required />
                           </div>
-
-                          <Button
-                            type="submit"
-                            className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
-                            disabled={isLoading}
-                          >
+                          <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {t('auth.actions.signin')}
                           </Button>
@@ -689,59 +686,36 @@ export default function Auth() {
                       )}
 
                       {signinPanel === 'forgot' && (
-                        <div className="space-y-5">
+                        <div className="space-y-4">
                           <div>
-                            <p className="text-base font-semibold text-foreground">{t('auth.recovery.request_title')}</p>
+                            <p className="font-semibold">{t('auth.recovery.request_title')}</p>
                             <p className="mt-1 text-sm text-muted-foreground">{t('auth.recovery.request_desc')}</p>
                           </div>
 
                           {forgotState.sent && (
-                            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
-                              <div className="flex items-start gap-3">
-                                <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                                  <CheckCircle2 className="h-5 w-5" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-foreground">{t('auth.recovery.sent_title')}</p>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    {t('auth.recovery.sent_desc', { email: forgotState.email })}
-                                  </p>
-                                </div>
-                              </div>
+                            <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
+                              <p className="text-sm font-semibold">{t('auth.recovery.sent_title')}</p>
+                              <p className="mt-1 text-sm text-muted-foreground">{t('auth.recovery.sent_desc', { email: forgotState.email })}</p>
                             </div>
                           )}
 
-                          <form onSubmit={handleRequestPasswordReset} className="space-y-4">
+                          <form onSubmit={handleRequestPasswordReset} className="space-y-3">
                             <div className="space-y-2">
                               <Label htmlFor="recovery-email">{t('auth.fields.email')}</Label>
                               <Input
                                 id="recovery-email"
                                 name="recoveryEmail"
                                 type="email"
-                                placeholder={t('auth.placeholders.email')}
                                 value={forgotState.email}
                                 onChange={(e) => setForgotState((prev) => ({ ...prev, email: e.target.value }))}
                                 required
-                                className="h-11 rounded-lg"
                               />
                             </div>
-
-                            <Button
-                              type="submit"
-                              className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
-                              disabled={isLoading}
-                            >
+                            <Button type="submit" className="w-full" disabled={isLoading}>
                               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               {t('auth.recovery.actions.send_link')}
                             </Button>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="h-11 w-full rounded-lg"
-                              onClick={() => setSigninPanel('signin')}
-                              disabled={isLoading}
-                            >
+                            <Button type="button" variant="ghost" className="w-full" onClick={() => setSigninPanel('signin')}>
                               {t('auth.recovery.actions.back_to_login')}
                             </Button>
                           </form>
@@ -749,346 +723,125 @@ export default function Auth() {
                       )}
 
                       {signinPanel === 'reset' && (
-                        <div className="space-y-5">
+                        <div className="space-y-4">
                           <div>
-                            <p className="text-base font-semibold text-foreground">{t('auth.recovery.reset_title')}</p>
+                            <p className="font-semibold">{t('auth.recovery.reset_title')}</p>
                             <p className="mt-1 text-sm text-muted-foreground">{t('auth.recovery.reset_desc')}</p>
                           </div>
 
-                          <form onSubmit={handleUpdatePassword} className="space-y-4">
+                          <form onSubmit={handleUpdatePassword} className="space-y-3">
                             <div className="space-y-2">
                               <Label htmlFor="reset-password">{t('auth.recovery.fields.new_password')}</Label>
                               <Input
                                 id="reset-password"
                                 type="password"
-                                placeholder="••••••••"
                                 value={resetState.password}
                                 onChange={(e) => setResetState((prev) => ({ ...prev, password: e.target.value }))}
-                                minLength={6}
                                 required
-                                className="h-11 rounded-lg"
+                                minLength={6}
                               />
                             </div>
-
                             <div className="space-y-2">
                               <Label htmlFor="reset-confirm">{t('auth.recovery.fields.confirm_new_password')}</Label>
                               <Input
                                 id="reset-confirm"
                                 type="password"
-                                placeholder="••••••••"
                                 value={resetState.confirmPassword}
                                 onChange={(e) => setResetState((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                                minLength={6}
                                 required
-                                className="h-11 rounded-lg"
+                                minLength={6}
                               />
                             </div>
-
-                            <Button
-                              type="submit"
-                              className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
-                              disabled={isLoading}
-                            >
+                            <Button type="submit" className="w-full" disabled={isLoading}>
                               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               {t('auth.recovery.actions.save_new_password')}
-                            </Button>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="h-11 w-full rounded-lg"
-                              onClick={async () => {
-                                setIsLoading(true);
-                                await supabase.auth.signOut();
-                                setSigninPanel('signin');
-                                setIsLoading(false);
-                              }}
-                              disabled={isLoading}
-                            >
-                              {t('auth.recovery.actions.cancel')}
                             </Button>
                           </form>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                    </div>
+                  </TabsContent>
 
-                <TabsContent value="signup" className="mt-0">
-                  <Card className="border-0 bg-transparent shadow-none">
-                    <CardHeader className="px-0 pb-6">
-                      <CardTitle className="text-lg">{t('auth.signup.description')}</CardTitle>
-                      <CardDescription className="text-sm text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent className="px-0">
-                      <form onSubmit={handleSignUp} className="space-y-5">
+                  <TabsContent value="signup" className="mt-0">
+                    <div className="space-y-2">
+                      <CardTitle>{t('auth.signup.title')}</CardTitle>
+                      <CardDescription>{t('auth.signup.description')}</CardDescription>
+                    </div>
+
+                    <form onSubmit={handleSignUp} className="mt-6 space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">{t('auth.fields.full_name')}</Label>
+                        <Input id="signup-name" name="fullName" required />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label htmlFor="signup-name">{t('auth.fields.full_name')}</Label>
-                          <Input
-                            id="signup-name"
-                            name="fullName"
-                            type="text"
-                            placeholder={t('auth.placeholders.full_name')}
-                            required
-                            className="h-11 rounded-lg"
-                          />
+                          <Label htmlFor="signup-age">{t('auth.fields.age')}</Label>
+                          <Input id="signup-age" name="age" type="number" min={14} max={90} required />
                         </div>
-
-                        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-[minmax(0,120px)_minmax(0,1fr)]">
-                          <div className="min-w-0 space-y-2">
-                            <Label htmlFor="signup-age">{t('auth.fields.age')}</Label>
-                            <Input
-                              id="signup-age"
-                              name="age"
-                              type="number"
-                              inputMode="numeric"
-                              min={14}
-                              max={90}
-                              placeholder={t('auth.placeholders.age')}
-                              required
-                              className="h-11 rounded-lg"
-                            />
-                          </div>
-                          <div className="min-w-0 space-y-2">
-                            <Label htmlFor="signup-phone">{t('auth.fields.phone')}</Label>
-                            <PhoneE164Input
-                              id="signup-phone"
-                              name="phone"
-                              defaultCountry="BR"
-                              required
-                              // placeholder comes from PhoneE164Input (smart by country)
-                              invalidHint={t('auth.validation.invalid_phone')}
-                              inputClassName="h-11 rounded-lg"
-                            />
-                          </div>
-                        </div>
-
                         <div className="space-y-2">
-                          <Label htmlFor="signup-email">{t('auth.fields.email')}</Label>
-                          <Input
-                            id="signup-email"
-                            name="email"
-                            type="email"
-                            placeholder={t('auth.placeholders.email')}
-                            required
-                            className="h-11 rounded-lg"
+                          <Label htmlFor="signup-phone">{t('auth.fields.phone')}</Label>
+                          <PhoneE164Input id="signup-phone" name="phone" defaultCountry="BR" required />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">{t('auth.fields.email')}</Label>
+                        <Input id="signup-email" name="email" type="email" required />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-contact-email">{t('auth.fields.contact_email')}</Label>
+                        <Input id="signup-contact-email" name="contactEmail" type="email" required />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-referral">{t('auth.fields.referral_code')}</Label>
+                        <Input id="signup-referral" name="referralCode" maxLength={12} />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">{t('auth.fields.password')}</Label>
+                        <Input id="signup-password" name="password" type="password" minLength={6} required />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-confirm-password">{t('auth.fields.confirm_password')}</Label>
+                        <Input id="signup-confirm-password" name="confirmPassword" type="password" minLength={6} required />
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">{t('auth.disclaimer')}</p>
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            id="signup-accept"
+                            checked={acceptTerms}
+                            onCheckedChange={(v) => setAcceptTerms(v === true)}
                           />
+                          <input type="hidden" name="acceptTerms" value={acceptTerms ? 'on' : ''} />
+                          <Label htmlFor="signup-accept" className="text-xs leading-snug">
+                            {t('auth.accept_terms')}
+                          </Label>
                         </div>
+                      </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-contact-email">{t('auth.fields.contact_email')}</Label>
-                          <Input
-                            id="signup-contact-email"
-                            name="contactEmail"
-                            type="email"
-                            placeholder={t('auth.placeholders.contact_email')}
-                            required
-                            className="h-11 rounded-lg"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-referral">{t('auth.fields.referral_code')}</Label>
-                          <Input
-                            id="signup-referral"
-                            name="referralCode"
-                            type="text"
-                            placeholder={t('auth.placeholders.referral_code')}
-                            className="h-11 rounded-lg"
-                            maxLength={12}
-                            autoCapitalize="characters"
-                          />
-                          <p className="text-xs text-muted-foreground">{t('referrals.signup_hint')}</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-password">{t('auth.fields.password')}</Label>
-                          <Input
-                            id="signup-password"
-                            name="password"
-                            type="password"
-                            placeholder="••••••••"
-                            minLength={6}
-                            required
-                            className="h-11 rounded-lg"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="signup-confirm-password">{t('auth.fields.confirm_password')}</Label>
-                          <Input
-                            id="signup-confirm-password"
-                            name="confirmPassword"
-                            type="password"
-                            placeholder="••••••••"
-                            minLength={6}
-                            required
-                            className="h-11 rounded-lg"
-                          />
-                        </div>
-
-                        <div className="space-y-4">
-                          <p className="text-sm text-muted-foreground">{t('auth.disclaimer')}</p>
-                          <div className="flex items-start gap-3">
-                            <Checkbox
-                              id="signup-accept"
-                              checked={acceptTerms}
-                              onCheckedChange={(v) => setAcceptTerms(v === true)}
-                            />
-                            <input type="hidden" name="acceptTerms" value={acceptTerms ? 'on' : ''} />
-                            <Label htmlFor="signup-accept" className="text-sm leading-snug">
-                              {t('auth.accept_terms')}
-                            </Label>
-                          </div>
-                        </div>
-
-                        <Button
-                          type="submit"
-                          className="h-11 w-full rounded-lg bg-primary shadow-lg hover:bg-primary/90"
-                          disabled={isLoading}
-                        >
-                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          {t('auth.actions.signup')}
-                        </Button>
-                      </form>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </div>
-            </Tabs>
-          </div>
-        </section>
-
-        {/* Right: Hero Marketing Section - REDESIGNED */}
-        <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
-          {/* Background Images Collage - Three Sectors */}
-          <div className="absolute inset-0">
-            <div className="grid h-full grid-cols-3 gap-0">
-              <div className="relative overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1758390283027-78cf31e42cd2"
-                  alt="Agriculture"
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-auth-right/60" />
-              </div>
-              <div className="relative overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1640101086894-7d70c3e70179"
-                  alt="Construction"
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-auth-right/60" />
-              </div>
-              <div className="relative overflow-hidden">
-                <img 
-                  src="https://images.unsplash.com/photo-1764168798776-2a531b7d6621"
-                  alt="Hospitality"
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-auth-right/60" />
-              </div>
-            </div>
-            {/* Strong overlay for readability */}
-            <div className="absolute inset-0 bg-gradient-to-br from-auth-right/95 via-auth-right/90 to-auth-right/85" />
-          </div>
-
-          <div className="relative z-10 w-full max-w-2xl space-y-10">
-            {/* Hero Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
-              <Zap className="h-4 w-4 text-ring" />
-              <span className="text-sm font-medium">{t('auth.hero_tagline')}</span>
-            </div>
-
-            {/* Main Hero Content */}
-            <div className="space-y-6">
-              <h1 className="text-5xl font-bold leading-tight tracking-tight">
-                {t('auth.marketing.q1')}
-              </h1>
-              <p className="text-xl leading-relaxed text-auth-right-foreground/90">
-                {t('auth.marketing.q2')}
-              </p>
-            </div>
-
-            {/* Stats Bar */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg border border-auth-right-border bg-auth-right-card p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-ring">
-                  <Clock className="h-5 w-5" />
-                  <span className="text-2xl font-bold">3min</span>
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('auth.actions.signup')}
+                      </Button>
+                    </form>
+                  </TabsContent>
                 </div>
-                <p className="mt-1 text-xs text-auth-right-foreground/70">Tempo médio de envio</p>
-              </div>
-              <div className="rounded-lg border border-auth-right-border bg-auth-right-card p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-ring">
-                  <Send className="h-5 w-5" />
-                  <span className="text-2xl font-bold">100+</span>
-                </div>
-                <p className="mt-1 text-xs text-auth-right-foreground/70">Candidaturas/dia</p>
-              </div>
-              <div className="rounded-lg border border-auth-right-border bg-auth-right-card p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-ring">
-                  <TrendingUp className="h-5 w-5" />
-                  <span className="text-2xl font-bold">5x</span>
-                </div>
-                <p className="mt-1 text-xs text-auth-right-foreground/70">Mais chances</p>
-              </div>
-            </div>
-
-            {/* Features Grid */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 rounded-xl border border-auth-right-border bg-auth-right-card p-5 backdrop-blur-md transition-all hover:border-ring/50">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ring/10">
-                  <Zap className="h-6 w-6 text-ring" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">{t('auth.marketing.solution_prefix')} <span className="text-ring">{t('auth.marketing.solution_emphasis')}</span> {t('auth.marketing.solution_suffix')}</h3>
-                  <p className="mt-1 text-sm text-auth-right-foreground/70">{t('auth.marketing.subline')}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 rounded-xl border border-auth-right-border bg-auth-right-card p-5 backdrop-blur-md transition-all hover:border-ring/50">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ring/10">
-                  <Users className="h-6 w-6 text-ring" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Vagas Verificadas</h3>
-                  <p className="mt-1 text-sm text-auth-right-foreground/70">Empregadores H-2A/H-2B confiáveis em agricultura, construção e hotelaria.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Sectors Visual Pills */}
-            <div className="flex flex-wrap gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
-                <Briefcase className="h-4 w-4 text-ring" />
-                <span className="text-sm">Agricultura H-2A</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
-                <Building2 className="h-4 w-4 text-ring" />
-                <span className="text-sm">Construção H-2B</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
-                <Hotel className="h-4 w-4 text-ring" />
-                <span className="text-sm">Hotelaria H-2B</span>
-              </div>
-            </div>
-
-            {/* Footer Trust Line */}
-            <p className="text-sm text-auth-right-foreground/60">
-              {t('auth.marketing.footer')}
-            </p>
-          </div>
-        </section>
+              </Tabs>
+            </CardHeader>
+          </Card>
+        </div>
       </div>
 
-      {/* Footer with help email */}
-      <footer className="border-t border-border bg-card/50 backdrop-blur-sm py-4 px-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          {t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}: help@h2linker.com
-        </p>
+      {/* Footer */}
+      <footer className="absolute bottom-4 left-0 right-0 text-center text-sm text-white/50">
+        <p>help@h2linker.com</p>
       </footer>
     </div>
   );
 }
-
