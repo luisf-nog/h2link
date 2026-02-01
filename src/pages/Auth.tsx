@@ -470,12 +470,12 @@ export default function Auth() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Language Switcher - Top Right */}
-      <header className="fixed right-6 top-6 z-20">
+      {/* Language Switcher - Top Right - Mobile friendly */}
+      <header className="fixed right-4 top-4 z-20 sm:right-6 sm:top-6">
         <LanguageSwitcher
           value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
           onChange={handleChangeLanguage}
-          className="h-9 w-[168px] border-white/20 bg-white/10 text-white backdrop-blur-md"
+          className="h-9 w-[140px] border-white/20 bg-white/10 text-white backdrop-blur-md sm:w-[168px]"
         />
       </header>
 
@@ -571,71 +571,12 @@ export default function Auth() {
         </div>
       )}
 
-      {/* Main Content - Centered Layout */}
-      <div className="flex min-h-screen items-center justify-center px-6 py-12">
-        <div className="grid w-full max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[1.2fr_1fr]">
+      {/* Main Content - Mobile First Layout */}
+      <div className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
+        <div className="grid w-full max-w-7xl grid-cols-1 items-center gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-12">
           
-          {/* Left: Hero Content */}
-          <div className="space-y-8 text-white">
-            <div className="flex items-center select-none">
-              <span className="text-5xl font-bold tracking-tight">
-                <span className="text-primary">H2</span> <span className="text-white">Linker</span>
-              </span>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm">
-                <Zap className="h-4 w-4 text-ring" />
-                <span className="text-sm font-medium">{t('auth.hero_tagline')}</span>
-              </div>
-              
-              <h1 className="text-4xl font-bold leading-tight lg:text-5xl">
-                {t('auth.marketing.q1')}
-              </h1>
-              
-              <p className="text-lg text-white/80 lg:text-xl">
-                {t('auth.marketing.q2')}
-              </p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <Clock className="mb-2 h-5 w-5 text-ring" />
-                <div className="text-2xl font-bold">3min</div>
-                <div className="text-xs text-white/60">Tempo médio</div>
-              </div>
-              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <Send className="mb-2 h-5 w-5 text-ring" />
-                <div className="text-2xl font-bold">100+</div>
-                <div className="text-xs text-white/60">Candidaturas</div>
-              </div>
-              <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <TrendingUp className="mb-2 h-5 w-5 text-ring" />
-                <div className="text-2xl font-bold">5x</div>
-                <div className="text-xs text-white/60">Mais chances</div>
-              </div>
-            </div>
-
-            {/* Sectors */}
-            <div className="flex flex-wrap gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
-                <Sprout className="h-4 w-4" />
-                <span className="text-sm">Agricultura H-2A</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
-                <Building className="h-4 w-4" />
-                <span className="text-sm">Construção H-2B</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
-                <Hotel className="h-4 w-4" />
-                <span className="text-sm">Hotelaria H-2B</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Auth Card */}
-          <Card className="border-white/10 bg-white shadow-2xl">
+          {/* Right: Auth Card - Shows FIRST on mobile */}
+          <Card className="order-1 border-white/10 bg-white shadow-2xl lg:order-2">
             <CardHeader className="space-y-4">
               <Tabs value={tab} onValueChange={(v) => setTab(v === 'signup' ? 'signup' : 'signin')}>
                 <TabsList className="grid h-11 w-full grid-cols-2 bg-muted">
@@ -839,11 +780,70 @@ export default function Auth() {
               </Tabs>
             </CardHeader>
           </Card>
+
+          {/* Left: Hero Content - Shows SECOND on mobile, first on desktop */}
+          <div className="order-2 space-y-6 text-white lg:order-1 lg:space-y-8">
+            <div className="flex items-center select-none">
+              <span className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+                <span className="text-primary">H2</span> <span className="text-white">Linker</span>
+              </span>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm">
+                <Zap className="h-4 w-4 text-ring" />
+                <span className="text-sm font-medium">{t('auth.hero_tagline')}</span>
+              </div>
+              
+              <h1 className="text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">
+                {t('auth.marketing.q1')}
+              </h1>
+              
+              <p className="text-base text-white/80 sm:text-lg">
+                {t('auth.marketing.q2')}
+              </p>
+            </div>
+
+            {/* Stats - Compact on mobile */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="rounded-lg border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:p-4">
+                <Clock className="mb-1 h-4 w-4 text-ring sm:mb-2 sm:h-5 sm:w-5" />
+                <div className="text-xl font-bold sm:text-2xl">3min</div>
+                <div className="text-[10px] text-white/60 sm:text-xs">Tempo médio</div>
+              </div>
+              <div className="rounded-lg border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:p-4">
+                <Send className="mb-1 h-4 w-4 text-ring sm:mb-2 sm:h-5 sm:w-5" />
+                <div className="text-xl font-bold sm:text-2xl">100+</div>
+                <div className="text-[10px] text-white/60 sm:text-xs">Candidaturas</div>
+              </div>
+              <div className="rounded-lg border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:p-4">
+                <TrendingUp className="mb-1 h-4 w-4 text-ring sm:mb-2 sm:h-5 sm:w-5" />
+                <div className="text-xl font-bold sm:text-2xl">5x</div>
+                <div className="text-[10px] text-white/60 sm:text-xs">Mais chances</div>
+              </div>
+            </div>
+
+            {/* Sectors - Stack on mobile */}
+            <div className="flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+                <Sprout className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">Agricultura H-2A</span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+                <Building className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">Construção H-2B</span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5">
+                <Hotel className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">Hotelaria H-2B</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="absolute bottom-4 left-0 right-0 text-center text-sm text-white/50">
+      {/* Footer - Mobile friendly */}
+      <footer className="pb-4 pt-4 text-center text-xs text-white/50 sm:absolute sm:bottom-4 sm:left-0 sm:right-0 sm:text-sm">
         <p>help@h2linker.com</p>
       </footer>
     </div>
