@@ -5,18 +5,7 @@
   "footer": {
     "tagline": "Smart connections. Real opportunities.",
     "terms": "Terms of Use",
-    "privacy": "Privacy Policy",
-    "rights": "All rights reserved."
-  },
-  "public": {
-    "jobs": {
-      "title": "H-2A & H-2B Jobs",
-      "jobs_available": "jobs available",
-      "loading": "Loading jobs...",
-      "cta_title": "Automate your applications",
-      "cta_description": "Create a free account to add jobs to your queue and send hundreds of AI-personalized applications.",
-      "cta_button": "Create free account"
-    }
+    "privacy": "Privacy Policy"
   },
   "reports": {
     "button": "Report issue",
@@ -122,8 +111,7 @@
       "save_failed": "Failed to save.",
       "send_failed": "Failed to send.",
       "delete_failed": "Failed to delete."
-    },
-    "page_of": "Page {{page}} of {{total}}"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -134,18 +122,6 @@
     "settings": "Settings"
   },
   "auth": {
-    "sign_in": "Sign in",
-    "sign_up": "Create account",
-    "dialog": {
-      "title": "Create an account to continue",
-      "description": "To add jobs to your sending queue, you need to be logged in.",
-      "benefit1_title": "Mass sending",
-      "benefit1_desc": "Send hundreds of applications per day automatically.",
-      "benefit2_title": "AI personalization",
-      "benefit2_desc": "Each email is personalized for the job using AI.",
-      "benefit3_title": "Open tracking",
-      "benefit3_desc": "Know when the recruiter opened your email."
-    },
     "hero_tagline": "Apply to H-2A & H-2B jobs at scale, safely",
     "tabs": { "signin": "Sign in", "signup": "Create account" },
     "signin": {
@@ -912,61 +888,6 @@
       "add_success_desc": "{{jobTitle}} was added to your queue.",
       "remove_success_title": "Removed from queue!",
       "remove_success_desc": "{{jobTitle}} was removed from your queue."
-    },
-    "details": {
-      "back": "Back to jobs",
-      "share": "Share",
-      "add_to_queue": "Add to queue",
-      "added": "Added",
-      "salary": "Salary",
-      "openings": "Openings",
-      "start_date": "Start date",
-      "experience": "Experience",
-      "no_experience": "Not required",
-      "contact": "Contact",
-      "description": "Description",
-      "duties": "Job Duties",
-      "requirements": "Requirements",
-      "benefits": "Benefits",
-      "housing": "Housing",
-      "transport": "Transport provided",
-      "tools": "Tools provided",
-      "source": "Job source",
-      "view_original": "View original",
-      "posted_on": "Posted on {{date}}"
-    },
-    "share": {
-      "copied_title": "Link copied!",
-      "copied_desc": "The job link has been copied to your clipboard.",
-      "error_title": "Copy failed",
-      "error_desc": "Could not copy the link."
-    },
-    "actions": {
-      "add_to_queue": "Add to queue",
-      "already_added": "Already added"
-    },
-    "empty": "No jobs found matching the selected filters.",
-    "filters": {
-      "search_placeholder": "Search jobs...",
-      "visa_type": "Visa type",
-      "all_visas": "All visas",
-      "state_placeholder": "State",
-      "city_placeholder": "City",
-      "salary": "Salary"
-    },
-    "table": {
-      "title": "Role",
-      "company": "Company",
-      "location": "Location",
-      "salary": "Salary",
-      "visa": "Visa",
-      "posted": "Posted",
-      "action": "Action",
-      "experience_months_one": "{{count}}mo",
-      "experience_months_other": "{{count}}mo",
-      "experience_years_one": "{{count}}yr",
-      "experience_years_other": "{{count}}yr",
-      "experience_years_months": "{{years}}yr {{months}}mo"
     }
   },
   "not_found": {

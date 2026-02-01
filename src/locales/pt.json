@@ -5,18 +5,7 @@
   "footer": {
     "tagline": "Conexões inteligentes. Oportunidades reais.",
     "terms": "Termos de Uso",
-    "privacy": "Política de Privacidade",
-    "rights": "Todos os direitos reservados."
-  },
-  "public": {
-    "jobs": {
-      "title": "Vagas H-2A & H-2B",
-      "jobs_available": "vagas disponíveis",
-      "loading": "Carregando vagas...",
-      "cta_title": "Automatize suas candidaturas",
-      "cta_description": "Crie uma conta gratuita para adicionar vagas à sua fila e enviar centenas de candidaturas com IA personalizada.",
-      "cta_button": "Criar conta grátis"
-    }
+    "privacy": "Política de Privacidade"
   },
   "reports": {
     "button": "Sinalizar erro",
@@ -122,8 +111,7 @@
       "save_failed": "Falha ao salvar.",
       "send_failed": "Falha ao enviar.",
       "delete_failed": "Falha ao remover."
-    },
-    "page_of": "Página {{page}} de {{total}}"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -134,18 +122,6 @@
     "settings": "Configurações"
   },
   "auth": {
-    "sign_in": "Entrar",
-    "sign_up": "Criar conta",
-    "dialog": {
-      "title": "Crie sua conta para continuar",
-      "description": "Para adicionar vagas à sua fila de envio, você precisa estar logado.",
-      "benefit1_title": "Envio em massa",
-      "benefit1_desc": "Envie centenas de candidaturas por dia automaticamente.",
-      "benefit2_title": "IA personalizada",
-      "benefit2_desc": "Cada email é personalizado para a vaga usando inteligência artificial.",
-      "benefit3_title": "Rastreamento de aberturas",
-      "benefit3_desc": "Saiba quando o recrutador abriu seu email."
-    },
     "hero_tagline": "Aplique para vagas H-2A e H-2B de forma massiva e segura",
     "tabs": { "signin": "Entrar", "signup": "Criar Conta" },
     "signin": {
@@ -911,61 +887,6 @@
       "add_success_desc": "{{jobTitle}} foi adicionado à sua fila.",
       "remove_success_title": "Removido da fila!",
       "remove_success_desc": "{{jobTitle}} foi removido da sua fila."
-    },
-    "details": {
-      "back": "Voltar para vagas",
-      "share": "Compartilhar",
-      "add_to_queue": "Adicionar à fila",
-      "added": "Adicionado",
-      "salary": "Salário",
-      "openings": "Vagas",
-      "start_date": "Início",
-      "experience": "Experiência",
-      "no_experience": "Não exigida",
-      "contact": "Contato",
-      "description": "Descrição",
-      "duties": "Responsabilidades",
-      "requirements": "Requisitos",
-      "benefits": "Benefícios",
-      "housing": "Moradia",
-      "transport": "Transporte fornecido",
-      "tools": "Ferramentas fornecidas",
-      "source": "Fonte da vaga",
-      "view_original": "Ver original",
-      "posted_on": "Publicado em {{date}}"
-    },
-    "share": {
-      "copied_title": "Link copiado!",
-      "copied_desc": "O link da vaga foi copiado para sua área de transferência.",
-      "error_title": "Erro ao copiar",
-      "error_desc": "Não foi possível copiar o link."
-    },
-    "actions": {
-      "add_to_queue": "Adicionar à fila",
-      "already_added": "Já na fila"
-    },
-    "empty": "Nenhuma vaga encontrada com os filtros selecionados.",
-    "filters": {
-      "search_placeholder": "Buscar vagas...",
-      "visa_type": "Tipo de visto",
-      "all_visas": "Todos os vistos",
-      "state_placeholder": "Estado",
-      "city_placeholder": "Cidade",
-      "salary": "Salário"
-    },
-    "table": {
-      "title": "Cargo",
-      "company": "Empresa",
-      "location": "Local",
-      "salary": "Salário",
-      "visa": "Visto",
-      "posted": "Publicado",
-      "action": "Ação",
-      "experience_months_one": "{{count}}m",
-      "experience_months_other": "{{count}}m",
-      "experience_years_one": "{{count}}a",
-      "experience_years_other": "{{count}}a",
-      "experience_years_months": "{{years}}a {{months}}m"
     }
   },
   "not_found": {
