@@ -480,7 +480,7 @@ export default function Auth() {
       </header>
 
       {/* Background Images - Subtle */}
-      <div className="absolute inset-0 grid grid-cols-3 opacity-10">
+      <div className="pointer-events-none absolute inset-0 grid grid-cols-3 opacity-10">
         <div className="relative">
           <img 
             src="https://images.unsplash.com/photo-1758390283027-78cf31e42cd2"
@@ -577,7 +577,11 @@ export default function Auth() {
           
           {/* Left: Hero Content */}
           <div className="space-y-8 text-white">
-            <BrandWordmark height={60} className="max-w-[280px]" />
+            <div className="flex items-center select-none">
+              <span className="text-5xl font-bold tracking-tight">
+                <span className="text-primary">H2</span> <span className="text-white">Linker</span>
+              </span>
+            </div>
             
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm">
