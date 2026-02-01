@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PLANS_CONFIG } from '@/config/plans.config';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,8 +16,10 @@ import {
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { JobDetailsDialog, type JobDetails } from '@/components/jobs/JobDetailsDialog';
+import { JobDetailsContent } from '@/components/jobs/JobDetailsContent';
 import { JobImportDialog } from '@/components/jobs/JobImportDialog';
 import { MobileJobCard } from '@/components/jobs/MobileJobCard';
+import { AuthRequiredDialog } from '@/components/auth/AuthRequiredDialog';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -28,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -44,14 +46,21 @@ interface Job extends JobDetails {
 }
 
 export default function Jobs() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAdmin = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
+
+  // Check if we're viewing a specific job via URL
+  const { id: jobIdFromUrl } = useParams<{ id: string }>();
+  const isDirectJobView = Boolean(jobIdFromUrl);
+  const isProtectedRoute = location.pathname === '/my-jobs';
+
   const formatPlanPrice = (tier: 'gold' | 'diamond') => {
     const amount = getPlanAmountForCurrency(PLANS_CONFIG[tier], currency);
     return formatCurrency(amount, currency, locale);
@@ -65,14 +74,20 @@ export default function Jobs() {
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
 
-  // Derive daily limit data for banner
+  // Direct job view state
+  const [directJob, setDirectJob] = useState<Job | null>(null);
+  const [directJobLoading, setDirectJobLoading] = useState(false);
+
+  // Auth required dialog
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+
+  // Derive daily limit data for banner (only for authenticated users)
   const planTierCheck = profile?.plan_tier || 'free';
   const isFreeUser = planTierCheck === 'free';
-  // Referral bonus only applies to free users
   const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
   const dailyLimitTotal = (PLANS_CONFIG[planTierCheck]?.limits?.daily_emails ?? 0) + referralBonus;
   const creditsUsedToday = profile?.credits_used_today || 0;
-  const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
+  const isFreeLimitReached = user && isFreeUser && creditsUsedToday >= dailyLimitTotal;
 
   const [visaType, setVisaType] = useState<'all' | 'H-2B' | 'H-2A'>(() => {
     const v = searchParams.get('visa');
@@ -114,7 +129,6 @@ export default function Jobs() {
   const [salaryBand, setSalaryBand] = useState<SalaryBand>(() => {
     const v = (searchParams.get('salary') as SalaryBand | null) ?? null;
     if (v && SALARY_BANDS.some((b) => b.value === v)) return v;
-    // backward-compat: old min/max params
     return deriveBandFromLegacyMinMax(searchParams.get('min'), searchParams.get('max'));
   });
 
@@ -160,14 +174,53 @@ export default function Jobs() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
+  // Plan settings - use default for unauthenticated users
   const planTier = profile?.plan_tier || 'free';
-  const planSettings = PLANS_CONFIG[planTier].settings;
+  const planSettings = user && isProtectedRoute ? PLANS_CONFIG[planTier].settings : {
+    job_db_access: 'visual_premium',
+    job_db_blur: false,
+    show_housing_icons: true,
+  };
 
   const pageSize = 25;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
 
   const buildOrSearch = (term: string) =>
     `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
+
+  // Fetch single job for direct view
+  const fetchDirectJob = async (id: string) => {
+    setDirectJobLoading(true);
+    const { data, error } = await supabase
+      .from('public_jobs')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error('Error fetching job:', error);
+      navigate('/404');
+      return;
+    }
+
+    setDirectJob(data as Job);
+
+    // Check if already in queue (only for authenticated users)
+    if (profile?.id) {
+      const { data: queueData } = await supabase
+        .from('my_queue')
+        .select('id')
+        .eq('user_id', profile.id)
+        .eq('job_id', id)
+        .maybeSingle();
+
+      if (queueData) {
+        setQueuedJobIds(new Set([id]));
+      }
+    }
+
+    setDirectJobLoading(false);
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -178,11 +231,10 @@ export default function Jobs() {
     let query = supabase
       .from('public_jobs')
       .select('*', { count: 'exact' })
-      .eq('is_banned', false) // Exclude banned jobs
+      .eq('is_banned', false)
       .order(sortKey, { ascending: sortDir === 'asc', nullsFirst: false })
       .range(from, to);
 
-    // desempate estável
     if (sortKey !== 'posted_date') {
       query = query.order('posted_date', { ascending: false, nullsFirst: false });
     }
@@ -218,9 +270,8 @@ export default function Jobs() {
       setJobs(nextJobs);
       setTotalCount(count ?? 0);
 
-      // Marca vagas já adicionadas pelo usuário (para trocar + por ✓)
-      // (não aplicamos isso quando o plano blur está ativo)
-      if (profile?.id && !planSettings.job_db_blur && nextJobs.length) {
+      // Mark jobs already in user's queue (only for authenticated users)
+      if (profile?.id && nextJobs.length) {
         const ids = nextJobs.map((j) => j.id);
         const { data: queueRows, error: queueErr } = await supabase
           .from('my_queue')
@@ -245,7 +296,6 @@ export default function Jobs() {
           console.warn('Error fetching job reports:', reportErr);
           setJobReports({});
         } else {
-          // Aggregate reports by job_id
           const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
           for (const row of reportRows ?? []) {
             if (!reportsMap[row.job_id]) {
@@ -269,10 +319,8 @@ export default function Jobs() {
 
   const fetchCategories = async () => {
     setCategoriesLoading(true);
-    // Note: PostgREST distinct isn't consistently exposed in client; we fetch and de-dupe client-side.
-    // IMPORTANT: paginate because the backend caps at 1000 rows per request.
     const pageSize = 1000;
-    const maxPages = 25; // safety cap (25k rows)
+    const maxPages = 25;
     const seen = new Set<string>();
 
     try {
@@ -306,16 +354,28 @@ export default function Jobs() {
     }
   };
 
-  // Fetch on filter changes (server-side pagination)
+  // Fetch direct job when URL has an ID
   useEffect(() => {
-    fetchJobs();
+    if (jobIdFromUrl) {
+      fetchDirectJob(jobIdFromUrl);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
+  }, [jobIdFromUrl, profile?.id]);
+
+  // Fetch jobs list on filter changes (only if not in direct view)
+  useEffect(() => {
+    if (!isDirectJobView) {
+      fetchJobs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page, isDirectJobView, profile?.id]);
 
   useEffect(() => {
-    fetchCategories();
+    if (!isDirectJobView) {
+      fetchCategories();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDirectJobView]);
 
   const categoryOptions = useMemo(() => {
     const base = categories;
@@ -324,8 +384,10 @@ export default function Jobs() {
     return base;
   }, [categories, categoryFilter]);
 
-  // Persist filters in URL (debounced)
+  // Persist filters in URL (debounced) - only for list view
   useEffect(() => {
+    if (isDirectJobView) return;
+
     const t = window.setTimeout(() => {
       const next = new URLSearchParams();
       if (visaType !== 'all') next.set('visa', visaType);
@@ -335,7 +397,6 @@ export default function Jobs() {
       if (categoryFilter.trim()) next.set('category', categoryFilter.trim());
 
       if (salaryBand !== 'any') next.set('salary', salaryBand);
-      // mantém compatibilidade se alguém tiver link antigo
       const legacy = SALARY_BANDS.find((b) => b.value === salaryBand);
       if (legacy?.min !== null) next.set('min', String(legacy.min));
       if (legacy?.max !== null) next.set('max', String(legacy.max));
@@ -346,7 +407,6 @@ export default function Jobs() {
       }
       next.set('page', String(page));
 
-      // Only update if different (prevents churn)
       const current = searchParams.toString();
       const nextStr = next.toString();
       if (current !== nextStr) setSearchParams(next, { replace: true });
@@ -354,14 +414,13 @@ export default function Jobs() {
 
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page, isDirectJobView]);
 
   const visaLabel = useMemo(() => {
     if (visaType === 'all') return 'H-2A + H-2B';
     return visaType;
   }, [visaType]);
 
-  // Cargo, Empresa, Local, Qtd. Vagas, Salário, Visto, Postada, Início, Fim, Experiência, Email, Ação
   const tableColSpan = 12;
 
   const formatExperience = (months: number | null | undefined) => {
@@ -383,7 +442,14 @@ export default function Jobs() {
     return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   };
 
+  // Action Paywall: Check if user is authenticated before performing actions
   const addToQueue = async (job: Job) => {
+    // Check authentication first (Action Paywall)
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
     if (planSettings.job_db_blur) {
       setShowUpgradeDialog(true);
       return;
@@ -391,12 +457,11 @@ export default function Jobs() {
 
     if (queuedJobIds.has(job.id)) return;
 
-    // OPTIMISTIC UPDATE: Mark as queued immediately for instant UI feedback
+    // OPTIMISTIC UPDATE
     setQueuedJobIds((prev) => new Set(prev).add(job.id));
-    // Track processing state for spinner
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
 
-    // Run DNS check and insert in background (non-blocking)
+    // Run insert in background
     (async () => {
       const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check;
       if (requiresDnsCheck) {
@@ -404,7 +469,6 @@ export default function Jobs() {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
           if (!token) {
-            // Revert optimistic update
             setQueuedJobIds((prev) => {
               const next = new Set(prev);
               next.delete(job.id);
@@ -431,7 +495,6 @@ export default function Jobs() {
           const payload = await res.json().catch(() => null);
           const ok = Boolean(payload?.ok);
           if (!ok) {
-            // Revert optimistic update
             setQueuedJobIds((prev) => {
               const next = new Set(prev);
               next.delete(job.id);
@@ -450,7 +513,6 @@ export default function Jobs() {
             return;
           }
         } catch (_e) {
-          // Revert optimistic update
           setQueuedJobIds((prev) => {
             const next = new Set(prev);
             next.delete(job.id);
@@ -477,13 +539,11 @@ export default function Jobs() {
 
       if (error) {
         if (error.code === '23505') {
-          // Already in queue - keep the optimistic state
           toast({
             title: t('jobs.toasts.already_in_queue_title'),
             description: t('jobs.toasts.already_in_queue_desc'),
           });
         } else {
-          // Revert optimistic update on error
           setQueuedJobIds((prev) => {
             const next = new Set(prev);
             next.delete(job.id);
@@ -506,7 +566,6 @@ export default function Jobs() {
           description: t('jobs.toasts.add_success_desc', { jobTitle: job.job_title }),
         });
       }
-      // Clear processing state
       setProcessingJobIds((prev) => {
         const next = new Set(prev);
         next.delete(job.id);
@@ -516,6 +575,11 @@ export default function Jobs() {
   };
 
   const removeFromQueue = async (job: Job) => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
     if (!profile?.id) return;
     
     const { error } = await supabase
@@ -572,10 +636,51 @@ export default function Jobs() {
     return dir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
+  // State B: Direct Job View (when URL has /vaga/:id)
+  if (isDirectJobView) {
+    if (directJobLoading) {
+      return (
+        <div className="min-h-screen bg-background p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-64 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
+      );
+    }
+
+    if (!directJob) return null;
+
+    return (
+      <TooltipProvider>
+        <div className="min-h-screen bg-background p-4 md:p-6 max-w-5xl mx-auto">
+          <JobDetailsContent
+            job={directJob}
+            formatSalary={formatSalary}
+            onAddToQueue={(job) => addToQueue(job as Job)}
+            onRemoveFromQueue={(job) => removeFromQueue(job as Job)}
+            isInQueue={queuedJobIds.has(directJob.id)}
+            showBackButton={true}
+            showSeoMeta={true}
+          />
+        </div>
+
+        <AuthRequiredDialog 
+          open={showAuthDialog} 
+          onOpenChange={setShowAuthDialog}
+          action="queue"
+        />
+      </TooltipProvider>
+    );
+  }
+
+  // State A: Job List View (root /jobs or /my-jobs)
   return (
     <TooltipProvider>
       <div className="space-y-6">
-      {/* Upgrade Banner for Free users at limit */}
+      {/* Upgrade Banner for Free users at limit (only for authenticated users) */}
       {isFreeLimitReached && (
         <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
           <div className="flex items-center gap-3">
@@ -997,6 +1102,14 @@ export default function Jobs() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Auth Required Dialog (Action Paywall) */}
+      <AuthRequiredDialog 
+        open={showAuthDialog} 
+        onOpenChange={setShowAuthDialog}
+        action="queue"
+      />
+
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {t('jobs.pagination.page_of', { page, totalPages })}
