@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, CheckCircle2, Loader2, Zap } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, Users, TrendingUp, Briefcase, Building2, Hotel } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { z } from 'zod';
@@ -959,70 +959,125 @@ export default function Auth() {
           </div>
         </section>
 
-        {/* Right: Marketing */}
+        {/* Right: Hero Marketing Section - REDESIGNED */}
         <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
-          {/* Background Images Grid - Agriculture, Construction, Hospitality */}
-          <div className="absolute inset-0 grid grid-cols-3">
-            {/* Agriculture - H2A - Farm Workers */}
-            <div className="relative overflow-hidden">
-              <img 
-                src="https://images.unsplash.com/photo-1758390283027-78cf31e42cd2"
-                alt="Agricultural Workers H2A"
-                className="h-full w-full object-cover opacity-40"
-              />
+          {/* Background Images Collage - Three Sectors */}
+          <div className="absolute inset-0">
+            <div className="grid h-full grid-cols-3 gap-0">
+              <div className="relative overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1758390283027-78cf31e42cd2"
+                  alt="Agriculture"
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-auth-right/60" />
+              </div>
+              <div className="relative overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1640101086894-7d70c3e70179"
+                  alt="Construction"
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-auth-right/60" />
+              </div>
+              <div className="relative overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1764168798776-2a531b7d6621"
+                  alt="Hospitality"
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-auth-right/60" />
+              </div>
             </div>
-            {/* Construction - H2B - Construction Site */}
-            <div className="relative overflow-hidden">
-              <img 
-                src="https://images.unsplash.com/photo-1640101086894-7d70c3e70179"
-                alt="Construction Workers H2B"
-                className="h-full w-full object-cover opacity-40"
-              />
-            </div>
-            {/* Hospitality/Hotel - H2B - Hotel Staff */}
-            <div className="relative overflow-hidden">
-              <img 
-                src="https://images.unsplash.com/photo-1764168798776-2a531b7d6621"
-                alt="Hospitality Hotel Staff H2B"
-                className="h-full w-full object-cover opacity-40"
-              />
-            </div>
-            {/* Lighter overlay to show images better */}
-            <div className="absolute inset-0 bg-gradient-to-br from-auth-right/80 via-auth-right/75 to-auth-right/70" />
+            {/* Strong overlay for readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-auth-right/95 via-auth-right/90 to-auth-right/85" />
           </div>
 
-          <div className="relative w-full max-w-lg">
-            <div className="relative overflow-hidden rounded-2xl border border-auth-right-border bg-auth-right-card p-10 shadow-2xl backdrop-blur-md">
-              <Zap className="pointer-events-none absolute -right-10 -bottom-10 h-56 w-56 opacity-10" />
+          <div className="relative z-10 w-full max-w-2xl space-y-10">
+            {/* Hero Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
+              <Zap className="h-4 w-4 text-ring" />
+              <span className="text-sm font-medium">{t('auth.hero_tagline')}</span>
+            </div>
 
-              <p className="text-sm text-auth-right-foreground/80">{t('auth.hero_tagline')}</p>
+            {/* Main Hero Content */}
+            <div className="space-y-6">
+              <h1 className="text-5xl font-bold leading-tight tracking-tight">
+                {t('auth.marketing.q1')}
+              </h1>
+              <p className="text-xl leading-relaxed text-auth-right-foreground/90">
+                {t('auth.marketing.q2')}
+              </p>
+            </div>
 
-              <div className="mt-10 space-y-7">
-                <p className="text-3xl font-semibold leading-tight">{t('auth.marketing.q1')}</p>
-                <p className="text-xl leading-relaxed text-auth-right-foreground/85">{t('auth.marketing.q2')}</p>
+            {/* Stats Bar */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-lg border border-auth-right-border bg-auth-right-card p-4 backdrop-blur-sm">
+                <div className="flex items-center gap-2 text-ring">
+                  <Clock className="h-5 w-5" />
+                  <span className="text-2xl font-bold">3min</span>
+                </div>
+                <p className="mt-1 text-xs text-auth-right-foreground/70">Tempo médio de envio</p>
+              </div>
+              <div className="rounded-lg border border-auth-right-border bg-auth-right-card p-4 backdrop-blur-sm">
+                <div className="flex items-center gap-2 text-ring">
+                  <Send className="h-5 w-5" />
+                  <span className="text-2xl font-bold">100+</span>
+                </div>
+                <p className="mt-1 text-xs text-auth-right-foreground/70">Candidaturas/dia</p>
+              </div>
+              <div className="rounded-lg border border-auth-right-border bg-auth-right-card p-4 backdrop-blur-sm">
+                <div className="flex items-center gap-2 text-ring">
+                  <TrendingUp className="h-5 w-5" />
+                  <span className="text-2xl font-bold">5x</span>
+                </div>
+                <p className="mt-1 text-xs text-auth-right-foreground/70">Mais chances</p>
+              </div>
+            </div>
 
-                <div className="mt-6 rounded-xl border border-auth-right-border bg-auth-right-card p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-auth-right-border bg-auth-right-card">
-                      <Zap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-base leading-snug">
-                        {t('auth.marketing.solution_prefix')}{' '}
-                        <span className="font-semibold">{t('auth.marketing.solution_emphasis')}</span>{' '}
-                        {t('auth.marketing.solution_suffix')}
-                      </p>
-                      <div className="mt-4 flex items-center gap-2 text-sm text-auth-right-foreground/80">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>{t('auth.marketing.subline')}</span>
-                      </div>
-                    </div>
-                  </div>
+            {/* Features Grid */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 rounded-xl border border-auth-right-border bg-auth-right-card p-5 backdrop-blur-md transition-all hover:border-ring/50">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ring/10">
+                  <Zap className="h-6 w-6 text-ring" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{t('auth.marketing.solution_prefix')} <span className="text-ring">{t('auth.marketing.solution_emphasis')}</span> {t('auth.marketing.solution_suffix')}</h3>
+                  <p className="mt-1 text-sm text-auth-right-foreground/70">{t('auth.marketing.subline')}</p>
                 </div>
               </div>
 
-              <div className="mt-10 text-sm text-auth-right-foreground/70">{t('auth.marketing.footer')}</div>
+              <div className="flex items-start gap-4 rounded-xl border border-auth-right-border bg-auth-right-card p-5 backdrop-blur-md transition-all hover:border-ring/50">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-ring/10">
+                  <Users className="h-6 w-6 text-ring" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Vagas Verificadas</h3>
+                  <p className="mt-1 text-sm text-auth-right-foreground/70">Empregadores H-2A/H-2B confiáveis em agricultura, construção e hotelaria.</p>
+                </div>
+              </div>
             </div>
+
+            {/* Sectors Visual Pills */}
+            <div className="flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
+                <Briefcase className="h-4 w-4 text-ring" />
+                <span className="text-sm">Agricultura H-2A</span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
+                <Building2 className="h-4 w-4 text-ring" />
+                <span className="text-sm">Construção H-2B</span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-auth-right-border bg-auth-right-card px-4 py-2 backdrop-blur-sm">
+                <Hotel className="h-4 w-4 text-ring" />
+                <span className="text-sm">Hotelaria H-2B</span>
+              </div>
+            </div>
+
+            {/* Footer Trust Line */}
+            <p className="text-sm text-auth-right-foreground/60">
+              {t('auth.marketing.footer')}
+            </p>
           </div>
         </section>
       </div>
