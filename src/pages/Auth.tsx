@@ -963,27 +963,27 @@ export default function Auth() {
         <section className="relative hidden items-center justify-center overflow-hidden bg-auth-right px-10 py-16 text-auth-right-foreground md:flex">
           {/* Background Images Grid - Agriculture, Construction, Hospitality */}
           <div className="absolute inset-0 grid grid-cols-3">
-            {/* Agriculture - H2A */}
+            {/* Agriculture - H2A - Farm Workers */}
             <div className="relative overflow-hidden">
               <img 
-                src="https://images.unsplash.com/photo-1662142299036-b05cc590b0f3"
-                alt="Agriculture H2A"
+                src="https://images.unsplash.com/photo-1758390283027-78cf31e42cd2"
+                alt="Agricultural Workers H2A"
                 className="h-full w-full object-cover opacity-40"
               />
             </div>
-            {/* Construction - H2B */}
+            {/* Construction - H2B - Construction Site */}
             <div className="relative overflow-hidden">
               <img 
-                src="https://images.unsplash.com/photo-1504307651254-35680f356dfd"
-                alt="Construction H2B"
+                src="https://images.unsplash.com/photo-1640101086894-7d70c3e70179"
+                alt="Construction Workers H2B"
                 className="h-full w-full object-cover opacity-40"
               />
             </div>
-            {/* Hospitality/Resort - H2B */}
+            {/* Hospitality/Hotel - H2B - Hotel Staff */}
             <div className="relative overflow-hidden">
               <img 
-                src="https://images.unsplash.com/photo-1566073771259-6a8506099945"
-                alt="Hospitality H2B"
+                src="https://images.unsplash.com/photo-1764168798776-2a531b7d6621"
+                alt="Hospitality Hotel Staff H2B"
                 className="h-full w-full object-cover opacity-40"
               />
             </div>
