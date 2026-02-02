@@ -777,7 +777,6 @@ export default function Jobs() {
                 isBlurred={planSettings.job_db_blur}
                 isQueued={queuedJobIds.has(job.id)}
                 onAddToQueue={() => addToQueue(job)}
-                onShare={() => handleShareJob(job)}
                 onClick={() => handleRowClick(job)}
                 formatDate={formatDate}
                 reportData={jobReports[job.id]}
