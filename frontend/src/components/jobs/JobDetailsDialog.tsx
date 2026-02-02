@@ -63,6 +63,7 @@ export function JobDetailsDialog({
   onAddToQueue,
   onRemoveFromQueue,
   isInQueue,
+  onShare,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,9 +73,47 @@ export function JobDetailsDialog({
   onAddToQueue: (job: JobDetails) => void;
   onRemoveFromQueue?: (job: JobDetails) => void;
   isInQueue?: boolean;
+  onShare?: (job: JobDetails) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const isH2A = job?.visa_type === "H-2A";
+
+  const handleShare = () => {
+    if (!job) return;
+    
+    if (onShare) {
+      onShare(job);
+    } else {
+      // Fallback share logic if onShare not provided
+      const shareUrl = `${window.location.origin}/job/${job.id}`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: `${job.job_title} - ${job.company}`,
+          text: `${t('jobs.shareText')}: ${job.job_title}`,
+          url: shareUrl,
+        }).catch(() => {
+          copyToClipboard(shareUrl);
+        });
+      } else {
+        copyToClipboard(shareUrl);
+      }
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    const locale = i18n.resolvedLanguage || i18n.language;
+    toast({
+      title: locale === 'pt' ? 'Link copiado!' : locale === 'es' ? '¡Enlace copiado!' : 'Link copied!',
+      description: locale === 'pt' 
+        ? 'Link de compartilhamento copiado para área de transferência' 
+        : locale === 'es'
+        ? 'Enlace copiado al portapapeles'
+        : 'Share link copied to clipboard',
+    });
+  };
 
   const formatDate = (v: string | null | undefined) => {
     if (!v) return "-";
