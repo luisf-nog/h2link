@@ -1,14 +1,16 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { AppFooter } from './AppFooter';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
 import i18n, { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu } from 'lucide-react';
+import { Menu, LogIn } from 'lucide-react';
 
 type LanguageOption = { value: SupportedLanguage; label: string };
 
@@ -17,9 +19,10 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, refreshProfile, user } = useAuth();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   const options: LanguageOption[] = useMemo(
     () => [
@@ -91,6 +94,18 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              {!user && (
+                <Button 
+                  onClick={() => navigate('/auth')}
+                  size="sm"
+                  variant="default"
+                  className="gap-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t('auth.actions.signin')}</span>
+                </Button>
+              )}
+              
               <Select value={lang} onValueChange={(v) => handleChangeLanguage(v as SupportedLanguage)}>
                 <SelectTrigger className="h-9 w-[160px]">
                   <SelectValue placeholder={t('common.language')} />

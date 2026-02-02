@@ -124,45 +124,31 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route
       path="/"
-      element={<Navigate to="/dashboard" replace />}
+      element={<Navigate to="/jobs" replace />}
     />
+    {/* Public Routes - No auth required */}
     <Route
       path="/dashboard"
-      element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      }
+      element={<AppLayout><Dashboard /></AppLayout>}
     />
     <Route
       path="/jobs"
-      element={
-        <ProtectedRoute>
-          <Jobs />
-        </ProtectedRoute>
-      }
+      element={<AppLayout><Jobs /></AppLayout>}
     />
+    <Route
+      path="/plans"
+      element={<AppLayout><Plans /></AppLayout>}
+    />
+    <Route
+      path="/referrals"
+      element={<AppLayout><Referrals /></AppLayout>}
+    />
+    {/* Protected Routes - Auth required */}
     <Route
       path="/queue"
       element={
         <ProtectedRoute>
           <Queue />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/referrals"
-      element={
-        <ProtectedRoute>
-          <Referrals />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/plans"
-      element={
-        <ProtectedRoute>
-          <Plans />
         </ProtectedRoute>
       }
     />

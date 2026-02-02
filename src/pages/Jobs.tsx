@@ -384,6 +384,17 @@ export default function Jobs() {
   };
 
   const addToQueue = async (job: Job) => {
+    // Check if user is authenticated before allowing queue action
+    if (!profile) {
+      toast({
+        title: t('auth.signin.title'),
+        description: 'Faça login para adicionar vagas à sua fila',
+        variant: 'default',
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (planSettings.job_db_blur) {
       setShowUpgradeDialog(true);
       return;
