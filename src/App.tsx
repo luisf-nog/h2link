@@ -136,6 +136,10 @@ const AppRoutes = () => (
       element={<AppLayout><Jobs /></AppLayout>}
     />
     <Route
+      path="/job/:jobId"
+      element={<AppLayout><Jobs /></AppLayout>}
+    />
+    <Route
       path="/plans"
       element={<AppLayout><Plans /></AppLayout>}
     />

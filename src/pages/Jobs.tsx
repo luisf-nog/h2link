@@ -48,6 +48,31 @@ export default function Jobs() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+
+  const handleShareJob = (job: Job) => {
+    const shareUrl = `${window.location.origin}/job/${job.id}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: `${job.job_title} - ${job.company}`,
+        text: `Vaga H2A/H2B: ${job.job_title} em ${job.city}, ${job.state}`,
+        url: shareUrl,
+      }).catch(() => {
+        copyToClipboard(shareUrl);
+      });
+    } else {
+      copyToClipboard(shareUrl);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Link copiado!',
+      description: 'Link de compartilhamento copiado para área de transferência',
+    });
+  };
+
   const isAdmin = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
@@ -752,6 +777,7 @@ export default function Jobs() {
                 isBlurred={planSettings.job_db_blur}
                 isQueued={queuedJobIds.has(job.id)}
                 onAddToQueue={() => addToQueue(job)}
+                onShare={() => handleShareJob(job)}
                 onClick={() => handleRowClick(job)}
                 formatDate={formatDate}
                 reportData={jobReports[job.id]}

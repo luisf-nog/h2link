@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/number";
-import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle } from "lucide-react";
+import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -30,6 +30,7 @@ interface MobileJobCardProps {
   isBlurred: boolean;
   isQueued: boolean;
   onAddToQueue: () => void;
+  onShare: () => void;
   onClick: () => void;
   formatDate: (date: string | null | undefined) => string;
   reportData?: { count: number; reasons: ReportReason[] };
@@ -40,6 +41,7 @@ export function MobileJobCard({
   isBlurred,
   isQueued,
   onAddToQueue,
+  onShare,
   onClick,
   formatDate,
   reportData,
@@ -89,6 +91,17 @@ export function MobileJobCard({
             <Badge variant={job.visa_type === "H-2A" ? "secondary" : "default"} className="text-xs">
               {job.visa_type === "H-2A" ? "H-2A" : "H-2B"}
             </Badge>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </Button>
             <Button
               size="icon"
               variant={!isBlurred && isQueued ? "default" : "outline"}
