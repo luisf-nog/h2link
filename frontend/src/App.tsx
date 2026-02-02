@@ -137,9 +137,10 @@ const AppRoutes = () => (
       path="/jobs"
       element={<AppLayout><Jobs /></AppLayout>}
     />
+    {/* Shared job view - Public landing page for shared jobs */}
     <Route
       path="/job/:jobId"
-      element={<AppLayout><Jobs /></AppLayout>}
+      element={<SharedJobView />}
     />
     <Route
       path="/plans"
