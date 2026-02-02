@@ -64,6 +64,7 @@ export default function Jobs() {
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   // Derive daily limit data for banner
   const planTierCheck = profile?.plan_tier || 'free';
@@ -386,12 +387,7 @@ export default function Jobs() {
   const addToQueue = async (job: Job) => {
     // Check if user is authenticated before allowing queue action
     if (!profile) {
-      toast({
-        title: t('auth.signin.title'),
-        description: 'Faça login para adicionar vagas à sua fila',
-        variant: 'default',
-      });
-      navigate('/auth');
+      setShowLoginDialog(true);
       return;
     }
 
@@ -1008,6 +1004,49 @@ export default function Jobs() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Login Required Dialog */}
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-primary" />
+              Login necessário
+            </DialogTitle>
+            <DialogDescription>
+              Para adicionar vagas à sua fila e começar a enviar candidaturas, você precisa estar logado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+              <p className="text-sm text-foreground">
+                ✨ Crie sua conta gratuitamente e comece a automatizar suas candidaturas para vagas H-2A/H-2B!
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button 
+                className="w-full" 
+                onClick={() => {
+                  setShowLoginDialog(false);
+                  navigate('/auth');
+                }}
+              >
+                Fazer Login / Criar Conta
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowLoginDialog(false)}
+              >
+                Continuar Navegando
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {t('jobs.pagination.page_of', { page, totalPages })}
