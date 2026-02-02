@@ -30,7 +30,6 @@ interface MobileJobCardProps {
   isBlurred: boolean;
   isQueued: boolean;
   onAddToQueue: () => void;
-  onShare: () => void;
   onClick: () => void;
   formatDate: (date: string | null | undefined) => string;
   reportData?: { count: number; reasons: ReportReason[] };
@@ -41,7 +40,6 @@ export function MobileJobCard({
   isBlurred,
   isQueued,
   onAddToQueue,
-  onShare,
   onClick,
   formatDate,
   reportData,
