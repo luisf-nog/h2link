@@ -200,6 +200,14 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+    <Route
+      path="/admin/analytics"
+      element={
+        <ProtectedRoute>
+          <AdminAnalytics />
+        </ProtectedRoute>
+      }
+    />
     <Route path="/v/:token" element={<PublicProfile />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
