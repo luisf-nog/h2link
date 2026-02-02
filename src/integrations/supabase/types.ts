@@ -267,6 +267,7 @@ export type Database = {
           opened_at: string | null
           processing_started_at: string | null
           profile_viewed_at: string | null
+          scheduled_for: string
           send_count: number
           sent_at: string | null
           status: string
@@ -283,6 +284,7 @@ export type Database = {
           opened_at?: string | null
           processing_started_at?: string | null
           profile_viewed_at?: string | null
+          scheduled_for?: string
           send_count?: number
           sent_at?: string | null
           status?: string
@@ -299,6 +301,7 @@ export type Database = {
           opened_at?: string | null
           processing_started_at?: string | null
           profile_viewed_at?: string | null
+          scheduled_for?: string
           send_count?: number
           sent_at?: string | null
           status?: string
@@ -429,6 +432,7 @@ export type Database = {
           description: string | null
           education_required: string | null
           email: string
+          email_invalid_dns: boolean
           end_date: string | null
           experience_months: number | null
           housing_info: string | null
@@ -464,6 +468,7 @@ export type Database = {
           description?: string | null
           education_required?: string | null
           email: string
+          email_invalid_dns?: boolean
           end_date?: string | null
           experience_months?: number | null
           housing_info?: string | null
@@ -499,6 +504,7 @@ export type Database = {
           description?: string | null
           education_required?: string | null
           email?: string
+          email_invalid_dns?: boolean
           end_date?: string | null
           experience_months?: number | null
           housing_info?: string | null

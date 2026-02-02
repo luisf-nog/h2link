@@ -123,8 +123,8 @@ export function AppSidebar() {
                   return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton 
-                      asChild={!requiresAuth || user} 
-                      tooltip={item.title} 
+                      asChild={!requiresAuth || !!user} 
+                      tooltip={item.title}
                       className={cn(
                         collapsed && !isMobile && "justify-center"
                       )}
