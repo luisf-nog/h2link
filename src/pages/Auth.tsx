@@ -567,11 +567,7 @@ export default function Auth() {
         
         {/* Top: Logo + Language Switcher inline */}
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center select-none">
-            <span className="text-3xl font-bold tracking-tight sm:text-4xl">
-              <span className="text-ring font-extrabold">H2</span> <span className="text-white">Linker</span>
-            </span>
-          </div>
+          <BrandWordmark height={48} className="[&_span]:!text-white [&_span_.text-primary]:!text-ring" />
           <LanguageSwitcher
             value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
             onChange={handleChangeLanguage}
