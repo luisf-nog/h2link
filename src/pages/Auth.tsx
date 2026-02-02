@@ -470,15 +470,6 @@ export default function Auth() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Language Switcher - Top Right - Mobile friendly */}
-      <header className="fixed right-4 top-4 z-20 sm:right-6 sm:top-6">
-        <LanguageSwitcher
-          value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : 'en'}
-          onChange={handleChangeLanguage}
-          className="h-9 w-[140px] border-white/20 bg-white/10 text-white backdrop-blur-md sm:w-[168px]"
-        />
-      </header>
-
       {/* Background Images - Subtle */}
       <div className="pointer-events-none absolute inset-0 grid grid-cols-3 opacity-10">
         <div className="relative">
@@ -577,8 +568,8 @@ export default function Auth() {
         {/* Top: Logo + Language Switcher inline */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center select-none">
-            <span className="text-2xl font-bold tracking-tight sm:text-3xl">
-              <span className="text-primary">H2</span> <span className="text-white">Linker</span>
+            <span className="text-3xl font-bold tracking-tight sm:text-4xl">
+              <span className="text-primary font-extrabold">H2</span> <span className="text-white">Linker</span>
             </span>
           </div>
           <LanguageSwitcher
