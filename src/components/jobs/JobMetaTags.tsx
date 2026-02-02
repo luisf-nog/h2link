@@ -178,7 +178,7 @@ export function JobMetaTags({ job }: JobMetaTagsProps) {
       <meta property="og:image:alt" content={`${job.job_title} at ${job.company}`} />
       
       {/* Additional SEO */}
-      <meta name="keywords" content={`${visaType}, H2 visa, ${job.job_title}, ${job.company}, ${job.city}, ${job.state}, work visa, employment`} />
+      <meta name="keywords" content={`${visaType}, H2 visa, ${job.job_title}, ${job.category || ''}, ${job.company}, ${job.city}, ${job.state}, work visa, employment, seasonal work, ${job.openings ? job.openings + ' openings' : ''}, ${salaryText}`} />
       <link rel="canonical" content={shareUrl} />
     </Helmet>
   );
