@@ -1,7 +1,25 @@
-import * as pdfjs from "pdfjs-dist";
-// Vite will bundle the worker and provide a URL; this avoids relying on external CDNs.
-// eslint-disable-next-line import/no-unresolved
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+type PdfJsModule = typeof import("pdfjs-dist");
+
+async function loadPdfJs(): Promise<PdfJsModule> {
+  // Preview generation can evaluate modules in a non-browser context.
+  // Only load pdfjs in the browser.
+  if (typeof window === "undefined") {
+    throw new Error("PDF parsing is only available in the browser.");
+  }
+
+  const [pdfjs, worker] = await Promise.all([
+    import("pdfjs-dist"),
+    // Vite will bundle the worker and provide a URL; this avoids relying on external CDNs.
+    // eslint-disable-next-line import/no-unresolved
+    import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+  ]);
+
+  // pdfjs typing varies between builds; workerSrc is required for browser parsing.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (pdfjs as any).GlobalWorkerOptions.workerSrc = (worker as any).default;
+
+  return pdfjs;
+}
 
 /**
  * Extracts text from a PDF file in the browser.
@@ -17,13 +35,11 @@ export async function extractTextFromPDF(
     maxChars?: number;
   } = {},
 ): Promise<string> {
+  const pdfjs = await loadPdfJs();
+
   if (file.type && file.type !== "application/pdf") {
     throw new Error("Invalid file type. Please upload a PDF.");
   }
-
-  // pdfjs typing varies between builds; workerSrc is required for browser parsing.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (pdfjs as any).GlobalWorkerOptions.workerSrc = workerSrc;
 
   const data = new Uint8Array(await file.arrayBuffer());
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
