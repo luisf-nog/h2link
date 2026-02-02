@@ -218,49 +218,53 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Promo Banner for Free BRL users */}
-      {isFreeUser && currency === 'BRL' && <PromoBanner />}
+      {profile && isFreeUser && currency === 'BRL' && <PromoBanner />}
 
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.user') })} 👋
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {t('dashboard.subtitle', { plan: t(`plans.tiers.${planTier}.label`) })}
-        </p>
-      </div>
+      {profile && (
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.user') })} 👋
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {t('dashboard.subtitle', { plan: t(`plans.tiers.${planTier}.label`) })}
+          </p>
+        </div>
+      )}
 
-      {/* Credits Card */}
-      <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            {t('dashboard.credits.title')}
-          </CardTitle>
-          <CardDescription>
-            {t('dashboard.credits.description')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-end">
-              <div>
-                <span className="text-4xl font-bold text-foreground">{creditsRemaining}</span>
-                <span className="text-muted-foreground ml-2">{t('dashboard.credits.remaining')}</span>
+      {/* Credits Card - Only for logged in users */}
+      {profile && (
+        <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              {t('dashboard.credits.title')}
+            </CardTitle>
+            <CardDescription>
+              {t('dashboard.credits.description')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <span className="text-4xl font-bold text-foreground">{creditsRemaining}</span>
+                  <span className="text-muted-foreground ml-2">{t('dashboard.credits.remaining')}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {t('dashboard.credits.used', { used: formatNumber(creditsUsed), dailyLimit: formatNumber(dailyLimit) })}
+                </span>
               </div>
-              <span className="text-sm text-muted-foreground">
-                {t('dashboard.credits.used', { used: formatNumber(creditsUsed), dailyLimit: formatNumber(dailyLimit) })}
-              </span>
+              <Progress value={usagePercent} className="h-3" />
             </div>
-            <Progress value={usagePercent} className="h-3" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Warmup Status Widget (only for paid tiers with SMTP) */}
-      {planTier !== 'free' && <WarmupStatusWidget />}
+      {profile && planTier !== 'free' && <WarmupStatusWidget />}
 
       {/* Free warning (kamikaze mode) */}
-      {planTier === 'free' && usagePercent >= 60 ? (
+      {profile && planTier === 'free' && usagePercent >= 60 ? (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -277,27 +281,29 @@ export default function Dashboard() {
         </Card>
       ) : null}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="hover:shadow-md transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">
-                    {typeof stat.value === 'number' ? formatNumber(stat.value) : stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>
+      {/* Stats Grid - Only for logged in users */}
+      {profile && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat) => (
+            <Card key={stat.title} className="hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      {typeof stat.value === 'number' ? formatNumber(stat.value) : stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>
+                  </div>
+                  <div className={`p-3 rounded-xl bg-muted/50 ${stat.color}`}>
+                    <stat.icon className="h-6 w-6" />
+                  </div>
                 </div>
-                <div className={`p-3 rounded-xl bg-muted/50 ${stat.color}`}>
-                  <stat.icon className="h-6 w-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Job Market */}
       <Card>
