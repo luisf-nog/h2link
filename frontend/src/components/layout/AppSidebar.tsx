@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, Brain, Lock } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, Brain, Lock, BarChart3 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
