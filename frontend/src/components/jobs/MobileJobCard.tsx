@@ -91,17 +91,6 @@ export function MobileJobCard({
             </Badge>
             <Button
               size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                onShare();
-              }}
-            >
-              <Share2 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon"
               variant={!isBlurred && isQueued ? "default" : "outline"}
               className={cn(
                 "h-8 w-8",
