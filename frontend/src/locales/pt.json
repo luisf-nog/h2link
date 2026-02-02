@@ -895,7 +895,8 @@
       "add_success_desc": "{{jobTitle}} foi adicionado à sua fila.",
       "remove_success_title": "Removido da fila!",
       "remove_success_desc": "{{jobTitle}} foi removido da sua fila."
-    }
+    },
+    "shareText": "Confira esta vaga"
   },
   "not_found": {
     "subtitle": "Ops! Página não encontrada",
