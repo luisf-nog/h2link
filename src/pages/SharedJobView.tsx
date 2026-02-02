@@ -220,338 +220,335 @@ export default function SharedJobView() {
 
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8 max-w-4xl">
-          <Card className="mb-6">
+          {/* Main Content - Same structure as JobDetailsDialog */}
+          <Card>
             <CardHeader>
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant={isH2A ? 'secondary' : 'default'}>
-                      {job.visa_type || 'H-2B'}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary" className="text-xs">
+                    {job.visa_type}
+                  </Badge>
+                  {job.category && (
+                    <Badge variant="outline" className="text-xs">
+                      {job.category}
                     </Badge>
-                    {job.category && (
-                      <Badge variant="outline">{job.category}</Badge>
-                    )}
+                  )}
+                </div>
+                
+                <div>
+                  <CardTitle className="text-2xl mb-2">{job.job_title}</CardTitle>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Building className="h-4 w-4" />
+                    <span className="font-medium">{job.company}</span>
+                    <MapPin className="h-4 w-4 ml-2" />
+                    <span>
+                      {job.city}, {job.state}
+                    </span>
                   </div>
-                  <CardTitle className="text-2xl md:text-3xl mb-1">
-                    {job.job_title}
-                  </CardTitle>
-                  <CardDescription className="text-lg">
-                    {job.company}
-                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Key Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      {locale === 'pt' ? 'Localização' : locale === 'es' ? 'Ubicación' : 'Location'}
-                    </div>
-                    <div className="font-medium">{job.city}, {job.state}</div>
-                  </div>
+
+            <CardContent className="space-y-5">
+              {/* Grid of key fields - 2 columns */}
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Openings */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'pt' ? 'Vagas' : locale === 'es' ? 'Vacantes' : 'Openings'}
+                  </p>
+                  <p className="font-medium">{job.openings ?? "-"}</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      {locale === 'pt' ? 'Salário' : locale === 'es' ? 'Salario' : 'Salary'}
-                    </div>
-                    <div className="font-medium">{formatSalary(job.salary)}/hr</div>
-                  </div>
+                {/* Salary */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'pt' ? 'Salário' : locale === 'es' ? 'Salario' : 'Salary'}
+                  </p>
+                  <p className="font-medium">{formatSalary(job.salary)}</p>
                 </div>
 
-                {job.start_date && (
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {locale === 'pt' ? 'Data de Início' : locale === 'es' ? 'Fecha de inicio' : 'Start Date'}
-                      </div>
-                      <div className="font-medium">{formatDate(job.start_date)}</div>
-                    </div>
+                {/* Overtime */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'pt' ? 'Hora Extra' : locale === 'es' ? 'Horas extras' : 'Overtime'}
+                  </p>
+                  <p className="font-medium">
+                    {job.overtime_salary ? `${formatSalary(job.overtime_salary)}/h` : "-"}
+                  </p>
+                </div>
+
+                {/* Weekly Hours */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'pt' ? 'Horas Semanais' : locale === 'es' ? 'Horas semanales' : 'Weekly hours'}
+                  </p>
+                  <p className="font-medium">{job.weekly_hours ? `${job.weekly_hours}h` : "-"}</p>
+                </div>
+
+                {/* Posted Date */}
+                {job.posted_date && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">
+                      {locale === 'pt' ? 'Publicado' : locale === 'es' ? 'Publicado' : 'Posted'}
+                    </p>
+                    <p className="font-medium inline-flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {formatDate(job.posted_date)}
+                    </p>
                   </div>
                 )}
 
-                {job.openings && (
-                  <div className="flex items-center gap-3">
-                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {locale === 'pt' ? 'Vagas' : locale === 'es' ? 'Vacantes' : 'Openings'}
-                      </div>
-                      <div className="font-medium">{job.openings}</div>
-                    </div>
-                  </div>
-                )}
+                {/* Start Date */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'pt' ? 'Início' : locale === 'es' ? 'Inicio' : 'Start'}
+                  </p>
+                  <p className="font-medium inline-flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(job.start_date)}
+                  </p>
+                </div>
 
-                {job.weekly_hours && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {locale === 'pt' ? 'Horas/Semana' : locale === 'es' ? 'Horas/Semana' : 'Hours/Week'}
-                      </div>
-                      <div className="font-medium">{job.weekly_hours}h</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Benefits Icons */}
-              {(job.housing_info || job.transport_provided || job.tools_provided) && (
-                <>
-                  <Separator />
-                  <div className="flex flex-wrap gap-4">
-                    {job.housing_info && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Home className="h-4 w-4 text-green-600" />
-                        <span>{locale === 'pt' ? 'Moradia' : locale === 'es' ? 'Vivienda' : 'Housing'}</span>
-                      </div>
-                    )}
-                    {job.transport_provided && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Bus className="h-4 w-4 text-blue-600" />
-                        <span>{locale === 'pt' ? 'Transporte' : locale === 'es' ? 'Transporte' : 'Transport'}</span>
-                      </div>
-                    )}
-                    {job.tools_provided && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Wrench className="h-4 w-4 text-orange-600" />
-                        <span>{locale === 'pt' ? 'Ferramentas' : locale === 'es' ? 'Herramientas' : 'Tools'}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* Description */}
-              {job.description && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {locale === 'pt' ? 'Descrição' : locale === 'es' ? 'Descripción' : 'Description'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.description}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Requirements */}
-              {job.requirements && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {locale === 'pt' ? 'Requisitos' : locale === 'es' ? 'Requisitos' : 'Requirements'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.requirements}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Job Duties */}
-              {job.job_duties && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {locale === 'pt' ? 'Funções do Trabalho' : locale === 'es' ? 'Funciones del trabajo' : 'Job Duties'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.job_duties}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Education Required */}
-              {job.education_required && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {locale === 'pt' ? 'Educação Requerida' : locale === 'es' ? 'Educación requerida' : 'Education Required'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.education_required}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Special Requirements */}
-              {job.job_min_special_req && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {locale === 'pt' ? 'Requisitos Especiais' : locale === 'es' ? 'Requisitos especiales' : 'Special Requirements'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.job_min_special_req}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Housing Info Detail */}
-              {job.housing_info && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {locale === 'pt' ? 'Informações de Moradia' : locale === 'es' ? 'Información de vivienda' : 'Housing Information'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.housing_info}
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Compensation & Additional Info */}
-          {(job.overtime_salary || job.wage_additional || job.rec_pay_deductions || job.end_date || job.worksite_address || job.experience_months) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">
-                  {locale === 'pt' ? 'Informações Adicionais' : locale === 'es' ? 'Información adicional' : 'Additional Information'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 {/* End Date */}
                 {job.end_date && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">
-                      {locale === 'pt' ? 'Data de Término' : locale === 'es' ? 'Fecha de finalización' : 'End Date'}
-                    </h4>
+                  <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">
+                      {locale === 'pt' ? 'Término' : locale === 'es' ? 'Fin' : 'End'}
+                    </p>
+                    <p className="font-medium inline-flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
                       {formatDate(job.end_date)}
                     </p>
                   </div>
                 )}
 
-                {/* Worksite Address */}
-                {job.worksite_address && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">
-                      {locale === 'pt' ? 'Endereço do Local de Trabalho' : locale === 'es' ? 'Dirección del lugar de trabajo' : 'Worksite Address'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {job.worksite_address}
-                      {job.worksite_zip && ` — ${job.worksite_zip}`}
-                    </p>
-                  </div>
-                )}
-
-                {/* Experience Required */}
-                {job.experience_months !== null && job.experience_months !== undefined && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">
-                      {locale === 'pt' ? 'Experiência Requerida' : locale === 'es' ? 'Experiencia requerida' : 'Experience Required'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {job.experience_months === 0 
+                {/* Experience */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'pt' ? 'Experiência' : locale === 'es' ? 'Experiencia' : 'Experience'}
+                  </p>
+                  <p className="font-medium">
+                    {job.experience_months != null
+                      ? job.experience_months === 0
                         ? (locale === 'pt' ? 'Nenhuma' : locale === 'es' ? 'Ninguna' : 'None')
                         : job.experience_months === 1
                         ? (locale === 'pt' ? '1 mês' : locale === 'es' ? '1 mes' : '1 month')
-                        : locale === 'pt' 
-                          ? `${job.experience_months} meses` 
-                          : locale === 'es'
-                          ? `${job.experience_months} meses`
-                          : `${job.experience_months} months`
-                      }
-                    </p>
-                  </div>
-                )}
+                        : locale === 'pt'
+                        ? `${job.experience_months} meses`
+                        : locale === 'es'
+                        ? `${job.experience_months} meses`
+                        : `${job.experience_months} months`
+                      : "-"}
+                  </p>
+                </div>
+              </section>
 
-                {/* Overtime Salary */}
-                {job.overtime_salary && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">
-                      {locale === 'pt' ? 'Salário de Hora Extra' : locale === 'es' ? 'Salario de horas extras' : 'Overtime Salary'}
-                    </h4>
+              <Separator />
+
+              {/* Contact Section */}
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold">
+                  {locale === 'pt' ? 'Contato' : locale === 'es' ? 'Contacto' : 'Contact'}
+                </h3>
+                <div className="rounded-md border p-3">
+                  <div className="flex flex-col gap-2">
+                    {job.email && (
+                      <div className="inline-flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <a href={`mailto:${job.email}`} className="font-medium hover:underline">
+                          {job.email}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {job.phone && (
+                      <div className="inline-flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <a href={`tel:${job.phone}`} className="font-medium hover:underline">
+                          {job.phone}
+                        </a>
+                      </div>
+                    )}
+
+                    {job.job_id && (
+                      <p className="text-xs text-muted-foreground">
+                        {locale === 'pt' ? 'ID da Vaga' : locale === 'es' ? 'ID del trabajo' : 'Job ID'}: <span className="font-mono">{job.job_id}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Worksite Section */}
+              {(job.worksite_address || job.worksite_zip) && (
+                <>
+                  <Separator />
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-semibold">
+                      {locale === 'pt' ? 'Local de Trabalho' : locale === 'es' ? 'Lugar de trabajo' : 'Worksite'}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      {formatSalary(job.overtime_salary)}/hr
+                      {job.worksite_address}
+                      {job.worksite_zip ? ` — ${job.worksite_zip}` : ""}
                     </p>
-                  </div>
-                )}
+                  </section>
+                </>
+              )}
 
-                {/* Additional Wage Info */}
-                {job.wage_additional && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">
-                      {locale === 'pt' ? 'Informações Adicionais de Salário' : locale === 'es' ? 'Información adicional de salario' : 'Additional Wage Info'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.wage_additional}
-                    </p>
-                  </div>
-                )}
+              {/* Details Section */}
+              {(job.description || job.requirements || job.education_required || job.job_duties || job.job_min_special_req) && (
+                <>
+                  <Separator />
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-semibold">
+                      {locale === 'pt' ? 'Detalhes' : locale === 'es' ? 'Detalles' : 'Details'}
+                    </h3>
 
-                {/* Pay Deductions */}
-                {job.rec_pay_deductions && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">
-                      {locale === 'pt' ? 'Deduções de Pagamento' : locale === 'es' ? 'Deducciones de pago' : 'Pay Deductions'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {job.rec_pay_deductions}
-                    </p>
-                  </div>
-                )}
+                    {job.education_required && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Educação' : locale === 'es' ? 'Educación' : 'Education'}
+                        </p>
+                        <p className="text-sm">{job.education_required}</p>
+                      </div>
+                    )}
 
-                {/* Contact Information */}
-                {(job.email || job.phone) && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="font-semibold text-sm mb-2">
-                        {locale === 'pt' ? 'Contato' : locale === 'es' ? 'Contacto' : 'Contact'}
-                      </h4>
-                      <div className="space-y-2">
-                        {job.email && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <a href={`mailto:${job.email}`} className="text-primary hover:underline">
-                              {job.email}
-                            </a>
+                    {job.job_min_special_req && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Requisitos Especiais' : locale === 'es' ? 'Requisitos especiales' : 'Special Requirements'}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{job.job_min_special_req}</p>
+                      </div>
+                    )}
+
+                    {job.job_duties && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Funções do Trabalho' : locale === 'es' ? 'Funciones del trabajo' : 'Job Duties'}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{job.job_duties}</p>
+                      </div>
+                    )}
+
+                    {job.requirements && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Requisitos' : locale === 'es' ? 'Requisitos' : 'Requirements'}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{job.requirements}</p>
+                      </div>
+                    )}
+
+                    {job.description && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Descrição' : locale === 'es' ? 'Descripción' : 'Description'}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{job.description}</p>
+                      </div>
+                    )}
+                  </section>
+                </>
+              )}
+
+              {/* Compensation Section */}
+              {(job.wage_additional || job.rec_pay_deductions) && (
+                <>
+                  <Separator />
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-semibold">
+                      {locale === 'pt' ? 'Compensação' : locale === 'es' ? 'Compensación' : 'Compensation'}
+                    </h3>
+
+                    {job.wage_additional && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Informações Adicionais de Salário' : locale === 'es' ? 'Información adicional de salario' : 'Additional Wage Info'}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{job.wage_additional}</p>
+                      </div>
+                    )}
+
+                    {job.rec_pay_deductions && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {locale === 'pt' ? 'Deduções de Pagamento' : locale === 'es' ? 'Deducciones de pago' : 'Pay Deductions'}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{job.rec_pay_deductions}</p>
+                      </div>
+                    )}
+                  </section>
+                </>
+              )}
+
+              {/* Benefits Section */}
+              {(job.housing_info || job.transport_provided !== null || job.tools_provided !== null) && (
+                <>
+                  <Separator />
+                  <section className="space-y-3">
+                    <h3 className="text-sm font-semibold">
+                      {locale === 'pt' ? 'Benefícios' : locale === 'es' ? 'Beneficios' : 'Benefits'}
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Housing */}
+                      <div className="rounded-md border p-3">
+                        <div className="flex items-start gap-2">
+                          <Home className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">
+                              {locale === 'pt' ? 'Moradia' : locale === 'es' ? 'Vivienda' : 'Housing'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {job.visa_type === 'H-2A'
+                                ? job.housing_info || (locale === 'pt' ? 'Sim (H-2A Obrigatório)' : locale === 'es' ? 'Sí (H-2A Obligatorio)' : 'Yes (H-2A Mandated)')
+                                : job.housing_info || (locale === 'pt' ? 'Não fornecido' : locale === 'es' ? 'No proporcionado' : 'Not provided')}
+                            </p>
                           </div>
-                        )}
-                        {job.phone && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone className="h-4 w-4 text-muted-foreground" />
-                            <a href={`tel:${job.phone}`} className="text-primary hover:underline">
-                              {job.phone}
-                            </a>
+                        </div>
+                      </div>
+
+                      {/* Transport */}
+                      <div className="rounded-md border p-3">
+                        <div className="flex items-start gap-2">
+                          <Bus className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">
+                              {locale === 'pt' ? 'Transporte' : locale === 'es' ? 'Transporte' : 'Transport'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {job.transport_provided
+                                ? (locale === 'pt' ? 'Sim' : locale === 'es' ? 'Sí' : 'Yes')
+                                : (locale === 'pt' ? 'Não' : 'No')}
+                            </p>
                           </div>
-                        )}
+                        </div>
+                      </div>
+
+                      {/* Tools */}
+                      <div className="rounded-md border p-3 sm:col-span-2">
+                        <div className="flex items-start gap-2">
+                          <Wrench className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">
+                              {locale === 'pt' ? 'Ferramentas' : locale === 'es' ? 'Herramientas' : 'Tools'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {job.tools_provided
+                                ? (locale === 'pt' ? 'Sim' : locale === 'es' ? 'Sí' : 'Yes')
+                                : (locale === 'pt' ? 'Não' : 'No')}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </>
-                )}
-
-                {/* Job ID */}
-                {job.job_id && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      {locale === 'pt' ? 'ID da Vaga' : locale === 'es' ? 'ID del trabajo' : 'Job ID'}: {job.job_id}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  </section>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Apply Section */}
           {!showLoginPrompt ? (
