@@ -11,8 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
-import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench } from "lucide-react";
+import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 
 export type JobDetails = {
   id: string;
