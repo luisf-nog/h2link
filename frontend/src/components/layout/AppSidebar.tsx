@@ -61,6 +61,7 @@ export function AppSidebar() {
 
   // Admin-only menu items
   const adminMenuItems = [
+    { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
     { title: 'Uso de IA', url: '/admin/ai-usage', icon: Brain },
   ];
 
