@@ -30,33 +30,116 @@ export function JobMetaTags({ job }: JobMetaTagsProps) {
   const visaType = job.visa_type || 'H-2B';
   const title = `${visaType}: ${job.job_title} - ${job.company}`;
   
-  // Build rich description
+  // Build rich description with more details
   const salaryText = job.salary 
     ? locale === 'en' 
       ? `$${job.salary.toFixed(2)}/hr` 
+      : locale === 'es'
+      ? `$${job.salary.toFixed(2)}/hora`
       : `$${job.salary.toFixed(2)}/hora`
     : '';
   
   const locationText = `${job.city}, ${job.state}`;
   
-  const descriptionParts = [
-    locale === 'en' ? 'Job opportunity' : 'Oportunidade de trabalho',
-    visaType,
-    locationText
-  ];
+  const descriptionParts = [];
   
+  // Opening line with category if available
+  if (job.category) {
+    descriptionParts.push(
+      locale === 'en' 
+        ? `${job.category} position` 
+        : locale === 'es'
+        ? `Puesto de ${job.category}`
+        : `Vaga de ${job.category}`
+    );
+  } else {
+    descriptionParts.push(
+      locale === 'en' ? 'Job opportunity' : locale === 'es' ? 'Oportunidad de empleo' : 'Oportunidade de trabalho'
+    );
+  }
+  
+  // Add visa type
+  descriptionParts.push(visaType);
+  
+  // Location
+  descriptionParts.push(locationText);
+  
+  // Openings
+  if (job.openings && job.openings > 1) {
+    descriptionParts.push(
+      locale === 'en' 
+        ? `${job.openings} openings` 
+        : locale === 'es'
+        ? `${job.openings} vacantes`
+        : `${job.openings} vagas`
+    );
+  }
+  
+  // Salary
   if (salaryText) {
     descriptionParts.push(salaryText);
   }
   
-  if (job.start_date) {
-    const startDate = new Date(job.start_date);
-    const formattedDate = startDate.toLocaleDateString(locale);
+  // Weekly hours
+  if (job.weekly_hours) {
     descriptionParts.push(
       locale === 'en' 
-        ? `Starts: ${formattedDate}` 
+        ? `${job.weekly_hours}h/week` 
+        : locale === 'es'
+        ? `${job.weekly_hours}h/semana`
+        : `${job.weekly_hours}h/semana`
+    );
+  }
+  
+  // Start date
+  if (job.start_date) {
+    const startDate = new Date(job.start_date);
+    const formattedDate = startDate.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+    descriptionParts.push(
+      locale === 'en' 
+        ? `Start: ${formattedDate}` 
+        : locale === 'es'
+        ? `Inicio: ${formattedDate}`
         : `Início: ${formattedDate}`
     );
+  }
+  
+  // Duration (if end date available)
+  if (job.start_date && job.end_date) {
+    const start = new Date(job.start_date);
+    const end = new Date(job.end_date);
+    const months = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    if (months > 0) {
+      descriptionParts.push(
+        locale === 'en' 
+          ? `${months} months` 
+          : locale === 'es'
+          ? `${months} meses`
+          : `${months} meses`
+      );
+    }
+  }
+  
+  // Benefits
+  const benefits = [];
+  if (job.housing_info) benefits.push(locale === 'en' ? 'Housing' : locale === 'es' ? 'Vivienda' : 'Moradia');
+  if (job.transport_provided) benefits.push(locale === 'en' ? 'Transport' : locale === 'es' ? 'Transporte' : 'Transporte');
+  if (job.tools_provided) benefits.push(locale === 'en' ? 'Tools' : locale === 'es' ? 'Herramientas' : 'Ferramentas');
+  
+  if (benefits.length > 0) {
+    descriptionParts.push(benefits.join(', '));
+  }
+  
+  // Experience
+  if (job.experience_months) {
+    const expText = job.experience_months === 1 
+      ? (locale === 'en' ? '1 month exp' : locale === 'es' ? '1 mes exp' : '1 mês exp')
+      : locale === 'en' 
+        ? `${job.experience_months} months exp` 
+        : locale === 'es'
+        ? `${job.experience_months} meses exp`
+        : `${job.experience_months} meses exp`;
+    descriptionParts.push(expText);
   }
   
   const description = descriptionParts.join(' • ');
