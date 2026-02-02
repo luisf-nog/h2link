@@ -2,6 +2,14 @@
   "app": {
     "name": "H2 Linker"
   },
+  "loginDialog": {
+    "title": "Login required",
+    "descriptionQueue": "To add jobs to your queue and start sending applications, you need to be logged in.",
+    "descriptionGeneric": "To access this feature, you need to be logged in.",
+    "benefit": "✨ Create your free account and start automating your H-2A/H-2B job applications!",
+    "ctaLogin": "Sign In / Create Account",
+    "ctaContinue": "Continue Browsing"
+  },
   "footer": {
     "tagline": "Smart connections. Real opportunities.",
     "terms": "Terms of Use",

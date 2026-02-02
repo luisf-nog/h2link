@@ -2,6 +2,14 @@
   "app": {
     "name": "H2 Linker"
   },
+  "loginDialog": {
+    "title": "Inicio de sesión requerido",
+    "descriptionQueue": "Para agregar empleos a tu cola y comenzar a enviar solicitudes, necesitas iniciar sesión.",
+    "descriptionGeneric": "Para acceder a esta funcionalidad, necesitas iniciar sesión.",
+    "benefit": "✨ ¡Crea tu cuenta gratis y comienza a automatizar tus solicitudes de empleo H-2A/H-2B!",
+    "ctaLogin": "Iniciar Sesión / Crear Cuenta",
+    "ctaContinue": "Continuar Navegando"
+  },
   "footer": {
     "tagline": "Conexiones inteligentes. Oportunidades reales.",
     "terms": "Términos de Uso",

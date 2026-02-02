@@ -118,8 +118,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <TooltipProvider>
                 {menuItems.map((item) => {
-                  const isSettings = item.url === '/settings';
-                  const requiresAuth = isSettings;
+                  const requiresAuth = item.url === '/settings' || item.url === '/queue' || item.url === '/referrals';
                   
                   return (
                   <SidebarMenuItem key={item.title}>
@@ -267,17 +266,17 @@ export function AppSidebar() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-primary" />
-              Login necessário
+              {t('loginDialog.title')}
             </DialogTitle>
             <DialogDescription>
-              Para acessar as configurações da sua conta, você precisa estar logado.
+              {t('loginDialog.descriptionGeneric')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
               <p className="text-sm text-foreground">
-                ✨ Crie sua conta gratuitamente para gerenciar suas configurações e começar a enviar candidaturas!
+                {t('loginDialog.benefit')}
               </p>
             </div>
 
@@ -290,14 +289,14 @@ export function AppSidebar() {
                   if (isMobile) setOpenMobile(false);
                 }}
               >
-                Fazer Login / Criar Conta
+                {t('loginDialog.ctaLogin')}
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={() => setShowLoginDialog(false)}
               >
-                Continuar Navegando
+                {t('loginDialog.ctaContinue')}
               </Button>
             </div>
           </div>

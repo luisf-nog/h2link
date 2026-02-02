@@ -2,6 +2,14 @@
   "app": {
     "name": "H2 Linker"
   },
+  "loginDialog": {
+    "title": "Login necessário",
+    "descriptionQueue": "Para adicionar vagas à sua fila e começar a enviar candidaturas, você precisa estar logado.",
+    "descriptionGeneric": "Para acessar esta funcionalidade, você precisa estar logado.",
+    "benefit": "✨ Crie sua conta gratuitamente e comece a automatizar suas candidaturas para vagas H-2A/H-2B!",
+    "ctaLogin": "Fazer Login / Criar Conta",
+    "ctaContinue": "Continuar Navegando"
+  },
   "footer": {
     "tagline": "Conexões inteligentes. Oportunidades reais.",
     "terms": "Termos de Uso",

@@ -1011,17 +1011,17 @@ export default function Jobs() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-primary" />
-              Login necessário
+              {t('loginDialog.title')}
             </DialogTitle>
             <DialogDescription>
-              Para adicionar vagas à sua fila e começar a enviar candidaturas, você precisa estar logado.
+              {t('loginDialog.descriptionQueue')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
               <p className="text-sm text-foreground">
-                ✨ Crie sua conta gratuitamente e comece a automatizar suas candidaturas para vagas H-2A/H-2B!
+                {t('loginDialog.benefit')}
               </p>
             </div>
 
@@ -1033,14 +1033,14 @@ export default function Jobs() {
                   navigate('/auth');
                 }}
               >
-                Fazer Login / Criar Conta
+                {t('loginDialog.ctaLogin')}
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={() => setShowLoginDialog(false)}
               >
-                Continuar Navegando
+                {t('loginDialog.ctaContinue')}
               </Button>
             </div>
           </div>
