@@ -130,21 +130,30 @@ serve(async (req) => {
       rec_pay_deductions: j.rec_pay_deductions ?? null,
     }));
 
-    // Upsert by (job_id, visa_type)
-    const { error: upsertError, count } = await supabase
-      .from('public_jobs')
-      .upsert(rows, { onConflict: 'job_id,visa_type', count: 'exact' });
+    // Process in batches to avoid CPU timeout
+    const BATCH_SIZE = 100;
+    let totalImported = 0;
 
-    if (upsertError) {
-      console.error('Upsert error:', upsertError);
-      return new Response(JSON.stringify({ error: upsertError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      
+      const { error: upsertError, count } = await supabase
+        .from('public_jobs')
+        .upsert(batch, { onConflict: 'job_id,visa_type', count: 'exact' });
+
+      if (upsertError) {
+        console.error('Upsert error at batch', i, ':', upsertError);
+        return new Response(JSON.stringify({ error: upsertError.message, importedSoFar: totalImported }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      totalImported += count ?? batch.length;
     }
 
     return new Response(
-      JSON.stringify({ success: true, imported: count ?? rows.length }),
+      JSON.stringify({ success: true, imported: totalImported }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
