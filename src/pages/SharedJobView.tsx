@@ -18,7 +18,8 @@ import {
   ArrowRight,
   Mail,
   AlertCircle,
-  Share2
+  Share2,
+  Phone
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/components/brand/BrandLogo';
