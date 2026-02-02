@@ -569,7 +569,7 @@ export default function Auth() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center select-none">
             <span className="text-3xl font-bold tracking-tight sm:text-4xl">
-              <span className="text-primary font-extrabold">H2</span> <span className="text-white">Linker</span>
+              <span className="text-ring font-extrabold">H2</span> <span className="text-white">Linker</span>
             </span>
           </div>
           <LanguageSwitcher
