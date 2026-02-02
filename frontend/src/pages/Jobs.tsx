@@ -994,6 +994,7 @@ export default function Jobs() {
          onAddToQueue={(job) => addToQueue(job as Job)}
          onRemoveFromQueue={(job) => removeFromQueue(job as Job)}
          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+         onShare={(job) => handleShareJob(job as Job)}
        />
 
       {/* Upgrade Dialog */}
