@@ -357,6 +357,51 @@ export default function SharedJobView() {
                 </>
               )}
 
+              {/* Job Duties */}
+              {job.job_duties && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">
+                      {locale === 'pt' ? 'Funções do Trabalho' : locale === 'es' ? 'Funciones del trabajo' : 'Job Duties'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {job.job_duties}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Education Required */}
+              {job.education_required && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">
+                      {locale === 'pt' ? 'Educação Requerida' : locale === 'es' ? 'Educación requerida' : 'Education Required'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {job.education_required}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Special Requirements */}
+              {job.job_min_special_req && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">
+                      {locale === 'pt' ? 'Requisitos Especiais' : locale === 'es' ? 'Requisitos especiales' : 'Special Requirements'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {job.job_min_special_req}
+                    </p>
+                  </div>
+                </>
+              )}
+
               {/* Housing Info Detail */}
               {job.housing_info && (
                 <>
@@ -365,7 +410,7 @@ export default function SharedJobView() {
                     <h3 className="font-semibold mb-2">
                       {locale === 'pt' ? 'Informações de Moradia' : locale === 'es' ? 'Información de vivienda' : 'Housing Information'}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                       {job.housing_info}
                     </p>
                   </div>
@@ -373,6 +418,139 @@ export default function SharedJobView() {
               )}
             </CardContent>
           </Card>
+
+          {/* Compensation & Additional Info */}
+          {(job.overtime_salary || job.wage_additional || job.rec_pay_deductions || job.end_date || job.worksite_address || job.experience_months) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">
+                  {locale === 'pt' ? 'Informações Adicionais' : locale === 'es' ? 'Información adicional' : 'Additional Information'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* End Date */}
+                {job.end_date && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      {locale === 'pt' ? 'Data de Término' : locale === 'es' ? 'Fecha de finalización' : 'End Date'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(job.end_date)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Worksite Address */}
+                {job.worksite_address && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      {locale === 'pt' ? 'Endereço do Local de Trabalho' : locale === 'es' ? 'Dirección del lugar de trabajo' : 'Worksite Address'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {job.worksite_address}
+                      {job.worksite_zip && ` — ${job.worksite_zip}`}
+                    </p>
+                  </div>
+                )}
+
+                {/* Experience Required */}
+                {job.experience_months !== null && job.experience_months !== undefined && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      {locale === 'pt' ? 'Experiência Requerida' : locale === 'es' ? 'Experiencia requerida' : 'Experience Required'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {job.experience_months === 0 
+                        ? (locale === 'pt' ? 'Nenhuma' : locale === 'es' ? 'Ninguna' : 'None')
+                        : job.experience_months === 1
+                        ? (locale === 'pt' ? '1 mês' : locale === 'es' ? '1 mes' : '1 month')
+                        : locale === 'pt' 
+                          ? `${job.experience_months} meses` 
+                          : locale === 'es'
+                          ? `${job.experience_months} meses`
+                          : `${job.experience_months} months`
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {/* Overtime Salary */}
+                {job.overtime_salary && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      {locale === 'pt' ? 'Salário de Hora Extra' : locale === 'es' ? 'Salario de horas extras' : 'Overtime Salary'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {formatSalary(job.overtime_salary)}/hr
+                    </p>
+                  </div>
+                )}
+
+                {/* Additional Wage Info */}
+                {job.wage_additional && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      {locale === 'pt' ? 'Informações Adicionais de Salário' : locale === 'es' ? 'Información adicional de salario' : 'Additional Wage Info'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {job.wage_additional}
+                    </p>
+                  </div>
+                )}
+
+                {/* Pay Deductions */}
+                {job.rec_pay_deductions && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      {locale === 'pt' ? 'Deduções de Pagamento' : locale === 'es' ? 'Deducciones de pago' : 'Pay Deductions'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {job.rec_pay_deductions}
+                    </p>
+                  </div>
+                )}
+
+                {/* Contact Information */}
+                {(job.email || job.phone) && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="font-semibold text-sm mb-2">
+                        {locale === 'pt' ? 'Contato' : locale === 'es' ? 'Contacto' : 'Contact'}
+                      </h4>
+                      <div className="space-y-2">
+                        {job.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <a href={`mailto:${job.email}`} className="text-primary hover:underline">
+                              {job.email}
+                            </a>
+                          </div>
+                        )}
+                        {job.phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <a href={`tel:${job.phone}`} className="text-primary hover:underline">
+                              {job.phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Job ID */}
+                {job.job_id && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      {locale === 'pt' ? 'ID da Vaga' : locale === 'es' ? 'ID del trabajo' : 'Job ID'}: {job.job_id}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Apply Section */}
           {!showLoginPrompt ? (
