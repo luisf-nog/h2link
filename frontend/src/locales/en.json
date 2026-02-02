@@ -896,7 +896,8 @@
       "add_success_desc": "{{jobTitle}} was added to your queue.",
       "remove_success_title": "Removed from queue!",
       "remove_success_desc": "{{jobTitle}} was removed from your queue."
-    }
+    },
+    "shareText": "Check out this job opportunity"
   },
   "not_found": {
     "subtitle": "Oops! Page not found",
