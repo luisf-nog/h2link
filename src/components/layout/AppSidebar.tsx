@@ -234,31 +234,33 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="flex flex-col gap-2">
-          {(!collapsed || isMobile) && (
-            <div className="text-sm text-muted-foreground truncate">
-              {profile?.email}
-            </div>
-          )}
-
-          <Button
-            variant="ghost"
-            size={collapsed && !isMobile ? 'icon' : 'sm'}
-            onClick={() => {
-              if (isMobile) setOpenMobile(false);
-              signOut();
-            }}
-            className={cn(
-              'text-muted-foreground hover:text-destructive',
-              collapsed && !isMobile ? 'mx-auto' : 'justify-start'
+        {user && (
+          <div className="flex flex-col gap-2">
+            {(!collapsed || isMobile) && (
+              <div className="text-sm text-muted-foreground truncate">
+                {profile?.email}
+              </div>
             )}
-            title={t('common.logout')}
-            aria-label={t('common.logout')}
-          >
-            <LogOut className={cn('h-4 w-4', (!collapsed || isMobile) && 'mr-2')} />
-            {(!collapsed || isMobile) && t('common.logout')}
-          </Button>
-        </div>
+
+            <Button
+              variant="ghost"
+              size={collapsed && !isMobile ? 'icon' : 'sm'}
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+                signOut();
+              }}
+              className={cn(
+                'text-muted-foreground hover:text-destructive',
+                collapsed && !isMobile ? 'mx-auto' : 'justify-start'
+              )}
+              title={t('common.logout')}
+              aria-label={t('common.logout')}
+            >
+              <LogOut className={cn('h-4 w-4', (!collapsed || isMobile) && 'mr-2')} />
+              {(!collapsed || isMobile) && t('common.logout')}
+            </Button>
+          </div>
+        )}
       </SidebarFooter>
 
       {/* Login Required Dialog */}
