@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/number";
-import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle, Share2 } from "lucide-react";
+import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
