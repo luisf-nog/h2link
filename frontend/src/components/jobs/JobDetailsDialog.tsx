@@ -436,22 +436,33 @@ export function JobDetailsDialog({
           </div>
         </div>
 
+        {/* Footer actions */}
         <div className="pt-2">
-          {isInQueue ? (
+          <div className="flex gap-2">
             <Button 
-              className="w-full" 
-              variant="destructive"
-              onClick={() => job && onRemoveFromQueue?.(job)}
+              variant="outline" 
+              onClick={handleShare}
+              className="flex-1"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t("job_details.actions.remove_from_queue")}
+              <Share2 className="h-4 w-4 mr-2" />
+              {t("common.share")}
             </Button>
-          ) : (
-            <Button className="w-full" onClick={() => job && onAddToQueue(job)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("job_details.actions.add_to_queue")}
-            </Button>
-          )}
+            {isInQueue ? (
+              <Button 
+                className="flex-1" 
+                variant="destructive"
+                onClick={() => job && onRemoveFromQueue?.(job)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t("job_details.actions.remove_from_queue")}
+              </Button>
+            ) : (
+              <Button className="flex-1" onClick={() => job && onAddToQueue(job)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t("job_details.actions.add_to_queue")}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
