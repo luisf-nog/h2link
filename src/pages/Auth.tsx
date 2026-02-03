@@ -581,15 +581,18 @@ export default function Auth() {
             variant="outline"
             size="lg"
             onClick={() => navigate('/jobs')}
-            className="group relative overflow-hidden border-2 border-primary/60 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 px-6 py-6 text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary hover:from-primary/30 hover:via-primary/20 hover:to-primary/30 hover:shadow-lg hover:shadow-primary/25"
+            className="group relative overflow-hidden border-2 border-primary/80 bg-gradient-to-br from-primary/30 via-primary/15 to-purple-500/20 px-8 py-6 text-white shadow-xl shadow-primary/20 backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:border-primary hover:from-primary/40 hover:via-primary/25 hover:to-purple-500/30 hover:shadow-2xl hover:shadow-primary/40"
           >
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-2 text-base font-semibold">
-                <Briefcase className="h-5 w-5" />
+            {/* Animated shine effect */}
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            
+            <div className="relative flex flex-col items-center gap-1.5">
+              <div className="flex items-center gap-2.5 text-lg font-bold tracking-wide">
+                <Briefcase className="h-5 w-5 transition-transform group-hover:scale-110" />
                 <span>{t('auth.browse_jobs')}</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-2" />
               </div>
-              <span className="text-xs text-white/70">{t('auth.browse_jobs_hint')}</span>
+              <span className="text-xs font-medium text-white/80">{t('auth.browse_jobs_hint')}</span>
             </div>
           </Button>
         </div>
