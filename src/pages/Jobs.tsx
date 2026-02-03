@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2, AlertTriangle, Gem } from 'lucide-react';
+import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2, AlertTriangle } from 'lucide-react';
 import { JobWarningBadge } from '@/components/jobs/JobWarningBadge';
 import type { ReportReason } from '@/components/queue/ReportJobButton';
 import { cn } from '@/lib/utils';
@@ -50,12 +50,14 @@ export default function Jobs() {
   const navigate = useNavigate();
 
   const handleShareJob = (job: Job) => {
-    const shareUrl = `${window.location.origin}/job/${job.id}`;
+    // Use backend route that generates proper Open Graph meta tags for social sharing
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-scout-20.preview.emergentagent.com';
+    const shareUrl = `${backendUrl}/job/${job.id}`;
     
     if (navigator.share) {
       navigator.share({
         title: `${job.job_title} - ${job.company}`,
-        text: `Vaga H2A/H2B: ${job.job_title} em ${job.city}, ${job.state}`,
+        text: `${t('jobs.shareText', 'Job opportunity')}: ${job.job_title} ${t('jobs.in', 'in')} ${job.city}, ${job.state}`,
         url: shareUrl,
       }).catch(() => {
         copyToClipboard(shareUrl);
@@ -928,16 +930,9 @@ export default function Jobs() {
                       <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
                       <TableCell>{formatSalary(job.salary)}</TableCell>
                       <TableCell>
-                        {job.visa_type === 'H-2A (Early Access)' ? (
-                          <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0">
-                            <Gem className="h-3 w-3 mr-1" />
-                            {t('early_access.badge')}
-                          </Badge>
-                        ) : (
-                          <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
-                            {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
-                          </Badge>
-                        )}
+                        <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
+                          {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
+                        </Badge>
                       </TableCell>
                       <TableCell>{formatDate(job.posted_date)}</TableCell>
                       <TableCell>{formatDate(job.start_date)}</TableCell>

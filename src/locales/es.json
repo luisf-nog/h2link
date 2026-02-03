@@ -1,8 +1,4 @@
 {
-  "early_access": {
-    "badge": "💎 Early Access",
-    "disclaimer": "Atención: Esta vacante fue registrada recientemente y está en procesamiento inicial por el Departamento de Trabajo (DOL). La certificación final puede o no ser aprobada."
-  },
   "app": {
     "name": "H2 Linker"
   },
@@ -139,6 +135,8 @@
     "settings": "Configuración"
   },
   "auth": {
+    "browse_jobs": "Explorar Empleos Disponibles",
+    "browse_jobs_hint": "Navega sin cuenta • Acceso gratuito",
     "hero_tagline": "Ahorra tiempo y encuentra oportunidades H-2A y H-2B reales",
     "tabs": { "signin": "Iniciar sesión", "signup": "Crear cuenta" },
     "signin": {
@@ -239,17 +237,7 @@
       "solution_emphasis": "3 clics",
       "solution_suffix": "y multiplica tus oportunidades.",
       "subline": "Menos trabajo manual. Más solicitudes enviadas. Más oportunidades.",
-      "footer": "Conectándote con empleadores H-2A/H-2B verificados desde el primer envío.",
-      "stats": {
-        "avg_time": "Tiempo promedio",
-        "applications": "Solicitudes",
-        "more_chances": "Más chances"
-      },
-      "sectors": {
-        "agriculture": "Agricultura",
-        "construction": "Construcción",
-        "hospitality": "Hotelería"
-      }
+      "footer": "Conectándote con empleadores H-2A/H-2B verificados desde el primer envío."
     },
     "actions": {
       "signin": "Iniciar sesión",

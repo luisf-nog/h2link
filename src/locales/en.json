@@ -1,8 +1,4 @@
 {
-  "early_access": {
-    "badge": "💎 Early Access",
-    "disclaimer": "Attention: This job was recently filed and is in initial processing with the Department of Labor (DOL). Final certification may or may not be approved."
-  },
   "app": {
     "name": "H2 Linker"
   },
@@ -139,6 +135,8 @@
     "settings": "Settings"
   },
   "auth": {
+    "browse_jobs": "Explore Available Jobs",
+    "browse_jobs_hint": "Browse without account • Free access",
     "hero_tagline": "Save time and find real H-2A & H-2B opportunities",
     "tabs": { "signin": "Sign in", "signup": "Create account" },
     "signin": {
@@ -239,17 +237,7 @@
       "solution_emphasis": "3 clicks",
       "solution_suffix": "and multiply your chances.",
       "subline": "Less manual work. More applications sent. More opportunities.",
-      "footer": "Connecting you to verified H-2A/H-2B employers from the first send.",
-      "stats": {
-        "avg_time": "Avg. time",
-        "applications": "Applications",
-        "more_chances": "More chances"
-      },
-      "sectors": {
-        "agriculture": "Agriculture",
-        "construction": "Construction",
-        "hospitality": "Hospitality"
-      }
+      "footer": "Connecting you to verified H-2A/H-2B employers from the first send."
     },
     "actions": {
       "signin": "Sign in",
