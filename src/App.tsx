@@ -20,6 +20,7 @@ import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import AdminAiUsage from "./pages/AdminAiUsage";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import AdminImport from "./pages/AdminImport";
 import PublicProfile from "./pages/PublicProfile";
 import SharedJobView from "./pages/SharedJobView";
 
