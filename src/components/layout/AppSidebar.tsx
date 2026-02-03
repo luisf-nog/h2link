@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, Brain, Lock, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, Brain, Lock, BarChart3, Upload } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -61,6 +61,7 @@ export function AppSidebar() {
 
   // Admin-only menu items
   const adminMenuItems = [
+    { title: 'Import', url: '/admin/import', icon: Upload },
     { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
     { title: 'Uso de IA', url: '/admin/ai-usage', icon: Brain },
   ];
