@@ -50,12 +50,14 @@ export default function Jobs() {
   const navigate = useNavigate();
 
   const handleShareJob = (job: Job) => {
-    const shareUrl = `${window.location.origin}/job/${job.id}`;
+    // Use backend route that generates proper Open Graph meta tags for social sharing
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-scout-20.preview.emergentagent.com';
+    const shareUrl = `${backendUrl}/job/${job.id}`;
     
     if (navigator.share) {
       navigator.share({
         title: `${job.job_title} - ${job.company}`,
-        text: `Vaga H2A/H2B: ${job.job_title} em ${job.city}, ${job.state}`,
+        text: `${t('jobs.shareText', 'Job opportunity')}: ${job.job_title} ${t('jobs.in', 'in')} ${job.city}, ${job.state}`,
         url: shareUrl,
       }).catch(() => {
         copyToClipboard(shareUrl);
