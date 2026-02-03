@@ -10,6 +10,10 @@
     "ctaLogin": "Sign In / Create Account",
     "ctaContinue": "Continue Browsing"
   },
+  "auth": {
+    "browse_jobs": "Explore Available Jobs",
+    "browse_jobs_hint": "Browse without account • Free access"
+  },
   "footer": {
     "tagline": "Smart connections. Real opportunities.",
     "terms": "Terms of Use",
