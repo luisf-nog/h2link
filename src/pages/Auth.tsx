@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel, Briefcase, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { z } from 'zod';
@@ -573,6 +573,25 @@ export default function Auth() {
             onChange={handleChangeLanguage}
             className="h-9 w-[120px] border-white/20 bg-white/10 text-white backdrop-blur-md sm:w-[140px]"
           />
+        </div>
+
+        {/* Browse Jobs CTA Button */}
+        <div className="mb-6 flex justify-center">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => navigate('/jobs')}
+            className="group relative overflow-hidden border-2 border-primary/60 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 px-6 py-6 text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary hover:from-primary/30 hover:via-primary/20 hover:to-primary/30 hover:shadow-lg hover:shadow-primary/25"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2 text-base font-semibold">
+                <Briefcase className="h-5 w-5" />
+                <span>{t('auth.browse_jobs')}</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+              <span className="text-xs text-white/70">{t('auth.browse_jobs_hint')}</span>
+            </div>
+          </Button>
         </div>
 
         {/* Center: Auth Card */}
