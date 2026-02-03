@@ -576,25 +576,18 @@ export default function Auth() {
         </div>
 
         {/* Browse Jobs CTA Button */}
-        <div className="mb-6 flex justify-center">
-          <Button
-            variant="outline"
-            size="lg"
+        <div className="mb-8 flex justify-center">
+          <button
             onClick={() => navigate('/jobs')}
-            className="group relative overflow-hidden border-2 border-primary/80 bg-gradient-to-br from-primary/30 via-primary/15 to-purple-500/20 px-8 py-6 text-white shadow-xl shadow-primary/20 backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:border-primary hover:from-primary/40 hover:via-primary/25 hover:to-purple-500/30 hover:shadow-2xl hover:shadow-primary/40"
+            className="group relative inline-flex items-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-8 py-4 font-semibold text-white shadow-lg shadow-blue-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/60"
           >
-            {/* Animated shine effect */}
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            
-            <div className="relative flex flex-col items-center gap-1.5">
-              <div className="flex items-center gap-2.5 text-lg font-bold tracking-wide">
-                <Briefcase className="h-5 w-5 transition-transform group-hover:scale-110" />
-                <span>{t('auth.browse_jobs')}</span>
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-2" />
-              </div>
-              <span className="text-xs font-medium text-white/80">{t('auth.browse_jobs_hint')}</span>
+            <Briefcase className="h-5 w-5" />
+            <div className="flex flex-col items-start">
+              <span className="text-base leading-tight">{t('auth.browse_jobs')}</span>
+              <span className="text-xs font-normal text-blue-100">{t('auth.browse_jobs_hint')}</span>
             </div>
-          </Button>
+            <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+          </button>
         </div>
 
         {/* Center: Auth Card */}
