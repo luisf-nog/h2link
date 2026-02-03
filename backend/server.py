@@ -90,11 +90,17 @@ async def render_job_meta(job_id: str):
         city = job.get('city', '')
         state = job.get('state', '')
         salary = job.get('salary')
+        openings = job.get('openings')
         
         title = f"{visa_type}: {job_title} - {company}"
         location = f"{city}, {state}".strip(', ')
         
-        description_parts = ['Job opportunity', visa_type]
+        # Build description with key info: openings, location, salary
+        description_parts = []
+        if openings:
+            openings_text = f"{openings} vaga" if openings == 1 else f"{openings} vagas"
+            description_parts.append(openings_text)
+        description_parts.append(visa_type)
         if location:
             description_parts.append(location)
         if salary:
