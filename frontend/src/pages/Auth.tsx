@@ -575,6 +575,28 @@ export default function Auth() {
           />
         </div>
 
+        {/* Browse Jobs CTA Button */}
+        <div className="mb-6 flex justify-center">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => navigate('/jobs')}
+            className="group relative overflow-hidden border-2 border-primary/80 bg-gradient-to-br from-primary/30 via-primary/15 to-purple-500/20 px-8 py-6 text-white shadow-xl shadow-primary/20 backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:border-primary hover:from-primary/40 hover:via-primary/25 hover:to-purple-500/30 hover:shadow-2xl hover:shadow-primary/40"
+          >
+            {/* Animated shine effect */}
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            
+            <div className="relative flex flex-col items-center gap-1.5">
+              <div className="flex items-center gap-2.5 text-lg font-bold tracking-wide">
+                <Briefcase className="h-5 w-5 transition-transform group-hover:scale-110" />
+                <span>{t('auth.browse_jobs')}</span>
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-2" />
+              </div>
+              <span className="text-xs font-medium text-white/80">{t('auth.browse_jobs_hint')}</span>
+            </div>
+          </Button>
+        </div>
+
         {/* Center: Auth Card */}
         <div className="flex flex-1 items-center justify-center">
           <Card className="w-full max-w-md border-white/10 bg-white shadow-2xl">
