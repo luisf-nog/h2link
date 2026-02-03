@@ -11,9 +11,13 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
-import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2 } from "lucide-react";
+import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2, Gem, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const isEarlyAccess = (visaType: string | null | undefined): boolean => 
+  visaType === "H-2A (Early Access)";
 
 export type JobDetails = {
   id: string;
@@ -77,7 +81,8 @@ export function JobDetailsDialog({
 }) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const isH2A = job?.visa_type === "H-2A";
+  const isH2A = job?.visa_type === "H-2A" || isEarlyAccess(job?.visa_type);
+  const jobIsEarlyAccess = isEarlyAccess(job?.visa_type);
 
   const handleShare = () => {
     if (!job) return;
@@ -136,9 +141,14 @@ export function JobDetailsDialog({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="mr-2">{job?.job_title}</DialogTitle>
-              {job?.visa_type && (
+              {jobIsEarlyAccess ? (
+                <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0">
+                  <Gem className="h-3 w-3 mr-1" />
+                  {t('early_access.badge')}
+                </Badge>
+              ) : job?.visa_type ? (
                 <Badge variant={isH2A ? "secondary" : "outline"}>{job.visa_type}</Badge>
-              )}
+              ) : null}
               {job?.category && <Badge variant="outline">{job.category}</Badge>}
             </div>
             <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -154,6 +164,15 @@ export function JobDetailsDialog({
         {/* Scrollable body */}
         <div className="max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-5">
+            {/* Early Access Disclaimer */}
+            {jobIsEarlyAccess && (
+              <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
+                  {t('early_access.disclaimer')}
+                </AlertDescription>
+              </Alert>
+            )}
             <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">{t("job_details.fields.openings")}</p>

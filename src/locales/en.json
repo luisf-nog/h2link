@@ -1,4 +1,8 @@
 {
+  "early_access": {
+    "badge": "💎 Early Access",
+    "disclaimer": "Attention: This job was recently filed and is in initial processing with the Department of Labor (DOL). Final certification may or may not be approved."
+  },
   "app": {
     "name": "H2 Linker"
   },
