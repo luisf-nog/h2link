@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel, Briefcase, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { z } from 'zod';
