@@ -202,7 +202,7 @@ export default function SharedJobView() {
 
   return (
     <>
-      <JobMetaTags job={job} />
+      {job && <JobMetaTags job={job} />}
       
       <div className="min-h-screen bg-gradient-to-br from-background to-muted">
         {/* Header */}
