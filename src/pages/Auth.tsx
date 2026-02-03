@@ -802,15 +802,15 @@ export default function Auth() {
           <div className="mx-auto flex max-w-sm justify-center gap-6 pt-2">
             <div className="text-center">
               <div className="text-2xl font-bold text-ring">3min</div>
-              <div className="text-xs text-white/60">Tempo médio</div>
+              <div className="text-xs text-white/60">{t('auth.marketing.stats.avg_time')}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-ring">100+</div>
-              <div className="text-xs text-white/60">Candidaturas</div>
+              <div className="text-xs text-white/60">{t('auth.marketing.stats.applications')}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-ring">5x</div>
-              <div className="text-xs text-white/60">Mais chances</div>
+              <div className="text-xs text-white/60">{t('auth.marketing.stats.more_chances')}</div>
             </div>
           </div>
 
@@ -818,15 +818,15 @@ export default function Auth() {
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Sprout className="h-3 w-3" />
-              <span className="text-xs">Agricultura</span>
+              <span className="text-xs">{t('auth.marketing.sectors.agriculture')}</span>
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Building className="h-3 w-3" />
-              <span className="text-xs">Construção</span>
+              <span className="text-xs">{t('auth.marketing.sectors.construction')}</span>
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Hotel className="h-3 w-3" />
-              <span className="text-xs">Hotelaria</span>
+              <span className="text-xs">{t('auth.marketing.sectors.hospitality')}</span>
             </div>
           </div>
         </div>
