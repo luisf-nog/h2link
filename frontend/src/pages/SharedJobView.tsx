@@ -126,7 +126,9 @@ export default function SharedJobView() {
   };
 
   const handleShare = () => {
-    const shareUrl = `${window.location.origin}/job/${jobId}`;
+    // Use backend route that generates proper Open Graph meta tags for social sharing
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-scout-20.preview.emergentagent.com';
+    const shareUrl = `${backendUrl}/job/${jobId}`;
     
     // UTM parameters prepared for future activation
     // const shareUrlWithUTM = `${shareUrl}?utm_source=share&utm_medium=social&utm_campaign=job_sharing`;
