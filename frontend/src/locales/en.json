@@ -135,6 +135,8 @@
     "settings": "Settings"
   },
   "auth": {
+    "browse_jobs": "Explore Available Jobs",
+    "browse_jobs_hint": "Browse without account • Free access",
     "hero_tagline": "Save time and find real H-2A & H-2B opportunities",
     "tabs": { "signin": "Sign in", "signup": "Create account" },
     "signin": {
