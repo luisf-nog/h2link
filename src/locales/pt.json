@@ -231,7 +231,17 @@
       "solution_emphasis": "3 cliques",
       "solution_suffix": "e multiplique suas chances.",
       "subline": "Menos esforço manual. Mais candidaturas enviadas. Mais oportunidades.",
-      "footer": "Conectando você a empregadores verificados de H-2A/H-2B desde o primeiro envio."
+      "footer": "Conectando você a empregadores verificados de H-2A/H-2B desde o primeiro envio.",
+      "stats": {
+        "avg_time": "Tempo médio",
+        "applications": "Candidaturas",
+        "more_chances": "Mais chances"
+      },
+      "sectors": {
+        "agriculture": "Agricultura",
+        "construction": "Construção",
+        "hospitality": "Hotelaria"
+      }
     },
     "actions": {
       "signin": "Entrar",

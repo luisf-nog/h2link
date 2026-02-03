@@ -231,7 +231,17 @@
       "solution_emphasis": "3 clicks",
       "solution_suffix": "and multiply your chances.",
       "subline": "Less manual work. More applications sent. More opportunities.",
-      "footer": "Connecting you to verified H-2A/H-2B employers from the first send."
+      "footer": "Connecting you to verified H-2A/H-2B employers from the first send.",
+      "stats": {
+        "avg_time": "Avg. time",
+        "applications": "Applications",
+        "more_chances": "More chances"
+      },
+      "sectors": {
+        "agriculture": "Agriculture",
+        "construction": "Construction",
+        "hospitality": "Hospitality"
+      }
     },
     "actions": {
       "signin": "Sign in",
