@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileJson, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileJson, AlertCircle, CheckCircle2, Loader2, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import JSZip from 'jszip';
 
 interface ProcessedJob {
   visa_type: string;
@@ -31,13 +32,14 @@ interface ProcessedJob {
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [result, setResult] = useState<{ success: number; errors: string[] } | null>(null);
   const { toast } = useToast();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files).filter(
-        f => f.name.endsWith('.json')
+        f => f.name.endsWith('.json') || f.name.endsWith('.zip')
       );
       setFiles(selectedFiles);
       setResult(null);
@@ -46,12 +48,35 @@ export function MultiJsonImporter() {
 
   const detectVisaType = (filename: string): string => {
     const lowerName = filename.toLowerCase();
-    if (lowerName.includes('_jo')) {
+    // Detecta pelo nome do arquivo ZIP ou JSON
+    if (lowerName.includes('_jo') || lowerName.includes('jo.')) {
       return 'H-2A (Early Access)';
     } else if (lowerName.includes('h2a')) {
       return 'H-2A';
     }
     return 'H-2B';
+  };
+
+  const extractZipFiles = async (zipFile: File): Promise<Array<{ name: string; content: string; visaType: string }>> => {
+    const zip = new JSZip();
+    const contents = await zip.loadAsync(zipFile);
+    const jsonFiles: Array<{ name: string; content: string; visaType: string }> = [];
+
+    // Detecta visa type pelo nome do ZIP
+    const zipVisaType = detectVisaType(zipFile.name);
+
+    for (const [filename, file] of Object.entries(contents.files)) {
+      if (!file.dir && filename.endsWith('.json')) {
+        const content = await file.async('string');
+        jsonFiles.push({
+          name: filename,
+          content,
+          visaType: zipVisaType, // Usa o tipo do ZIP, não do arquivo individual
+        });
+      }
+    }
+
+    return jsonFiles;
   };
 
   const extractJobsList = (content: any): any[] => {
@@ -110,28 +135,58 @@ export function MultiJsonImporter() {
     if (files.length === 0) {
       toast({
         title: 'Nenhum arquivo selecionado',
-        description: 'Por favor, selecione pelo menos um arquivo JSON.',
+        description: 'Por favor, selecione pelo menos um arquivo JSON ou ZIP.',
         variant: 'destructive',
       });
       return;
     }
 
     setProcessing(true);
+    setExtracting(true);
     setResult(null);
 
     try {
       const allJobs: ProcessedJob[] = [];
       const errors: string[] = [];
 
-      // Processar cada arquivo
+      // Extrair e processar arquivos
+      const jsonContents: Array<{ name: string; content: string; visaType: string }> = [];
+
       for (const file of files) {
+        if (file.name.endsWith('.zip')) {
+          // Extrair JSONs do ZIP
+          const extracted = await extractZipFiles(file);
+          jsonContents.push(...extracted);
+        } else {
+          // Arquivo JSON direto
+          const content = await file.text();
+          jsonContents.push({
+            name: file.name,
+            content,
+            visaType: detectVisaType(file.name),
+          });
+        }
+      }
+
+      setExtracting(false);
+      toast({
+        title: 'Arquivos extraídos',
+        description: `${jsonContents.length} arquivos JSON encontrados. Processando...`,
+      });
+
+      // Processar cada JSON
+      for (const jsonFile of jsonContents) {
         try {
-          const text = await file.text();
-          const json = JSON.parse(text);
-          const visaType = detectVisaType(file.name);
+          const json = JSON.parse(jsonFile.content);
+          const visaType = jsonFile.visaType;
           
           // Extrair lista de vagas
           const jobsList = extractJobsList(json);
+          
+          toast({
+            title: `Processando ${jsonFile.name}`,
+            description: `${jobsList.length} vagas encontradas (${visaType})`,
+          });
           
           // Processar cada vaga
           for (const rawJob of jobsList) {
@@ -210,11 +265,11 @@ export function MultiJsonImporter() {
               
               allJobs.push(processedJob);
             } catch (err) {
-              errors.push(`${file.name}: Erro ao processar vaga - ${err}`);
+              errors.push(`${jsonFile.name}: Erro ao processar vaga - ${err}`);
             }
           }
         } catch (err) {
-          errors.push(`${file.name}: Erro ao ler arquivo - ${err}`);
+          errors.push(`${jsonFile.name}: Erro ao ler arquivo - ${err}`);
         }
       }
 
@@ -285,17 +340,17 @@ export function MultiJsonImporter() {
             type="file"
             id="json-files"
             multiple
-            accept=".json"
+            accept=".json,.zip"
             onChange={handleFileSelect}
             className="hidden"
           />
           <label htmlFor="json-files" className="cursor-pointer">
             <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-sm font-medium mb-1">
-              Clique para selecionar arquivos JSON
+              Clique para selecionar arquivos
             </p>
             <p className="text-xs text-muted-foreground">
-              Aceita múltiplos arquivos .json
+              Aceita arquivos .json e .zip
             </p>
           </label>
         </div>
@@ -307,7 +362,11 @@ export function MultiJsonImporter() {
             <div className="space-y-1">
               {files.map((file, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-sm">
-                  <FileJson className="h-4 w-4 text-primary" />
+                  {file.name.endsWith('.zip') ? (
+                    <FileArchive className="h-4 w-4 text-orange-500" />
+                  ) : (
+                    <FileJson className="h-4 w-4 text-primary" />
+                  )}
                   <span className="flex-1">{file.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {(file.size / 1024).toFixed(1)} KB
@@ -327,10 +386,15 @@ export function MultiJsonImporter() {
           disabled={files.length === 0 || processing}
           className="w-full"
         >
-          {processing ? (
+          {extracting ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Processando...
+              Extraindo ZIPs...
+            </>
+          ) : processing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processando vagas...
             </>
           ) : (
             <>
@@ -373,13 +437,16 @@ export function MultiJsonImporter() {
         <div className="text-xs text-muted-foreground space-y-1 pt-4 border-t">
           <p className="font-medium">Como funciona:</p>
           <ul className="space-y-1 ml-4">
-            <li>• Detecta automaticamente o tipo de visto pelo nome do arquivo</li>
-            <li>• <code>*_jo*.json</code> → H-2A (Early Access)</li>
-            <li>• <code>*h2a*.json</code> → H-2A</li>
-            <li>• Outros → H-2B</li>
+            <li>• <strong>Aceita arquivos ZIP e JSON</strong></li>
+            <li>• Detecta automaticamente o tipo de visto pelo nome do arquivo:</li>
+            <li className="ml-4">→ <code>*_jo*.zip</code> ou <code>*jo.zip</code> → H-2A (Early Access)</li>
+            <li className="ml-4">→ <code>*h2a*.zip</code> → H-2A</li>
+            <li className="ml-4">→ Outros → H-2B</li>
+            <li>• Extrai automaticamente todos os JSONs de dentro do ZIP</li>
             <li>• Unifica campos de diferentes feeds (9142A/B e 790A)</li>
             <li>• Calcula salário horário automaticamente</li>
             <li>• Valida emails e campos obrigatórios</li>
+            <li>• <strong>Pode fazer upload de múltiplos ZIPs de uma vez</strong></li>
           </ul>
         </div>
       </CardContent>
