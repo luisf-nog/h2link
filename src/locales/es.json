@@ -14,6 +14,10 @@
     "ctaLogin": "Iniciar Sesión / Crear Cuenta",
     "ctaContinue": "Continuar Navegando"
   },
+  "auth": {
+    "browse_jobs": "🔍 Ver Empleos Disponibles",
+    "browse_jobs_hint": "Sin necesidad de cuenta"
+  },
   "footer": {
     "tagline": "Conexiones inteligentes. Oportunidades reales.",
     "terms": "Términos de Uso",
