@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2, AlertTriangle } from 'lucide-react';
+import { Info, Search, Plus, Check, Lock, ArrowUpDown, ArrowUp, ArrowDown, Zap, Clock, Loader2, AlertTriangle, Gem } from 'lucide-react';
 import { JobWarningBadge } from '@/components/jobs/JobWarningBadge';
 import type { ReportReason } from '@/components/queue/ReportJobButton';
 import { cn } from '@/lib/utils';
@@ -928,9 +928,16 @@ export default function Jobs() {
                       <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
                       <TableCell>{formatSalary(job.salary)}</TableCell>
                       <TableCell>
-                        <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
-                          {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
-                        </Badge>
+                        {job.visa_type === 'H-2A (Early Access)' ? (
+                          <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0">
+                            <Gem className="h-3 w-3 mr-1" />
+                            {t('early_access.badge')}
+                          </Badge>
+                        ) : (
+                          <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
+                            {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>{formatDate(job.posted_date)}</TableCell>
                       <TableCell>{formatDate(job.start_date)}</TableCell>

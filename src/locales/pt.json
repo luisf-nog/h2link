@@ -1,4 +1,8 @@
 {
+  "early_access": {
+    "badge": "💎 Early Access",
+    "disclaimer": "Atenção: Esta vaga foi registrada recentemente e está em processamento inicial pelo Departamento de Trabalho (DOL). A certificação final pode ou não ser aprovada."
+  },
   "app": {
     "name": "H2 Linker"
   },
