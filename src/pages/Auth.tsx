@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Zap, Clock, Send, TrendingUp, Building, Sprout, Hotel, Briefcase, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BrandWordmark } from '@/components/brand/BrandWordmark';
 import { z } from 'zod';
@@ -575,6 +575,25 @@ export default function Auth() {
           />
         </div>
 
+        {/* Browse Jobs CTA Button */}
+        <div className="mb-6 flex justify-center">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => navigate('/jobs')}
+            className="group relative overflow-hidden border-2 border-primary/60 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 px-6 py-6 text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-primary hover:from-primary/30 hover:via-primary/20 hover:to-primary/30 hover:shadow-lg hover:shadow-primary/25"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2 text-base font-semibold">
+                <Briefcase className="h-5 w-5" />
+                <span>{t('auth.browse_jobs')}</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+              <span className="text-xs text-white/70">{t('auth.browse_jobs_hint')}</span>
+            </div>
+          </Button>
+        </div>
+
         {/* Center: Auth Card */}
         <div className="flex flex-1 items-center justify-center">
           <Card className="w-full max-w-md border-white/10 bg-white shadow-2xl">
@@ -802,15 +821,15 @@ export default function Auth() {
           <div className="mx-auto flex max-w-sm justify-center gap-6 pt-2">
             <div className="text-center">
               <div className="text-2xl font-bold text-ring">3min</div>
-              <div className="text-xs text-white/60">Tempo médio</div>
+              <div className="text-xs text-white/60">{t('auth.marketing.stats.avg_time')}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-ring">100+</div>
-              <div className="text-xs text-white/60">Candidaturas</div>
+              <div className="text-xs text-white/60">{t('auth.marketing.stats.applications')}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-ring">5x</div>
-              <div className="text-xs text-white/60">Mais chances</div>
+              <div className="text-xs text-white/60">{t('auth.marketing.stats.more_chances')}</div>
             </div>
           </div>
 
@@ -818,15 +837,15 @@ export default function Auth() {
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Sprout className="h-3 w-3" />
-              <span className="text-xs">Agricultura</span>
+              <span className="text-xs">{t('auth.marketing.sectors.agriculture')}</span>
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Building className="h-3 w-3" />
-              <span className="text-xs">Construção</span>
+              <span className="text-xs">{t('auth.marketing.sectors.construction')}</span>
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Hotel className="h-3 w-3" />
-              <span className="text-xs">Hotelaria</span>
+              <span className="text-xs">{t('auth.marketing.sectors.hospitality')}</span>
             </div>
           </div>
         </div>

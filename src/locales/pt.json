@@ -1,4 +1,8 @@
 {
+  "early_access": {
+    "badge": "💎 Early Access",
+    "disclaimer": "Atenção: Esta vaga foi registrada recentemente e está em processamento inicial pelo Departamento de Trabalho (DOL). A certificação final pode ou não ser aprovada."
+  },
   "app": {
     "name": "H2 Linker"
   },
@@ -9,6 +13,10 @@
     "benefit": "✨ Crie sua conta gratuitamente e comece a automatizar suas candidaturas para vagas H-2A/H-2B!",
     "ctaLogin": "Fazer Login / Criar Conta",
     "ctaContinue": "Continuar Navegando"
+  },
+  "auth": {
+    "browse_jobs": "🔍 Ver Vagas Disponíveis",
+    "browse_jobs_hint": "Sem precisar criar conta"
   },
   "footer": {
     "tagline": "Conexões inteligentes. Oportunidades reais.",
@@ -231,7 +239,17 @@
       "solution_emphasis": "3 cliques",
       "solution_suffix": "e multiplique suas chances.",
       "subline": "Menos esforço manual. Mais candidaturas enviadas. Mais oportunidades.",
-      "footer": "Conectando você a empregadores verificados de H-2A/H-2B desde o primeiro envio."
+      "footer": "Conectando você a empregadores verificados de H-2A/H-2B desde o primeiro envio.",
+      "stats": {
+        "avg_time": "Tempo médio",
+        "applications": "Candidaturas",
+        "more_chances": "Mais chances"
+      },
+      "sectors": {
+        "agriculture": "Agricultura",
+        "construction": "Construção",
+        "hospitality": "Hotelaria"
+      }
     },
     "actions": {
       "signin": "Entrar",

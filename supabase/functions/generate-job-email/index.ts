@@ -108,7 +108,10 @@ const defaultPreferences: AIPreferences = {
   custom_instructions: null,
 };
 
-function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: string, email: string): string {
+function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: string, email: string, visaType: string): string {
+  // Early Access detection
+  const isEarlyAccess = visaType === "H-2A (Early Access)";
+  
   // Greeting variations based on preference
   const greetingInstructions = {
     hello: "Always start with 'Hello,' - simple and direct.",
@@ -123,30 +126,43 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
     NEVER use "Dear Hiring Manager" - it's overused and generic.`,
   }[prefs.greeting_style];
 
-  // Opening style instructions
-  const openingInstructions = {
-    varied: `CRITICAL: Vary how you START the email body. Randomly choose one approach:
-    - Start with a question: "Are you looking for a reliable worker who...?"
-    - Start with a direct statement: "I am a hardworking professional ready to..."
-    - Start by mentioning the company: "[Company] caught my attention because..."
-    - Start with enthusiasm: "I'm excited about the opportunity to join..."
-    NEVER use the same opening twice in a row.`,
-    question: `Start the email body with a QUESTION that hooks the reader. Examples:
-    - "Are you looking for a dedicated worker who can start immediately?"
-    - "Need someone reliable for the upcoming season?"
-    - "Looking for a hardworking professional with full availability?"
-    Make the question relevant to the specific job.`,
-    direct_statement: `Start with a DIRECT, CONFIDENT statement about your qualifications. Examples:
-    - "I am a dedicated worker with full availability for your ${prefs.formality_level === "casual" ? "team" : "organization"}."
-    - "With my physical stamina and work ethic, I am ready to contribute to your operations."
-    - "I bring reliability, punctuality, and a strong work ethic to every job."
-    Be confident but not arrogant.`,
-    company_mention: `Start by MENTIONING THE COMPANY naturally. Examples:
-    - "[Company] has a reputation for quality, and I want to be part of that."
-    - "I noticed [Company] is hiring, and I believe I would be a great fit."
-    - "The opportunity at [Company] aligns perfectly with my experience."
-    Make it genuine, not forced.`,
-  }[prefs.opening_style];
+  // Opening style instructions - with special handling for Early Access
+  const earlyAccessOpeningInstruction = isEarlyAccess
+    ? `IMPORTANT - EARLY ACCESS JOB: This job was recently filed with the Department of Labor and is still in initial processing. 
+    Start the email by PROFESSIONALLY ACKNOWLEDGING that you are aware the Job Order was recently filed and is currently in the initial processing stage.
+    Use a PROACTIVE tone to express interest BEFORE the official certification is finalized.
+    Example openings for Early Access jobs:
+    - "I noticed your Job Order was recently filed, and I wanted to reach out early to express my strong interest..."
+    - "As your H-2A application is being processed, I am proactively reaching out to introduce myself..."
+    - "I am aware your position is in the initial DOL processing stage, and I wanted to be among the first candidates to show my availability..."
+    Be confident but acknowledge the early stage professionally.`
+    : "";
+
+  const openingInstructions = isEarlyAccess 
+    ? earlyAccessOpeningInstruction 
+    : {
+        varied: `CRITICAL: Vary how you START the email body. Randomly choose one approach:
+        - Start with a question: "Are you looking for a reliable worker who...?"
+        - Start with a direct statement: "I am a hardworking professional ready to..."
+        - Start by mentioning the company: "[Company] caught my attention because..."
+        - Start with enthusiasm: "I'm excited about the opportunity to join..."
+        NEVER use the same opening twice in a row.`,
+        question: `Start the email body with a QUESTION that hooks the reader. Examples:
+        - "Are you looking for a dedicated worker who can start immediately?"
+        - "Need someone reliable for the upcoming season?"
+        - "Looking for a hardworking professional with full availability?"
+        Make the question relevant to the specific job.`,
+        direct_statement: `Start with a DIRECT, CONFIDENT statement about your qualifications. Examples:
+        - "I am a dedicated worker with full availability for your ${prefs.formality_level === "casual" ? "team" : "organization"}."
+        - "With my physical stamina and work ethic, I am ready to contribute to your operations."
+        - "I bring reliability, punctuality, and a strong work ethic to every job."
+        Be confident but not arrogant.`,
+        company_mention: `Start by MENTIONING THE COMPANY naturally. Examples:
+        - "[Company] has a reputation for quality, and I want to be part of that."
+        - "I noticed [Company] is hiring, and I believe I would be a great fit."
+        - "The opportunity at [Company] aligns perfectly with my experience."
+        Make it genuine, not forced.`,
+      }[prefs.opening_style];
 
   // Closing variations
   const closingInstructions = {
@@ -197,6 +213,17 @@ function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: strin
 
   const customNote = prefs.custom_instructions 
     ? `\n\nUSER'S CUSTOM INSTRUCTIONS (FOLLOW THESE):\n${prefs.custom_instructions}`
+    : "";
+
+  // Early Access specific context
+  const earlyAccessContext = isEarlyAccess
+    ? `\n\n### EARLY ACCESS JOB CONTEXT (IMPORTANT)
+This is an EARLY ACCESS job that was recently filed with the Department of Labor (DOL) and is still in initial processing.
+The certification has NOT been finalized yet. Your email should:
+1. Acknowledge awareness of the early filing status professionally
+2. Express proactive interest BEFORE certification is complete
+3. Position yourself as a prepared candidate ready when approval comes through
+4. Be optimistic but not presumptuous about the approval`
     : "";
 
   return `You are an expert assistant helping a Brazilian worker apply for H-2A/H-2B seasonal visa jobs in the USA.
@@ -283,6 +310,7 @@ If candidate lacks a specific requirement:
 - Benefits should NOT be mentioned at all unless absolutely relevant to logistics (e.g., "I can relocate immediately")
 - Focus 100% on QUALIFICATIONS and what the candidate offers, NOT on what benefits they want to receive
 - The email is about what the CANDIDATE brings to the company, not what the company offers to the candidate
+${earlyAccessContext}
 
 ### SIGNATURE BLOCK
 ${closingInstructions}
@@ -407,8 +435,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { success: false, error: "AI not configured" });
 
-    // Build dynamic system prompt based on user preferences
-    const systemPrompt = buildDynamicPrompt(prefs, fullName, phone, email);
+    // Build dynamic system prompt based on user preferences and visa type
+    const systemPrompt = buildDynamicPrompt(prefs, fullName, phone, email, visaType);
 
     const jobContext = [
       `Visa type: ${visaType}`,

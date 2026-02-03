@@ -4,11 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/number";
-import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle } from "lucide-react";
+import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Clock, AlertTriangle, Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
 
+const isEarlyAccess = (visaType: string | null | undefined): boolean => 
+  visaType === "H-2A (Early Access)";
 interface JobData {
   id: string;
   job_title: string;
@@ -86,9 +88,16 @@ export function MobileJobCard({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge variant={job.visa_type === "H-2A" ? "secondary" : "default"} className="text-xs">
-              {job.visa_type === "H-2A" ? "H-2A" : "H-2B"}
-            </Badge>
+            {isEarlyAccess(job.visa_type) ? (
+              <Badge variant="secondary" className="text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0">
+                <Gem className="h-3 w-3 mr-1" />
+                {t('early_access.badge')}
+              </Badge>
+            ) : (
+              <Badge variant={job.visa_type === "H-2A" ? "secondary" : "default"} className="text-xs">
+                {job.visa_type === "H-2A" ? "H-2A" : "H-2B"}
+              </Badge>
+            )}
             <Button
               size="icon"
               variant={!isBlurred && isQueued ? "default" : "outline"}
