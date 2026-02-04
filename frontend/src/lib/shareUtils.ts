@@ -8,7 +8,7 @@ export function getJobShareUrl(jobId: string): string {
   // Use actual backend URL from environment (works immediately)
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 
                      import.meta.env.REACT_APP_BACKEND_URL ||
-                     'https://visa-type-badge-fix.preview.emergentagent.com';
+                     'https://codebase-sync-69.preview.emergentagent.com';
   
   return `${backendUrl}/api/job/${jobId}`;
 }

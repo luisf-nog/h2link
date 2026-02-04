@@ -50,7 +50,7 @@ Os meta tags do Open Graph agora funcionam corretamente no WhatsApp, Facebook e 
 
 Quando clicar em "Compartilhar" ou usar o botão nativo:
 ```
-https://visa-type-badge-fix.preview.emergentagent.com/job/1281a942-0fec-4783-8e07-9b0464812d60
+https://codebase-sync-69.preview.emergentagent.com/job/1281a942-0fec-4783-8e07-9b0464812d60
 ```
 
 ### **2. O que Acontece**

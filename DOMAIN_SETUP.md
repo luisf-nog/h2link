@@ -4,7 +4,7 @@
 
 Configurar o domínio customizado **h2linker.com** para que os links de compartilhamento fiquem amigáveis:
 
-**Atual:** `https://visa-type-badge-fix.preview.emergentagent.com/job/123`
+**Atual:** `https://codebase-sync-69.preview.emergentagent.com/job/123`
 **Desejado:** `https://h2linker.com/job/123`
 
 ---
@@ -126,7 +126,7 @@ Atualizar URLs no código para usar o novo domínio:
 
 ```typescript
 // ANTES
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://visa-type-badge-fix.preview.emergentagent.com';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-sync-69.preview.emergentagent.com';
 
 // DEPOIS  
 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://h2linker.com';
