@@ -278,6 +278,16 @@ export default function SharedJobView() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6 relative z-10">
+              {/* Early Access Disclaimer */}
+              {isEarlyAccess(job.visa_type) && (
+                <Alert variant="destructive" className="bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700">
+                  <AlertTriangle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <AlertDescription className="text-purple-900 dark:text-purple-200">
+                    {getEarlyAccessDisclaimer(locale)}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Key Info Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
