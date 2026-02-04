@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { getJobShareUrl } from "@/config/app.config";
 import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
 import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2, Gem, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -90,8 +91,8 @@ export function JobDetailsDialog({
     if (onShare) {
       onShare(job);
     } else {
-      // Fallback share logic if onShare not provided
-      const shareUrl = `${window.location.origin}/job/${job.id}`;
+      // Fallback share logic using Edge Function for proper meta tags
+      const shareUrl = getJobShareUrl(job.id);
       
       if (navigator.share) {
         navigator.share({

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PLANS_CONFIG } from '@/config/plans.config';
+import { getJobShareUrl } from '@/config/app.config';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,9 +51,8 @@ export default function Jobs() {
   const navigate = useNavigate();
 
   const handleShareJob = (job: Job) => {
-    // Use backend route that generates proper Open Graph meta tags for social sharing
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-scout-20.preview.emergentagent.com';
-    const shareUrl = `${backendUrl}/job/${job.id}`;
+    // Use Edge Function URL for proper Open Graph meta tags (WhatsApp/Facebook previews)
+    const shareUrl = getJobShareUrl(job.id);
     
     if (navigator.share) {
       navigator.share({
@@ -70,8 +70,8 @@ export default function Jobs() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: 'Link copiado!',
-      description: 'Link de compartilhamento copiado para área de transferência',
+      title: t('common.link_copied', 'Link copiado!'),
+      description: t('common.link_copied_desc', 'Link de compartilhamento copiado para área de transferência'),
     });
   };
 
