@@ -649,18 +649,20 @@ export default function Jobs() {
                 <Select
                   value={visaType}
                   onValueChange={(v) => {
-                    const next = (v === 'H-2A' || v === 'H-2B' || v === 'all') ? v : 'all';
+                    const next = v as VisaTypeFilter;
                     setVisaType(next);
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t('jobs.filters.visa.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('jobs.filters.visa.all')}</SelectItem>
-                    <SelectItem value="H-2B">{t('jobs.filters.visa.only_h2b')}</SelectItem>
-                    <SelectItem value="H-2A">{t('jobs.filters.visa.only_h2a')}</SelectItem>
+                    {VISA_TYPE_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
