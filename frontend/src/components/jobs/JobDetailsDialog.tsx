@@ -14,6 +14,7 @@ import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/li
 import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { getVisaBadgeConfig } from "@/lib/visaTypes";
 
 export type JobDetails = {
   id: string;
