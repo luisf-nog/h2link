@@ -9,12 +9,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
-import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2 } from "lucide-react";
+import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { getVisaBadgeConfig } from "@/lib/visaTypes";
+import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
 
 export type JobDetails = {
   id: string;
