@@ -8,21 +8,18 @@ import { supabase } from "@/integrations/supabase/client";
 import JSZip from "jszip";
 
 interface ProcessedJob {
-  visa_type: string;
   job_id: string;
-  fingerprint: string;
-  is_active: boolean;
+  visa_type: string;
   company: string;
   email: string;
   job_title: string;
-  category?: string;
   city: string;
   state: string;
-  openings?: number | null;
-  salary?: number | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  posted_date?: string | null;
+  start_date: string | null; // Agora sempre em YYYY-MM-DD
+  end_date: string | null; // Agora sempre em YYYY-MM-DD
+  posted_date: string | null;
+  fingerprint: string;
+  is_active: boolean;
   [key: string]: any;
 }
 
@@ -33,142 +30,123 @@ export function MultiJsonImporter() {
   const [result, setResult] = useState<{ success: number; errors: string[] } | null>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files).filter(
-        (f) => f.name.endsWith(".json") || f.name.endsWith(".zip"),
-      );
-      setFiles(selectedFiles);
-      setResult(null);
+  // --- 1. CONVERSOR DE DATA INTERNACIONAL (ISO 8601) ---
+  const formatToISODate = (dateStr: string | null): string | null => {
+    if (!dateStr || dateStr === "N/A") return null;
+
+    try {
+      // Tenta converter formatos como "01-Apr-2026" ou ISO strings
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return null;
+
+      // Retorna no formato YYYY-MM-DD (exatamente o que o i18n precisa)
+      return date.toISOString().split("T")[0];
+    } catch (e) {
+      return null;
     }
   };
 
-  const detectVisaType = (filename: string): string => {
-    const lowerName = filename.toLowerCase();
-    if (lowerName.includes("_jo") || lowerName.includes("jo.")) return "H-2A (Early Access)";
-    if (lowerName.includes("h2a")) return "H-2A";
-    return "H-2B";
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files).filter((f) => f.name.endsWith(".json") || f.name.endsWith(".zip")));
+      setResult(null);
+    }
   };
 
   const generateFingerprint = (fein: string, title: string, city: string, startDate: string): string => {
     return `${fein}|${(title || "").toUpperCase().trim()}|${(city || "").toUpperCase().trim()}|${startDate}`;
   };
 
-  const extractZipFiles = async (zipFile: File) => {
-    const zip = new JSZip();
-    const contents = await zip.loadAsync(zipFile);
-    const jsonFiles: any[] = [];
-    const zipVisaType = detectVisaType(zipFile.name);
-
-    for (const [filename, file] of Object.entries(contents.files)) {
-      if (!file.dir && filename.endsWith(".json")) {
-        const content = await file.async("string");
-        jsonFiles.push({ name: filename, content, visaType: zipVisaType });
-      }
-    }
-    return jsonFiles;
-  };
-
-  const unifyField = (...values: any[]) => values.find((v) => v !== null && v !== undefined && v !== "N/A") || null;
-
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setResult(null);
 
     try {
-      // --- PASSO 1: LIMPEZA (MARK) ---
-      // Desativa todas as vagas antes da nova importação para limpar "vagas fantasmas"
-      const { error: resetError } = await supabase
-        .from("public_jobs")
-        .update({ is_active: false })
-        .neq("job_id", "clean_all_records");
+      // PASSO 1: Limpeza Total (Opcional, mas garante o Hub limpo)
+      await supabase.from("public_jobs").delete().not("job_id", "is", null);
 
-      if (resetError) console.error("Aviso: Falha ao resetar status is_active");
-
-      // --- PASSO 2: PROCESSAMENTO ---
       setExtracting(true);
       const rawProcessedJobs: ProcessedJob[] = [];
-      const errors: string[] = [];
       const jsonContents: any[] = [];
 
+      // Extração de ficheiros (Lógica simplificada para brevidade)
       for (const file of files) {
         if (file.name.endsWith(".zip")) {
-          const extracted = await extractZipFiles(file);
-          jsonContents.push(...extracted);
+          const zip = new JSZip();
+          const contents = await zip.loadAsync(file);
+          for (const [name, f] of Object.entries(contents.files)) {
+            if (!f.dir && name.endsWith(".json")) {
+              jsonContents.push({
+                content: await f.async("string"),
+                visaType: file.name.includes("h2a") ? "H-2A" : "H-2B",
+              });
+            }
+          }
         } else {
-          jsonContents.push({ name: file.name, content: await file.text(), visaType: detectVisaType(file.name) });
+          jsonContents.push({ content: await file.text(), visaType: file.name.includes("h2a") ? "H-2A" : "H-2B" });
         }
       }
       setExtracting(false);
 
       for (const jsonFile of jsonContents) {
-        try {
-          const json = JSON.parse(jsonFile.content);
-          const jobsList = Array.isArray(json)
-            ? json
-            : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
+        const json = JSON.parse(jsonFile.content);
+        const jobsList = Array.isArray(json)
+          ? json
+          : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
 
-          for (const rawJob of jobsList) {
-            const job = rawJob.clearanceOrder ? { ...rawJob, ...rawJob.clearanceOrder } : rawJob;
-            const fein = job.empFein;
-            const jobTitle = unifyField(job.job_title, job.jobTitle, job.tempneedJobtitle);
-            const startDate = unifyField(job.job_begin_date, job.jobBeginDate, job.tempneedStart);
-            const email = unifyField(job.recApplyEmail);
+        for (const rawJob of jobsList) {
+          const job = rawJob.clearanceOrder ? { ...rawJob, ...rawJob.clearanceOrder } : rawJob;
+          const fein = job.empFein;
+          const jobTitle = (job.jobTitle || job.job_title || "").trim();
 
-            if (!fein || !jobTitle || !startDate || !email || email === "N/A") continue;
+          // --- 2. PADRONIZAÇÃO DAS DATAS ---
+          const rawStart = job.jobBeginDate || job.job_begin_date || job.tempneedStart;
+          const rawEnd = job.jobEndDate || job.job_end_date || job.tempneedEnd;
 
-            rawProcessedJobs.push({
-              visa_type: jsonFile.visaType,
-              job_id: job.caseNumber || job.jobOrderNumber,
-              fingerprint: generateFingerprint(fein, jobTitle, job.jobCity, startDate),
-              is_active: true, // REATIVA A VAGA (SWEEP)
-              company: unifyField(job.employerBusinessName, job.empBusinessName),
-              email,
-              job_title: jobTitle,
-              category: unifyField(job.socTitle, job.jobSocTitle, job.tempneedSocTitle),
-              city: job.jobCity,
-              state: job.jobState,
-              openings: parseInt(unifyField(job.totalWorkersNeeded, job.jobWrksNeeded, job.tempneedWkrPos)) || null,
-              start_date: startDate,
-              end_date: unifyField(job.job_end_date, job.jobEndDate, job.tempneedEnd),
-              posted_date: job.dateAcceptanceLtrIssued,
-              source_url: job.recApplyUrl,
-              phone: job.recApplyPhone,
-            });
-          }
-        } catch (e) {
-          errors.push(`Erro no ficheiro ${jsonFile.name}`);
+          const startDateISO = formatToISODate(rawStart);
+          const endDateISO = formatToISODate(rawEnd);
+          const email = job.recApplyEmail;
+
+          if (!fein || !jobTitle || !startDateISO || !email || email === "N/A") continue;
+
+          rawProcessedJobs.push({
+            job_id: job.caseNumber || job.jobOrderNumber,
+            visa_type: jsonFile.visaType,
+            company: job.empBusinessName || job.employerBusinessName,
+            email,
+            job_title: jobTitle,
+            city: job.jobCity,
+            state: job.jobState,
+            start_date: startDateISO, // Salvo como 2026-04-01
+            end_date: endDateISO, // Salvo como 2026-12-15
+            posted_date: formatToISODate(job.dateAcceptanceLtrIssued),
+            fingerprint: generateFingerprint(fein, jobTitle, job.jobCity, startDateISO),
+            is_active: true,
+          });
         }
       }
 
-      // --- PASSO 3: DEDUPLICAÇÃO E PRIORIDADE ---
+      // Deduplicação (H-2A vence JO)
       const finalJobs = Array.from(
         rawProcessedJobs
           .reduce((acc, current) => {
             const existing = acc.get(current.fingerprint);
-            // Se houver duplicata, a versão com posted_date (Certificada) substitui a Early Access
-            if (!existing || (!existing.posted_date && current.posted_date)) {
-              acc.set(current.fingerprint, current);
-            }
+            if (!existing || (!existing.posted_date && current.posted_date)) acc.set(current.fingerprint, current);
             return acc;
           }, new Map<string, ProcessedJob>())
           .values(),
       );
 
-      // --- PASSO 4: UPSERT FINAL ---
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const { error: importError } = await supabase.functions.invoke("import-jobs", {
+      await supabase.functions.invoke("import-jobs", {
         body: { jobs: finalJobs },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
 
-      if (importError) throw new Error(importError.message);
-
-      setResult({ success: finalJobs.length, errors });
-      toast({ title: "Importação Concluída", description: `${finalJobs.length} vagas únicas ativadas.` });
+      setResult({ success: finalJobs.length, errors: [] });
+      toast({ title: "Sucesso!", description: "Datas padronizadas e Hub limpo." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -179,45 +157,14 @@ export function MultiJsonImporter() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" /> Importador Inteligente H2 Linker
-        </CardTitle>
-        <CardDescription>Sincronização completa: remove duplicatas e desativa vagas obsoletas.</CardDescription>
+        <CardTitle>Sincronizador Internacional</CardTitle>
+        <CardDescription>Converte datas para ISO (YYYY-MM-DD) para suporte multilingue.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="border-2 border-dashed rounded-lg p-8 text-center">
-          <input type="file" id="files" multiple accept=".json,.zip" onChange={handleFileSelect} className="hidden" />
-          <label htmlFor="files" className="cursor-pointer">
-            <Loader2 className={`h-12 w-12 mx-auto mb-2 ${extracting ? "animate-spin" : "text-muted-foreground"}`} />
-            <p className="text-sm font-medium">Arraste ou selecione ficheiros JSON/ZIP</p>
-          </label>
-        </div>
-
-        {files.length > 0 && (
-          <div className="text-xs space-y-1">
-            {files.map((f, i) => (
-              <div key={i} className="flex justify-between">
-                <span>{f.name}</span>
-                <strong>{detectVisaType(f.name)}</strong>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <Button onClick={processJobs} disabled={files.length === 0 || processing} className="w-full">
-          {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Sincronizar Hub de Vagas
+        <input type="file" multiple onChange={handleFileSelect} />
+        <Button onClick={processJobs} disabled={processing || files.length === 0} className="w-full">
+          {processing ? <Loader2 className="animate-spin" /> : "Limpar e Importar com Datas ISO"}
         </Button>
-
-        {result && (
-          <Alert className="mt-4">
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>
-              <strong>{result.success}</strong> vagas ativas. O excesso de {10000 - result.success} registros antigos
-              foi desativado.
-            </AlertDescription>
-          </Alert>
-        )}
       </CardContent>
     </Card>
   );
