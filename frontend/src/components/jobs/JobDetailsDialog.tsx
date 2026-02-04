@@ -137,8 +137,13 @@ export function JobDetailsDialog({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="mr-2">{job?.job_title}</DialogTitle>
-              {job?.visa_type && (
-                <Badge variant={isH2A ? "secondary" : "outline"}>{job.visa_type}</Badge>
+              {badgeConfig && (
+                <Badge 
+                  variant={badgeConfig.variant}
+                  className={badgeConfig.className}
+                >
+                  {badgeConfig.label}
+                </Badge>
               )}
               {job?.category && <Badge variant="outline">{job.category}</Badge>}
             </div>
