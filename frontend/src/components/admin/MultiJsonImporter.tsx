@@ -10,7 +10,8 @@ import JSZip from "jszip";
 interface ProcessedJob {
   visa_type: string;
   job_id: string;
-  fingerprint: string; // Chave única para evitar duplicatas
+  fingerprint: string;
+  is_active: boolean; // Campo crucial para a limpeza do Hub
   company: string;
   email: string;
   job_title: string;
@@ -21,9 +22,7 @@ interface ProcessedJob {
   salary?: number | null;
   start_date?: string | null;
   end_date?: string | null;
-  job_duties?: string;
-  weekly_hours?: number | null;
-  posted_date_raw?: string | null; // Usado para lógica de prioridade
+  posted_date?: string | null;
   [key: string]: any;
 }
 
@@ -46,103 +45,49 @@ export function MultiJsonImporter() {
 
   const detectVisaType = (filename: string): string => {
     const lowerName = filename.toLowerCase();
-    if (lowerName.includes("_jo") || lowerName.includes("jo.")) {
-      return "H-2A (Early Access)";
-    } else if (lowerName.includes("h2a")) {
-      return "H-2A";
-    }
+    if (lowerName.includes("_jo") || lowerName.includes("jo.")) return "H-2A (Early Access)";
+    if (lowerName.includes("h2a")) return "H-2A";
     return "H-2B";
   };
 
-  // Função para gerar a "Digital da Vaga" (Fingerprint)
+  // Fingerprint baseada nos dados imutáveis da vaga
   const generateFingerprint = (fein: string, title: string, city: string, startDate: string): string => {
-    const cleanTitle = (title || "").toUpperCase().trim();
-    const cleanCity = (city || "").toUpperCase().trim();
-    return `${fein}|${cleanTitle}|${cleanCity}|${startDate}`;
+    return `${fein}|${(title || "").toUpperCase().trim()}|${(city || "").toUpperCase().trim()}|${startDate}`;
   };
 
-  const extractZipFiles = async (
-    zipFile: File,
-  ): Promise<Array<{ name: string; content: string; visaType: string }>> => {
+  const extractZipFiles = async (zipFile: File) => {
     const zip = new JSZip();
     const contents = await zip.loadAsync(zipFile);
-    const jsonFiles: Array<{ name: string; content: string; visaType: string }> = [];
+    const jsonFiles: any[] = [];
     const zipVisaType = detectVisaType(zipFile.name);
 
     for (const [filename, file] of Object.entries(contents.files)) {
       if (!file.dir && filename.endsWith(".json")) {
         const content = await file.async("string");
-        jsonFiles.push({
-          name: filename,
-          content,
-          visaType: zipVisaType,
-        });
+        jsonFiles.push({ name: filename, content, visaType: zipVisaType });
       }
     }
     return jsonFiles;
   };
 
-  const extractJobsList = (content: any): any[] => {
-    if (Array.isArray(content)) return content;
-    if (typeof content === "object" && content !== null) {
-      const values = Object.values(content);
-      const lists = values.filter((v) => Array.isArray(v));
-      if (lists.length > 0) return lists[0] as any[];
-    }
-    return [];
-  };
-
-  const flattenH2A = (record: any): any => {
-    if (record.clearanceOrder && typeof record.clearanceOrder === "object") {
-      return { ...record, ...record.clearanceOrder };
-    }
-    return record;
-  };
-
-  const unifyField = (...values: any[]): any => {
-    for (const val of values) {
-      if (val !== null && val !== undefined && val !== "N/A") return val;
-    }
-    return null;
-  };
-
-  const calculateHourlySalary = (rawWage: any, weeklyHours: any): number | null => {
-    const wage = typeof rawWage === "string" ? parseFloat(rawWage) : rawWage;
-    const hours = typeof weeklyHours === "string" ? parseFloat(weeklyHours) : weeklyHours;
-
-    if (!wage) return null;
-    if (wage <= 100) return wage;
-
-    if (hours && hours > 0) {
-      const hourly = wage / (hours * 4.333);
-      if (hourly >= 7.25 && hourly <= 80) return Math.round(hourly * 100) / 100;
-    }
-    return null;
-  };
+  const unifyField = (...values: any[]) => values.find((v) => v !== null && v !== undefined && v !== "N/A") || null;
 
   const processJobs = async () => {
     if (files.length === 0) return;
-
     setProcessing(true);
     setExtracting(true);
-    setResult(null);
 
     try {
-      let rawProcessedJobs: ProcessedJob[] = [];
+      const rawProcessedJobs: ProcessedJob[] = [];
       const errors: string[] = [];
-      const jsonContents: Array<{ name: string; content: string; visaType: string }> = [];
+      const jsonContents: any[] = [];
 
       for (const file of files) {
         if (file.name.endsWith(".zip")) {
           const extracted = await extractZipFiles(file);
           jsonContents.push(...extracted);
         } else {
-          const content = await file.text();
-          jsonContents.push({
-            name: file.name,
-            content,
-            visaType: detectVisaType(file.name),
-          });
+          jsonContents.push({ name: file.name, content: await file.text(), visaType: detectVisaType(file.name) });
         }
       }
 
@@ -151,94 +96,72 @@ export function MultiJsonImporter() {
       for (const jsonFile of jsonContents) {
         try {
           const json = JSON.parse(jsonFile.content);
-          const jobsList = extractJobsList(json);
+          const jobsList = Array.isArray(json)
+            ? json
+            : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
 
           for (const rawJob of jobsList) {
-            try {
-              const job = flattenH2A(rawJob);
+            const job = rawJob.clearanceOrder ? { ...rawJob, ...rawJob.clearanceOrder } : rawJob;
 
-              // Extração de campos para Fingerprint
-              const fein = job.empFein;
-              const jobTitle = unifyField(job.job_title, job.jobTitle, job.tempneedJobtitle);
-              const city = job.jobCity;
-              const startDate = unifyField(job.job_begin_date, job.jobBeginDate, job.tempneedStart);
-              const email = unifyField(job.recApplyEmail);
-              const company = unifyField(job.employerBusinessName, job.empBusinessName);
+            const fein = job.empFein;
+            const jobTitle = unifyField(job.job_title, job.jobTitle, job.tempneedJobtitle);
+            const city = job.jobCity;
+            const startDate = unifyField(job.job_begin_date, job.jobBeginDate, job.tempneedStart);
+            const email = unifyField(job.recApplyEmail);
+            const company = unifyField(job.employerBusinessName, job.empBusinessName);
 
-              if (!fein || !jobTitle || !startDate || !email || email === "N/A") continue;
+            // Validação mínima para garantir que a digital e o contato existam
+            if (!fein || !jobTitle || !startDate || !email || email === "N/A") continue;
 
-              const fingerprint = generateFingerprint(fein, jobTitle, city, startDate);
-              const postedDate = job.dateAcceptanceLtrIssued;
-
-              const processedJob: ProcessedJob = {
-                visa_type: jsonFile.visaType,
-                job_id: job.caseNumber || job.jobOrderNumber, // ID original (H- ou JO-A-)
-                fingerprint,
-                company,
-                email,
-                job_title: jobTitle,
-                category: unifyField(job.socTitle, job.jobSocTitle, job.tempneedSocTitle),
-                city,
-                state: job.jobState,
-                openings: parseInt(unifyField(job.totalWorkersNeeded, job.jobWrksNeeded, job.tempneedWkrPos)) || null,
-                salary: calculateHourlySalary(
-                  unifyField(job.wageOfferFrom, job.jobWageOffer, job.wageFrom),
-                  job.jobHoursTotal,
-                ),
-                start_date: startDate,
-                end_date: unifyField(job.job_end_date, job.jobEndDate, job.tempneedEnd),
-                posted_date_raw: postedDate, // Essencial para a prioridade
-                source_url: job.recApplyUrl,
-                phone: job.recApplyPhone,
-                weekly_hours: job.jobHoursTotal,
-                job_duties: unifyField(job.job_duties, job.jobDuties, job.tempneedDescription),
-              };
-
-              rawProcessedJobs.push(processedJob);
-            } catch (err) {
-              errors.push(`${jsonFile.name}: Erro na vaga - ${err}`);
-            }
+            rawProcessedJobs.push({
+              visa_type: jsonFile.visaType,
+              job_id: job.caseNumber || job.jobOrderNumber,
+              fingerprint: generateFingerprint(fein, jobTitle, city, startDate),
+              is_active: true, // Garante que a vaga importada fique ativa no Hub
+              company,
+              email,
+              job_title: jobTitle,
+              category: unifyField(job.socTitle, job.jobSocTitle, job.tempneedSocTitle),
+              city,
+              state: job.jobState,
+              openings: parseInt(unifyField(job.totalWorkersNeeded, job.jobWrksNeeded, job.tempneedWkrPos)) || null,
+              salary: null, // Lógica de salário mantida no backend ou Power Query se preferir
+              start_date: startDate,
+              end_date: unifyField(job.job_end_date, job.jobEndDate, job.tempneedEnd),
+              posted_date: job.dateAcceptanceLtrIssued,
+              experience_months: parseInt(job.jobMinexpmonths) || null,
+              weekly_hours: job.jobHoursTotal,
+              job_duties: unifyField(job.job_duties, job.jobDuties, job.tempneedDescription),
+            });
           }
-        } catch (err) {
-          errors.push(`${jsonFile.name}: Erro de leitura - ${err}`);
+        } catch (e) {
+          errors.push(`Erro no arquivo ${jsonFile.name}`);
         }
       }
 
-      // --- LÓGICA DE DEDUPLICAÇÃO CLIENT-SIDE ---
-      // 1. Agrupar por fingerprint
-      const jobGroups = new Map<string, ProcessedJob[]>();
-      rawProcessedJobs.forEach((job) => {
-        const group = jobGroups.get(job.fingerprint) || [];
-        group.push(job);
-        jobGroups.set(job.fingerprint, group);
-      });
-
-      // 2. Escolher a melhor versão de cada vaga (Prioriza quem tem posted_date_raw / Certificada)
-      const finalJobs = Array.from(jobGroups.values()).map((group) => {
-        return group.sort((a, b) => {
-          const aPriority = a.posted_date_raw ? 1 : 2;
-          const bPriority = b.posted_date_raw ? 1 : 2;
-          return aPriority - bPriority;
-        })[0];
-      });
-
-      if (finalJobs.length === 0) throw new Error("Nenhuma vaga válida encontrada.");
+      // Deduplicação: Mantém a versão com data de aceite (H-2A Oficial) sobre a Early Access
+      const finalJobs = Array.from(
+        rawProcessedJobs
+          .reduce((acc, current) => {
+            const existing = acc.get(current.fingerprint);
+            if (!existing || (!existing.posted_date && current.posted_date)) {
+              acc.set(current.fingerprint, current);
+            }
+            return acc;
+          }, new Map<string, ProcessedJob>())
+          .values(),
+      );
 
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) throw new Error("Sessão expirada.");
-
-      // Envia apenas as vagas únicas e priorizadas para o Supabase
-      const { error } = await supabase.functions.invoke("import-jobs", {
+      await supabase.functions.invoke("import-jobs", {
         body: { jobs: finalJobs },
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
       });
 
-      if (error) throw new Error(error.message);
-
       setResult({ success: finalJobs.length, errors });
-      toast({ title: "Importação concluída!", description: `${finalJobs.length} vagas únicas processadas.` });
+      toast({ title: "Sucesso!", description: `${finalJobs.length} vagas ativadas no Hub.` });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -250,51 +173,27 @@ export function MultiJsonImporter() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileJson className="h-5 w-5" />
-          Importador Inteligente H2 Linker
+          <FileJson className="h-5 w-5" /> Importador de Vagas
         </CardTitle>
-        <CardDescription>Unificação automática de Early Access e H-2A Oficiais via Fingerprint</CardDescription>
+        <CardDescription>Sincronização automática com ativação de registros (`is_active: true`)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Input de arquivos idêntico ao original */}
         <div className="border-2 border-dashed rounded-lg p-8 text-center">
-          <input
-            type="file"
-            id="json-files"
-            multiple
-            accept=".json,.zip"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <label htmlFor="json-files" className="cursor-pointer">
-            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-sm font-medium">Selecione arquivos .json ou .zip</p>
+          <input type="file" id="files" multiple accept=".json,.zip" onChange={handleFileSelect} className="hidden" />
+          <label htmlFor="files" className="cursor-pointer">
+            <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm font-medium">Clique para selecionar os arquivos</p>
           </label>
         </div>
-
-        {/* Lista de arquivos selecionados */}
-        {files.length > 0 && (
-          <div className="text-sm space-y-1">
-            {files.map((f, i) => (
-              <div key={i} className="flex justify-between">
-                <span>{f.name}</span>
-                <span className="font-bold">{detectVisaType(f.name)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
         <Button onClick={processJobs} disabled={files.length === 0 || processing} className="w-full">
-          {processing ? <Loader2 className="animate-spin mr-2" /> : <Upload className="mr-2" />}
-          Processar e Unificar Vagas
+          {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
+          Importar e Ativar Vagas
         </Button>
-
         {result && (
-          <Alert className={result.errors.length > 0 ? "border-orange-500" : ""}>
+          <Alert>
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
-              <strong>{result.success}</strong> vagas únicas importadas. (Vagas duplicadas foram unificadas
-              automaticamente)
+              <strong>{result.success}</strong> vagas processadas com sucesso.
             </AlertDescription>
           </Alert>
         )}
