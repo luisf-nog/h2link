@@ -21,38 +21,49 @@ export function JobMetaTags({ job }: JobMetaTagsProps) {
   
   // Build structured title and description
   const visaType = job.visa_type || 'H-2B';
-  const title = `${visaType}: ${job.job_title} - ${job.company}`;
+  const title = `${job.job_title} - ${job.company} | ${visaType}`;
   
-  // Build rich description
-  const salaryText = job.salary 
-    ? locale === 'en' 
-      ? `$${job.salary.toFixed(2)}/hr` 
-      : `$${job.salary.toFixed(2)}/hora`
-    : '';
+  // Build rich description with key information
+  const descriptionParts: string[] = [];
   
-  const locationText = `${job.city}, ${job.state}`;
+  // Line 1: Company and Location
+  descriptionParts.push(`🏢 ${job.company} | 📍 ${job.city}, ${job.state}`);
   
-  const descriptionParts = [
-    locale === 'en' ? 'Job opportunity' : 'Oportunidade de trabalho',
-    visaType,
-    locationText
-  ];
-  
-  if (salaryText) {
-    descriptionParts.push(salaryText);
+  // Line 2: Openings and Salary
+  const line2Parts: string[] = [];
+  if (job.openings) {
+    line2Parts.push(`💼 ${job.openings} ${locale === 'pt' ? 'vagas' : locale === 'es' ? 'vacantes' : 'openings'}`);
+  }
+  if (job.salary) {
+    const salaryText = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(job.salary);
+    line2Parts.push(`💰 ${salaryText}/h`);
+  }
+  if (line2Parts.length > 0) {
+    descriptionParts.push(line2Parts.join(' | '));
   }
   
-  if (job.start_date) {
-    const startDate = new Date(job.start_date);
-    const formattedDate = startDate.toLocaleDateString(locale);
-    descriptionParts.push(
-      locale === 'en' 
-        ? `Starts: ${formattedDate}` 
-        : `Início: ${formattedDate}`
-    );
+  // Line 3: Dates
+  if (job.start_date && job.end_date) {
+    try {
+      const startDate = new Date(job.start_date);
+      const endDate = new Date(job.end_date);
+      const startFormatted = startDate.toLocaleDateString(locale, { month: '2-digit', day: '2-digit' });
+      const endFormatted = endDate.toLocaleDateString(locale, { month: '2-digit', day: '2-digit', year: 'numeric' });
+      descriptionParts.push(`📅 ${startFormatted} - ${endFormatted}`);
+    } catch {
+      // Skip if dates are invalid
+    }
   }
   
-  const description = descriptionParts.join(' • ');
+  // Line 4: Job title and visa type
+  descriptionParts.push(`${job.job_title} - ${visaType}`);
+  
+  const description = descriptionParts.join('\n');
   
   // URL for sharing - always use production domain
   const shareUrl = getJobShareUrl(job.id);
