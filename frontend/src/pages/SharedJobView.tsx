@@ -359,63 +359,90 @@ export default function SharedJobView() {
                 <Separator />
 
                 {/* Additional Details */}
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">{t("job_details.sections.additional_info")}</h3>
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold">{t("job_details.sections.details")}</h3>
                   
-                  {job.housing_info && (
-                    <div className="rounded-md border p-3">
-                      <div className="inline-flex items-center gap-2 mb-1">
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("job_details.fields.housing")}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground ml-6">{job.housing_info}</p>
-                    </div>
-                  )}
-
-                  {job.transport_provided && (
-                    <div className="rounded-md border p-3">
-                      <div className="inline-flex items-center gap-2">
-                        <Bus className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("job_details.fields.transport")}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground ml-6">
-                        {t("job_details.values.transport_provided")}
-                      </p>
-                    </div>
-                  )}
-
                   {job.education_required && (
-                    <div className="rounded-md border p-3">
-                      <div className="inline-flex items-center gap-2 mb-1">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("job_details.fields.education")}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground ml-6">{job.education_required}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.education")}</p>
+                      <p className="text-sm">{job.education_required}</p>
                     </div>
                   )}
 
                   {job.job_min_special_req && (
-                    <div className="rounded-md border p-3">
-                      <div className="inline-flex items-center gap-2 mb-1">
-                        <Wrench className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("job_details.fields.special_requirements")}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground ml-6 whitespace-pre-wrap">{job.job_min_special_req}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.special_requirements")}</p>
+                      <p className="text-sm whitespace-pre-wrap">{job.job_min_special_req}</p>
                     </div>
                   )}
 
                   {job.job_duties && (
-                    <div className="rounded-md border p-3">
-                      <div className="inline-flex items-center gap-2 mb-1">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("job_details.fields.duties")}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground ml-6 whitespace-pre-wrap">{job.job_duties}</p>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{t("job_details.fields.job_duties")}</p>
+                      <p className="text-sm whitespace-pre-wrap">{job.job_duties}</p>
                     </div>
                   )}
+                </section>
 
-                  {job.source_url && (
+                {/* Compensation Details */}
+                {(job.wage_additional || job.rec_pay_deductions) && (
+                  <>
+                    <Separator />
+                    <section className="space-y-4">
+                      <h3 className="text-sm font-semibold">{t("job_details.sections.compensation")}</h3>
+
+                      {job.wage_additional && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">{t("job_details.fields.wage_additional")}</p>
+                          <p className="text-sm whitespace-pre-wrap">{job.wage_additional}</p>
+                        </div>
+                      )}
+
+                      {job.rec_pay_deductions && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">{t("job_details.fields.pay_deductions")}</p>
+                          <p className="text-sm whitespace-pre-wrap">{job.rec_pay_deductions}</p>
+                        </div>
+                      )}
+                    </section>
+                  </>
+                )}
+
+                <Separator />
+
+                {/* Benefits Section */}
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold">{t("job_details.sections.benefits")}</h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="rounded-md border p-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{t("job_details.fields.housing")}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {job.visa_type === 'H-2A'
+                            ? job.housing_info || t("job_details.values.housing_required_h2a")
+                            : job.housing_info || t("job_details.values.not_provided")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border p-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{t("job_details.fields.transport")}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {job.transport_provided 
+                            ? t("job_details.values.yes") 
+                            : t("job_details.values.no")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {job.source_url && (
+                  <>
+                    <Separator />
+                    <section>
                       <a 
                         href={job.source_url} 
                         target="_blank" 
@@ -425,9 +452,9 @@ export default function SharedJobView() {
                         <ExternalLink className="h-4 w-4" />
                         {t("job_details.fields.source_link")}
                       </a>
-                    </div>
-                  )}
-                </section>
+                    </section>
+                  </>
+                )}
 
                 {/* Call to Action */}
                 <div className="pt-4">
