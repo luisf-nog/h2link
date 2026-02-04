@@ -466,10 +466,10 @@ export default function Jobs() {
         });
       }
     } else {
-      // Success
+      // Success - show friendly message
       toast({
-        title: t('jobs.toasts.added_title'),
-        description: t('jobs.toasts.added_desc'),
+        title: '✓ Vaga adicionada!',
+        description: `${job.job_title} foi adicionada à sua fila de candidaturas.`,
       });
     }
   };
