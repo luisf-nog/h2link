@@ -85,7 +85,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     features: {
       cloud_sending: true,
       mask_user_agent: true,
-      dns_bounce_check: true,
+      dns_bounce_check: false, // Disabled: MX validation unreliable and causes false negatives
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
@@ -117,7 +117,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     features: {
       cloud_sending: true,
       mask_user_agent: true,
-      dns_bounce_check: true,
+      dns_bounce_check: false, // Disabled: MX validation unreliable and causes false negatives
       magic_paste: false,
       ai_email_writer: false,
       priority_support: false,
@@ -149,7 +149,7 @@ export const PLANS_CONFIG: Record<PlanTier, PlanConfig> = {
     features: {
       cloud_sending: true,
       mask_user_agent: true,
-      dns_bounce_check: true,
+      dns_bounce_check: false, // Disabled: MX validation unreliable and causes false negatives
       magic_paste: true,
       ai_email_writer: true,
       priority_support: true,
