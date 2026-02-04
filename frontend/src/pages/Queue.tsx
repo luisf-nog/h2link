@@ -427,7 +427,7 @@ export default function Queue() {
       }
 
       const to = job.email;
-      const visaType = item.public_jobs?.visa_type === 'H-2A' ? ('H-2A' as const) : ('H-2B' as const);
+      const visaType = item.public_jobs?.visa_type || 'H-2B';
 
       const vars: Record<string, string> = {
         name: profile?.full_name ?? '',
