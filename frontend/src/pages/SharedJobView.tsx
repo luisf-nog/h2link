@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { JobMetaTags } from '@/components/jobs/JobMetaTags';
 import { useToast } from '@/hooks/use-toast';
+import { getVisaBadgeConfig } from '@/lib/visaTypes';
+import { getJobShareUrl, getShortShareUrl } from '@/lib/shareUtils';
 
 interface Job {
   id: string;
