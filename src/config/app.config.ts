@@ -26,8 +26,8 @@ export function getBaseUrl(): string {
  * @returns The share URL with friendly domain
  */
 export function getJobShareUrl(jobId: string): string {
-  // Use h2linker.com for share URLs
-  return `${PRODUCTION_URL}/jobs/${jobId}`;
+  // Use production domain with /api/job/ route
+  return `${PRODUCTION_URL}/api/job/${jobId}`;
 }
 
 /**
