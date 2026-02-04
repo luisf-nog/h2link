@@ -22,53 +22,26 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
 # GitHub Configuration
 .config/
--e 
+
 # Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+.env
+.env.*
+!.env.example
+
+# Build outputs
+build/
+.next/
+out/
+
+# Cache
+.cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
