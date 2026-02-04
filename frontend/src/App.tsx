@@ -209,6 +209,14 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+    <Route
+      path="/admin/import"
+      element={
+        <ProtectedRoute>
+          <AdminImport />
+        </ProtectedRoute>
+      }
+    />
     <Route path="/v/:token" element={<PublicProfile />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
