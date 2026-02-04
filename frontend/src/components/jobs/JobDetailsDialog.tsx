@@ -78,7 +78,7 @@ export function JobDetailsDialog({
 }) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const isH2A = job?.visa_type === "H-2A";
+  const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
   const handleShare = () => {
     if (!job) return;
