@@ -198,51 +198,85 @@ export default function SharedJobView() {
     );
   }
 
-  const isH2A = job.visa_type === 'H-2A';
+  const badgeConfig = getVisaBadgeConfig(job.visa_type);
 
   return (
     <>
       <JobMetaTags job={job} />
       
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         {/* Header */}
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/jobs')}>
-              <BrandLogo className="h-8 w-8" />
-              <span className="font-bold text-xl">H2 Linker</span>
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/jobs')}>
+              <BrandLogo className="h-10 w-10" />
+              <div>
+                <span className="font-bold text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  H2 Linker
+                </span>
+                <p className="text-xs text-muted-foreground hidden sm:block">Job Opportunities Platform</p>
+              </div>
             </div>
-            <Button onClick={handleShare} variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              {locale === 'pt' ? 'Compartilhar' : locale === 'es' ? 'Compartir' : 'Share'}
+            <Button onClick={handleShare} variant="outline" size="sm" className="gap-2">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {locale === 'pt' ? 'Compartilhar' : locale === 'es' ? 'Compartir' : 'Share'}
+              </span>
             </Button>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="container mx-auto px-4 py-8 max-w-4xl">
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-start justify-between mb-2">
+        <main className="container mx-auto px-4 py-8 max-w-5xl">
+          {/* Hero Card */}
+          <Card className="mb-6 overflow-hidden border-none shadow-xl bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-gray-900">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-200/20 dark:bg-purple-900/10 rounded-full blur-3xl -z-0" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-200/20 dark:bg-blue-900/10 rounded-full blur-3xl -z-0" />
+            
+            <CardHeader className="relative z-10 pb-4">
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant={isH2A ? 'secondary' : 'default'}>
-                      {job.visa_type || 'H-2B'}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <Badge 
+                      variant={badgeConfig.variant}
+                      className={`${badgeConfig.className} text-sm px-3 py-1`}
+                    >
+                      {badgeConfig.label}
                     </Badge>
                     {job.category && (
-                      <Badge variant="outline">{job.category}</Badge>
+                      <Badge variant="outline" className="text-sm">{job.category}</Badge>
                     )}
                   </div>
-                  <CardTitle className="text-2xl md:text-3xl mb-1">
+                  <CardTitle className="text-3xl md:text-4xl mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                     {job.job_title}
                   </CardTitle>
-                  <CardDescription className="text-lg">
+                  <CardDescription className="text-xl font-medium text-gray-700 dark:text-gray-300">
                     {job.company}
                   </CardDescription>
                 </div>
               </div>
+              
+              {/* Share URL Display */}
+              <div className="mt-4 flex items-center gap-2 p-3 bg-white/60 dark:bg-gray-900/60 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {locale === 'pt' ? 'Link de compartilhamento' : locale === 'es' ? 'Enlace para compartir' : 'Share link'}
+                  </p>
+                  <p className="text-sm font-mono text-blue-600 dark:text-blue-400 truncate">
+                    {getShortShareUrl(jobId || '')}
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => copyToClipboard(getJobShareUrl(jobId || ''))} 
+                  size="sm" 
+                  variant="ghost"
+                  className="shrink-0"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 relative z-10">
               {/* Key Info Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
