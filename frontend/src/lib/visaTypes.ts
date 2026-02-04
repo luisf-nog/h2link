@@ -9,6 +9,26 @@ export interface VisaBadgeConfig {
 }
 
 /**
+ * Check if a visa type is Early Access
+ */
+export function isEarlyAccess(visaType: string | null | undefined): boolean {
+  return visaType?.trim() === 'H-2A (Early Access)';
+}
+
+/**
+ * Get the Early Access disclaimer message
+ */
+export function getEarlyAccessDisclaimer(locale: string = 'pt'): string {
+  const disclaimers: Record<string, string> = {
+    pt: 'Atenção: Esta vaga foi registrada recentemente e está em processamento inicial pelo Departamento de Trabalho (DOL). A certificação final pode ou não ser aprovada.',
+    en: 'Attention: This job was recently filed and is in initial processing with the Department of Labor (DOL). Final certification may or may not be approved.',
+    es: 'Atención: Esta oferta fue registrada recientemente y está en procesamiento inicial por el Departamento de Trabajo (DOL). La certificación final puede o no ser aprobada.',
+  };
+  
+  return disclaimers[locale] || disclaimers['en'];
+}
+
+/**
  * Get badge configuration for a visa type
  */
 export function getVisaBadgeConfig(visaType: string | null | undefined): VisaBadgeConfig {
