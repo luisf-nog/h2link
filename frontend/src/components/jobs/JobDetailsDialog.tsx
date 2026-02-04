@@ -397,14 +397,14 @@ export function JobDetailsDialog({
                           <Home
                             className={cn(
                               "h-4 w-4 mt-0.5",
-                              isH2A ? "text-secondary-foreground" : "text-muted-foreground",
+                              job?.visa_type === 'H-2A' ? "text-secondary-foreground" : "text-muted-foreground",
                             )}
                           />
                         )}
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{t("job_details.fields.housing")}</p>
                           <p className="text-sm text-muted-foreground">
-                            {isH2A
+                            {job?.visa_type === 'H-2A'
                               ? job?.housing_info || t("job_details.values.housing_required_h2a")
                               : job?.housing_info || t("job_details.values.not_provided")}
                           </p>
