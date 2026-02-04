@@ -158,6 +158,16 @@ export function JobDetailsDialog({
           </div>
         </DialogHeader>
 
+        {/* Early Access Disclaimer */}
+        {job && isEarlyAccess(job.visa_type) && (
+          <Alert variant="destructive" className="bg-purple-50 border-purple-200">
+            <AlertTriangle className="h-4 w-4 text-purple-600" />
+            <AlertDescription className="text-purple-900">
+              {getEarlyAccessDisclaimer(i18n.language)}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Scrollable body */}
         <div className="max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-5">
