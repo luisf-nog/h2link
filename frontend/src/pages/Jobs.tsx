@@ -932,9 +932,17 @@ export default function Jobs() {
                       <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
                       <TableCell>{formatSalary(job.salary)}</TableCell>
                       <TableCell>
-                        <Badge variant={job.visa_type === 'H-2A' ? 'secondary' : 'default'}>
-                          {job.visa_type === 'H-2A' ? 'H-2A' : 'H-2B'}
-                        </Badge>
+                        {(() => {
+                          const badgeConfig = getVisaBadgeConfig(job.visa_type);
+                          return (
+                            <Badge 
+                              variant={badgeConfig.variant}
+                              className={badgeConfig.className}
+                            >
+                              {badgeConfig.label}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>{formatDate(job.posted_date)}</TableCell>
                       <TableCell>{formatDate(job.start_date)}</TableCell>
