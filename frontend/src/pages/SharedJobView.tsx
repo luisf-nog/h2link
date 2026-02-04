@@ -410,64 +410,63 @@ export default function SharedJobView() {
                   </>
                 )}
 
-                <Separator />
-
-                {/* Benefits Section */}
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">{t("job_details.sections.benefits")}</h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="rounded-md border p-3">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{t("job_details.fields.housing")}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {job.visa_type === 'H-2A'
-                            ? job.housing_info || t("job_details.values.housing_required_h2a")
-                            : job.housing_info || t("job_details.values.not_provided")}
-                        </p>
-                      </div>
+                {/* Call to Action - Use Platform */}
+                <div className="pt-4 space-y-3">
+                  <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-6 text-center space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">
+                        {locale === 'pt' 
+                          ? 'Quer se candidatar a esta e outras vagas?' 
+                          : locale === 'es'
+                          ? '¿Quieres postularte a este y otros trabajos?'
+                          : 'Want to apply to this and other jobs?'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {locale === 'pt' 
+                          ? 'Use o H2 Linker para gerenciar suas candidaturas, gerar emails personalizados com IA e acompanhar seus processos em um só lugar.' 
+                          : locale === 'es'
+                          ? 'Usa H2 Linker para gestionar tus aplicaciones, generar emails personalizados con IA y seguir tus procesos en un solo lugar.'
+                          : 'Use H2 Linker to manage your applications, generate AI-powered personalized emails and track your processes in one place.'}
+                      </p>
                     </div>
-
-                    <div className="rounded-md border p-3">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{t("job_details.fields.transport")}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {job.transport_provided 
-                            ? t("job_details.values.yes") 
-                            : t("job_details.values.no")}
-                        </p>
-                      </div>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button 
+                        onClick={() => navigate('/jobs')}
+                        size="lg"
+                        className="gap-2"
+                      >
+                        {locale === 'pt' 
+                          ? 'Ver Todas as Vagas' 
+                          : locale === 'es'
+                          ? 'Ver Todos los Trabajos'
+                          : 'Browse All Jobs'}
+                      </Button>
+                      <Button 
+                        onClick={() => navigate('/signup')}
+                        variant="outline"
+                        size="lg"
+                        className="gap-2"
+                      >
+                        {locale === 'pt' 
+                          ? 'Criar Conta Grátis' 
+                          : locale === 'es'
+                          ? 'Crear Cuenta Gratis'
+                          : 'Sign Up Free'}
+                      </Button>
                     </div>
                   </div>
-                </section>
-
-                {job.source_url && (
-                  <>
-                    <Separator />
-                    <section>
-                      <a 
-                        href={job.source_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        {t("job_details.fields.source_link")}
-                      </a>
-                    </section>
-                  </>
-                )}
-
-                {/* Call to Action */}
-                <div className="pt-4">
-                  <Button 
-                    onClick={() => window.location.href = `mailto:${job.email}`}
-                    className="w-full"
-                    size="lg"
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    {locale === 'pt' ? 'Candidatar-se por Email' : locale === 'es' ? 'Aplicar por Email' : 'Apply via Email'}
-                  </Button>
+                  
+                  {/* Direct email as secondary option */}
+                  <p className="text-xs text-center text-muted-foreground">
+                    {locale === 'pt' 
+                      ? 'Ou entre em contato diretamente: ' 
+                      : locale === 'es'
+                      ? 'O contacta directamente: '
+                      : 'Or contact directly: '}
+                    <a href={`mailto:${job.email}`} className="text-primary hover:underline">
+                      {job.email}
+                    </a>
+                  </p>
                 </div>
               </div>
             </CardContent>
