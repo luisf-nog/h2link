@@ -11,7 +11,7 @@ interface ProcessedJob {
   visa_type: string;
   job_id: string;
   fingerprint: string;
-  is_active: boolean; // Campo crucial para a limpeza do Hub
+  is_active: boolean;
   company: string;
   email: string;
   job_title: string;
@@ -50,7 +50,6 @@ export function MultiJsonImporter() {
     return "H-2B";
   };
 
-  // Fingerprint baseada nos dados imutáveis da vaga
   const generateFingerprint = (fein: string, title: string, city: string, startDate: string): string => {
     return `${fein}|${(title || "").toUpperCase().trim()}|${(city || "").toUpperCase().trim()}|${startDate}`;
   };
@@ -75,9 +74,20 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setExtracting(true);
+    setResult(null);
 
     try {
+      // --- PASSO 1: LIMPEZA (MARK) ---
+      // Desativa todas as vagas antes da nova importação para limpar "vagas fantasmas"
+      const { error: resetError } = await supabase
+        .from("public_jobs")
+        .update({ is_active: false })
+        .neq("job_id", "clean_all_records");
+
+      if (resetError) console.error("Aviso: Falha ao resetar status is_active");
+
+      // --- PASSO 2: PROCESSAMENTO ---
+      setExtracting(true);
       const rawProcessedJobs: ProcessedJob[] = [];
       const errors: string[] = [];
       const jsonContents: any[] = [];
@@ -90,7 +100,6 @@ export function MultiJsonImporter() {
           jsonContents.push({ name: file.name, content: await file.text(), visaType: detectVisaType(file.name) });
         }
       }
-
       setExtracting(false);
 
       for (const jsonFile of jsonContents) {
@@ -102,48 +111,43 @@ export function MultiJsonImporter() {
 
           for (const rawJob of jobsList) {
             const job = rawJob.clearanceOrder ? { ...rawJob, ...rawJob.clearanceOrder } : rawJob;
-
             const fein = job.empFein;
             const jobTitle = unifyField(job.job_title, job.jobTitle, job.tempneedJobtitle);
-            const city = job.jobCity;
             const startDate = unifyField(job.job_begin_date, job.jobBeginDate, job.tempneedStart);
             const email = unifyField(job.recApplyEmail);
-            const company = unifyField(job.employerBusinessName, job.empBusinessName);
 
-            // Validação mínima para garantir que a digital e o contato existam
             if (!fein || !jobTitle || !startDate || !email || email === "N/A") continue;
 
             rawProcessedJobs.push({
               visa_type: jsonFile.visaType,
               job_id: job.caseNumber || job.jobOrderNumber,
-              fingerprint: generateFingerprint(fein, jobTitle, city, startDate),
-              is_active: true, // Garante que a vaga importada fique ativa no Hub
-              company,
+              fingerprint: generateFingerprint(fein, jobTitle, job.jobCity, startDate),
+              is_active: true, // REATIVA A VAGA (SWEEP)
+              company: unifyField(job.employerBusinessName, job.empBusinessName),
               email,
               job_title: jobTitle,
               category: unifyField(job.socTitle, job.jobSocTitle, job.tempneedSocTitle),
-              city,
+              city: job.jobCity,
               state: job.jobState,
               openings: parseInt(unifyField(job.totalWorkersNeeded, job.jobWrksNeeded, job.tempneedWkrPos)) || null,
-              salary: null, // Lógica de salário mantida no backend ou Power Query se preferir
               start_date: startDate,
               end_date: unifyField(job.job_end_date, job.jobEndDate, job.tempneedEnd),
               posted_date: job.dateAcceptanceLtrIssued,
-              experience_months: parseInt(job.jobMinexpmonths) || null,
-              weekly_hours: job.jobHoursTotal,
-              job_duties: unifyField(job.job_duties, job.jobDuties, job.tempneedDescription),
+              source_url: job.recApplyUrl,
+              phone: job.recApplyPhone,
             });
           }
         } catch (e) {
-          errors.push(`Erro no arquivo ${jsonFile.name}`);
+          errors.push(`Erro no ficheiro ${jsonFile.name}`);
         }
       }
 
-      // Deduplicação: Mantém a versão com data de aceite (H-2A Oficial) sobre a Early Access
+      // --- PASSO 3: DEDUPLICAÇÃO E PRIORIDADE ---
       const finalJobs = Array.from(
         rawProcessedJobs
           .reduce((acc, current) => {
             const existing = acc.get(current.fingerprint);
+            // Se houver duplicata, a versão com posted_date (Certificada) substitui a Early Access
             if (!existing || (!existing.posted_date && current.posted_date)) {
               acc.set(current.fingerprint, current);
             }
@@ -152,16 +156,19 @@ export function MultiJsonImporter() {
           .values(),
       );
 
+      // --- PASSO 4: UPSERT FINAL ---
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      await supabase.functions.invoke("import-jobs", {
+      const { error: importError } = await supabase.functions.invoke("import-jobs", {
         body: { jobs: finalJobs },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
 
+      if (importError) throw new Error(importError.message);
+
       setResult({ success: finalJobs.length, errors });
-      toast({ title: "Sucesso!", description: `${finalJobs.length} vagas ativadas no Hub.` });
+      toast({ title: "Importação Concluída", description: `${finalJobs.length} vagas únicas ativadas.` });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -173,27 +180,41 @@ export function MultiJsonImporter() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileJson className="h-5 w-5" /> Importador de Vagas
+          <Upload className="h-5 w-5" /> Importador Inteligente H2 Linker
         </CardTitle>
-        <CardDescription>Sincronização automática com ativação de registros (`is_active: true`)</CardDescription>
+        <CardDescription>Sincronização completa: remove duplicatas e desativa vagas obsoletas.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="border-2 border-dashed rounded-lg p-8 text-center">
           <input type="file" id="files" multiple accept=".json,.zip" onChange={handleFileSelect} className="hidden" />
           <label htmlFor="files" className="cursor-pointer">
-            <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm font-medium">Clique para selecionar os arquivos</p>
+            <Loader2 className={`h-12 w-12 mx-auto mb-2 ${extracting ? "animate-spin" : "text-muted-foreground"}`} />
+            <p className="text-sm font-medium">Arraste ou selecione ficheiros JSON/ZIP</p>
           </label>
         </div>
+
+        {files.length > 0 && (
+          <div className="text-xs space-y-1">
+            {files.map((f, i) => (
+              <div key={i} className="flex justify-between">
+                <span>{f.name}</span>
+                <strong>{detectVisaType(f.name)}</strong>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Button onClick={processJobs} disabled={files.length === 0 || processing} className="w-full">
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar e Ativar Vagas
+          Sincronizar Hub de Vagas
         </Button>
+
         {result && (
-          <Alert>
+          <Alert className="mt-4">
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
-              <strong>{result.success}</strong> vagas processadas com sucesso.
+              <strong>{result.success}</strong> vagas ativas. O excesso de {10000 - result.success} registros antigos
+              foi desativado.
             </AlertDescription>
           </Alert>
         )}
