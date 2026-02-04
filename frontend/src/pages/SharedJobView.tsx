@@ -74,9 +74,15 @@ export default function SharedJobView() {
 
   useEffect(() => {
     async function fetchJob() {
-      if (!jobId) return;
+      if (!jobId) {
+        console.error('No jobId provided');
+        setLoading(false);
+        return;
+      }
 
       try {
+        console.log('Fetching job with ID:', jobId);
+        
         // Public access - no auth required
         const { data, error } = await supabase
           .from('public_jobs')
@@ -84,7 +90,21 @@ export default function SharedJobView() {
           .eq('id', jobId)
           .single();
 
-        if (error) throw error;
+        console.log('Supabase response:', { data, error });
+
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+        
+        if (!data) {
+          console.error('No data returned');
+          setJob(null);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Job loaded successfully:', data);
         setJob(data as Job);
       } catch (error) {
         console.error('Error fetching job:', error);
@@ -97,6 +117,7 @@ export default function SharedJobView() {
             : 'Could not load job',
           variant: 'destructive',
         });
+        setJob(null);
       } finally {
         setLoading(false);
       }
