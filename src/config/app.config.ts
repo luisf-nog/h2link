@@ -21,18 +21,17 @@ export function getBaseUrl(): string {
 
 /**
  * Get the share URL for a job that works with social media crawlers.
- * Uses the backend route to render proper meta tags for WhatsApp/Facebook previews.
+ * Uses h2linker.com/api/job/ route to render proper meta tags.
  * @param jobId - The job UUID
- * @returns The share URL with friendly domain
+ * @returns The share URL with h2linker.com domain
  */
 export function getJobShareUrl(jobId: string): string {
-  // Use production domain with /api/job/ route
   return `${PRODUCTION_URL}/api/job/${jobId}`;
 }
 
 /**
  * Get the direct job URL on the production domain.
- * Use this for canonical URLs and after-redirect destinations.
+ * This is where users are redirected after meta tags are rendered.
  * @param jobId - The job UUID
  * @returns The direct job page URL
  */
