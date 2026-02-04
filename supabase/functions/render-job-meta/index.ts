@@ -1,12 +1,11 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -40,13 +39,14 @@ serve(async (req) => {
     const visaType = job.visa_type || 'H-2B';
     const title = `${visaType}: ${job.job_title} - ${job.company}`;
     const location = `${job.city}, ${job.state}`;
-    const salary = job.salary ? `$${job.salary.toFixed(2)}/hr` : '';
+    const salary = job.salary ? `$${Number(job.salary).toFixed(2)}/hr` : '';
     
     const descriptionParts = ['Job opportunity', visaType, location];
     if (salary) descriptionParts.push(salary);
     const description = descriptionParts.join(' • ');
 
-    const appUrl = Deno.env.get('APP_URL') || 'https://h2linker.lovable.app';
+    // Always redirect to production domain
+    const appUrl = 'https://h2linker.com';
     const shareUrl = `${appUrl}/job/${job.id}`;
     const logoUrl = 'https://storage.googleapis.com/gpt-engineer-file-uploads/qLZbvqI1JJV7s7qLCqiN2u0iNM93/uploads/1769111120896-Gemini_Generated_Image_yeubloyeubloyeub.png';
 

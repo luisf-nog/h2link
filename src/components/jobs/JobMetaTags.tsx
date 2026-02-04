@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
+import { getJobDirectUrl } from '@/config/app.config';
 
 interface JobMetaTagsProps {
   job: {
@@ -144,8 +145,8 @@ export function JobMetaTags({ job }: JobMetaTagsProps) {
   
   const description = descriptionParts.join(' • ');
   
-  // URL for sharing
-  const shareUrl = `${window.location.origin}/job/${job.id}`;
+  // URL for sharing - always use production domain
+  const shareUrl = getJobDirectUrl(job.id);
   
   // Logo URL - using the H2 Linker logo
   const logoUrl = 'https://storage.googleapis.com/gpt-engineer-file-uploads/qLZbvqI1JJV7s7qLCqiN2u0iNM93/uploads/1769111120896-Gemini_Generated_Image_yeubloyeubloyeub.png';

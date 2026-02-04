@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getJobShareUrl } from '@/config/app.config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -126,12 +127,9 @@ export default function SharedJobView() {
   };
 
   const handleShare = () => {
-    // Use backend route that generates proper Open Graph meta tags for social sharing
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-scout-20.preview.emergentagent.com';
-    const shareUrl = `${backendUrl}/job/${jobId}`;
-    
-    // UTM parameters prepared for future activation
-    // const shareUrlWithUTM = `${shareUrl}?utm_source=share&utm_medium=social&utm_campaign=job_sharing`;
+    if (!jobId) return;
+    // Use Edge Function URL for proper Open Graph meta tags (WhatsApp/Facebook previews)
+    const shareUrl = getJobShareUrl(jobId);
     
     if (navigator.share) {
       navigator.share({
