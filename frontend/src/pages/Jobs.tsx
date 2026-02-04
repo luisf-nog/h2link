@@ -478,11 +478,19 @@ export default function Jobs() {
               next.delete(job.id);
               return next;
             });
-            toast({
-              title: t('queue.toasts.mx_invalid_title'),
-              description: t('queue.toasts.mx_invalid_desc', { domain: String(payload?.domain ?? '') }),
-              variant: 'destructive',
-            });
+            
+            // Show error with option to force add
+            const domain = String(payload?.domain ?? '');
+            const forceAdd = window.confirm(
+              `${t('queue.toasts.mx_invalid_title')}\n\n` +
+              `${t('queue.toasts.mx_invalid_desc', { domain })}\n\n` +
+              `${t('queue.toasts.mx_force_add', 'Deseja adicionar mesmo assim?')}`
+            );
+            
+            if (forceAdd) {
+              // Retry without MX check
+              addToQueue(job, true);
+            }
             return;
           }
         } catch (_e) {
