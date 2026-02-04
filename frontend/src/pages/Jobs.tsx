@@ -434,7 +434,7 @@ export default function Jobs() {
 
     // Run DNS check and insert in background (non-blocking)
     (async () => {
-      const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check;
+      const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check && !skipMxCheck;
       if (requiresDnsCheck) {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
