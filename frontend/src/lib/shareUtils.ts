@@ -7,8 +7,8 @@
 export function getJobShareUrl(jobId: string): string {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.REACT_APP_BACKEND_URL;
   
-  // Use backend /job/ route which handles Open Graph meta tags
-  return `${backendUrl}/job/${jobId}`;
+  // Use backend /api/job/ route which handles Open Graph meta tags
+  return `${backendUrl}/api/job/${jobId}`;
 }
 
 /**
