@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }: ConfigEnv) => ({
+  base: './', // Use relative paths for assets (important for Lovable)
   build: {
     outDir: "dist",
   },
