@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from '@/lib/pricing';
 import { formatNumber } from '@/lib/number';
+import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from '@/lib/visaTypes';
 
 interface Job extends JobDetails {
   id: string;
