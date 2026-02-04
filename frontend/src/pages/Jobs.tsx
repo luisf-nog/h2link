@@ -387,7 +387,7 @@ export default function Jobs() {
   }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
 
   const visaLabel = useMemo(() => {
-    if (visaType === 'all') return 'H-2A + H-2B';
+    if (visaType === 'all') return 'All Visas';
     return visaType;
   }, [visaType]);
 
