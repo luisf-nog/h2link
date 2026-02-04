@@ -8,6 +8,7 @@ import { Check, Plus, Lock, MapPin, Calendar, DollarSign, Users, Briefcase, Cloc
 import { useTranslation } from "react-i18next";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
+import { getVisaBadgeConfig } from "@/lib/visaTypes";
 
 interface JobData {
   id: string;
