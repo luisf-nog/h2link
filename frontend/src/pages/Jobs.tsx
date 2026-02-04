@@ -413,7 +413,7 @@ export default function Jobs() {
     return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   };
 
-  const addToQueue = async (job: Job) => {
+  const addToQueue = async (job: Job, skipMxCheck: boolean = false) => {
     // Check if user is authenticated before allowing queue action
     if (!profile) {
       setShowLoginDialog(true);
