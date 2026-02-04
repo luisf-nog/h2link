@@ -51,7 +51,7 @@ export default function Jobs() {
 
   const handleShareJob = (job: Job) => {
     // Use backend route that generates proper Open Graph meta tags for social sharing
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://codebase-scout-20.preview.emergentagent.com';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://visa-type-badge-fix.preview.emergentagent.com';
     const shareUrl = `${backendUrl}/job/${job.id}`;
     
     if (navigator.share) {

@@ -133,7 +133,7 @@ Todas as variáveis necessárias estão no `.env`:
 VITE_SUPABASE_URL="https://dalarhopratsgzmmzhxx.supabase.co"
 VITE_SUPABASE_PROJECT_ID="dalarhopratsgzmmzhxx"
 VITE_SUPABASE_PUBLISHABLE_KEY="eyJ..."
-REACT_APP_BACKEND_URL="https://codebase-scout-20.preview.emergentagent.com"
+REACT_APP_BACKEND_URL="https://visa-type-badge-fix.preview.emergentagent.com"
 WDS_SOCKET_PORT=443
 ENABLE_HEALTH_CHECK=false
 ```

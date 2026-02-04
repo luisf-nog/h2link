@@ -156,7 +156,7 @@ Após o sync, o Lovable deve:
 ✅ VITE_SUPABASE_URL="https://dalarhopratsgzmmzhxx.supabase.co"
 ✅ VITE_SUPABASE_PROJECT_ID="dalarhopratsgzmmzhxx"
 ✅ VITE_SUPABASE_PUBLISHABLE_KEY="eyJ..." (key preservada)
-✅ REACT_APP_BACKEND_URL="https://codebase-scout-20.preview.emergentagent.com"
+✅ REACT_APP_BACKEND_URL="https://visa-type-badge-fix.preview.emergentagent.com"
 ```
 
 ## ⚠️ Notas Importantes
