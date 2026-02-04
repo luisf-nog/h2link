@@ -16,6 +16,7 @@ import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plu
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
+import { getJobShareUrl } from "@/lib/shareUtils";
 
 export type JobDetails = {
   id: string;
@@ -87,8 +88,8 @@ export function JobDetailsDialog({
     if (onShare) {
       onShare(job);
     } else {
-      // Fallback share logic if onShare not provided
-      const shareUrl = `${window.location.origin}/job/${job.id}`;
+      // Use production domain for sharing
+      const shareUrl = getJobShareUrl(job.id);
       
       if (navigator.share) {
         navigator.share({
