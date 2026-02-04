@@ -413,7 +413,7 @@ export default function Jobs() {
     return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   };
 
-  const addToQueue = async (job: Job, skipMxCheck: boolean = false) => {
+  const addToQueue = async (job: Job) => {
     // Check if user is authenticated before allowing queue action
     if (!profile) {
       setShowLoginDialog(true);
@@ -432,138 +432,46 @@ export default function Jobs() {
     // Track processing state for spinner
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
 
-    // Run DNS check and insert in background (non-blocking)
-    (async () => {
-      const requiresDnsCheck = PLANS_CONFIG[planTier].features.dns_bounce_check && !skipMxCheck;
-      if (requiresDnsCheck) {
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const token = sessionData.session?.access_token;
-          if (!token) {
-            // Revert optimistic update
-            setQueuedJobIds((prev) => {
-              const next = new Set(prev);
-              next.delete(job.id);
-              return next;
-            });
-            setProcessingJobIds((prev) => {
-              const next = new Set(prev);
-              next.delete(job.id);
-              return next;
-            });
-            toast({ title: t('common.errors.no_session'), variant: 'destructive' });
-            return;
-          }
+    // Insert directly without MX validation (validation removed as it caused more issues than it solved)
+    const { error } = await supabase.from('my_queue').insert({
+      user_id: profile?.id,
+      job_id: job.id,
+    });
 
-          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-dns-mx`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ email: job.email }),
-          });
+    // Remove from processing state
+    setProcessingJobIds((prev) => {
+      const next = new Set(prev);
+      next.delete(job.id);
+      return next;
+    });
 
-          const payload = await res.json().catch(() => null);
-          const ok = Boolean(payload?.ok);
-          if (!ok) {
-            // Revert optimistic update
-            setQueuedJobIds((prev) => {
-              const next = new Set(prev);
-              next.delete(job.id);
-              return next;
-            });
-            setProcessingJobIds((prev) => {
-              const next = new Set(prev);
-              next.delete(job.id);
-              return next;
-            });
-            
-            // Show error with option to force add
-            const domain = String(payload?.domain ?? '');
-            const forceAdd = window.confirm(
-              `${t('queue.toasts.mx_invalid_title')}\n\n` +
-              `${t('queue.toasts.mx_invalid_desc', { domain })}\n\n` +
-              `${t('queue.toasts.mx_force_add', 'Deseja adicionar mesmo assim?')}`
-            );
-            
-            if (forceAdd) {
-              // Retry without MX check
-              addToQueue(job, true);
-            }
-            return;
-          }
-        } catch (_e) {
-          // Revert optimistic update
-          setQueuedJobIds((prev) => {
-            const next = new Set(prev);
-            next.delete(job.id);
-            return next;
-          });
-          setProcessingJobIds((prev) => {
-            const next = new Set(prev);
-            next.delete(job.id);
-            return next;
-          });
-          
-          // Show error with option to force add
-          const forceAdd = window.confirm(
-            `${t('queue.toasts.mx_invalid_title')}\n\n` +
-            `${t('queue.toasts.mx_check_failed', 'Não foi possível verificar o email. Pode ser um problema temporário de rede.')}\n\n` +
-            `${t('queue.toasts.mx_force_add', 'Deseja adicionar mesmo assim?')}`
-          );
-          
-          if (forceAdd) {
-            // Retry without MX check
-            addToQueue(job, true);
-          }
-          return;
-        }
-      }
-
-      const { error } = await supabase.from('my_queue').insert({
-        user_id: profile?.id,
-        job_id: job.id,
-      });
-
-      if (error) {
-        if (error.code === '23505') {
-          // Already in queue - keep the optimistic state
-          toast({
-            title: t('jobs.toasts.already_in_queue_title'),
-            description: t('jobs.toasts.already_in_queue_desc'),
-          });
-        } else {
-          // Revert optimistic update on error
-          setQueuedJobIds((prev) => {
-            const next = new Set(prev);
-            next.delete(job.id);
-            return next;
-          });
-          setProcessingJobIds((prev) => {
-            const next = new Set(prev);
-            next.delete(job.id);
-            return next;
-          });
-          toast({
-            title: t('jobs.toasts.add_error_title'),
-            description: error.message,
-            variant: 'destructive',
-          });
-        }
-      } else {
+    if (error) {
+      if (error.code === '23505') {
+        // Already in queue - keep the optimistic state
         toast({
-          title: t('jobs.toasts.add_success_title'),
-          description: t('jobs.toasts.add_success_desc', { jobTitle: job.job_title }),
+          title: t('jobs.toasts.already_in_queue_title'),
+          description: t('jobs.toasts.already_in_queue_desc'),
+        });
+      } else {
+        // Revert optimistic update on error
+        setQueuedJobIds((prev) => {
+          const next = new Set(prev);
+          next.delete(job.id);
+          return next;
+        });
+        toast({
+          title: t('common.errors.generic'),
+          description: error.message,
+          variant: 'destructive',
         });
       }
-      // Clear processing state
-      setProcessingJobIds((prev) => {
-        const next = new Set(prev);
-        next.delete(job.id);
-        return next;
+    } else {
+      // Success
+      toast({
+        title: t('jobs.toasts.added_title'),
+        description: t('jobs.toasts.added_desc'),
       });
-    })();
+    }
   };
 
   const removeFromQueue = async (job: Job) => {
