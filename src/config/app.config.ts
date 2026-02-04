@@ -21,12 +21,13 @@ export function getBaseUrl(): string {
 
 /**
  * Get the share URL for a job that works with social media crawlers.
- * Uses the Edge Function to render proper meta tags for WhatsApp/Facebook previews.
+ * Uses the backend route to render proper meta tags for WhatsApp/Facebook previews.
  * @param jobId - The job UUID
- * @returns The share URL that renders meta tags for bots and redirects humans
+ * @returns The share URL with friendly domain
  */
 export function getJobShareUrl(jobId: string): string {
-  return `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/render-job-meta?jobId=${jobId}`;
+  // Use h2linker.com for share URLs
+  return `${PRODUCTION_URL}/jobs/${jobId}`;
 }
 
 /**
