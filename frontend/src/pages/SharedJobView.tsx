@@ -55,6 +55,8 @@ interface Job {
   source_url?: string | null;
   worksite_address?: string | null;
   job_min_special_req?: string | null;
+  wage_additional?: string | null;
+  rec_pay_deductions?: string | null;
 }
 
 export default function SharedJobView() {
