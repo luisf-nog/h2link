@@ -87,9 +87,17 @@ export function MobileJobCard({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge variant={job.visa_type === "H-2A" ? "secondary" : "default"} className="text-xs">
-              {job.visa_type === "H-2A" ? "H-2A" : "H-2B"}
-            </Badge>
+            {(() => {
+              const badgeConfig = getVisaBadgeConfig(job.visa_type);
+              return (
+                <Badge 
+                  variant={badgeConfig.variant} 
+                  className={cn("text-xs", badgeConfig.className)}
+                >
+                  {badgeConfig.label}
+                </Badge>
+              );
+            })()}
             <Button
               size="icon"
               variant={!isBlurred && isQueued ? "default" : "outline"}
