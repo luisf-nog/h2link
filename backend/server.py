@@ -55,7 +55,7 @@ async def get_status_checks():
     return [StatusCheck(**status_check) for status_check in status_checks]
 
 # Job Meta Tags Route for Social Media Sharing
-@app.get("/job/{job_id}", response_class=HTMLResponse)
+@api_router.get("/job/{job_id}", response_class=HTMLResponse)
 async def render_job_meta(job_id: str):
     """
     Renders HTML with Open Graph meta tags for social media sharing.
