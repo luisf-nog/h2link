@@ -101,3 +101,121 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  No banco de dados foi incluído um novo tipo de visa_type (Early Access) porém na tabela de vagas não aparece esse novo badge. 
+  Aparentemente duplicou a mesma vaga em dois tipos diferentes (H2A e H2B). Verificar e ajustar.
+
+backend:
+  - task: "Support for Early Access visa type"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Backend já tinha suporte via migration SQL, não necessita mudanças"
+
+frontend:
+  - task: "Add visa type utility helper"
+    implemented: true
+    working: true
+    file: "frontend/src/lib/visaTypes.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Criado helper getVisaBadgeConfig para mapear visa_types para badges consistentemente"
+  
+  - task: "Update Jobs.tsx to support Early Access badge"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/Jobs.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Atualizado para usar helper, adicionado filtro para Early Access, atualizado renderização de badges"
+  
+  - task: "Update MobileJobCard to support Early Access badge"
+    implemented: true
+    working: true
+    file: "frontend/src/components/jobs/MobileJobCard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Atualizado para usar helper getVisaBadgeConfig"
+  
+  - task: "Update JobDetailsDialog to support Early Access badge"
+    implemented: true
+    working: true
+    file: "frontend/src/components/jobs/JobDetailsDialog.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Atualizado para usar helper getVisaBadgeConfig"
+  
+  - task: "Update Queue.tsx visa_type handling"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/Queue.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Corrigido para aceitar qualquer visa_type em vez de binário H-2A/H-2B"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Verificar badges renderizam corretamente para H-2A (Early Access)"
+    - "Testar filtro de visa_type com nova opção"
+    - "Investigar possíveis duplicatas no banco de dados"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      IMPLEMENTAÇÃO CONCLUÍDA:
+      
+      Problema identificado e corrigido:
+      1. Frontend tinha lógica binária (H-2A ou H-2B) que não suportava "H-2A (Early Access)"
+      2. Criado helper lib/visaTypes.ts com função getVisaBadgeConfig para mapear visa_types
+      3. Badge "Early Access" usa cor roxa distintiva (bg-purple-500) para destacar
+      4. Atualizado Jobs.tsx, MobileJobCard.tsx, JobDetailsDialog.tsx e Queue.tsx
+      5. Adicionado filtro para "H-2A (Early Access)" na página de Jobs
+      
+      MUDANÇAS IMPLEMENTADAS:
+      - Novo arquivo: /app/frontend/src/lib/visaTypes.ts
+      - Atualizado: Jobs.tsx (importa helper, usa getVisaBadgeConfig, adiciona opção no filtro)
+      - Atualizado: MobileJobCard.tsx (usa helper para badge)
+      - Atualizado: JobDetailsDialog.tsx (usa helper para badge)
+      - Atualizado: Queue.tsx (aceita qualquer visa_type)
+      
+      Frontend compilado com sucesso sem erros.
+      
+      PRÓXIMOS PASSOS:
+      - Testar UI para verificar badges
+      - Investigar duplicatas no banco de dados
