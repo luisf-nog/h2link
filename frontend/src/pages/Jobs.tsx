@@ -505,11 +505,18 @@ export default function Jobs() {
             next.delete(job.id);
             return next;
           });
-          toast({
-            title: t('queue.toasts.mx_invalid_title'),
-            description: t('queue.toasts.mx_invalid_desc', { domain: '' }),
-            variant: 'destructive',
-          });
+          
+          // Show error with option to force add
+          const forceAdd = window.confirm(
+            `${t('queue.toasts.mx_invalid_title')}\n\n` +
+            `${t('queue.toasts.mx_check_failed', 'Não foi possível verificar o email. Pode ser um problema temporário de rede.')}\n\n` +
+            `${t('queue.toasts.mx_force_add', 'Deseja adicionar mesmo assim?')}`
+          );
+          
+          if (forceAdd) {
+            // Retry without MX check
+            addToQueue(job, true);
+          }
           return;
         }
       }
