@@ -103,10 +103,11 @@ export default function Jobs() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
 
-  const [visaType, setVisaType] = useState<'all' | 'H-2B' | 'H-2A'>(() => {
-    const v = searchParams.get('visa');
+  const [visaType, setVisaType] = useState<VisaTypeFilter>(() => {
+    const v = searchParams.get('visa') as VisaTypeFilter | null;
     if (v === 'H-2A') return 'H-2A';
     if (v === 'H-2B') return 'H-2B';
+    if (v === 'H-2A (Early Access)') return 'H-2A (Early Access)';
     return 'all';
   });
 
