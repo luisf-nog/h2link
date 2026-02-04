@@ -223,12 +223,12 @@ export function MultiJsonImporter() {
               
               // Validar campos obrigatórios
               if (!email || email === 'N/A') {
-                errors.push(`${file.name}: Vaga sem email válido (ID: ${job.caseNumber || 'N/A'})`);
+                errors.push(`${jsonFile.name}: Vaga sem email válido (ID: ${job.caseNumber || 'N/A'})`);
                 continue;
               }
               
               if (!jobTitle || !company) {
-                errors.push(`${file.name}: Vaga sem título ou empresa (ID: ${job.caseNumber || 'N/A'})`);
+                errors.push(`${jsonFile.name}: Vaga sem título ou empresa (ID: ${job.caseNumber || 'N/A'})`);
                 continue;
               }
               
