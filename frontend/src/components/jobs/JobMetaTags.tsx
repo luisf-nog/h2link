@@ -12,6 +12,8 @@ interface JobMetaTagsProps {
     visa_type: string | null;
     salary: number | null;
     start_date: string | null;
+    end_date?: string | null;
+    openings?: number | null;
   };
 }
 
