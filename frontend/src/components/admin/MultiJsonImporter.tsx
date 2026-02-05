@@ -46,15 +46,16 @@ export function MultiJsonImporter() {
         const entries = isZip ? Object.entries(zip!.files) : [[file.name, file]];
 
         for (const [filename, f] of entries) {
-          if (!filename.endsWith(".json")) continue;
+          const fname = typeof filename === 'string' ? filename : (filename as any).name || '';
+          if (!fname.endsWith(".json")) continue;
 
           const content = isZip ? await (f as any).async("string") : await (f as File).text();
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
 
           let visaType = "H-2A";
-          if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
-          else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
+          if (fname.toLowerCase().includes("h2b")) visaType = "H-2B";
+          else if (fname.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;

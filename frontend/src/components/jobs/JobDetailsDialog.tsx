@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
 import { Bus, Calendar, Home, Mail, MapPin, MessageCircle, Phone, PhoneCall, Plus, Trash2, Wrench, Share2, AlertTriangle } from "lucide-react";
+import { Briefcase, Clock, DollarSign, GraduationCap, Car, Utensils, Shield, Weight, FileCheck, Building2, Leaf } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
@@ -50,6 +51,33 @@ export type JobDetails = {
   job_min_special_req?: string | null;
   wage_additional?: string | null;
   rec_pay_deductions?: string | null;
+  crop_activities?: string | null;
+  wage_from?: number | null;
+  wage_to?: number | null;
+  wage_unit?: string | null;
+  pay_frequency?: string | null;
+  overtime_available?: boolean | null;
+  overtime_from?: number | null;
+  overtime_to?: number | null;
+  transport_min_reimburse?: number | null;
+  transport_max_reimburse?: number | null;
+  transport_desc?: string | null;
+  housing_type?: string | null;
+  housing_addr?: string | null;
+  housing_city?: string | null;
+  housing_state?: string | null;
+  housing_zip?: string | null;
+  housing_capacity?: number | null;
+  is_meal_provision?: boolean | null;
+  meal_charge?: number | null;
+  training_months?: number | null;
+  job_is_lifting?: boolean | null;
+  job_lifting_weight?: string | null;
+  job_is_drug_screen?: boolean | null;
+  job_is_background?: boolean | null;
+  job_is_driver?: boolean | null;
+  shift_start?: string | null;
+  shift_end?: string | null;
 };
 
 type PlanSettings = {
@@ -172,62 +200,139 @@ export function JobDetailsDialog({
         {/* Scrollable body */}
         <div className="max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-5">
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.openings")}</p>
-                <p className="font-medium">{job?.openings ?? "-"}</p>
+            {/* Two Column Layout for Basic Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Left Column - Core Info */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  {t("job_details.sections.job_info")}
+                </h4>
+                <div className="space-y-3 pl-6">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.openings")}</span>
+                    <span className="text-sm font-medium">{job?.openings ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.experience")}</span>
+                    <span className="text-sm font-medium">
+                      {job?.experience_months != null
+                        ? t("job_details.values.months", { count: job.experience_months })
+                        : "-"}
+                    </span>
+                  </div>
+                  {job?.training_months != null && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.training")}</span>
+                      <span className="text-sm font-medium">
+                        {t("job_details.values.months", { count: job.training_months })}
+                      </span>
+                    </div>
+                  )}
+                  {job?.crop_activities && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.crop_activities")}</span>
+                      <span className="text-sm font-medium text-right">{job.crop_activities}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.salary")}</p>
-                <p className="font-medium">{formatSalary(job?.salary ?? null)}</p>
+              {/* Right Column - Schedule & Dates */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  {t("job_details.sections.schedule")}
+                </h4>
+                <div className="space-y-3 pl-6">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.weekly_hours")}</span>
+                    <span className="text-sm font-medium">{job?.weekly_hours ? `${job.weekly_hours}h` : "-"}</span>
+                  </div>
+                  {(job?.shift_start || job?.shift_end) && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.shift")}</span>
+                      <span className="text-sm font-medium">
+                        {job?.shift_start || "-"} - {job?.shift_end || "-"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.start_date")}</span>
+                    <span className="text-sm font-medium">{formatDate(job?.start_date)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.end_date")}</span>
+                    <span className="text-sm font-medium">{formatDate(job?.end_date)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.posted_date")}</span>
+                    <span className="text-sm font-medium">{formatDate(job?.posted_date)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Two Column Layout for Compensation */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Left Column - Wages */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  {t("job_details.sections.wages")}
+                </h4>
+                <div className="space-y-3 pl-6">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.salary")}</span>
+                    <span className="text-sm font-medium">{formatSalary(job?.salary ?? null)}</span>
+                  </div>
+                  {(job?.wage_from || job?.wage_to) && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.wage_range")}</span>
+                      <span className="text-sm font-medium">
+                        ${job?.wage_from?.toFixed(2) || "?"} - ${job?.wage_to?.toFixed(2) || "?"}/{job?.wage_unit || "Hour"}
+                      </span>
+                    </div>
+                  )}
+                  {job?.pay_frequency && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.pay_frequency")}</span>
+                      <span className="text-sm font-medium">{job.pay_frequency}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.overtime")}</p>
-                <p className="font-medium">
-                  {job?.overtime_salary ? `$${Number(job.overtime_salary).toFixed(2)}/h` : "-"}
-                </p>
+              {/* Right Column - Overtime */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  {t("job_details.sections.overtime")}
+                </h4>
+                <div className="space-y-3 pl-6">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">{t("job_details.fields.overtime_available")}</span>
+                    <span className="text-sm font-medium">{yesNo(job?.overtime_available)}</span>
+                  </div>
+                  {job?.overtime_salary && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.overtime")}</span>
+                      <span className="text-sm font-medium">${Number(job.overtime_salary).toFixed(2)}/h</span>
+                    </div>
+                  )}
+                  {(job?.overtime_from || job?.overtime_to) && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">{t("job_details.fields.overtime_range")}</span>
+                      <span className="text-sm font-medium">
+                        ${job?.overtime_from?.toFixed(2) || "?"} - ${job?.overtime_to?.toFixed(2) || "?"}/h
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.weekly_hours")}</p>
-                <p className="font-medium">{job?.weekly_hours ? `${job.weekly_hours}h` : "-"}</p>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.posted_date")}</p>
-                <p className="font-medium inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(job?.posted_date)}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.start_date")}</p>
-                <p className="font-medium inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(job?.start_date)}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.end_date")}</p>
-                <p className="font-medium inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(job?.end_date)}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t("job_details.fields.experience")}</p>
-                <p className="font-medium">
-                  {job?.experience_months != null
-                    ? t("job_details.values.months", { count: job.experience_months })
-                    : "-"}
-                </p>
-              </div>
-            </section>
+            </div>
 
             <Separator />
 
@@ -399,56 +504,125 @@ export function JobDetailsDialog({
               planSettings.job_db_access === "visual_premium") && (
               <>
                 <Separator />
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">{t("job_details.sections.benefits")}</h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="rounded-md border p-3">
-                      <div className="flex items-start gap-2">
-                        {planSettings.show_housing_icons && (
-                          <Home
-                            className={cn(
-                              "h-4 w-4 mt-0.5",
-                              job?.visa_type === 'H-2A' ? "text-secondary-foreground" : "text-muted-foreground",
-                            )}
-                          />
-                        )}
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{t("job_details.fields.housing")}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {job?.visa_type === 'H-2A'
-                              ? job?.housing_info || t("job_details.values.housing_required_h2a")
-                              : job?.housing_info || t("job_details.values.not_provided")}
-                          </p>
-                        </div>
+                {/* Two Column Layout for Benefits */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Left Column - Housing */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Home className="h-4 w-4 text-primary" />
+                      {t("job_details.sections.housing")}
+                    </h4>
+                    <div className="space-y-3 pl-6">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">{t("job_details.fields.housing")}</span>
+                        <span className="text-sm font-medium">
+                          {job?.visa_type === 'H-2A'
+                            ? job?.housing_info || t("job_details.values.housing_required_h2a")
+                            : job?.housing_info || yesNo(!!job?.housing_type)}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="rounded-md border p-3">
-                      <div className="flex items-start gap-2">
-                        {planSettings.show_housing_icons && <Bus className="h-4 w-4 mt-0.5 text-muted-foreground" />}
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{t("job_details.fields.transport")}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {yesNo(job?.transport_provided)}
-                          </p>
+                      {job?.housing_type && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">{t("job_details.fields.housing_type")}</span>
+                          <span className="text-sm font-medium">{job.housing_type}</span>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-md border p-3 sm:col-span-2">
-                      <div className="flex items-start gap-2">
-                        {planSettings.show_housing_icons && (
-                          <Wrench className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                        )}
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{t("job_details.fields.tools")}</p>
-                          <p className="text-sm text-muted-foreground">{yesNo(job?.tools_provided)}</p>
+                      )}
+                      {job?.housing_capacity && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">{t("job_details.fields.housing_capacity")}</span>
+                          <span className="text-sm font-medium">{job.housing_capacity}</span>
                         </div>
+                      )}
+                      {(job?.housing_city || job?.housing_state) && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">{t("job_details.fields.housing_location")}</span>
+                          <span className="text-sm font-medium">
+                            {[job?.housing_city, job?.housing_state].filter(Boolean).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">{t("job_details.fields.meals")}</span>
+                        <span className="text-sm font-medium">
+                          {job?.is_meal_provision 
+                            ? (job?.meal_charge ? `${t("common.yes")} ($${job.meal_charge})` : t("common.yes"))
+                            : t("common.no")}
+                        </span>
                       </div>
                     </div>
                   </div>
-                </section>
+
+                  {/* Right Column - Transport & Tools */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Car className="h-4 w-4 text-primary" />
+                      {t("job_details.sections.transport_tools")}
+                    </h4>
+                    <div className="space-y-3 pl-6">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">{t("job_details.fields.transport")}</span>
+                        <span className="text-sm font-medium">{yesNo(job?.transport_provided)}</span>
+                      </div>
+                      {job?.transport_desc && (
+                        <div className="text-sm text-muted-foreground">{job.transport_desc}</div>
+                      )}
+                      {(job?.transport_min_reimburse || job?.transport_max_reimburse) && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">{t("job_details.fields.transport_reimburse")}</span>
+                          <span className="text-sm font-medium">
+                            ${job?.transport_min_reimburse || 0} - ${job?.transport_max_reimburse || 0}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">{t("job_details.fields.tools")}</span>
+                        <span className="text-sm font-medium">{yesNo(job?.tools_provided)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Physical Requirements Section */}
+                {(job?.job_is_lifting || job?.job_is_drug_screen || job?.job_is_background || job?.job_is_driver) && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-primary" />
+                        {t("job_details.sections.physical_requirements")}
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pl-6">
+                        {job?.job_is_lifting && (
+                          <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
+                            <Weight className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-xs text-center">{t("job_details.fields.lifting")}</span>
+                            {job?.job_lifting_weight && (
+                              <span className="text-xs font-medium">{job.job_lifting_weight}</span>
+                            )}
+                          </div>
+                        )}
+                        {job?.job_is_drug_screen && (
+                          <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
+                            <FileCheck className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-xs text-center">{t("job_details.fields.drug_screen")}</span>
+                          </div>
+                        )}
+                        {job?.job_is_background && (
+                          <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
+                            <Shield className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-xs text-center">{t("job_details.fields.background_check")}</span>
+                          </div>
+                        )}
+                        {job?.job_is_driver && (
+                          <div className="flex flex-col items-center gap-1 p-2 rounded-md bg-muted/50">
+                            <Car className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-xs text-center">{t("job_details.fields.driver_required")}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

@@ -38,6 +38,37 @@ interface ImportedJob {
   job_min_special_req?: string | null;
   wage_additional?: string | null;
   rec_pay_deductions?: string | null;
+  fingerprint?: string | null;
+  is_active?: boolean;
+  crop_activities?: string | null;
+  zip?: string | null;
+  website?: string | null;
+  wage_from?: number | null;
+  wage_to?: number | null;
+  wage_unit?: string | null;
+  pay_frequency?: string | null;
+  overtime_available?: boolean;
+  overtime_from?: number | null;
+  overtime_to?: number | null;
+  transport_min_reimburse?: number | null;
+  transport_max_reimburse?: number | null;
+  transport_desc?: string | null;
+  housing_type?: string | null;
+  housing_addr?: string | null;
+  housing_city?: string | null;
+  housing_state?: string | null;
+  housing_zip?: string | null;
+  housing_capacity?: number | null;
+  is_meal_provision?: boolean;
+  meal_charge?: number | null;
+  training_months?: number | null;
+  job_is_lifting?: boolean;
+  job_lifting_weight?: string | null;
+  job_is_drug_screen?: boolean;
+  job_is_background?: boolean;
+  job_is_driver?: boolean;
+  shift_start?: string | null;
+  shift_end?: string | null;
 }
 
 serve(async (req) => {
@@ -128,6 +159,37 @@ serve(async (req) => {
       job_min_special_req: j.job_min_special_req ?? null,
       wage_additional: j.wage_additional ?? null,
       rec_pay_deductions: j.rec_pay_deductions ?? null,
+      fingerprint: j.fingerprint ?? null,
+      is_active: j.is_active ?? true,
+      crop_activities: j.crop_activities ?? null,
+      zip: j.zip ?? null,
+      website: j.website ?? null,
+      wage_from: j.wage_from ?? null,
+      wage_to: j.wage_to ?? null,
+      wage_unit: j.wage_unit ?? 'Hour',
+      pay_frequency: j.pay_frequency ?? null,
+      overtime_available: j.overtime_available ?? false,
+      overtime_from: j.overtime_from ?? null,
+      overtime_to: j.overtime_to ?? null,
+      transport_min_reimburse: j.transport_min_reimburse ?? null,
+      transport_max_reimburse: j.transport_max_reimburse ?? null,
+      transport_desc: j.transport_desc ?? null,
+      housing_type: j.housing_type ?? null,
+      housing_addr: j.housing_addr ?? null,
+      housing_city: j.housing_city ?? null,
+      housing_state: j.housing_state ?? null,
+      housing_zip: j.housing_zip ?? null,
+      housing_capacity: j.housing_capacity ?? null,
+      is_meal_provision: j.is_meal_provision ?? false,
+      meal_charge: j.meal_charge ?? null,
+      training_months: j.training_months ?? null,
+      job_is_lifting: j.job_is_lifting ?? false,
+      job_lifting_weight: j.job_lifting_weight ?? null,
+      job_is_drug_screen: j.job_is_drug_screen ?? false,
+      job_is_background: j.job_is_background ?? false,
+      job_is_driver: j.job_is_driver ?? false,
+      shift_start: j.shift_start ?? null,
+      shift_end: j.shift_end ?? null,
     }));
 
     // Process in batches to avoid CPU timeout
