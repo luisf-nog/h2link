@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload, FileJson, CheckCircle2, Loader2, Database, ShieldAlert } from "lucide-react";
+import { Upload, CheckCircle2, Loader2, Database } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -43,13 +43,29 @@ export function MultiJsonImporter() {
 
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
-        const zip = isZip ? await new JSZip().loadAsync(file) : null;
-        const entries = isZip ? Object.entries(zip!.files) : [[file.name, file]];
 
-        for (const [filename, f] of entries) {
-          if (!filename.endsWith(".json")) continue;
+        // Estrutura unificada para processamento
+        let contents: { filename: string; content: string }[] = [];
 
-          const content = isZip ? await (f as any).async("string") : await (f as File).text();
+        // Lógica separada para ZIP vs JSON simples (Resolve o erro do TypeScript)
+        if (isZip) {
+          const zip = await new JSZip().loadAsync(file);
+          const entries = Object.entries(zip.files);
+
+          for (const [filename, zipObj] of entries) {
+            if (!zipObj.dir && filename.endsWith(".json")) {
+              const text = await zipObj.async("string");
+              contents.push({ filename, content: text });
+            }
+          }
+        } else {
+          // Arquivo JSON único
+          const text = await file.text();
+          contents.push({ filename: file.name, content: text });
+        }
+
+        // Processa o conteúdo extraído
+        for (const { filename, content } of contents) {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
 
@@ -61,23 +77,18 @@ export function MultiJsonImporter() {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
             // --- BLOCO DE VALIDAÇÃO DE INTEGRIDADE ---
-            // Extraímos os campos CRÍTICOS primeiro
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
             const start = formatToISODate(getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart"]));
             const city = getVal(flat, ["jobCity", "job_city", "worksite_city"]);
             const state = getVal(flat, ["jobState", "job_state", "worksite_state"]);
-
-            // CORREÇÃO AQUI: Extraímos e validamos o E-mail e Empresa AGORA
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail"]);
             const company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName"]);
 
-            // Se faltar qualquer um desses dados vitais, pulamos a vaga para não quebrar o banco
             if (!fein || !title || !start || !city || !state || !email || !company) {
               skippedCount++;
               continue;
             }
-            // ------------------------------------------
 
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
@@ -89,7 +100,7 @@ export function MultiJsonImporter() {
 
               job_title: title,
               company: company,
-              email: email, // Agora garantido que não é nulo
+              email: email,
 
               city: city,
               state: state,
@@ -128,7 +139,6 @@ export function MultiJsonImporter() {
               experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
               training_months: parseInt(getVal(flat, ["jobMintrainingmonths"])) || null,
 
-              // Booleanos seguros
               job_is_lifting: getVal(flat, ["jobIsLifting"]) === 1,
               job_lifting_weight: getVal(flat, ["jobLiftingWeight"]),
               job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
@@ -182,7 +192,7 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Blindado)
+          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Final)
         </CardTitle>
         <CardDescription>Filtra automaticamente vagas sem e-mail ou empresa para garantir integridade.</CardDescription>
       </CardHeader>
@@ -198,7 +208,7 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar (Ignorar Incompletos)
+          Importar Vagas
         </Button>
 
         {stats.total > 0 && (
@@ -207,7 +217,7 @@ export function MultiJsonImporter() {
             <div>
               <p className="font-bold">Processo Finalizado</p>
               <p className="text-sm">
-                Vagas válidas: {stats.total} | Ignoradas (sem email/dados): {stats.skipped}
+                Vagas válidas: {stats.total} | Ignoradas (sem dados): {stats.skipped}
               </p>
             </div>
           </div>
