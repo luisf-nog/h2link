@@ -21,6 +21,7 @@ import {
   Globe,
   Users,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -152,14 +153,11 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">Ver detalhes</span>;
   };
 
-  // Helper para limpar número (apenas dígitos)
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  // --- GERADOR DE MENSAGEM (INGLÊS) ---
   const getMessage = () => {
     if (!job) return "";
     const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
-    // Mensagem em inglês, sem mencionar experiência
     return `Hello, I am interested in the ${job.job_title} position at ${job.company}${location}. I would like to apply. Please let me know the next steps. Thank you.`;
   };
 
@@ -197,9 +195,21 @@ export function JobDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
         {/* HEADER */}
-        <DialogHeader className="p-6 pb-4 bg-white border-b sticky top-0 z-10 shadow-sm">
+        <DialogHeader className="p-4 sm:p-6 pb-4 bg-white border-b sticky top-0 z-10 shadow-sm">
+          {/* BARRA DE NAVEGAÇÃO MOBILE (Apenas Voltar) */}
+          <div className="flex sm:hidden items-center mb-4 -mt-2">
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="-ml-3 flex items-center gap-2 text-slate-600 hover:text-slate-900"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="text-base font-semibold">{t("common.back")}</span>
+            </Button>
+          </div>
+
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-start">
               <div className="flex flex-col gap-1 w-full">
@@ -253,7 +263,7 @@ export function JobDetailsDialog({
         {job && isEarlyAccess(job.visa_type) && (
           <Alert
             variant="destructive"
-            className="mx-6 mt-4 bg-red-50 border-red-200 text-red-800 flex items-center py-2"
+            className="mx-4 sm:mx-6 mt-4 bg-red-50 border-red-200 text-red-800 flex items-center py-2"
           >
             <AlertTriangle className="h-4 w-4 mr-2" />
             <AlertDescription className="text-sm font-semibold">
@@ -263,7 +273,7 @@ export function JobDetailsDialog({
         )}
 
         {/* LAYOUT GRID - CONTEÚDO PRINCIPAL */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/30">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* --- COLUNA ESQUERDA (Info Rápida) - 35% --- */}
             <div className="lg:col-span-4 space-y-6">
@@ -321,7 +331,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* CONTATO (Com Botões de Link Reais) */}
+              {/* CONTATO */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Contatos da Empresa
@@ -359,7 +369,7 @@ export function JobDetailsDialog({
 
                     {/* BOTÕES LINKS (asChild) */}
                     <div className="grid grid-cols-3 gap-2">
-                      {/* 1. LIGAR (tel:) */}
+                      {/* 1. LIGAR */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -371,7 +381,7 @@ export function JobDetailsDialog({
                         </a>
                       </Button>
 
-                      {/* 2. SMS (sms: + body) */}
+                      {/* 2. SMS */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -383,7 +393,7 @@ export function JobDetailsDialog({
                         </a>
                       </Button>
 
-                      {/* 3. WHATSAPP (wa.me) */}
+                      {/* 3. WHATSAPP */}
                       <Button
                         variant="outline"
                         size="sm"
