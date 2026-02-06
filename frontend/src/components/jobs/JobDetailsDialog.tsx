@@ -1,14 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { getJobShareUrl } from "@/lib/shareUtils";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
 import {
-  Calendar,
   Home,
   Mail,
   MapPin,
@@ -17,25 +14,19 @@ import {
   Briefcase,
   Clock,
   DollarSign,
-  Car,
-  Shield,
-  Weight,
-  FileCheck,
-  BookOpen,
-  Wallet,
   ArrowRight,
   Phone,
-  MessageCircle,
-  PhoneCall,
-  Check,
   Plus,
   Trash2,
   Globe,
+  Users,
+  MessageSquare,
+  MessageCircle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
 
+// Definição do Tipo
 export type JobDetails = {
   id: string;
   job_id: string;
@@ -136,7 +127,7 @@ export function JobDetailsDialog({
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Link copiado!", description: "Link de compartilhamento copiado." });
+    toast({ title: "Copiado!", description: "Texto copiado para a área de transferência." });
   };
 
   const formatDate = (v: string | null | undefined) => {
@@ -145,13 +136,6 @@ export function JobDetailsDialog({
     return Number.isNaN(d.getTime())
       ? "-"
       : d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
-  };
-
-  // Helper para sim/não
-  const yesNo = (v: boolean | null | undefined) => {
-    if (v === true) return t("common.yes", "Sim");
-    if (v === false) return t("common.no", "Não");
-    return "-";
   };
 
   const renderMainWage = () => {
@@ -163,42 +147,43 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">Ver detalhes</span>;
   };
 
-  const renderOvertimeWage = () => (job?.overtime_from ? `$${job.overtime_from.toFixed(2)}/h` : null);
-  const overtimeText = renderOvertimeWage();
-
-  // Timeline Component
   const Timeline = () => (
-    <div className="flex items-center justify-between text-xs text-muted-foreground bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+    <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
       <div className="flex flex-col items-center">
-        <span className="font-semibold text-slate-700 mb-1">Postada</span>
-        <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600">
+        <span className="font-semibold text-slate-700 mb-1 text-xs uppercase tracking-wider">Postada</span>
+        <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700">
           {formatDate(job?.posted_date)}
         </span>
       </div>
-      <div className="h-px bg-slate-300 flex-1 mx-3 relative top-[-8px]">
+      <div className="h-px bg-slate-300 flex-1 mx-3 relative top-[-10px]">
         <ArrowRight className="absolute right-0 top-[-5px] h-3 w-3 text-slate-400" />
       </div>
       <div className="flex flex-col items-center">
-        <span className="font-semibold text-green-700 mb-1">Início</span>
-        <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-700 font-bold">
+        <span className="font-semibold text-green-700 mb-1 text-xs uppercase tracking-wider">Início</span>
+        <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-800 font-bold">
           {formatDate(job?.start_date)}
         </span>
       </div>
-      <div className="h-px bg-slate-300 flex-1 mx-3 relative top-[-8px]">
+      <div className="h-px bg-slate-300 flex-1 mx-3 relative top-[-10px]">
         <ArrowRight className="absolute right-0 top-[-5px] h-3 w-3 text-slate-400" />
       </div>
       <div className="flex flex-col items-center">
-        <span className="font-semibold text-red-700 mb-1">Fim</span>
-        <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-700 font-medium">
+        <span className="font-semibold text-red-700 mb-1 text-xs uppercase tracking-wider">Fim</span>
+        <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-800 font-medium">
           {formatDate(job?.end_date)}
         </span>
       </div>
     </div>
   );
 
+  // Funções para os botões de telefone
+  const cleanPhone = (phone: string) => phone.replace(/\D/g, ""); // Remove tudo que não é número
+  const handleCall = () => job?.phone && window.open(`tel:${job.phone}`, "_self");
+  const handleSMS = () => job?.phone && window.open(`sms:${job.phone}`, "_self");
+  const handleWhatsApp = () => job?.phone && window.open(`https://wa.me/${cleanPhone(job.phone)}`, "_blank");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* MUDANÇA AQUI: sm:max-w-7xl para ficar super largo */}
       <DialogContent className="sm:max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* HEADER */}
         <DialogHeader className="p-6 pb-4 bg-white border-b sticky top-0 z-10 shadow-sm">
@@ -222,13 +207,13 @@ export function JobDetailsDialog({
                     {job?.job_title}
                   </DialogTitle>
                 </div>
-                <DialogDescription className="flex flex-wrap items-center gap-2 text-base text-slate-600 mt-1">
+                <DialogDescription className="flex flex-wrap items-center gap-2 text-lg text-slate-600 mt-1">
                   <span className="font-bold text-foreground flex items-center gap-1">
-                    <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
+                    <Briefcase className="h-5 w-5 text-slate-400" /> {job?.company}
                   </span>
                   <span className="hidden sm:inline text-slate-300">|</span>
                   <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
+                    <MapPin className="h-5 w-5 text-slate-400" /> {job?.city}, {job?.state}
                   </span>
                 </DialogDescription>
               </div>
@@ -258,171 +243,149 @@ export function JobDetailsDialog({
             className="mx-6 mt-4 bg-red-50 border-red-200 text-red-800 flex items-center py-2"
           >
             <AlertTriangle className="h-4 w-4 mr-2" />
-            <AlertDescription className="text-xs font-semibold">
+            <AlertDescription className="text-sm font-semibold">
               {getEarlyAccessDisclaimer(i18n.language)}
             </AlertDescription>
           </Alert>
         )}
 
-        {/* LAYOUT GRID */}
+        {/* LAYOUT GRID - CONTEÚDO PRINCIPAL */}
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
-          {/* Ajuste do grid para aproveitar a largura extra */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* --- COLUNA ESQUERDA (Info Rápida) - 35% --- */}
             <div className="lg:col-span-4 space-y-6">
               <Timeline />
 
-              {/* Salário Card */}
-              <div className="bg-white p-5 rounded-xl border border-green-100 shadow-sm space-y-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                <div className="flex items-center gap-2 text-green-800 font-bold text-lg border-b border-green-100 pb-2">
-                  <DollarSign className="h-6 w-6" /> <span>Remuneração</span>
+              {/* CARD DE VAGAS E SALÁRIO (Unificado) */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Users className="h-5 w-5 text-blue-500" />
+                    <span className="font-semibold text-base">Vagas Disponíveis</span>
+                  </div>
+                  <Badge className="text-lg px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
+                    {job?.openings ? job.openings : "N/A"}
+                  </Badge>
                 </div>
+
                 <div>
+                  <div className="flex items-center gap-2 text-green-700 font-bold text-lg mb-2">
+                    <DollarSign className="h-6 w-6" /> <span>Remuneração</span>
+                  </div>
                   <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
                   {job?.pay_frequency && (
-                    <p className="text-sm text-slate-500 font-medium capitalize mt-1">{job.pay_frequency}</p>
+                    <p className="text-sm text-slate-500 font-medium capitalize mt-1">Pagamento: {job.pay_frequency}</p>
                   )}
                 </div>
+
                 {job?.wage_additional && (
-                  <div className="text-xs bg-green-50 p-3 rounded-lg text-green-900 border border-green-200">
-                    <span className="font-bold block text-[10px] uppercase text-green-600 mb-1">Bônus / Adicional</span>
-                    {job.wage_additional}
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <span className="text-xs font-bold uppercase text-green-800 block mb-1">Bônus / Adicional</span>
+                    <p className="text-base text-green-900 leading-snug">{job.wage_additional}</p>
                   </div>
                 )}
+
                 {job?.rec_pay_deductions && (
-                  <div className="text-xs pt-2 border-t border-slate-100">
-                    <span className="font-bold text-slate-600 block mb-1">Deduções Previstas:</span>
-                    <span className="text-slate-500 leading-relaxed">{job.rec_pay_deductions}</span>
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="font-semibold text-slate-600 text-sm block mb-1">Deduções Previstas:</span>
+                    <span className="text-sm text-slate-500 leading-relaxed">{job.rec_pay_deductions}</span>
                   </div>
                 )}
               </div>
 
-              {/* Turno Card */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg border-b border-slate-100 pb-2">
-                  <Clock className="h-6 w-6 text-slate-500" /> <span>Jornada</span>
+              {/* CARD JORNADA (Simplificado) */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
+                  <Clock className="h-6 w-6 text-slate-500" /> <span>Jornada de Trabalho</span>
                 </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center bg-slate-50 p-2 rounded">
-                    <span className="text-slate-500 font-medium">Carga Semanal:</span>
-                    <span className="font-bold text-slate-900 text-base">
-                      {job?.weekly_hours ? `${job.weekly_hours}h` : "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-50 p-2 rounded">
-                    <span className="text-slate-500 font-medium">Turno:</span>
-                    <span className="font-bold text-slate-900">
-                      {job?.shift_start ? `${job.shift_start} - ${job.shift_end}` : "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-amber-50 p-2 rounded border border-amber-100">
-                    <span className="text-amber-800 font-medium flex items-center gap-1">
-                      <Plus className="h-3 w-3" /> Hora Extra:
-                    </span>
-                    {overtimeText ? (
-                      <span className="font-bold text-amber-700">{overtimeText}</span>
-                    ) : (
-                      <span className="font-bold text-amber-700">{yesNo(job?.overtime_available)}</span>
-                    )}
-                  </div>
+                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
+                  <span className="text-slate-600 font-medium text-base">Carga Horária Semanal:</span>
+                  <span className="font-bold text-slate-900 text-xl">
+                    {job?.weekly_hours ? `${job.weekly_hours}h` : "-"}
+                  </span>
                 </div>
               </div>
 
-              {/* Badges de Requisitos */}
-              <div className="grid grid-cols-2 gap-3">
-                <div
-                  className={cn(
-                    "p-3 rounded-lg border text-center flex flex-col items-center justify-center h-24 transition-colors hover:bg-slate-50",
-                    job?.experience_months ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-200",
-                  )}
-                >
-                  <Briefcase className="h-5 w-5 mb-1 text-blue-500" />
-                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Experiência</span>
-                  <span className="text-base font-bold text-slate-800">
-                    {job?.experience_months ? `${job.experience_months} Meses` : "Não"}
-                  </span>
+              {/* CONTATO (Com Botões de Ação) */}
+              <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Contatos da Empresa
                 </div>
-                <div
-                  className={cn(
-                    "p-3 rounded-lg border text-center flex flex-col items-center justify-center h-24 transition-colors hover:bg-slate-50",
-                    job?.education_required ? "bg-purple-50/50 border-purple-200" : "bg-white border-slate-200",
-                  )}
-                >
-                  <BookOpen className="h-5 w-5 mb-1 text-purple-500" />
-                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Educação</span>
-                  <span
-                    className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight px-1"
-                    title={job?.education_required || ""}
-                  >
-                    {job?.education_required || "N/A"}
-                  </span>
-                </div>
-                <div
-                  className={cn(
-                    "p-3 rounded-lg border text-center flex flex-col items-center justify-center h-24 transition-colors hover:bg-slate-50",
-                    job?.job_is_lifting ? "bg-orange-50/50 border-orange-200" : "bg-white border-slate-200",
-                  )}
-                >
-                  <Weight className="h-5 w-5 mb-1 text-orange-500" />
-                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Peso</span>
-                  <span className="text-sm font-bold text-slate-800">
-                    {job?.job_is_lifting ? job.job_lifting_weight || "Sim" : "Não"}
-                  </span>
-                </div>
-                <div
-                  className={cn(
-                    "p-3 rounded-lg border text-center flex flex-col items-center justify-center h-24 transition-colors hover:bg-slate-50",
-                    job?.job_is_driver ? "bg-yellow-50/50 border-yellow-200" : "bg-white border-slate-200",
-                  )}
-                >
-                  <Car className="h-5 w-5 mb-1 text-yellow-600" />
-                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">CNH/Driver</span>
-                  <span className="text-base font-bold text-slate-800">{job?.job_is_driver ? "Sim" : "Não"}</span>
-                </div>
-              </div>
 
-              {/* Contato Rápido */}
-              <div className="bg-white rounded-xl p-4 space-y-3 border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Informações de Contato
-                </div>
+                {/* Email */}
                 <div
-                  className="group flex items-center gap-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer"
+                  className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer"
                   onClick={() => copyToClipboard(job?.email || "")}
                 >
-                  <div className="bg-white p-1.5 rounded-full border border-slate-200 text-blue-500">
-                    <Mail className="h-4 w-4" />
+                  <div className="bg-white p-2 rounded-full border border-slate-200 text-blue-500">
+                    <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col overflow-hidden">
-                    <span className="text-[10px] text-slate-400 font-bold">EMAIL</span>
-                    <span className="truncate font-medium text-slate-700 select-all">{job?.email}</span>
+                    <span className="text-xs text-slate-400 font-bold">EMAIL</span>
+                    <span className="truncate font-medium text-slate-700 text-base select-all">{job?.email}</span>
                   </div>
                 </div>
+
+                {/* Telefone & Ações Rápidas */}
                 {job?.phone && (
-                  <div className="group flex items-center gap-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-green-200 transition-colors">
-                    <div className="bg-white p-1.5 rounded-full border border-slate-200 text-green-500">
-                      <Phone className="h-4 w-4" />
+                  <div className="space-y-2">
+                    <div
+                      className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-green-200 transition-colors cursor-pointer"
+                      onClick={() => copyToClipboard(job?.phone || "")}
+                    >
+                      <div className="bg-white p-2 rounded-full border border-slate-200 text-green-500">
+                        <Phone className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-xs text-slate-400 font-bold">TELEFONE</span>
+                        <span className="truncate font-medium text-slate-700 text-base select-all">{job.phone}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="text-[10px] text-slate-400 font-bold">TELEFONE</span>
-                      <span className="truncate font-medium text-slate-700 select-all">{job.phone}</span>
+
+                    {/* BOTÕES DE AÇÃO DO TELEFONE */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex gap-1 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                        onClick={handleCall}
+                      >
+                        <Phone className="h-4 w-4" /> Ligar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                        onClick={handleSMS}
+                      >
+                        <MessageSquare className="h-4 w-4" /> SMS
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex gap-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+                        onClick={handleWhatsApp}
+                      >
+                        <MessageCircle className="h-4 w-4" /> WhatsApp
+                      </Button>
                     </div>
                   </div>
                 )}
+
+                {/* Website */}
                 {job?.website && (
                   <a
                     href={job.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center gap-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-purple-200 transition-colors hover:bg-purple-50"
+                    className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-purple-200 transition-colors hover:bg-purple-50"
                   >
-                    <div className="bg-white p-1.5 rounded-full border border-slate-200 text-purple-500">
-                      <Globe className="h-4 w-4" />
+                    <div className="bg-white p-2 rounded-full border border-slate-200 text-purple-500">
+                      <Globe className="h-5 w-5" />
                     </div>
                     <div className="flex flex-col overflow-hidden">
-                      <span className="text-[10px] text-slate-400 font-bold">WEBSITE</span>
-                      <span className="truncate font-medium text-purple-700">Visitar site da empresa</span>
+                      <span className="text-xs text-slate-400 font-bold">WEBSITE</span>
+                      <span className="truncate font-medium text-purple-700 text-base">Visitar site oficial</span>
                     </div>
                   </a>
                 )}
@@ -430,87 +393,67 @@ export function JobDetailsDialog({
             </div>
 
             {/* --- COLUNA DIREITA (Textos Longos) - 65% --- */}
-            <div className="lg:col-span-8 space-y-6">
-              {/* Requisitos Especiais (Destaque Amarelo) */}
+            <div className="lg:col-span-8 space-y-8">
               {job?.job_min_special_req && (
-                <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm">
-                  <h4 className="flex items-center gap-2 font-bold text-amber-800 mb-3 text-lg">
-                    <AlertTriangle className="h-5 w-5" /> Requisitos Especiais & Condições
+                <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
+                  <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-4 text-xl">
+                    <AlertTriangle className="h-6 w-6" /> Requisitos Especiais & Condições
                   </h4>
-                  <p className="text-sm text-amber-900/90 whitespace-pre-wrap leading-relaxed">
-                    {job.job_min_special_req}
-                  </p>
+                  <div className="prose prose-amber max-w-none">
+                    <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
+                      {job.job_min_special_req}
+                    </p>
+                  </div>
                 </div>
               )}
 
-              {/* Deveres (Destaque Principal) */}
               {job?.job_duties && (
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800">
-                    <Briefcase className="h-6 w-6 text-blue-600" /> Descrição e Deveres
+                <div className="space-y-4">
+                  <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
+                    <Briefcase className="h-7 w-7 text-blue-600" /> Descrição da Vaga
                   </h4>
-                  <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[200px]">
-                    {job.job_duties}
+                  <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-base text-slate-700 leading-7 whitespace-pre-wrap">{job.job_duties}</p>
                   </div>
                 </div>
               )}
 
-              {/* Logística (Moradia e Transporte) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4 shadow-sm h-full">
-                  <h4 className="font-bold flex items-center gap-2 text-slate-700 text-lg border-b border-slate-100 pb-2">
-                    <Home className="h-5 w-5 text-indigo-500" /> Moradia
-                  </h4>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">Tipo:</span>
-                    <Badge variant="outline" className="bg-slate-50">
-                      {job?.housing_type || "N/A"}
-                    </Badge>
-                  </div>
-                  {job?.housing_info && (
-                    <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed">
-                      <span className="font-bold block text-slate-400 text-[10px] uppercase mb-1">Detalhes</span>
-                      {job.housing_info}
-                    </div>
-                  )}
-                  {job?.housing_addr && (
-                    <div className="flex gap-2 text-xs text-slate-500 items-start">
-                      <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-indigo-400" />
-                      <span>
-                        {job.housing_addr}, {job.housing_city}
-                      </span>
-                    </div>
-                  )}
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
+                <h4 className="font-bold flex items-center gap-2 text-slate-700 text-xl border-b border-slate-100 pb-3">
+                  <Home className="h-6 w-6 text-indigo-500" /> Informações de Moradia
+                </h4>
+
+                <div className="flex flex-wrap gap-4 items-center">
+                  <span className="text-slate-600 font-medium text-base">Tipo de Acomodação:</span>
+                  <Badge
+                    variant="outline"
+                    className="text-base py-1 px-4 bg-slate-50 text-slate-800 font-medium border-slate-300"
+                  >
+                    {job?.housing_type || "Não especificado"}
+                  </Badge>
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4 shadow-sm h-full">
-                  <h4 className="font-bold flex items-center gap-2 text-slate-700 text-lg border-b border-slate-100 pb-2">
-                    <Car className="h-5 w-5 text-blue-500" /> Transporte
-                  </h4>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">Fornecido:</span>
-                    <span
-                      className={cn(
-                        "font-bold px-2 py-0.5 rounded",
-                        job?.transport_provided ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500",
-                      )}
-                    >
-                      {yesNo(job?.transport_provided)}
+                {job?.housing_info && (
+                  <div className="bg-slate-50 p-5 rounded-lg border border-slate-100">
+                    <span className="text-xs font-bold uppercase text-slate-400 block mb-2">Detalhes Adicionais</span>
+                    <p className="text-base text-slate-700 leading-relaxed">{job.housing_info}</p>
+                  </div>
+                )}
+
+                {job?.housing_addr && (
+                  <div className="flex gap-2 text-base text-slate-600 items-start pt-2 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                    <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-indigo-500" />
+                    <span className="font-medium">
+                      {job.housing_addr}, {job.housing_city}
                     </span>
                   </div>
-                  {job?.transport_desc && (
-                    <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed max-h-[150px] overflow-y-auto">
-                      <span className="font-bold block text-slate-400 text-[10px] uppercase mb-1">Detalhes</span>
-                      {job.transport_desc}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* MOBILE FOOTER ACTIONS (Apenas mobile) */}
+        {/* MOBILE FOOTER (Fixo no fundo) */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-5 w-5 mr-2" /> Salvar Vaga
