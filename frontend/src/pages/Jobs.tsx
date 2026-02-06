@@ -97,7 +97,7 @@ export default function Jobs() {
     });
   };
 
-  const isAdmin = useIsAdmin();
+  const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
