@@ -14,18 +14,24 @@ export function MultiJsonImporter() {
 
   const getVal = (obj: any, keys: string[]) => {
     for (const key of keys) {
-      if (
-        obj &&
-        obj[key] !== undefined &&
-        obj[key] !== null &&
-        obj[key] !== "N/A" &&
-        obj[key] !== "" &&
-        obj[key] !== "n/a"
-      ) {
-        return obj[key];
+      if (obj && obj[key] !== undefined && obj[key] !== null) {
+        const val = obj[key];
+        // Ignora valores que são apenas "N/A", "None", etc.
+        if (typeof val === "string") {
+          const clean = val.trim().toLowerCase();
+          if (clean === "" || clean === "n/a" || clean === "none" || clean === "null") continue;
+        }
+        return val;
       }
     }
     return null;
+  };
+
+  // Conversor "Super Tolerante" para Booleanos
+  const parseBool = (val: any): boolean => {
+    if (!val) return false;
+    const s = String(val).toLowerCase().trim();
+    return ["1", "true", "yes", "y", "t"].includes(s);
   };
 
   const parseMoney = (val: any): number | null => {
@@ -35,7 +41,6 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
-  // 1. Busca Profunda (Deep Search) - Salário
   const deepFindWage = (item: any): number | null => {
     let val = parseMoney(item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE);
     if (val) return val;
@@ -60,7 +65,6 @@ export function MultiJsonImporter() {
     return null;
   };
 
-  // 2. Lógica Power Query (Conversão Mensal -> Horária)
   const calculateFinalWage = (item: any, flat: any): number | null => {
     const rawWage = deepFindWage(item);
     if (!rawWage) return null;
@@ -162,35 +166,35 @@ export function MultiJsonImporter() {
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd"])),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date"])),
 
-              // SALÁRIOS
               salary: finalWage,
               wage_from: finalWage,
               wage_to: finalWage,
               wage_unit: "Hour",
               pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
 
-              // HORA EXTRA (Fix: wageOtFrom para H-2B, isOvertimeAvailable para H-2A)
+              // HORA EXTRA (Blindado com parseBool)
               overtime_available:
-                getVal(flat, ["isOvertimeAvailable", "recIsOtAvailable"]) === 1 ||
+                parseBool(getVal(flat, ["isOvertimeAvailable", "recIsOtAvailable"])) ||
                 !!parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom"])),
               overtime_from: parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom", "ot_wage_from"])),
 
-              // TURNO (Fix: jobHourStart singular para H-2B)
+              // TURNO
               shift_start: getVal(flat, ["jobHoursStart", "jobHourStart", "shiftStart"]),
               shift_end: getVal(flat, ["jobHoursEnd", "jobHourEnd", "shiftEnd"]),
               weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours"])) || null,
 
-              // REQUISITOS (Lifting, Driver)
-              job_is_lifting: getVal(flat, ["jobIsLifting", "lifting"]) === 1,
+              // BOOLEANOS (Blindados)
+              job_is_lifting: parseBool(getVal(flat, ["jobIsLifting", "lifting"])),
               job_lifting_weight: getVal(flat, ["jobLiftingWeight", "liftingWeight"]),
-              job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
-              job_is_driver: getVal(flat, ["jobIsDriver", "driver"]) === 1,
+              job_is_drug_screen: parseBool(getVal(flat, ["jobIsDrugScreen"])),
+              job_is_driver: parseBool(getVal(flat, ["jobIsDriver", "driver"])),
+              job_is_background: parseBool(getVal(flat, ["jobIsBackground"])),
 
-              // EDUCAÇÃO e EXPERIÊNCIA
-              education_required: getVal(flat, ["jobEducationLevel", "jobEducation", "educationLevel"]),
+              // EDUCAÇÃO
+              education_required: getVal(flat, ["jobEducationLevel", "jobEducation", "educationLevel", "jobMinedu"]),
               experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
 
-              // CAMPOS EXTRAS
+              // TEXTOS LONGOS
               job_min_special_req: getVal(flat, [
                 "jobMinspecialreq",
                 "jobAddReqinfo",
@@ -200,13 +204,13 @@ export function MultiJsonImporter() {
               wage_additional: getVal(flat, ["wageAdditional", "addSpecialPayInfo", "jobSpecialPayInfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
 
-              // TRANSPORTE e MORADIA
-              transport_provided:
-                getVal(flat, ["isEmploymentTransport", "recIsDailyTransport", "transportProvided"]) === 1 ||
-                getVal(flat, ["isEmploymentTransport"]) === true,
+              // TRANSPORTE E MORADIA (Blindados)
+              transport_provided: parseBool(
+                getVal(flat, ["isEmploymentTransport", "recIsDailyTransport", "transportProvided"]),
+              ),
               transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily"]),
               housing_info: getVal(flat, ["housingAddInfo", "housingAdditionalInfo"]),
-              // Fallback para moradia em array se não tiver na raiz
+
               housing_type:
                 getVal(flat, ["housingType", "housing_type"]) || item.housingLocations?.[0]?.addmbHousingType,
               housing_addr: getVal(flat, ["housingAddr1"]) || item.housingLocations?.[0]?.addmbHousingAddr1,
@@ -215,7 +219,7 @@ export function MultiJsonImporter() {
               housing_zip: getVal(flat, ["housingPostcode"]) || item.housingLocations?.[0]?.addmbHousingPostcode,
               housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity"])) || null,
 
-              is_meal_provision: getVal(flat, ["isMealProvision"]) === 1,
+              is_meal_provision: parseBool(getVal(flat, ["isMealProvision"])),
               meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
 
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
@@ -244,8 +248,8 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Importação V5 (Shift Fix)",
-        description: `Sucesso: ${finalJobs.length}. Turno, Educação e Hora Extra corrigidos.`,
+        title: "Importação V6 (Blindada)",
+        description: `Sucesso: ${finalJobs.length}. Campos booleanos corrigidos.`,
       });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -259,9 +263,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-primary" /> Extrator V5 (Shift Fix)
+          <Database className="h-6 w-6 text-primary" /> Extrator V6 (Boolean Fix)
         </CardTitle>
-        <CardDescription>Correção específica para H-2B: Turno (HourStart), Hora Extra e Transporte.</CardDescription>
+        <CardDescription>Proteção total para campos sim/não e educação.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -274,7 +278,7 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar (Shift + Extra)
+          Importar (V6 Blindada)
         </Button>
         {stats.total > 0 && (
           <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
