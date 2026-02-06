@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, Database, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Loader2, Database } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -12,6 +12,7 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ total: 0, skipped: 0 });
   const { toast } = useToast();
 
+  // Função auxiliar para pegar valor de múltiplas chaves possíveis
   const getVal = (obj: any, keys: string[]) => {
     for (const key of keys) {
       if (
@@ -41,10 +42,12 @@ export function MultiJsonImporter() {
       to = null,
       ot = null;
 
+    // 1. Tenta Raiz (H-2B / JO / Padrão Simples)
     from = parseMoney(item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE);
-    to = parseMoney(item.wageTo || item.jobWageTo || item.wageOfferTo || item.WAGE_OFFER_TO);
+    to = parseMoney(item.wageTo || item.jobWageTo || item.wageOfferTo || item.WAGE_OFFER_TO || item.WAGE_RATE_TO);
     ot = parseMoney(item.wageOtFrom || item.overtimeWageFrom || item.ot_wage_from);
 
+    // 2. Se não achou e tem clearanceOrder (H-2A), tenta lá
     if (!from && item.clearanceOrder) {
       const co = item.clearanceOrder;
       from = parseMoney(co.jobWageOffer || co.wageOfferFrom || co.BASIC_WAGE_RATE);
@@ -52,7 +55,9 @@ export function MultiJsonImporter() {
       ot = parseMoney(co.overtimeWageFrom);
     }
 
+    // 3. Se ainda não achou, tenta Arrays Especiais (JO / H-2B aninhado)
     if (!from) {
+      // H-2A / JO: cropsAndActivities
       const crops = item.cropsAndActivities || item.clearanceOrder?.cropsAndActivities;
       if (Array.isArray(crops)) {
         for (const c of crops) {
@@ -64,6 +69,7 @@ export function MultiJsonImporter() {
         }
       }
 
+      // H-2B: employmentLocations
       const locs = item.employmentLocations || item.clearanceOrder?.employmentLocations;
       if (!from && Array.isArray(locs)) {
         for (const l of locs) {
@@ -77,6 +83,7 @@ export function MultiJsonImporter() {
       }
     }
 
+    // Se o teto for igual ao base, deixa nulo para o front-end tratar ("A partir de X")
     if (to === from) to = null;
     return { from, to, ot };
   };
@@ -119,6 +126,7 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
+          // O JSON pode ser um array direto ou um objeto com chave 'data'
           let list = [];
           if (Array.isArray(json)) list = json;
           else if (json.data && Array.isArray(json.data)) list = json.data;
@@ -129,8 +137,10 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
+            // Flatten inteligente apenas para campos gerais
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
+            // --- VALIDAÇÃO DE INTEGRIDADE ---
             const fein = getVal(flat, ["empFein", "employer_fein", "fein", "employerFein"]);
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
             const start = formatToISODate(
@@ -145,14 +155,16 @@ export function MultiJsonImporter() {
               "empName",
             ]);
 
-            // Validação Inicial
+            // Se não tem FEIN, Título, Data, Email ou Empresa -> Lixo.
             if (!fein || !title || !start || !email || !company) {
               skippedCount++;
               continue;
             }
 
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
-            const wages = deepFindWage(item);
+
+            // --- EXTRAÇÃO DE DADOS ---
+            const wages = deepFindWage(item); // Passa item original para arrays
 
             const extractedJob = {
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "clearanceOrderNumber"]) || `GEN-${Math.random()}`,
@@ -176,6 +188,7 @@ export function MultiJsonImporter() {
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "endDate"])),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted"])),
 
+              // SALÁRIOS (Deep Search)
               wage_from: wages.from,
               wage_to: wages.to,
               wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "wagePer", "payUnit"]) || "Hour",
@@ -186,6 +199,29 @@ export function MultiJsonImporter() {
               overtime_from: wages.ot,
               overtime_to: null,
 
+              // NOVOS CAMPOS ADICIONADOS (Correção de campos em branco)
+              // 1. Requisitos Especiais (H-2B: jobMinspecialreq / H-2A: jobAddReqinfo)
+              job_min_special_req: getVal(flat, [
+                "jobMinspecialreq",
+                "jobAddReqinfo",
+                "job_min_special_req",
+                "specialRequirements",
+              ]),
+
+              // 2. Educação (H-2B: jobEducationLevel)
+              education_required: getVal(flat, ["jobEducationLevel", "jobEducation", "educationLevel"]),
+
+              // 3. Info Extra Pagamento (H-2A: addSpecialPayInfo / H-2B: wageAdditional)
+              wage_additional: getVal(flat, ["addSpecialPayInfo", "wageAdditional", "jobSpecialPayInfo"]),
+              rec_pay_deductions: getVal(flat, ["jobPayDeduction", "recPayDeductions"]),
+
+              // 4. Transporte e Moradia (Extra)
+              transport_provided:
+                getVal(flat, ["isEmploymentTransport", "transportProvided"]) === 1 ||
+                getVal(flat, ["isEmploymentTransport"]) === true,
+              housing_info: getVal(flat, ["housingAddInfo", "housingAdditionalInfo"]),
+
+              // Campos Numéricos / Financeiros
               transport_min_reimburse: parseMoney(getVal(flat, ["transportMinreimburse"])),
               transport_max_reimburse: parseMoney(getVal(flat, ["transportMaxreimburse"])),
               transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily"]),
@@ -200,15 +236,18 @@ export function MultiJsonImporter() {
               is_meal_provision: getVal(flat, ["isMealProvision"]) === 1,
               meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
 
-              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
+              experience_months:
+                parseInt(getVal(flat, ["jobMinexpmonths", "experience_required", "experienceMonths"])) || null,
 
+              // Booleanos / Checkboxes
               job_is_lifting: getVal(flat, ["jobIsLifting"]) === 1,
               job_lifting_weight: getVal(flat, ["jobLiftingWeight"]),
               job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
               job_is_background: getVal(flat, ["jobIsBackground"]) === 1,
               job_is_driver: getVal(flat, ["jobIsDriver"]) === 1,
 
-              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "totalWorkersNeeded"])) || null,
+              // Horas (Corrigido para não pegar nº de trabalhadores)
+              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours"])) || null,
               shift_start: getVal(flat, ["jobHoursStart"]),
               shift_end: getVal(flat, ["jobHoursEnd"]),
 
@@ -224,18 +263,15 @@ export function MultiJsonImporter() {
         }
       }
 
-      // --- FILTRO DE SEGURANÇA FINAL ---
-      // Garante que NENHUM objeto sem e-mail seja enviado para o backend,
-      // mesmo que tenha passado pela validação inicial ou sido mesclado incorretamente.
+      // --- FILTRO DE SEGURANÇA FINAL (Safety Net) ---
+      // Impede erro 500 do banco removendo itens sem email no último segundo
       let finalJobs = Array.from(rawJobsMap.values());
       const originalCount = finalJobs.length;
 
       finalJobs = finalJobs.filter((job) => {
-        // Validação rigorosa: tem que ter email E ser string não vazia
-        return job.email && typeof job.email === "string" && job.email.trim().length > 0;
+        return job.email && typeof job.email === "string" && job.email.trim().length > 0 && job.email !== "n/a";
       });
 
-      // Atualiza a contagem de ignorados com os que falharam no filtro final
       skippedCount += originalCount - finalJobs.length;
 
       const BATCH_SIZE = 500;
@@ -249,11 +285,11 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Sucesso Total",
-        description: `Salvos: ${finalJobs.length}. Ignorados (sem dados/email): ${skippedCount}.`,
+        title: "Importação Concluída com Sucesso",
+        description: `Importado: ${finalJobs.length}. Ignorado (Incompleto/Sem Email): ${skippedCount}.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -264,9 +300,11 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-primary" /> Extrator V3.2 (Safety Net)
+          <Database className="h-6 w-6 text-primary" /> Extrator V3.4 (Full Fields)
         </CardTitle>
-        <CardDescription>Inclui validação de segurança final para impedir erros de banco de dados.</CardDescription>
+        <CardDescription>
+          Algoritmo ajustado para H-2B e H-2A. Preenche requisitos especiais e educação.
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -280,7 +318,7 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar (Com Filtro de Segurança)
+          Importar Completos
         </Button>
 
         {stats.total > 0 && (
