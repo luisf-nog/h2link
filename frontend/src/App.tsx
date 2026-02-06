@@ -43,11 +43,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to onboarding if SMTP not fully configured
-  // Skip redirect if already on settings page (allow manual config)
   const needsOnboarding = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
   const isSettingsRoute = location.pathname.startsWith("/settings");
-  
+
   if (needsOnboarding && !isSettingsRoute) {
     return <Navigate to="/onboarding" replace />;
   }
@@ -71,7 +69,6 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // If SMTP is fully configured, redirect to dashboard
   if (smtpStatus?.hasPassword && smtpStatus?.hasRiskProfile) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -92,9 +89,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Important: when arriving at /auth from an email link (confirmation or recovery),
-  // we must allow the Auth page to process the callback and/or show the reset UI.
-  // Otherwise, the presence of a session will instantly redirect to /dashboard.
   if (user) {
     const isAuthRoute = location.pathname === "/auth";
     const params = new URLSearchParams(location.search);
@@ -126,31 +120,40 @@ const AppRoutes = () => (
       }
     />
     <Route path="/reset-password" element={<ResetPassword />} />
-    <Route
-      path="/"
-      element={<Navigate to="/jobs" replace />}
-    />
+    <Route path="/" element={<Navigate to="/jobs" replace />} />
     {/* Public Routes - No auth required */}
     <Route
       path="/dashboard"
-      element={<AppLayout><Dashboard /></AppLayout>}
+      element={
+        <AppLayout>
+          <Dashboard />
+        </AppLayout>
+      }
     />
     <Route
       path="/jobs"
-      element={<AppLayout><Jobs /></AppLayout>}
+      element={
+        <AppLayout>
+          <Jobs />
+        </AppLayout>
+      }
     />
-    {/* Shared job view - Public landing page for shared jobs */}
-    <Route
-      path="/job/:jobId"
-      element={<SharedJobView />}
-    />
+    <Route path="/job/:jobId" element={<SharedJobView />} />
     <Route
       path="/plans"
-      element={<AppLayout><Plans /></AppLayout>}
+      element={
+        <AppLayout>
+          <Plans />
+        </AppLayout>
+      }
     />
     <Route
       path="/referrals"
-      element={<AppLayout><Referrals /></AppLayout>}
+      element={
+        <AppLayout>
+          <Referrals />
+        </AppLayout>
+      }
     />
     {/* Protected Routes - Auth required */}
     <Route
@@ -225,15 +228,19 @@ const AppRoutes = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
+      {/* Atenção: O AuthProvider DEVE estar dentro do BrowserRouter 
+        (para usar hooks de navegação se necessário) mas DEVE envolver 
+        todas as rotas e componentes de UI que possam depender do user.
+      */}
+      <BrowserRouter>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <AppRoutes />
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </HelmetProvider>
   </QueryClientProvider>
 );
