@@ -228,8 +228,9 @@ export default function Jobs() {
     if (categoryFilter.trim()) query = query.ilike('category', `%${categoryFilter.trim()}%`);
 
     const band = SALARY_BANDS.find((b) => b.value === salaryBand) ?? SALARY_BANDS[0];
-    if (band.min !== null) query = query.gte('salary', band.min);
-    if (band.max !== null) query = query.lte('salary', band.max);
+    // Usa wage_from para filtrar (campo novo do sistema)
+    if (band.min !== null) query = query.gte('wage_from', band.min);
+    if (band.max !== null) query = query.lte('wage_from', band.max);
 
     const { data, error, count } = await query;
 
@@ -855,7 +856,15 @@ export default function Jobs() {
                         {job.city}, {job.state}
                       </TableCell>
                       <TableCell>{typeof job.openings === 'number' ? formatNumber(job.openings) : '-'}</TableCell>
-                      <TableCell>{formatSalary(job.salary)}</TableCell>
+                      <TableCell>
+                        {job.wage_from ? (
+                          `$${job.wage_from.toFixed(2)}/h`
+                        ) : job.salary ? (
+                          formatSalary(job.salary)
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {(() => {
                           const badgeConfig = getVisaBadgeConfig(job.visa_type);
@@ -890,7 +899,7 @@ export default function Jobs() {
                           variant={!planSettings.job_db_blur && queuedJobIds.has(job.id) ? "default" : "outline"}
                           className={cn(
                             !planSettings.job_db_blur && queuedJobIds.has(job.id) && 
-                            "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500"
+                            "bg-primary hover:bg-primary/90 text-primary-foreground border-primary"
                           )}
                           disabled={!planSettings.job_db_blur && queuedJobIds.has(job.id)}
                           onClick={(e) => {

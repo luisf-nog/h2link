@@ -959,7 +959,8 @@
       "lifting": "Carregar peso",
       "drug_screen": "Teste de drogas",
       "background_check": "Verificação antecedentes",
-      "driver_required": "CNH necessária"
+      "driver_required": "CNH necessária",
+      "website": "Visitar Site"
     },
     "values": {
       "months": "{{count}} meses",

@@ -960,7 +960,8 @@
       "lifting": "Lifting",
       "drug_screen": "Drug screen",
       "background_check": "Background check",
-      "driver_required": "Driver's license"
+      "driver_required": "Driver's license",
+      "website": "Visit Website"
     },
     "values": {
       "months": "{{count}} months",
