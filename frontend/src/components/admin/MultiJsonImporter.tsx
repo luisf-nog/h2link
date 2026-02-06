@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload, CheckCircle2, Loader2, Database } from "lucide-react";
+import { CheckCircle2, Loader2, Database } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -12,6 +12,7 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ total: 0, skipped: 0 });
   const { toast } = useToast();
 
+  // Função auxiliar para pegar valor de múltiplas chaves possíveis
   const getVal = (obj: any, keys: string[]) => {
     for (const key of keys) {
       if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "N/A" && obj[key] !== "") {
@@ -19,6 +20,15 @@ export function MultiJsonImporter() {
       }
     }
     return null;
+  };
+
+  // Função robusta para limpar dinheiro (remove $ e vírgulas)
+  const parseMoney = (obj: any, keys: string[]): number | null => {
+    const val = getVal(obj, keys);
+    if (!val) return null;
+    const clean = String(val).replace(/[$,]/g, "");
+    const num = parseFloat(clean);
+    return isNaN(num) || num === 0 ? null : num;
   };
 
   const formatToISODate = (dateStr: any) => {
@@ -37,21 +47,18 @@ export function MultiJsonImporter() {
     let skippedCount = 0;
 
     try {
-      await supabase.from("public_jobs").delete().neq("job_id", "clean_all");
+      // Limpeza opcional: descomente se quiser limpar tudo antes de importar
+      // await supabase.from('public_jobs').delete().neq('job_id', 'clean_all');
 
       const rawJobsMap = new Map();
 
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
-
-        // Estrutura unificada para processamento
         let contents: { filename: string; content: string }[] = [];
 
-        // Lógica separada para ZIP vs JSON simples (Resolve o erro do TypeScript)
         if (isZip) {
           const zip = await new JSZip().loadAsync(file);
           const entries = Object.entries(zip.files);
-
           for (const [filename, zipObj] of entries) {
             if (!zipObj.dir && filename.endsWith(".json")) {
               const text = await zipObj.async("string");
@@ -59,14 +66,13 @@ export function MultiJsonImporter() {
             }
           }
         } else {
-          // Arquivo JSON único
           const text = await file.text();
           contents.push({ filename: file.name, content: text });
         }
 
-        // Processa o conteúdo extraído
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
+          // O JSON pode ser um array direto ou um objeto contendo o array
           const list = Array.isArray(json) ? json : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
 
           let visaType = "H-2A";
@@ -74,23 +80,50 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
+            // TRUQUE DE MESTRE: Achatar o objeto H-2A
+            // No H-2A, tudo está dentro de 'clearanceOrder'. No H-2B está na raiz.
+            // Ao fazer isso, trazemos 'jobWageOffer' para o nível superior.
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // --- BLOCO DE VALIDAÇÃO DE INTEGRIDADE ---
-            const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
+            // --- VALIDAÇÃO CRÍTICA ---
+            const fein = getVal(flat, ["empFein", "employer_fein", "fein", "employerFein"]);
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
-            const start = formatToISODate(getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart"]));
-            const city = getVal(flat, ["jobCity", "job_city", "worksite_city"]);
-            const state = getVal(flat, ["jobState", "job_state", "worksite_state"]);
+            const start = formatToISODate(
+              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "beginDate"]),
+            );
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail"]);
-            const company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName"]);
 
-            if (!fein || !title || !start || !city || !state || !email || !company) {
+            // Se não tem FEIN, Título ou Data de Início, é lixo.
+            // E-mail opcional: se quiser ser rigoroso, descomente a verificação de email.
+            if (!fein || !title || !start) {
               skippedCount++;
               continue;
             }
 
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
+
+            // --- EXTRAÇÃO DE SALÁRIO UNIFICADA ---
+            const wageFrom = parseMoney(flat, [
+              "wageFrom", // H-2B Padrão
+              "jobWageOffer", // H-2A Padrão (agora na raiz graças ao flat)
+              "wageOfferFrom", // Variação
+              "BASIC_WAGE_RATE", // Gov Data
+              "tempneedWageoffer", // JO Data
+            ]);
+
+            const wageTo = parseMoney(flat, [
+              "wageTo", // H-2B Padrão
+              "jobWageTo",
+              "wageOfferTo",
+              "WAGE_OFFER_TO",
+              "tempneedWageto",
+            ]);
+
+            const wageOt = parseMoney(flat, [
+              "wageOtFrom", // H-2B Padrão
+              "overtimeWageFrom",
+              "ot_wage_from",
+            ]);
 
             const extractedJob = {
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "clearanceOrderNumber"]) || `GEN-${Math.random()}`,
@@ -99,80 +132,69 @@ export function MultiJsonImporter() {
               is_active: true,
 
               job_title: title,
-              company: company,
-              email: email,
+              company: getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "employerName"]),
+              email: email, // Pode ser null se não tiver
 
-              city: city,
-              state: state,
-              zip: getVal(flat, ["jobPostcode", "worksite_zip"]),
-              worksite_address: getVal(flat, ["jobAddr1", "worksite_address"]),
+              city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity"]),
+              state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState"]),
+              zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode"]),
+              worksite_address: getVal(flat, ["jobAddr1", "worksite_address", "empAddr1"]),
 
-              phone: getVal(flat, ["recApplyPhone", "emppocPhone"]),
-              website: getVal(flat, ["recApplyUrl", "employerWebsite"]),
+              phone: getVal(flat, ["recApplyPhone", "emppocPhone", "employerPhone"]),
+              website: getVal(flat, ["recApplyUrl", "employerWebsite", "rec_url"]),
 
               start_date: start,
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd"])),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted"])),
 
-              // Salário - Múltiplas possibilidades de campos
-              wage_from: parseFloat(getVal(flat, [
-                "jobWageOffer", "wageOfferFrom", "tempneedWageoffer", "wageOffer", 
-                "wage_from", "minWage", "wageMin", "hourlyRate", "hourlyWage",
-                "wageoffer", "WAGE_OFFER", "wageRate", "payRate"
-              ])) || null,
-              wage_to: parseFloat(getVal(flat, [
-                "jobWageTo", "wageOfferTo", "tempneedWageto", "wageTo",
-                "wage_to", "maxWage", "wageMax", "wageofferTo", "WAGE_TO"
-              ])) || null,
-              wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "tempneedWageper", "wagePer", "wageUnit", "payPer"]) || "Hour",
-              pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency", "payFrequency", "paymentFrequency"]),
+              // Novos Campos de Salário Corrigidos
+              wage_from: wageFrom,
+              wage_to: wageTo,
+              wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "wagePer", "payUnit"]) || "Hour",
+              pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
+
               overtime_available:
-                getVal(flat, ["isOvertimeAvailable", "ot_available", "overtimeAvailable"]) === 1 || 
-                getVal(flat, ["isOvertimeAvailable", "ot_available", "overtimeAvailable"]) === true ||
-                getVal(flat, ["isOvertimeAvailable", "ot_available", "overtimeAvailable"]) === "Y",
-              overtime_from: parseFloat(getVal(flat, ["overtimeWageFrom", "ot_wage_from", "overtimeFrom", "otWage"])) || null,
-              overtime_to: parseFloat(getVal(flat, ["overtimeWageTo", "ot_wage_to", "overtimeTo"])) || null,
+                getVal(flat, ["isOvertimeAvailable", "ot_available", "recIsOtAvailable"]) === 1 ||
+                flat.recIsOtAvailable === true ||
+                !!wageOt,
+              overtime_from: wageOt,
+              overtime_to: parseMoney(flat, ["wageOtTo", "overtimeWageTo"]),
 
-              // Transporte
-              transport_min_reimburse: parseFloat(getVal(flat, ["transportMinreimburse", "transportMinReimburse", "transport_min_reimburse"])) || null,
-              transport_max_reimburse: parseFloat(getVal(flat, ["transportMaxreimburse", "transportMaxReimburse", "transport_max_reimburse"])) || null,
-              transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily", "transportDescription", "transportDesc"]),
+              transport_min_reimburse: parseMoney(flat, ["transportMinreimburse"]),
+              transport_max_reimburse: parseMoney(flat, ["transportMaxreimburse"]),
+              transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily"]),
 
-              // Moradia
-              housing_type: getVal(flat, ["housingType", "housing_type", "HOUSING_TYPE"]),
-              housing_addr: getVal(flat, ["housingAddr1", "housingAddress", "housing_addr"]),
-              housing_city: getVal(flat, ["housingCity", "housing_city"]),
-              housing_state: getVal(flat, ["housingState", "housing_state"]),
-              housing_zip: getVal(flat, ["housingPostcode", "housingZip", "housing_zip"]),
-              housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity", "housingCapacity"])) || null,
-              is_meal_provision: getVal(flat, ["isMealProvision", "mealProvision"]) === 1 || getVal(flat, ["isMealProvision", "mealProvision"]) === true,
-              meal_charge: parseFloat(getVal(flat, ["mealCharge", "meal_charge"])) || null,
+              // Moradia (Forte no H-2A)
+              housing_type: getVal(flat, ["housingType", "housing_type"]),
+              housing_addr: getVal(flat, ["housingAddr1", "housingAddress"]),
+              housing_city: getVal(flat, ["housingCity"]),
+              housing_state: getVal(flat, ["housingState"]),
+              housing_zip: getVal(flat, ["housingPostcode"]),
+              housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity"])) || null,
 
-              // Experiência/Treinamento
-              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required", "minExperienceMonths", "experienceMonths"])) || null,
-              training_months: parseInt(getVal(flat, ["jobMintrainingmonths", "trainingMonths", "minTrainingMonths"])) || null,
+              is_meal_provision: getVal(flat, ["isMealProvision"]) === 1,
+              meal_charge: parseMoney(flat, ["mealCharge"]),
 
-              // Requisitos físicos
-              job_is_lifting: getVal(flat, ["jobIsLifting", "isLifting"]) === 1 || getVal(flat, ["jobIsLifting", "isLifting"]) === true,
-              job_lifting_weight: getVal(flat, ["jobLiftingWeight", "liftingWeight"]),
-              job_is_drug_screen: getVal(flat, ["jobIsDrugScreen", "drugScreen", "isDrugScreen"]) === 1 || getVal(flat, ["jobIsDrugScreen", "drugScreen"]) === true,
-              job_is_background: getVal(flat, ["jobIsBackground", "backgroundCheck", "isBackground"]) === 1 || getVal(flat, ["jobIsBackground", "backgroundCheck"]) === true,
-              job_is_driver: getVal(flat, ["jobIsDriver", "driverRequired", "isDriver"]) === 1 || getVal(flat, ["jobIsDriver", "driverRequired"]) === true,
+              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
 
-              // Horários
-              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "weeklyHours", "hoursPerWeek", "totalHours"])) || null,
-              shift_start: getVal(flat, ["jobHoursStart", "shiftStart", "startTime"]),
-              shift_end: getVal(flat, ["jobHoursEnd", "shiftEnd", "endTime"]),
+              // Booleanos (0 ou 1 nos JSONs)
+              job_is_lifting: getVal(flat, ["jobIsLifting"]) === 1,
+              job_lifting_weight: getVal(flat, ["jobLiftingWeight"]),
+              job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
+              job_is_background: getVal(flat, ["jobIsBackground"]) === 1,
+              job_is_driver: getVal(flat, ["jobIsDriver"]) === 1,
 
-              // Deveres
-              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "duties", "jobDescription"]),
-              crop_activities: flat.cropsAndActivities
-                ? flat.cropsAndActivities.map((c: any) => c.addmaCropActivity).join(", ")
-                : getVal(flat, ["crops", "crop_activities"]),
+              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "totalWorkersNeeded"])) || null,
+              shift_start: getVal(flat, ["jobHoursStart"]),
+              shift_end: getVal(flat, ["jobHoursEnd"]),
+
+              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
               openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
             };
 
+            // Lógica de Upsert (Atualizar se já existe)
             const existing = rawJobsMap.get(fingerprint);
+            // Se já existe e a nova versão tem data de postagem e a antiga não, atualiza
             if (!existing || (!existing.posted_date && extractedJob.posted_date)) {
               rawJobsMap.set(fingerprint, extractedJob);
             }
@@ -182,6 +204,7 @@ export function MultiJsonImporter() {
 
       const finalJobs = Array.from(rawJobsMap.values());
 
+      // Envio em Lotes para não travar o Supabase
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
@@ -193,11 +216,11 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Importação Concluída com Sucesso!",
-        description: `${finalJobs.length} vagas importadas. ${skippedCount} incompletas foram ignoradas.`,
+        title: "Sucesso Absoluto!",
+        description: `${finalJobs.length} vagas importadas e corrigidas.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro na Importação", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -206,16 +229,16 @@ export function MultiJsonImporter() {
 
   return (
     <Card className="shadow-xl border-2 border-primary/10">
-      <CardHeader className="bg-muted">
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Final)
+      <CardHeader className="bg-slate-50">
+        <CardTitle className="flex items-center gap-2 text-slate-800">
+          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Universal)
         </CardTitle>
-        <CardDescription>Filtra automaticamente vagas sem e-mail ou empresa para garantir integridade.</CardDescription>
+        <CardDescription>Processa H-2A, H-2B e JO. Normaliza salários automaticamente.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
-        <div className="border-dashed border-2 rounded-xl p-8 text-center bg-muted/50 hover:bg-background transition-colors">
+        <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-muted-foreground">Aceita JSON e ZIP</p>
+          <p className="mt-2 text-sm text-slate-500">Arraste seus arquivos JSON ou ZIP aqui</p>
         </div>
 
         <Button
@@ -224,16 +247,16 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar Vagas
+          Importar e Corrigir
         </Button>
 
         {stats.total > 0 && (
-          <div className="mt-4 p-4 bg-accent text-accent-foreground rounded-lg flex items-center gap-2">
+          <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" />
             <div>
-              <p className="font-bold">Processo Finalizado</p>
+              <p className="font-bold">Importação Finalizada</p>
               <p className="text-sm">
-                Vagas válidas: {stats.total} | Ignoradas (sem dados): {stats.skipped}
+                Vagas salvas: {stats.total} | Ignoradas: {stats.skipped}
               </p>
             </div>
           </div>
