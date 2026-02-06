@@ -35,13 +35,14 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
-  // --- BUSCA PROFUNDA DE SALÁRIO (Deep Search) ---
+  // --- NOVA FUNÇÃO DE BUSCA PROFUNDA ---
+  // Varre o objeto inteiro atrás de qualquer coisa que pareça um salário
   const deepFindWage = (item: any): { from: number | null; to: number | null; ot: number | null } => {
     let from = null,
       to = null,
       ot = null;
 
-    // 1. Tenta Raiz (H-2B / JO / Padrão Simples)
+    // 1. Tenta Raiz (H-2B / JO)
     from = parseMoney(item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE);
     to = parseMoney(item.wageTo || item.jobWageTo || item.wageOfferTo || item.WAGE_OFFER_TO);
     ot = parseMoney(item.wageOtFrom || item.overtimeWageFrom || item.ot_wage_from);
@@ -82,7 +83,9 @@ export function MultiJsonImporter() {
       }
     }
 
+    // Se o teto for nulo ou igual ao base, deixa nulo para o front-end tratar
     if (to === from) to = null;
+
     return { from, to, ot };
   };
 
@@ -124,6 +127,7 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
+          // O JSON pode ser um array direto ou um objeto com chave 'data'
           let list = [];
           if (Array.isArray(json)) list = json;
           else if (json.data && Array.isArray(json.data)) list = json.data;
@@ -134,14 +138,16 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
+            // Flatten inteligente apenas para campos gerais
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // --- VALIDAÇÃO DE INTEGRIDADE ---
+            // --- VALIDAÇÃO ---
             const fein = getVal(flat, ["empFein", "employer_fein", "fein", "employerFein"]);
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "beginDate"]),
             );
+            // Email é opcional para não perder vagas boas, mas recomendado
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "contactEmail"]);
             const company = getVal(flat, [
               "empBusinessName",
@@ -151,16 +157,16 @@ export function MultiJsonImporter() {
               "empName",
             ]);
 
-            // O FIX ESTÁ AQUI: !email adicionado à lista de bloqueio
-            if (!fein || !title || !start || !email || !company) {
+            // Se não tem FEIN, Título ou Data, não é uma vaga válida.
+            if (!fein || !title || !start) {
               skippedCount++;
               continue;
             }
 
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
-            // Extração de Salários com Busca Profunda
-            const wages = deepFindWage(item);
+            // --- EXTRAÇÃO DE PREÇO (DEEP SEARCH) ---
+            const wages = deepFindWage(item); // Passa o item original para acessar arrays
 
             const extractedJob = {
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "clearanceOrderNumber"]) || `GEN-${Math.random()}`,
@@ -184,7 +190,7 @@ export function MultiJsonImporter() {
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "endDate"])),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted"])),
 
-              // SALÁRIOS PREENCHIDOS
+              // SALÁRIOS CORRIGIDOS
               wage_from: wages.from,
               wage_to: wages.to,
               wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "wagePer", "payUnit"]) || "Hour",
@@ -193,7 +199,7 @@ export function MultiJsonImporter() {
               overtime_available:
                 getVal(flat, ["isOvertimeAvailable", "ot_available", "recIsOtAvailable"]) === 1 || !!wages.ot,
               overtime_from: wages.ot,
-              overtime_to: null,
+              overtime_to: null, // Geralmente não fornecido explicitamente como range
 
               transport_min_reimburse: parseMoney(getVal(flat, ["transportMinreimburse"])),
               transport_max_reimburse: parseMoney(getVal(flat, ["transportMaxreimburse"])),
@@ -226,6 +232,7 @@ export function MultiJsonImporter() {
             };
 
             const existing = rawJobsMap.get(fingerprint);
+            // Prioriza registros com data de postagem ou dados mais completos
             if (!existing || (!existing.posted_date && extractedJob.posted_date)) {
               rawJobsMap.set(fingerprint, extractedJob);
             }
@@ -246,11 +253,11 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Sucesso Total",
-        description: `Importado: ${finalJobs.length}. Ignorado (sem email): ${skippedCount}.`,
+        title: "Importação Concluída com Sucesso!",
+        description: `${finalJobs.length} vagas importadas. ${skippedCount} sem dados mínimos.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -261,11 +268,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-primary" /> Extrator V3.1 (Deep Search + Validação)
+          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Deep Search)
         </CardTitle>
-        <CardDescription>
-          Algoritmo avançado para salário + Proteção contra erro de banco (Email obrigatório).
-        </CardDescription>
+        <CardDescription>Algoritmo Deep Search para encontrar salários aninhados em H-2A, JO e H-2B.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -279,7 +284,7 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar Agora
+          Importar com Deep Search
         </Button>
 
         {stats.total > 0 && (
@@ -288,7 +293,7 @@ export function MultiJsonImporter() {
             <div>
               <p className="font-bold">Processo Finalizado</p>
               <p className="text-sm">
-                Sucesso: {stats.total} | Ignorados: {stats.skipped}
+                Vagas válidas: {stats.total} | Ignoradas: {stats.skipped}
               </p>
             </div>
           </div>
