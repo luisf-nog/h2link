@@ -1,5 +1,4 @@
 {
-  {
   "app": {
     "name": "H2 Linker"
   },
@@ -541,7 +540,7 @@
       "previous_jobs_hint": "e.g. Farm worker, Construction",
       "bio": "Short bio"
     },
-    "actions": { 
+    "actions": {
       "save": "Save resume",
       "uploading": "Uploading PDF..."
     },
@@ -645,7 +644,14 @@
       "opened_at": "Viewed at: {{date}}",
       "disclaimer": "Read confirmation depends on the recipient's privacy settings."
     },
-    "status": { "sent": "Sent", "pending": "Pending", "processing": "Processing", "failed": "Failed", "paused": "Paused", "skipped_invalid_domain": "Invalid domain" },
+    "status": {
+      "sent": "Sent",
+      "pending": "Pending",
+      "processing": "Processing",
+      "failed": "Failed",
+      "paused": "Paused",
+      "skipped_invalid_domain": "Invalid domain"
+    },
     "toasts": {
       "no_template_title": "No templates found",
       "no_template_desc": "Create at least one template in Settings before sending.",
