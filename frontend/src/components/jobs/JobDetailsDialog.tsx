@@ -152,13 +152,14 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">Ver detalhes</span>;
   };
 
-  // Helper para limpar número
+  // Helper para limpar número (apenas dígitos)
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  // --- GERADOR DE MENSAGEM (INGLÊS - SEM EXPERIÊNCIA) ---
+  // --- GERADOR DE MENSAGEM (INGLÊS) ---
   const getMessage = () => {
     if (!job) return "";
     const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
+    // Mensagem em inglês, sem mencionar experiência
     return `Hello, I am interested in the ${job.job_title} position at ${job.company}${location}. I would like to apply. Please let me know the next steps. Thank you.`;
   };
 
@@ -358,6 +359,7 @@ export function JobDetailsDialog({
 
                     {/* BOTÕES LINKS (asChild) */}
                     <div className="grid grid-cols-3 gap-2">
+                      {/* 1. LIGAR (tel:) */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -368,6 +370,8 @@ export function JobDetailsDialog({
                           <Phone className="h-4 w-4" /> Ligar
                         </a>
                       </Button>
+
+                      {/* 2. SMS (sms: + body) */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -378,6 +382,8 @@ export function JobDetailsDialog({
                           <MessageSquare className="h-4 w-4" /> SMS
                         </a>
                       </Button>
+
+                      {/* 3. WHATSAPP (wa.me) */}
                       <Button
                         variant="outline"
                         size="sm"
