@@ -1,16 +1,16 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
-import { AppFooter } from './AppFooter';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useTranslation } from 'react-i18next';
-import i18n, { isSupportedLanguage, type SupportedLanguage } from '@/i18n';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, LogIn } from 'lucide-react';
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "./AppSidebar";
+import { AppFooter } from "./AppFooter";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
+import i18n, { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Menu, LogIn } from "lucide-react";
 
 type LanguageOption = { value: SupportedLanguage; label: string };
 
@@ -23,18 +23,20 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  
+
   const options: LanguageOption[] = useMemo(
     () => [
-      { value: 'en', label: t('common.languages.en') },
-      { value: 'pt', label: t('common.languages.pt') },
-      { value: 'es', label: t('common.languages.es') },
+      { value: "en", label: t("common.languages.en") },
+      { value: "pt", label: t("common.languages.pt") },
+      { value: "es", label: t("common.languages.es") },
     ],
-    [t]
+    [t],
   );
 
-  const profileLang = isSupportedLanguage(profile?.preferred_language) ? (profile!.preferred_language as SupportedLanguage) : null;
-  const [lang, setLang] = useState<SupportedLanguage>((i18n.language as SupportedLanguage) || 'en');
+  const profileLang = isSupportedLanguage(profile?.preferred_language)
+    ? (profile!.preferred_language as SupportedLanguage)
+    : null;
+  const [lang, setLang] = useState<SupportedLanguage>((i18n.language as SupportedLanguage) || "en");
 
   // Sync UI language with profile preference when it loads/changes.
   useEffect(() => {
@@ -42,7 +44,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       i18n.changeLanguage(profileLang);
       setLang(profileLang);
       try {
-        localStorage.setItem('app_language', profileLang);
+        localStorage.setItem("app_language", profileLang);
       } catch {
         // ignore
       }
@@ -53,17 +55,14 @@ export function AppLayout({ children }: AppLayoutProps) {
     setLang(next);
     await i18n.changeLanguage(next);
     try {
-      localStorage.setItem('app_language', next);
+      localStorage.setItem("app_language", next);
     } catch {
       // ignore
     }
 
     // Persist in profile (best-effort).
     if (profile?.id) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ preferred_language: next })
-        .eq('id', profile.id);
+      const { error } = await supabase.from("profiles").update({ preferred_language: next }).eq("id", profile.id);
 
       if (!error) {
         await refreshProfile();
@@ -95,20 +94,15 @@ export function AppLayout({ children }: AppLayoutProps) {
 
             <div className="ml-auto flex items-center gap-2">
               {!user && (
-                <Button 
-                  onClick={() => navigate('/auth')}
-                  size="sm"
-                  variant="default"
-                  className="gap-2"
-                >
+                <Button onClick={() => navigate("/auth")} size="sm" variant="default" className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t('auth.actions.signin')}</span>
+                  <span className="hidden sm:inline">{t("auth.actions.signin")}</span>
                 </Button>
               )}
-              
+
               <Select value={lang} onValueChange={(v) => handleChangeLanguage(v as SupportedLanguage)}>
                 <SelectTrigger className="h-9 w-[160px]">
-                  <SelectValue placeholder={t('common.language')} />
+                  <SelectValue placeholder={t("common.language")} />
                 </SelectTrigger>
                 <SelectContent>
                   {options.map((opt) => (
@@ -120,9 +114,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Select>
             </div>
           </header>
-          <div className="flex-1 p-4 md:p-6 overflow-auto">
-            {children}
-          </div>
+          <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
           <AppFooter />
         </main>
       </div>
