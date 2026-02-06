@@ -960,7 +960,8 @@
       "lifting": "Levantar peso",
       "drug_screen": "Prueba de drogas",
       "background_check": "Verificación antecedentes",
-      "driver_required": "Licencia requerida"
+      "driver_required": "Licencia requerida",
+      "website": "Visitar Sitio"
     },
     "values": {
       "months": "{{count}} meses",

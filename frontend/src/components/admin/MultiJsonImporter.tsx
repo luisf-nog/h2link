@@ -114,42 +114,58 @@ export function MultiJsonImporter() {
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd"])),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted"])),
 
-              wage_from: parseFloat(getVal(flat, ["jobWageOffer", "wageOfferFrom", "tempneedWageoffer"])) || null,
-              wage_to: parseFloat(getVal(flat, ["jobWageTo", "wageOfferTo", "tempneedWageto"])) || null,
-              wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "tempneedWageper"]) || "Hour",
-              pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
+              // Salário - Múltiplas possibilidades de campos
+              wage_from: parseFloat(getVal(flat, [
+                "jobWageOffer", "wageOfferFrom", "tempneedWageoffer", "wageOffer", 
+                "wage_from", "minWage", "wageMin", "hourlyRate", "hourlyWage",
+                "wageoffer", "WAGE_OFFER", "wageRate", "payRate"
+              ])) || null,
+              wage_to: parseFloat(getVal(flat, [
+                "jobWageTo", "wageOfferTo", "tempneedWageto", "wageTo",
+                "wage_to", "maxWage", "wageMax", "wageofferTo", "WAGE_TO"
+              ])) || null,
+              wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "tempneedWageper", "wagePer", "wageUnit", "payPer"]) || "Hour",
+              pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency", "payFrequency", "paymentFrequency"]),
               overtime_available:
-                getVal(flat, ["isOvertimeAvailable", "ot_available"]) === 1 || flat.isOvertimeAvailable === true,
-              overtime_from: parseFloat(getVal(flat, ["overtimeWageFrom", "ot_wage_from"])) || null,
-              overtime_to: parseFloat(getVal(flat, ["overtimeWageTo", "ot_wage_to"])) || null,
+                getVal(flat, ["isOvertimeAvailable", "ot_available", "overtimeAvailable"]) === 1 || 
+                getVal(flat, ["isOvertimeAvailable", "ot_available", "overtimeAvailable"]) === true ||
+                getVal(flat, ["isOvertimeAvailable", "ot_available", "overtimeAvailable"]) === "Y",
+              overtime_from: parseFloat(getVal(flat, ["overtimeWageFrom", "ot_wage_from", "overtimeFrom", "otWage"])) || null,
+              overtime_to: parseFloat(getVal(flat, ["overtimeWageTo", "ot_wage_to", "overtimeTo"])) || null,
 
-              transport_min_reimburse: parseFloat(getVal(flat, ["transportMinreimburse"])) || null,
-              transport_max_reimburse: parseFloat(getVal(flat, ["transportMaxreimburse"])) || null,
-              transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily"]),
+              // Transporte
+              transport_min_reimburse: parseFloat(getVal(flat, ["transportMinreimburse", "transportMinReimburse", "transport_min_reimburse"])) || null,
+              transport_max_reimburse: parseFloat(getVal(flat, ["transportMaxreimburse", "transportMaxReimburse", "transport_max_reimburse"])) || null,
+              transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily", "transportDescription", "transportDesc"]),
 
-              housing_type: getVal(flat, ["housingType", "housing_type"]),
-              housing_addr: getVal(flat, ["housingAddr1"]),
-              housing_city: getVal(flat, ["housingCity"]),
-              housing_state: getVal(flat, ["housingState"]),
-              housing_zip: getVal(flat, ["housingPostcode"]),
-              housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity"])) || null,
-              is_meal_provision: getVal(flat, ["isMealProvision"]) === 1,
-              meal_charge: parseFloat(getVal(flat, ["mealCharge"])) || null,
+              // Moradia
+              housing_type: getVal(flat, ["housingType", "housing_type", "HOUSING_TYPE"]),
+              housing_addr: getVal(flat, ["housingAddr1", "housingAddress", "housing_addr"]),
+              housing_city: getVal(flat, ["housingCity", "housing_city"]),
+              housing_state: getVal(flat, ["housingState", "housing_state"]),
+              housing_zip: getVal(flat, ["housingPostcode", "housingZip", "housing_zip"]),
+              housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity", "housingCapacity"])) || null,
+              is_meal_provision: getVal(flat, ["isMealProvision", "mealProvision"]) === 1 || getVal(flat, ["isMealProvision", "mealProvision"]) === true,
+              meal_charge: parseFloat(getVal(flat, ["mealCharge", "meal_charge"])) || null,
 
-              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
-              training_months: parseInt(getVal(flat, ["jobMintrainingmonths"])) || null,
+              // Experiência/Treinamento
+              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required", "minExperienceMonths", "experienceMonths"])) || null,
+              training_months: parseInt(getVal(flat, ["jobMintrainingmonths", "trainingMonths", "minTrainingMonths"])) || null,
 
-              job_is_lifting: getVal(flat, ["jobIsLifting"]) === 1,
-              job_lifting_weight: getVal(flat, ["jobLiftingWeight"]),
-              job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
-              job_is_background: getVal(flat, ["jobIsBackground"]) === 1,
-              job_is_driver: getVal(flat, ["jobIsDriver"]) === 1,
+              // Requisitos físicos
+              job_is_lifting: getVal(flat, ["jobIsLifting", "isLifting"]) === 1 || getVal(flat, ["jobIsLifting", "isLifting"]) === true,
+              job_lifting_weight: getVal(flat, ["jobLiftingWeight", "liftingWeight"]),
+              job_is_drug_screen: getVal(flat, ["jobIsDrugScreen", "drugScreen", "isDrugScreen"]) === 1 || getVal(flat, ["jobIsDrugScreen", "drugScreen"]) === true,
+              job_is_background: getVal(flat, ["jobIsBackground", "backgroundCheck", "isBackground"]) === 1 || getVal(flat, ["jobIsBackground", "backgroundCheck"]) === true,
+              job_is_driver: getVal(flat, ["jobIsDriver", "driverRequired", "isDriver"]) === 1 || getVal(flat, ["jobIsDriver", "driverRequired"]) === true,
 
-              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "totalWorkersNeeded"])) || null,
-              shift_start: getVal(flat, ["jobHoursStart"]),
-              shift_end: getVal(flat, ["jobHoursEnd"]),
+              // Horários
+              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "weeklyHours", "hoursPerWeek", "totalHours"])) || null,
+              shift_start: getVal(flat, ["jobHoursStart", "shiftStart", "startTime"]),
+              shift_end: getVal(flat, ["jobHoursEnd", "shiftEnd", "endTime"]),
 
-              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
+              // Deveres
+              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "duties", "jobDescription"]),
               crop_activities: flat.cropsAndActivities
                 ? flat.cropsAndActivities.map((c: any) => c.addmaCropActivity).join(", ")
                 : getVal(flat, ["crops", "crop_activities"]),
@@ -190,16 +206,16 @@ export function MultiJsonImporter() {
 
   return (
     <Card className="shadow-xl border-2 border-primary/10">
-      <CardHeader className="bg-slate-50">
-        <CardTitle className="flex items-center gap-2 text-slate-800">
+      <CardHeader className="bg-muted">
+        <CardTitle className="flex items-center gap-2 text-foreground">
           <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Final)
         </CardTitle>
         <CardDescription>Filtra automaticamente vagas sem e-mail ou empresa para garantir integridade.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
-        <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
+        <div className="border-dashed border-2 rounded-xl p-8 text-center bg-muted/50 hover:bg-background transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">Aceita JSON e ZIP</p>
+          <p className="mt-2 text-sm text-muted-foreground">Aceita JSON e ZIP</p>
         </div>
 
         <Button
@@ -212,7 +228,7 @@ export function MultiJsonImporter() {
         </Button>
 
         {stats.total > 0 && (
-          <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
+          <div className="mt-4 p-4 bg-accent text-accent-foreground rounded-lg flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" />
             <div>
               <p className="font-bold">Processo Finalizado</p>

@@ -243,9 +243,9 @@ export function JobDetailsDialog({
         </DialogHeader>
 
         {job && isEarlyAccess(job.visa_type) && (
-          <Alert variant="destructive" className="bg-purple-50 border-purple-200 shrink-0">
-            <AlertTriangle className="h-4 w-4 text-purple-600" />
-            <AlertDescription className="text-purple-900">{getEarlyAccessDisclaimer(i18n.language)}</AlertDescription>
+          <Alert variant="destructive" className="bg-primary/10 border-primary/30 shrink-0">
+            <AlertTriangle className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-foreground">{getEarlyAccessDisclaimer(i18n.language)}</AlertDescription>
           </Alert>
         )}
 
@@ -296,7 +296,7 @@ export function JobDetailsDialog({
                   </div>
                   {/* Exibe Hora Extra com Range se disponível */}
                   {overtimeText && (
-                    <div className="flex justify-between text-green-700 font-bold bg-green-50 px-2 py-1 rounded -mx-2">
+                    <div className="flex justify-between text-accent-foreground font-bold bg-accent px-2 py-1 rounded -mx-2">
                       <span>{t("job_details.fields.overtime")}:</span>
                       <span>{overtimeText}</span>
                     </div>
@@ -342,10 +342,10 @@ export function JobDetailsDialog({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Moradia Card */}
-                    <div className="bg-slate-50 p-3 rounded border space-y-2">
+                    <div className="bg-muted/50 p-3 rounded border space-y-2">
                       <div className="flex justify-between items-start">
                         <span className="font-medium flex items-center gap-2 text-sm">
-                          <Home className="h-3 w-3" /> {job?.housing_type || "Moradia"}
+                          <Home className="h-3 w-3" /> {job?.housing_type || t("job_details.sections.housing")}
                         </span>
                         <Badge variant={job?.housing_type ? "default" : "outline"} className="text-[10px]">
                           {job?.housing_capacity ? `${job.housing_capacity} Cap.` : "Info"}
@@ -360,29 +360,29 @@ export function JobDetailsDialog({
                           </span>
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground">{job?.housing_info || "Detalhes sob consulta"}</p>
+                        <p className="text-xs text-muted-foreground">{job?.housing_info || t("job_details.values.not_provided")}</p>
                       )}
 
                       {job?.is_meal_provision && (
-                        <div className="text-xs flex items-center gap-1 text-green-700">
+                        <div className="text-xs flex items-center gap-1 text-primary">
                           <Utensils className="h-3 w-3" />
-                          {job.meal_charge ? `Refeições: $${job.meal_charge}/dia` : "Refeições Fornecidas"}
+                          {job.meal_charge ? `${t("job_details.fields.meals")}: $${job.meal_charge}/${t("common.day", "dia")}` : t("job_details.fields.meals")}
                         </div>
                       )}
                     </div>
 
                     {/* Transporte Card */}
-                    <div className="bg-slate-50 p-3 rounded border space-y-2">
+                    <div className="bg-muted/50 p-3 rounded border space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="font-medium flex items-center gap-2 text-sm">
-                          <Car className="h-3 w-3" /> Transporte
+                          <Car className="h-3 w-3" /> {t("job_details.fields.transport")}
                         </span>
                         <span className="text-xs font-bold">{yesNo(job?.transport_provided)}</span>
                       </div>
 
                       {(job?.transport_min_reimburse || job?.transport_max_reimburse) && (
-                        <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded inline-block">
-                          Reembolso: ${job?.transport_min_reimburse} - ${job?.transport_max_reimburse}
+                        <div className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded inline-block">
+                          {t("job_details.fields.transport_reimburse")}: ${job?.transport_min_reimburse} - ${job?.transport_max_reimburse}
                         </div>
                       )}
 
@@ -403,57 +403,57 @@ export function JobDetailsDialog({
             <div className="space-y-3">
               <h4 className="text-sm font-semibold flex items-center gap-2">
                 <Shield className="h-4 w-4 text-primary" />
-                {t("job_details.sections.requirements")}
+                {t("job_details.sections.physical_requirements")}
               </h4>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div
                   className={cn(
                     "flex flex-col items-center p-3 rounded border text-center gap-2",
-                    job?.job_is_lifting ? "bg-red-50 border-red-200" : "bg-slate-50",
+                    job?.job_is_lifting ? "bg-destructive/10 border-destructive/30" : "bg-muted/50",
                   )}
                 >
                   <Weight className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Levantar Peso</span>
+                  <span className="text-xs font-medium">{t("job_details.fields.lifting")}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {job?.job_is_lifting ? job.job_lifting_weight || "Sim" : "Não"}
+                    {job?.job_is_lifting ? job.job_lifting_weight || t("common.yes") : t("common.no")}
                   </span>
                 </div>
 
                 <div
                   className={cn(
                     "flex flex-col items-center p-3 rounded border text-center gap-2",
-                    job?.job_is_driver ? "bg-blue-50 border-blue-200" : "bg-slate-50",
+                    job?.job_is_driver ? "bg-primary/10 border-primary/30" : "bg-muted/50",
                   )}
                 >
                   <Car className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Motorista</span>
-                  <span className="text-[10px] text-muted-foreground">{job?.job_is_driver ? "Requer CNH" : "Não"}</span>
+                  <span className="text-xs font-medium">{t("job_details.fields.driver_required")}</span>
+                  <span className="text-[10px] text-muted-foreground">{job?.job_is_driver ? t("common.yes") : t("common.no")}</span>
                 </div>
 
                 <div
                   className={cn(
                     "flex flex-col items-center p-3 rounded border text-center gap-2",
-                    job?.job_is_drug_screen ? "bg-yellow-50 border-yellow-200" : "bg-slate-50",
+                    job?.job_is_drug_screen ? "bg-warning/10 border-warning/30" : "bg-muted/50",
                   )}
                 >
                   <FileCheck className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Anti-Drogas</span>
+                  <span className="text-xs font-medium">{t("job_details.fields.drug_screen")}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {job?.job_is_drug_screen ? "Obrigatório" : "Não"}
+                    {job?.job_is_drug_screen ? t("common.yes") : t("common.no")}
                   </span>
                 </div>
 
                 <div
                   className={cn(
                     "flex flex-col items-center p-3 rounded border text-center gap-2",
-                    job?.experience_months ? "bg-green-50 border-green-200" : "bg-slate-50",
+                    job?.experience_months ? "bg-accent/50 border-accent" : "bg-muted/50",
                   )}
                 >
                   <Briefcase className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Experiência</span>
+                  <span className="text-xs font-medium">{t("job_details.fields.experience")}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {job?.experience_months ? `${job.experience_months} meses` : "Nenhuma"}
+                    {job?.experience_months ? t("job_details.values.months", { count: job.experience_months }) : "-"}
                   </span>
                 </div>
               </div>
@@ -480,7 +480,7 @@ export function JobDetailsDialog({
             <Separator />
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">{t("job_details.sections.contact")}</h3>
-              <div className="rounded-md border p-4 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="rounded-md border p-4 bg-muted/50 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
@@ -497,9 +497,9 @@ export function JobDetailsDialog({
                       href={job.website}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-primary hover:underline"
                     >
-                      Visitar Site da Empresa
+                      {t("job_details.fields.website", "Visitar Site")}
                     </a>
                   )}
                 </div>
