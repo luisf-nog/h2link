@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, Database } from "lucide-react";
+import { CheckCircle2, Loader2, Database, AlertTriangle } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -12,17 +12,15 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ total: 0, skipped: 0 });
   const { toast } = useToast();
 
-  // Função auxiliar para pegar valor de múltiplas chaves possíveis
   const getVal = (obj: any, keys: string[]) => {
     for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "N/A" && obj[key] !== "") {
+      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "N/A" && obj[key] !== "" && obj[key] !== "n/a") {
         return obj[key];
       }
     }
     return null;
   };
 
-  // Função robusta para limpar dinheiro (remove $ e vírgulas)
   const parseMoney = (obj: any, keys: string[]): number | null => {
     const val = getVal(obj, keys);
     if (!val) return null;
@@ -47,9 +45,6 @@ export function MultiJsonImporter() {
     let skippedCount = 0;
 
     try {
-      // Limpeza opcional: descomente se quiser limpar tudo antes de importar
-      // await supabase.from('public_jobs').delete().neq('job_id', 'clean_all');
-
       const rawJobsMap = new Map();
 
       for (const file of files) {
@@ -72,7 +67,6 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
-          // O JSON pode ser um array direto ou um objeto contendo o array
           const list = Array.isArray(json) ? json : (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
 
           let visaType = "H-2A";
@@ -80,50 +74,36 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
-            // TRUQUE DE MESTRE: Achatar o objeto H-2A
-            // No H-2A, tudo está dentro de 'clearanceOrder'. No H-2B está na raiz.
-            // Ao fazer isso, trazemos 'jobWageOffer' para o nível superior.
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // --- VALIDAÇÃO CRÍTICA ---
+            // --- VALIDAÇÃO DE INTEGRIDADE (CORRIGIDA) ---
             const fein = getVal(flat, ["empFein", "employer_fein", "fein", "employerFein"]);
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "beginDate"]),
             );
-            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail"]);
 
-            // Se não tem FEIN, Título ou Data de Início, é lixo.
-            // E-mail opcional: se quiser ser rigoroso, descomente a verificação de email.
-            if (!fein || !title || !start) {
+            // CORREÇÃO: O banco exige e-mail (NOT NULL). Se não tiver, pula.
+            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "contactEmail"]);
+            const company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "employerName"]);
+
+            if (!fein || !title || !start || !email || !company) {
               skippedCount++;
-              continue;
+              continue; // Ignora silenciosamente a vaga incompleta
             }
 
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
-            // --- EXTRAÇÃO DE SALÁRIO UNIFICADA ---
+            // Extração de Salários
             const wageFrom = parseMoney(flat, [
-              "wageFrom", // H-2B Padrão
-              "jobWageOffer", // H-2A Padrão (agora na raiz graças ao flat)
-              "wageOfferFrom", // Variação
-              "BASIC_WAGE_RATE", // Gov Data
-              "tempneedWageoffer", // JO Data
+              "wageFrom",
+              "jobWageOffer",
+              "wageOfferFrom",
+              "BASIC_WAGE_RATE",
+              "tempneedWageoffer",
             ]);
-
-            const wageTo = parseMoney(flat, [
-              "wageTo", // H-2B Padrão
-              "jobWageTo",
-              "wageOfferTo",
-              "WAGE_OFFER_TO",
-              "tempneedWageto",
-            ]);
-
-            const wageOt = parseMoney(flat, [
-              "wageOtFrom", // H-2B Padrão
-              "overtimeWageFrom",
-              "ot_wage_from",
-            ]);
+            const wageTo = parseMoney(flat, ["wageTo", "jobWageTo", "wageOfferTo", "WAGE_OFFER_TO", "tempneedWageto"]);
+            const wageOt = parseMoney(flat, ["wageOtFrom", "overtimeWageFrom", "ot_wage_from"]);
 
             const extractedJob = {
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "clearanceOrderNumber"]) || `GEN-${Math.random()}`,
@@ -132,8 +112,8 @@ export function MultiJsonImporter() {
               is_active: true,
 
               job_title: title,
-              company: getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "employerName"]),
-              email: email, // Pode ser null se não tiver
+              company: company,
+              email: email, // Agora garantido que existe
 
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState"]),
@@ -147,7 +127,6 @@ export function MultiJsonImporter() {
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd"])),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted"])),
 
-              // Novos Campos de Salário Corrigidos
               wage_from: wageFrom,
               wage_to: wageTo,
               wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "wagePer", "payUnit"]) || "Hour",
@@ -164,7 +143,6 @@ export function MultiJsonImporter() {
               transport_max_reimburse: parseMoney(flat, ["transportMaxreimburse"]),
               transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily"]),
 
-              // Moradia (Forte no H-2A)
               housing_type: getVal(flat, ["housingType", "housing_type"]),
               housing_addr: getVal(flat, ["housingAddr1", "housingAddress"]),
               housing_city: getVal(flat, ["housingCity"]),
@@ -177,7 +155,6 @@ export function MultiJsonImporter() {
 
               experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
 
-              // Booleanos (0 ou 1 nos JSONs)
               job_is_lifting: getVal(flat, ["jobIsLifting"]) === 1,
               job_lifting_weight: getVal(flat, ["jobLiftingWeight"]),
               job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
@@ -192,9 +169,7 @@ export function MultiJsonImporter() {
               openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
             };
 
-            // Lógica de Upsert (Atualizar se já existe)
             const existing = rawJobsMap.get(fingerprint);
-            // Se já existe e a nova versão tem data de postagem e a antiga não, atualiza
             if (!existing || (!existing.posted_date && extractedJob.posted_date)) {
               rawJobsMap.set(fingerprint, extractedJob);
             }
@@ -204,7 +179,6 @@ export function MultiJsonImporter() {
 
       const finalJobs = Array.from(rawJobsMap.values());
 
-      // Envio em Lotes para não travar o Supabase
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
@@ -216,11 +190,11 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Sucesso Absoluto!",
-        description: `${finalJobs.length} vagas importadas e corrigidas.`,
+        title: "Importação Concluída",
+        description: `Salvos: ${finalJobs.length}. Ignorados (Sem Email/Dados): ${skippedCount}.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro na Importação", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -231,14 +205,14 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Universal)
+          <Database className="h-6 w-6 text-primary" /> Extrator Data Miner V3 (Blindado)
         </CardTitle>
-        <CardDescription>Processa H-2A, H-2B e JO. Normaliza salários automaticamente.</CardDescription>
+        <CardDescription>Apenas vagas completas (com Email e Empresa) serão importadas.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">Arraste seus arquivos JSON ou ZIP aqui</p>
+          <p className="mt-2 text-sm text-slate-500">Aceita JSON e ZIP</p>
         </div>
 
         <Button
@@ -247,16 +221,17 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar e Corrigir
+          Importar (Ignorar Incompletos)
         </Button>
 
         {stats.total > 0 && (
           <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" />
             <div>
-              <p className="font-bold">Importação Finalizada</p>
+              <p className="font-bold">Processo Finalizado</p>
               <p className="text-sm">
-                Vagas salvas: {stats.total} | Ignoradas: {stats.skipped}
+                Vagas válidas: {stats.total} |{" "}
+                <span className="text-red-600 font-bold">Ignoradas (sem email): {stats.skipped}</span>
               </p>
             </div>
           </div>
