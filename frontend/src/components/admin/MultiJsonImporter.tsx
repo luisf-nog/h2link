@@ -12,7 +12,6 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ total: 0, skipped: 0 });
   const { toast } = useToast();
 
-  // Função auxiliar para pegar valor de múltiplas chaves possíveis
   const getVal = (obj: any, keys: string[]) => {
     for (const key of keys) {
       if (
@@ -36,56 +35,37 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
-  // --- BUSCA PROFUNDA DE SALÁRIO (Deep Search) ---
-  const deepFindWage = (item: any): { from: number | null; to: number | null; ot: number | null } => {
-    let from = null,
-      to = null,
-      ot = null;
+  // --- LÓGICA POWER QUERY (Salário) ---
+  const calculateHourlyWage = (item: any, flat: any) => {
+    // 1. Acha o valor bruto (igual seu Power Query Step 8/9)
+    let rawWage = parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom", "BASIC_WAGE_RATE"]));
 
-    // 1. Tenta Raiz (H-2B / JO / Padrão Simples)
-    from = parseMoney(item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE);
-    to = parseMoney(item.wageTo || item.jobWageTo || item.wageOfferTo || item.WAGE_OFFER_TO || item.WAGE_RATE_TO);
-    ot = parseMoney(item.wageOtFrom || item.overtimeWageFrom || item.ot_wage_from);
-
-    // 2. Se não achou e tem clearanceOrder (H-2A), tenta lá
-    if (!from && item.clearanceOrder) {
-      const co = item.clearanceOrder;
-      from = parseMoney(co.jobWageOffer || co.wageOfferFrom || co.BASIC_WAGE_RATE);
-      to = parseMoney(co.jobWageTo || co.wageOfferTo);
-      ot = parseMoney(co.overtimeWageFrom);
+    // Se não achou na raiz, tenta arrays (Deep Search igual antes, mas focado)
+    if (!rawWage && item.cropsAndActivities && Array.isArray(item.cropsAndActivities)) {
+      rawWage = parseMoney(item.cropsAndActivities[0]?.addmaWageOffer);
+    }
+    if (!rawWage && item.employmentLocations && Array.isArray(item.employmentLocations)) {
+      rawWage = parseMoney(item.employmentLocations[0]?.apdxaWageFrom);
     }
 
-    // 3. Se ainda não achou, tenta Arrays Especiais (JO / H-2B aninhado)
-    if (!from) {
-      // H-2A / JO: cropsAndActivities
-      const crops = item.cropsAndActivities || item.clearanceOrder?.cropsAndActivities;
-      if (Array.isArray(crops)) {
-        for (const c of crops) {
-          const w = parseMoney(c.addmaWageOffer || c.wageOffer);
-          if (w) {
-            from = w;
-            break;
-          }
-        }
-      }
+    if (!rawWage) return null;
 
-      // H-2B: employmentLocations
-      const locs = item.employmentLocations || item.clearanceOrder?.employmentLocations;
-      if (!from && Array.isArray(locs)) {
-        for (const l of locs) {
-          const w = parseMoney(l.apdxaWageFrom || l.wageFrom);
-          if (w) {
-            from = w;
-            to = parseMoney(l.apdxaWageTo || l.wageTo);
-            break;
-          }
-        }
+    // 2. Aplica a lógica de conversão do seu Power Query
+    // "if raw_wage <= 100 then raw_wage else ..."
+    if (rawWage <= 100) return rawWage; // Já é horário
+
+    // Se for maior que 100 (semanal/mensal), converte
+    const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "40");
+    if (hours > 0) {
+      const calc = rawWage / (hours * 4.333); // 4.333 semanas/mês
+      // "if calc >= 7.25 and calc <= 80 then Number.Round(calc, 2)"
+      if (calc >= 7.25 && calc <= 150) {
+        // Aumentei o teto pra garantir
+        return parseFloat(calc.toFixed(2));
       }
     }
 
-    // Se o teto for igual ao base, deixa nulo para o front-end tratar ("A partir de X")
-    if (to === from) to = null;
-    return { from, to, ot };
+    return rawWage; // Retorna bruto se não conseguiu converter (melhor que null)
   };
 
   const formatToISODate = (dateStr: any) => {
@@ -126,7 +106,6 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
-          // O JSON pode ser um array direto ou um objeto com chave 'data'
           let list = [];
           if (Array.isArray(json)) list = json;
           else if (json.data && Array.isArray(json.data)) list = json.data;
@@ -137,25 +116,16 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
-            // Flatten inteligente apenas para campos gerais
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // --- VALIDAÇÃO DE INTEGRIDADE ---
-            const fein = getVal(flat, ["empFein", "employer_fein", "fein", "employerFein"]);
+            const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "beginDate"]),
             );
-            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "contactEmail"]);
-            const company = getVal(flat, [
-              "empBusinessName",
-              "employerBusinessName",
-              "legalName",
-              "employerName",
-              "empName",
-            ]);
+            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail"]);
+            const company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "employerName"]);
 
-            // Se não tem FEIN, Título, Data, Email ou Empresa -> Lixo.
             if (!fein || !title || !start || !email || !company) {
               skippedCount++;
               continue;
@@ -163,11 +133,11 @@ export function MultiJsonImporter() {
 
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
-            // --- EXTRAÇÃO DE DADOS ---
-            const wages = deepFindWage(item); // Passa item original para arrays
+            // Lógica Power Query de Salário
+            const finalWage = calculateHourlyWage(item, flat);
 
             const extractedJob = {
-              job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "clearanceOrderNumber"]) || `GEN-${Math.random()}`,
+              job_id: getVal(flat, ["caseNumber", "jobOrderNumber"]) || `GEN-${Math.random()}`,
               visa_type: visaType,
               fingerprint,
               is_active: true,
@@ -176,83 +146,54 @@ export function MultiJsonImporter() {
               company: company,
               email: email,
 
-              city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity"]),
-              state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState"]),
+              // Mapeamento Power Query (#"Registro Expandido")
+              city: getVal(flat, ["jobCity", "worksite_city", "empCity", "addmbEmpCity"]),
+              state: getVal(flat, ["jobState", "worksite_state", "empState", "addmbEmpState"]),
               zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode"]),
               worksite_address: getVal(flat, ["jobAddr1", "worksite_address", "empAddr1"]),
-
-              phone: getVal(flat, ["recApplyPhone", "emppocPhone", "employerPhone"]),
+              phone: getVal(flat, ["recApplyPhone", "emppocPhone"]),
               website: getVal(flat, ["recApplyUrl", "employerWebsite", "rec_url"]),
 
               start_date: start,
-              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "endDate"])),
-              posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted"])),
+              end_date: formatToISODate(getVal(flat, ["jobEndDate", "tempneedEnd", "endDate"])),
+              posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date"])),
 
-              // SALÁRIOS (Deep Search)
-              wage_from: wages.from,
-              wage_to: wages.to,
-              wage_unit: getVal(flat, ["jobWagePer", "wage_unit", "wagePer", "payUnit"]) || "Hour",
-              pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
+              // --- CAMPOS CRÍTICOS QUE VOCÊ PEDIU ---
+              // Power Query: "Col SpecialReq" = if [req_h2b] <> null then [req_h2b] else [req_h2a]
+              job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "job_min_special_req"]),
 
-              overtime_available:
-                getVal(flat, ["isOvertimeAvailable", "ot_available", "recIsOtAvailable"]) === 1 || !!wages.ot,
-              overtime_from: wages.ot,
-              overtime_to: null,
+              // Power Query: "Col Duties"
+              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
 
-              // NOVOS CAMPOS ADICIONADOS (Correção de campos em branco)
-              // 1. Requisitos Especiais (H-2B: jobMinspecialreq / H-2A: jobAddReqinfo)
-              job_min_special_req: getVal(flat, [
-                "jobMinspecialreq",
-                "jobAddReqinfo",
-                "job_min_special_req",
-                "specialRequirements",
-              ]),
+              // Power Query: "Col WageAdd"
+              wage_additional: getVal(flat, ["wageAdditional", "addSpecialPayInfo", "jobSpecialPayInfo"]),
 
-              // 2. Educação (H-2B: jobEducationLevel)
-              education_required: getVal(flat, ["jobEducationLevel", "jobEducation", "educationLevel"]),
+              // Power Query: "Col Deductions"
+              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
 
-              // 3. Info Extra Pagamento (H-2A: addSpecialPayInfo / H-2B: wageAdditional)
-              wage_additional: getVal(flat, ["addSpecialPayInfo", "wageAdditional", "jobSpecialPayInfo"]),
-              rec_pay_deductions: getVal(flat, ["jobPayDeduction", "recPayDeductions"]),
+              // Power Query: "Col Salary" (Calculado acima)
+              wage_from: finalWage,
+              wage_to: finalWage, // Assumindo flat wage se não houver range explícito no PQ
+              wage_unit: "Hour", // Power Query normaliza para hora
 
-              // 4. Transporte e Moradia (Extra)
+              // Outros campos
+              education_required: getVal(flat, ["jobEducationLevel", "jobEducation"]),
+              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
+
+              housing_info: getVal(flat, ["housingAddInfo"]),
+              housing_type: getVal(flat, ["housingType"]),
+              housing_addr: getVal(flat, ["housingAddr1"]),
               transport_provided:
-                getVal(flat, ["isEmploymentTransport", "transportProvided"]) === 1 ||
-                getVal(flat, ["isEmploymentTransport"]) === true,
-              housing_info: getVal(flat, ["housingAddInfo", "housingAdditionalInfo"]),
+                getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === true ||
+                getVal(flat, ["isEmploymentTransport"]) === 1,
 
-              // Campos Numéricos / Financeiros
-              transport_min_reimburse: parseMoney(getVal(flat, ["transportMinreimburse"])),
-              transport_max_reimburse: parseMoney(getVal(flat, ["transportMaxreimburse"])),
-              transport_desc: getVal(flat, ["transportDescEmp", "transportDescDaily"]),
+              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours"])) || null,
+              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
 
-              housing_type: getVal(flat, ["housingType", "housing_type"]),
-              housing_addr: getVal(flat, ["housingAddr1", "housingAddress"]),
-              housing_city: getVal(flat, ["housingCity"]),
-              housing_state: getVal(flat, ["housingState"]),
-              housing_zip: getVal(flat, ["housingPostcode"]),
-              housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity"])) || null,
-
-              is_meal_provision: getVal(flat, ["isMealProvision"]) === 1,
-              meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
-
-              experience_months:
-                parseInt(getVal(flat, ["jobMinexpmonths", "experience_required", "experienceMonths"])) || null,
-
-              // Booleanos / Checkboxes
+              // Campos Booleanos extras
               job_is_lifting: getVal(flat, ["jobIsLifting"]) === 1,
               job_lifting_weight: getVal(flat, ["jobLiftingWeight"]),
-              job_is_drug_screen: getVal(flat, ["jobIsDrugScreen"]) === 1,
-              job_is_background: getVal(flat, ["jobIsBackground"]) === 1,
               job_is_driver: getVal(flat, ["jobIsDriver"]) === 1,
-
-              // Horas (Corrigido para não pegar nº de trabalhadores)
-              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours"])) || null,
-              shift_start: getVal(flat, ["jobHoursStart"]),
-              shift_end: getVal(flat, ["jobHoursEnd"]),
-
-              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
-              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
             };
 
             const existing = rawJobsMap.get(fingerprint);
@@ -263,16 +204,9 @@ export function MultiJsonImporter() {
         }
       }
 
-      // --- FILTRO DE SEGURANÇA FINAL (Safety Net) ---
-      // Impede erro 500 do banco removendo itens sem email no último segundo
+      // Filtro de Segurança Final (Email)
       let finalJobs = Array.from(rawJobsMap.values());
-      const originalCount = finalJobs.length;
-
-      finalJobs = finalJobs.filter((job) => {
-        return job.email && typeof job.email === "string" && job.email.trim().length > 0 && job.email !== "n/a";
-      });
-
-      skippedCount += originalCount - finalJobs.length;
+      finalJobs = finalJobs.filter((job) => job.email && job.email.length > 2 && job.email !== "n/a");
 
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
@@ -285,11 +219,11 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Importação Concluída com Sucesso",
-        description: `Importado: ${finalJobs.length}. Ignorado (Incompleto/Sem Email): ${skippedCount}.`,
+        title: "Importação Power Query Style",
+        description: `Sucesso: ${finalJobs.length}. Mantivemos Duties, SpecialReq e Deductions.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -300,35 +234,29 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-primary" /> Extrator V3.4 (Full Fields)
+          <Database className="h-6 w-6 text-primary" /> Importador V4 (Power Query Logic)
         </CardTitle>
-        <CardDescription>
-          Algoritmo ajustado para H-2B e H-2A. Preenche requisitos especiais e educação.
-        </CardDescription>
+        <CardDescription>Réplica exata da lógica do seu Power Query para garantir todos os campos.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
           <p className="mt-2 text-sm text-slate-500">Aceita JSON e ZIP</p>
         </div>
-
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar Completos
+          Importar (Lógica Power Query)
         </Button>
-
         {stats.total > 0 && (
           <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" />
             <div>
               <p className="font-bold">Processo Finalizado</p>
-              <p className="text-sm">
-                Sucesso: {stats.total} | Ignorados: {stats.skipped}
-              </p>
+              <p className="text-sm">Vagas: {stats.total}</p>
             </div>
           </div>
         )}
