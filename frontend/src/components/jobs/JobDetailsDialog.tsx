@@ -36,9 +36,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { isMobileNumber, getWhatsAppUrl, getSmsUrl, getPhoneCallUrl } from "@/lib/phone";
 
-// Mantendo o mesmo tipo JobDetails (omitido para brevidade, mas o código usa o mesmo)
 export type JobDetails = {
-  // ... (mesmos campos de antes)
   id: string;
   job_id: string;
   visa_type: "H-2B" | "H-2A" | string | null;
@@ -147,6 +145,13 @@ export function JobDetailsDialog({
     return Number.isNaN(d.getTime())
       ? "-"
       : d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+  };
+
+  // --- A FUNÇÃO QUE FALTAVA ---
+  const yesNo = (v: boolean | null | undefined) => {
+    if (v === true) return t("common.yes", "Sim");
+    if (v === false) return t("common.no", "Não");
+    return "-";
   };
 
   const renderMainWage = () => {
