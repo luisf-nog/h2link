@@ -1,4 +1,5 @@
 {
+  {
   "app": {
     "name": "H2 Linker"
   },
@@ -9,130 +10,6 @@
     "benefit": "✨ Create your free account and start automating your H-2A/H-2B job applications!",
     "ctaLogin": "Sign In / Create Account",
     "ctaContinue": "Continue Browsing"
-  },
-  "auth": {
-    "browse_jobs": "Explore Available Jobs",
-    "browse_jobs_hint": "Browse without account • Free access"
-  },
-  "footer": {
-    "tagline": "Smart connections. Real opportunities.",
-    "terms": "Terms of Use",
-    "privacy": "Privacy Policy"
-  },
-  "reports": {
-    "button": "Report issue",
-    "reasons": {
-      "invalid_email": "Invalid email",
-      "inactive_job": "Inactive job",
-      "wrong_info": "Wrong information",
-      "spam": "Spam/Scam",
-      "other": "Other issue"
-    },
-    "warning_tooltip": "⚠️ Caution: {{count}} user(s) reported: {{reasons}}",
-    "toasts": {
-      "success_title": "Thanks for the feedback!",
-      "success_desc": "Your report was sent and helps us maintain job quality.",
-      "already_reported_title": "Already reported",
-      "already_reported_desc": "You have already flagged an issue with this job."
-    }
-  },
-  "onboarding": {
-    "step": "Step {{current}} of {{total}}",
-    "welcome": {
-      "title": "Welcome to H2 Linker!",
-      "description": "Let's set up your account to start sending job applications safely.",
-      "step1_title": "Connect your email",
-      "step1_desc": "Set up SMTP with your Gmail or Outlook account.",
-      "step2_title": "Choose your sending speed",
-      "step2_desc": "Configure email warm-up to protect your reputation.",
-      "step3_title": "Start applying",
-      "step3_desc": "Browse jobs and send applications at scale.",
-      "start": "Let's get started"
-    },
-    "smtp": {
-      "title": "Connect Your Email",
-      "description": "We'll use your email to send job applications on your behalf.",
-      "why_app_password_title": "Why use an App Password?",
-      "why_app_password_desc": "For security, Google and Microsoft don't allow external apps to use your main password. You need to create a special \"App Password\" — it only works for sending emails and can be revoked anytime.",
-      "gmail_guide_title": "How to create on Gmail",
-      "gmail_step1": "Enable 2-Step Verification (2FA) on your Google account",
-      "gmail_step2": "Go to App Passwords and create one named \"H2 Linker\"",
-      "gmail_step3": "Copy the 16-character password generated",
-      "gmail_link": "Open Google App Passwords →",
-      "outlook_guide_title": "How to create on Outlook",
-      "outlook_step1": "Enable 2-Step Verification on your Microsoft account",
-      "outlook_step2": "Go to Advanced security options",
-      "outlook_step3": "Create a new app password and copy it",
-      "outlook_link": "Open Microsoft Security →",
-      "password_hint": "Paste the 16-character password here (you can paste without spaces)",
-      "continue": "Save & Continue"
-    },
-    "warmup": {
-      "title": "Protect Your Reputation",
-      "subtitle": "Configure smart email warm-up",
-      "why_title": "Why is warm-up essential?",
-      "why_desc": "Providers like Gmail and Outlook monitor sending patterns. If you send too many emails at once with a new account, you risk:",
-      "why_point1": "Your emails going straight to Spam",
-      "why_point2": "Temporary or permanent account blocks",
-      "why_point3": "Damaging your sender reputation long-term",
-      "recommendation_title": "💡 Our recommendation",
-      "recommendation_desc": "For new users, we recommend the \"Standard\" profile. It offers the best balance between speed and safety. Experienced users with already warmed accounts may consider \"Aggressive\".",
-      "recommended_badge": "Recommended",
-      "how_it_works": "Your limit increases automatically each day you use at least 80% of your quota. The more consistent you are, the faster you reach your plan's maximum speed.",
-      "continue": "Save & Continue"
-    },
-    "complete": {
-      "title": "You're all set!",
-      "description": "Your account is ready to start sending applications.",
-      "smtp_ready": "Email configured successfully",
-      "warmup_ready": "Smart warm-up activated",
-      "next_steps": "Next: Browse the Jobs Hub to find opportunities, add them to your queue, and start sending applications!",
-      "go_dashboard": "Go to Dashboard"
-    }
-  },
-  "common": {
-    "loading": "Loading...",
-    "menu": "Menu",
-    "ok": "OK",
-    "cancel": "Cancel",
-    "save": "Save",
-    "select": "Select...",
-    "logout": "Sign out",
-    "language": "Language",
-    "share": "Share",
-    "previous": "Previous",
-    "next": "Next",
-    "more_pages": "More pages",
-    "pagination": {
-      "previous_aria": "Go to previous page",
-      "next_aria": "Go to next page"
-    },
-    "languages": {
-      "en": "English",
-      "pt": "Português",
-      "es": "Español"
-    },
-    "yes": "Yes",
-    "no": "No",
-    "user": "User",
-    "expand": "Expand",
-    "collapse": "Collapse",
-    "helpExpanded": "Questions or suggestions? Get in touch",
-    "errors": {
-      "no_session": "No authenticated session.",
-      "invalid_data": "Invalid data.",
-      "save_failed": "Failed to save.",
-      "send_failed": "Failed to send.",
-      "delete_failed": "Failed to delete."
-    }
-  },
-  "nav": {
-    "dashboard": "Dashboard",
-    "jobs": "Jobs Hub",
-    "queue": "My Queue",
-    "referrals": "Referrals",
-    "plans": "Plans",
-    "settings": "Settings"
   },
   "auth": {
     "browse_jobs": "Explore Available Jobs",
@@ -269,6 +146,127 @@
       "brand_title": "Access granted",
       "brand_desc": "You’re one step away from H2Link — we’re syncing your session."
     }
+  },
+  "footer": {
+    "tagline": "Smart connections. Real opportunities.",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy"
+  },
+  "reports": {
+    "button": "Report issue",
+    "reasons": {
+      "invalid_email": "Invalid email",
+      "inactive_job": "Inactive job",
+      "wrong_info": "Wrong information",
+      "spam": "Spam/Scam",
+      "other": "Other issue"
+    },
+    "warning_tooltip": "⚠️ Caution: {{count}} user(s) reported: {{reasons}}",
+    "toasts": {
+      "success_title": "Thanks for the feedback!",
+      "success_desc": "Your report was sent and helps us maintain job quality.",
+      "already_reported_title": "Already reported",
+      "already_reported_desc": "You have already flagged an issue with this job."
+    }
+  },
+  "onboarding": {
+    "step": "Step {{current}} of {{total}}",
+    "welcome": {
+      "title": "Welcome to H2 Linker!",
+      "description": "Let's set up your account to start sending job applications safely.",
+      "step1_title": "Connect your email",
+      "step1_desc": "Set up SMTP with your Gmail or Outlook account.",
+      "step2_title": "Choose your sending speed",
+      "step2_desc": "Configure email warm-up to protect your reputation.",
+      "step3_title": "Start applying",
+      "step3_desc": "Browse jobs and send applications at scale.",
+      "start": "Let's get started"
+    },
+    "smtp": {
+      "title": "Connect Your Email",
+      "description": "We'll use your email to send job applications on your behalf.",
+      "why_app_password_title": "Why use an App Password?",
+      "why_app_password_desc": "For security, Google and Microsoft don't allow external apps to use your main password. You need to create a special \"App Password\" — it only works for sending emails and can be revoked anytime.",
+      "gmail_guide_title": "How to create on Gmail",
+      "gmail_step1": "Enable 2-Step Verification (2FA) on your Google account",
+      "gmail_step2": "Go to App Passwords and create one named \"H2 Linker\"",
+      "gmail_step3": "Copy the 16-character password generated",
+      "gmail_link": "Open Google App Passwords →",
+      "outlook_guide_title": "How to create on Outlook",
+      "outlook_step1": "Enable 2-Step Verification on your Microsoft account",
+      "outlook_step2": "Go to Advanced security options",
+      "outlook_step3": "Create a new app password and copy it",
+      "outlook_link": "Open Microsoft Security →",
+      "password_hint": "Paste the 16-character password here (you can paste without spaces)",
+      "continue": "Save & Continue"
+    },
+    "warmup": {
+      "title": "Protect Your Reputation",
+      "subtitle": "Configure smart email warm-up",
+      "why_title": "Why is warm-up essential?",
+      "why_desc": "Providers like Gmail and Outlook monitor sending patterns. If you send too many emails at once with a new account, you risk:",
+      "why_point1": "Your emails going straight to Spam",
+      "why_point2": "Temporary or permanent account blocks",
+      "why_point3": "Damaging your sender reputation long-term",
+      "recommendation_title": "💡 Our recommendation",
+      "recommendation_desc": "For new users, we recommend the \"Standard\" profile. It offers the best balance between speed and safety. Experienced users with already warmed accounts may consider \"Aggressive\".",
+      "recommended_badge": "Recommended",
+      "how_it_works": "Your limit increases automatically each day you use at least 80% of your quota. The more consistent you are, the faster you reach your plan's maximum speed.",
+      "continue": "Save & Continue"
+    },
+    "complete": {
+      "title": "You're all set!",
+      "description": "Your account is ready to start sending applications.",
+      "smtp_ready": "Email configured successfully",
+      "warmup_ready": "Smart warm-up activated",
+      "next_steps": "Next: Browse the Jobs Hub to find opportunities, add them to your queue, and start sending applications!",
+      "go_dashboard": "Go to Dashboard"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "menu": "Menu",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "select": "Select...",
+    "logout": "Sign out",
+    "language": "Language",
+    "share": "Share",
+    "previous": "Previous",
+    "next": "Next",
+    "back": "Back",
+    "more_pages": "More pages",
+    "pagination": {
+      "previous_aria": "Go to previous page",
+      "next_aria": "Go to next page"
+    },
+    "languages": {
+      "en": "English",
+      "pt": "Português",
+      "es": "Español"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "user": "User",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "helpExpanded": "Questions or suggestions? Get in touch",
+    "errors": {
+      "no_session": "No authenticated session.",
+      "invalid_data": "Invalid data.",
+      "save_failed": "Failed to save.",
+      "send_failed": "Failed to send.",
+      "delete_failed": "Failed to delete."
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "jobs": "Jobs Hub",
+    "queue": "My Queue",
+    "referrals": "Referrals",
+    "plans": "Plans",
+    "settings": "Settings"
   },
   "dashboard": {
     "greeting": "Hi, {{name}}!",
@@ -521,7 +519,6 @@
       "limit_reached_desc": "Your plan allows up to {{max}} template(s). Upgrade to create more."
     }
   },
-
   "resume": {
     "title": "Resume (AI)",
     "subtitle": "Upload your PDF, review extracted data, and save. The resume will be attached to all emails sent.",
@@ -654,9 +651,6 @@
       "no_template_desc": "Create at least one template in Settings before sending.",
       "resume_required_title": "Resume required",
       "resume_required_desc": "On Black plan, upload your resume in Settings → Resume so we can generate a tailored email for each job.",
-      "bulk_premium_title": "Premium Feature",
-      "bulk_premium_desc": "The bulk send (Send All) is exclusive to Premium plans. Upgrade to send everything at once.",
-      "bulk_premium_cta": "View plans",
       "black_ai_failed_no_fallback": "AI failed to generate the email and there is no fallback template.",
       "black_ai_failed_no_fallback": "AI failed to generate the email and there is no fallback template.",
       "bg_started_title": "Sending started",
@@ -675,7 +669,10 @@
       "sent_desc": "{{count}} applications were sent.",
       "partial_success_title": "Partial success",
       "partial_success_desc": "{{sent}} emails sent, {{failed}} failed. Check the failed items and retry.",
-      "all_failed_desc": "All {{count}} emails failed to send. Check your SMTP settings."
+      "all_failed_desc": "All {{count}} emails failed to send. Check your SMTP settings.",
+      "bulk_premium_title": "Premium Feature",
+      "bulk_premium_desc": "The bulk send (Send All) is exclusive to Premium plans. Upgrade to send everything at once.",
+      "bulk_premium_cta": "View plans"
     }
   },
   "plans": {
@@ -879,6 +876,39 @@
       "housing_h2a": "H-2A: housing is mandatory by visa rules.",
       "housing_available": "Housing available."
     },
+    "details": {
+      "title": "Job Details",
+      "posted": "Posted",
+      "start": "Start",
+      "end": "End",
+      "available_positions": "Available Positions",
+      "remuneration": "Compensation",
+      "pay_frequency": "Pay: {{frequency}}",
+      "bonus": "Bonus / Additional",
+      "deductions": "Planned Deductions:",
+      "schedule": "Work Schedule",
+      "weekly_hours": "Weekly Hours:",
+      "company_contacts": "Company Contacts",
+      "email_label": "EMAIL",
+      "phone_label": "PHONE",
+      "website_label": "WEBSITE",
+      "visit_site": "Visit official site",
+      "call_action": "Call",
+      "sms_action": "SMS",
+      "whatsapp_action": "WhatsApp",
+      "special_reqs": "Special Requirements & Conditions",
+      "job_description": "Job Description",
+      "housing_info": "Housing Information",
+      "housing_type": "Housing Type:",
+      "not_specified": "Not specified",
+      "additional_details": "Additional Details",
+      "view_details": "View details",
+      "save_job": "Save Job",
+      "share": "Share",
+      "remove": "Remove",
+      "copied": "Copied!",
+      "copy_success": "Text copied to clipboard."
+    },
     "upgrade": {
       "title": "Exclusive Content",
       "description": "Upgrade to unlock contact details and benefits.",
@@ -905,80 +935,6 @@
       "remove_success_desc": "{{jobTitle}} was removed from your queue."
     },
     "shareText": "Check out this job opportunity"
-  },
-  "not_found": {
-    "subtitle": "Oops! Page not found",
-    "cta": "Return to Home"
-  },
-  "job_details": {
-    "sections": {
-      "contact": "Contact",
-      "worksite": "Worksite",
-      "details": "Details",
-      "benefits": "Benefits",
-      "compensation": "Compensation",
-      "job_info": "Job Info",
-      "schedule": "Schedule",
-      "wages": "Wages",
-      "overtime": "Overtime",
-      "housing": "Housing",
-      "transport_tools": "Transport & Tools",
-      "physical_requirements": "Physical Requirements"
-    },
-    "fields": {
-      "openings": "Openings",
-      "salary": "Salary",
-      "overtime": "Overtime",
-      "overtime_available": "Overtime available",
-      "overtime_range": "Overtime range",
-      "weekly_hours": "Weekly hours",
-      "posted_date": "Posted",
-      "start_date": "Start",
-      "end_date": "End",
-      "experience": "Experience",
-      "training": "Training",
-      "crop_activities": "Crops/Activities",
-      "shift": "Shift",
-      "wage_range": "Wage range",
-      "pay_frequency": "Pay frequency",
-      "job_id": "Job ID",
-      "education": "Education",
-      "requirements": "Requirements",
-      "special_requirements": "Special Requirements",
-      "job_duties": "Job Duties",
-      "description": "Description",
-      "housing": "Housing",
-      "housing_type": "Housing type",
-      "housing_capacity": "Capacity",
-      "housing_location": "Housing location",
-      "meals": "Meals",
-      "transport": "Transport",
-      "transport_reimburse": "Transport reimbursement",
-      "tools": "Tools",
-      "wage_additional": "Additional Wage Info",
-      "pay_deductions": "Pay Deductions",
-      "lifting": "Lifting",
-      "drug_screen": "Drug screen",
-      "background_check": "Background check",
-      "driver_required": "Driver's license",
-      "website": "Visit Website"
-    },
-    "values": {
-      "months": "{{count}} months",
-      "housing_required_h2a": "Required (details not provided).",
-      "not_provided": "Not provided."
-    },
-    "contact": {
-      "message": "Send Message",
-      "call": "Call",
-      "whatsapp": "Open WhatsApp",
-      "landline": "Landline",
-      "landline_tooltip": "This is a landline number (not WhatsApp)"
-    },
-    "actions": {
-      "add_to_queue": "Add to Queue",
-      "remove_from_queue": "Remove from Queue"
-    }
   },
   "job_import": {
     "trigger": "Import",
