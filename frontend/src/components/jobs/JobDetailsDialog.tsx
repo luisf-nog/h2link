@@ -152,10 +152,10 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">Ver detalhes</span>;
   };
 
-  // Limpa o telefone
+  // Helper para limpar número
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  // --- GERADOR DE MENSAGEM ---
+  // --- GERADOR DE MENSAGEM (INGLÊS - SEM EXPERIÊNCIA) ---
   const getMessage = () => {
     if (!job) return "";
     const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
@@ -320,7 +320,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* CONTATO (Com Botões de Link Reais e Mensagem Pronta) */}
+              {/* CONTATO (Com Botões de Link Reais) */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Contatos da Empresa
@@ -356,7 +356,7 @@ export function JobDetailsDialog({
                       </div>
                     </div>
 
-                    {/* BOTÕES LINKS (asChild) - Com Mensagem Pronta */}
+                    {/* BOTÕES LINKS (asChild) */}
                     <div className="grid grid-cols-3 gap-2">
                       <Button
                         variant="outline"
@@ -389,7 +389,7 @@ export function JobDetailsDialog({
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          <WhatsAppIcon className="h-4 w-4" /> Zap
+                          <WhatsAppIcon className="h-4 w-4" /> WhatsApp
                         </a>
                       </Button>
                     </div>
