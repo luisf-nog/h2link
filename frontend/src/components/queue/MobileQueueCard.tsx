@@ -117,6 +117,46 @@ export function MobileQueueCard({
               <span className="text-sm text-muted-foreground truncate">{job?.company}</span>
             </div>
           </div>
+          {item.status === 'failed' && item.last_error ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="secondary"
+                  className={cn("shrink-0 text-xs cursor-help", getStatusBadgeClasses(item.status))}
+                >
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  {(() => {
+                    const parsed = parseSmtpError(item.last_error ?? '');
+                    return t(parsed.titleKey);
+                  })()}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[280px]">
+                <div className="space-y-1">
+                  <p className="font-semibold text-destructive text-xs">
+                    {(() => {
+                      const parsed = parseSmtpError(item.last_error ?? '');
+                      return t(parsed.titleKey);
+                    })()}
+                  </p>
+                  <p className="text-xs">
+                    {(() => {
+                      const parsed = parseSmtpError(item.last_error ?? '');
+                      return t(parsed.descriptionKey);
+                    })()}
+                  </p>
+                  {(() => {
+                    const parsed = parseSmtpError(item.last_error ?? '');
+                    return parsed.category === 'unknown' ? (
+                      <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
+                        {item.last_error}
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
           <Badge
             variant={item.status === "sent" ? "default" : "secondary"}
             className={cn("shrink-0 text-xs", getStatusBadgeClasses(item.status))}
@@ -133,6 +173,7 @@ export function MobileQueueCard({
               statusLabel(item.status)
             )}
           </Badge>
+          )}
         </div>
 
         {/* Email Row */}
