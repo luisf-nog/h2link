@@ -1102,6 +1102,8 @@ async function processOneUser(params: {
         // No attachment - resume is accessed via Smart Profile link
       });
 
+      console.log(`[process-queue] Enviando email para ${job.email} usando ${provider} (${smtpConfig.useStartTls ? 'STARTTLS' : 'TLS'})`);
+
       if (smtpConfig.useStartTls) {
         await sendEmailSMTPStartTls({
           host: smtpConfig.host,
@@ -1121,6 +1123,8 @@ async function processOneUser(params: {
           rawMessage,
         });
       }
+
+      console.log(`[process-queue] Email enviado com sucesso para ${job.email}`);
 
       await (serviceClient
         .from("my_queue")
