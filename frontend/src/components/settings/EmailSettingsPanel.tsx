@@ -239,7 +239,13 @@ export function EmailSettingsPanel() {
       toast({ title: t("smtp.toasts.test_sent") });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-      toast({ title: t("smtp.toasts.send_error_title"), description: message, variant: "destructive" });
+      const parsed = parseSmtpError(message);
+      toast({ 
+        title: t(parsed.titleKey), 
+        description: t(parsed.descriptionKey) + (parsed.category === 'unknown' ? `\n\n${message}` : ''), 
+        variant: "destructive",
+        duration: 12000,
+      });
     } finally {
       setSending(false);
     }
