@@ -650,8 +650,12 @@ export default function Queue() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error(t('common.errors.no_session'));
 
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dalarhopratsgzmmzhxx.supabase.co';
+      const url = `${supabaseUrl}/functions/v1/process-queue`;
+      console.log('[Queue] Chamando process-queue:', url);
+      
       const res = await fetchWithRetry(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`,
+        url,
         {
           method: 'POST',
           headers: {
@@ -661,6 +665,8 @@ export default function Queue() {
            body: JSON.stringify({}),
         }
       );
+      
+      console.log('[Queue] Resposta process-queue:', res.status, res.statusText);
 
       const payload = await res.json().catch(() => null);
       if (!res.ok || payload?.ok === false) {
@@ -716,8 +722,12 @@ export default function Queue() {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error(t('common.errors.no_session'));
 
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dalarhopratsgzmmzhxx.supabase.co';
+      const url = `${supabaseUrl}/functions/v1/process-queue`;
+      console.log('[Queue] Chamando process-queue com IDs:', url, selectedPendingIds);
+      
       const res = await fetchWithRetry(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-queue`,
+        url,
         {
           method: 'POST',
           headers: {
@@ -727,6 +737,8 @@ export default function Queue() {
           body: JSON.stringify({ ids: selectedPendingIds }),
         }
       );
+      
+      console.log('[Queue] Resposta process-queue:', res.status, res.statusText);
 
       const payload = await res.json().catch(() => null);
       if (!res.ok || payload?.ok === false) {
