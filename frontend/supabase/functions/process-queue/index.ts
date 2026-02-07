@@ -165,6 +165,15 @@ const SMTP_CONFIGS: Record<EmailProvider, SmtpConfig> = {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+// Helper function para validar variáveis de ambiente
+function requireEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 function json(status: number, payload: unknown) {
   return new Response(JSON.stringify(payload), {
     status,
@@ -644,8 +653,7 @@ async function generateDiamondEmail(params: {
   prefs?: AIPreferences;
 }): Promise<{ subject: string; body: string }> {
   const { resumeData, job, visaType, prefs } = params;
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("AI not configured");
+  const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
 
   const userPrefs = prefs || defaultPreferences;
   const systemPrompt = buildDynamicPromptForQueue(userPrefs);
@@ -1040,7 +1048,7 @@ async function processOneUser(params: {
 
 
       // Open tracking pixel - uses history-specific tracking_id for per-send tracking
-      const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(historyTrackingId)}`;
+      const pixelUrl = `${supabaseUrl}/functions/v1/track-email-open?id=${encodeURIComponent(historyTrackingId)}`;
       htmlBody += `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
 
       const sendProfile = pickSendProfile(p.plan_tier);
@@ -1186,9 +1194,11 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const supabaseUrl = requireEnv("SUPABASE_URL");
+    const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
     const serviceClient: any = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      supabaseUrl,
+      supabaseServiceKey,
     );
 
     const cronToken = req.headers.get("x-cron-token");
@@ -1237,9 +1247,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const token = authHeader.replace("Bearer ", "");
+    const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
     const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } },
     );
     const { data: userData, error: userError } = await authClient.auth.getUser(token);

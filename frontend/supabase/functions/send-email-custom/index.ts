@@ -127,6 +127,15 @@ const SMTP_CONFIGS: Record<EmailProvider, SmtpConfig> = {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+// Helper function para validar variáveis de ambiente
+function requireEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 function utf8ToBase64(str: string): string {
   const bytes = encoder.encode(str);
   return base64Encode(
@@ -442,9 +451,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const token = authHeader.replace("Bearer ", "");
 
+    const supabaseUrl = requireEnv("SUPABASE_URL");
+    const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
+
     const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } },
     );
 
@@ -460,9 +472,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Prefer saved credentials (secure). Allow body override ONLY if both are present.
+    const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
     const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      supabaseUrl,
+      supabaseServiceKey,
     );
 
     // ===== DAILY LIMIT ENFORCEMENT (with warm-up integration) =====
@@ -567,8 +580,6 @@ const handler = async (req: Request): Promise<Response> => {
         
         const publicToken = (profileData as any)?.public_token;
         if (publicToken) {
-          // Get base URL from environment or construct from Supabase URL
-          const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
           // Extract project ID from Supabase URL to build frontend URL
           const projectMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
           const projectId = projectMatch?.[1];
@@ -601,7 +612,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       if (trackingId) {
-        const pixelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?id=${encodeURIComponent(String(trackingId))}`;
+        const pixelUrl = `${supabaseUrl}/functions/v1/track-email-open?id=${encodeURIComponent(String(trackingId))}`;
         htmlBody +=
           `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
       }
@@ -686,13 +697,13 @@ const handler = async (req: Request): Promise<Response> => {
         const authHeader = req.headers.get("Authorization");
         if (authHeader?.startsWith("Bearer ")) {
           const serviceClient = createClient(
-            Deno.env.get("SUPABASE_URL")!,
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            requireEnv("SUPABASE_URL"),
+            requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
           );
           
           const authClient = createClient(
-            Deno.env.get("SUPABASE_URL")!,
-            Deno.env.get("SUPABASE_ANON_KEY")!,
+            requireEnv("SUPABASE_URL"),
+            requireEnv("SUPABASE_ANON_KEY"),
             { global: { headers: { Authorization: authHeader } } },
           );
           

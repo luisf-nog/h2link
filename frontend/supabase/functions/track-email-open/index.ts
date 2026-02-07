@@ -1,6 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
+// Helper function para validar variáveis de ambiente
+function requireEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 // 1x1 transparent GIF
 const GIF_1PX = Uint8Array.from(
   atob("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="),
@@ -27,9 +36,11 @@ const handler = async (req: Request): Promise<Response> => {
     const id = url.searchParams.get("id") ?? "";
 
     if (isUuid(id)) {
+      const supabaseUrl = requireEnv("SUPABASE_URL");
+      const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
       const serviceClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        supabaseUrl,
+        supabaseServiceKey,
       );
 
       // Look for the tracking_id in queue_send_history (per-send tracking)

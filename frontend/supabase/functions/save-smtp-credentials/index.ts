@@ -24,6 +24,15 @@ function json(status: number, payload: unknown) {
   });
 }
 
+// Helper function para validar variáveis de ambiente
+function requireEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,9 +44,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const token = authHeader.replace("Bearer ", "");
 
+    const supabaseUrl = requireEnv("SUPABASE_URL");
+    const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
     const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } },
     );
 
@@ -57,9 +68,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!email) return json(400, { success: false, error: "Missing email" });
 
+    const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
     const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      supabaseUrl,
+      supabaseServiceKey,
     );
 
     // Build upsert data
