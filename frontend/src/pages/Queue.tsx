@@ -71,6 +71,40 @@ type EmailTemplate = {
 
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
 
+// --- VARIAÇÕES DE TEXTO PARA EARLY ACCESS (ANTI-SPAM) ---
+// 10 Variações estruturalmente diferentes para evitar detecção de spam
+const EARLY_ACCESS_VARIATIONS = [
+  // 1. Formal e Direto
+  "I am writing to express my interest in this position, acknowledging that it is currently in the 'Early Access' phase. I wanted to ensure my application is on file as soon as the process moves forward.",
+
+  // 2. Proativo e Entusiasta
+  "Please consider this a proactive application. I am aware this job order is not yet fully approved (Early Access), but I am highly interested and available for this future opportunity.",
+
+  // 3. Focado no Compromisso
+  "I understand this role is in the Early Access stage. I am submitting my resume in advance to demonstrate my strong commitment and availability for this upcoming season.",
+
+  // 4. Apresentação Antecipada
+  "Acknowledging that this position is currently in Early Access, I would like to present my qualifications ahead of time for your consideration.",
+
+  // 5. "Head Start" (Saindo na frente)
+  "I am applying for this Early Access opportunity to get a head start. I understand the job order is pending final approval, but I am ready to proceed whenever you are.",
+
+  // 6. Observador e Disponível
+  "I noticed this position is listed as Early Access. Although it is not fully open yet, I want to express my enthusiasm and availability to join your team as soon as possible.",
+
+  // 7. Desejo Forte
+  "Regarding the Early Access status of this job: I am sending my details now to express my strong desire to be considered once the position is officially greenlit.",
+
+  // 8. Não perder a chance
+  "I am aware that this job order is still pending finalization (Early Access). However, I did not want to miss the chance to introduce myself early as a strong candidate.",
+
+  // 9. Interesse Genuíno
+  "To show my genuine interest, I am applying while this role is still in Early Access. Please review my attached resume for this future opening.",
+
+  // 10. Topo da Lista
+  "Recognizing this is an Early Access listing, I am reaching out proactively. I am fully available and would love to be at the top of your list when hiring begins.",
+];
+
 export default function Queue() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
@@ -116,10 +150,9 @@ export default function Queue() {
   };
 
   const getDelayMs = () => {
-    // Reduzi um pouco o delay para ficar mais ágil, já que estamos rodando no front
     if (planTier === "gold") return 5000;
     if (planTier === "diamond") return 5000 + Math.floor(Math.random() * 10000);
-    return 1000; // Mínimo de 1s para não travar a UI
+    return 1000;
   };
 
   useEffect(() => {
@@ -323,14 +356,12 @@ export default function Queue() {
     });
   }, [pendingIds]);
 
-  // Função unificada de invoke do Supabase
   const invokeEdgeFunction = async (functionName: string, body: any) => {
     const { data, error } = await supabase.functions.invoke(functionName, { body });
     if (error) throw error;
     return data;
   };
 
-  // Lógica principal de envio (Agora roda SEMPRE no navegador)
   const sendQueueItems = async (items: QueueItem[]) => {
     const guard = await ensureCanSend();
     if (!guard.ok) return;
@@ -341,7 +372,6 @@ export default function Queue() {
     const failedErrors: string[] = [];
     let creditsRemaining = remainingToday;
 
-    // Marca visualmente como processando
     setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
 
     for (let idx = 0; idx < items.length; idx++) {
@@ -367,6 +397,7 @@ export default function Queue() {
           })
           .eq("id", item.id);
         failedIds.push(item.id);
+        failedErrors.push("Email ausente");
         continue;
       }
 
@@ -394,14 +425,32 @@ export default function Queue() {
       let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
       let finalBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars) : "";
 
+      // --- LOGICA DE EARLY ACCESS (SPINTAX) ---
+      // Sorteia uma das 10 variações se for Early Access
+      if (visaType?.toLowerCase().includes("early access")) {
+        const randomIndex = Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length);
+        const randomIntro = EARLY_ACCESS_VARIATIONS[randomIndex];
+        finalBody = randomIntro + "\n\n" + finalBody;
+      }
+      // ----------------------------------------
+
       try {
-        // AI Logic para plano Black
         if (planTier === "black") {
           try {
             const payload = await invokeEdgeFunction("generate-job-email", { queueId: item.id });
             if (payload?.success !== false && payload?.subject && payload?.body) {
               finalSubject = String(payload.subject);
               finalBody = String(payload.body);
+
+              // Garante que o texto de early access seja mantido com variação, se a IA não colocou
+              if (
+                visaType?.toLowerCase().includes("early access") &&
+                !finalBody.toLowerCase().includes("early access")
+              ) {
+                const randomIndex = Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length);
+                const randomIntro = EARLY_ACCESS_VARIATIONS[randomIndex];
+                finalBody = randomIntro + "\n\n" + finalBody;
+              }
             } else if (payload?.error === "resume_data_missing") {
               throw new Error("resume_data_missing");
             }
@@ -415,7 +464,6 @@ export default function Queue() {
               navigate("/settings?tab=resume");
               throw e;
             }
-            // Fallback para template se AI falhar
             if (!finalSubject.trim() || !finalBody.trim()) {
               throw new Error(t("queue.toasts.black_ai_failed_no_fallback"));
             }
@@ -427,7 +475,6 @@ export default function Queue() {
 
         console.log(`[Queue] Enviando email para ${to}, queueId: ${item.id}`);
 
-        // ENVIO REAL: Chama a mesma função que funciona no teste
         const payload = await invokeEdgeFunction("send-email-custom", {
           to,
           subject: finalSubject,
@@ -462,7 +509,6 @@ export default function Queue() {
           })
           .eq("id", item.id);
 
-        // Log de erro
         await supabase.from("queue_send_history").insert({
           queue_id: item.id,
           user_id: profile?.id,
@@ -475,14 +521,12 @@ export default function Queue() {
         failedErrors.push(message);
       }
 
-      // Delay entre envios
       if (idx < items.length - 1 && sentIds.length > 0) {
         const ms = getDelayMs();
         if (ms > 0) await sleep(ms);
       }
     }
 
-    // Atualiza status de sucesso no banco
     for (const sentId of sentIds) {
       const currentItem = items.find((i) => i.id === sentId);
       const newCount = (currentItem?.send_count ?? 0) + 1;
@@ -497,7 +541,6 @@ export default function Queue() {
       });
     }
 
-    // Feedback visual final
     if (sentIds.length > 0 && failedIds.length === 0) {
       toast({
         title: t("queue.toasts.sent_title"),
@@ -521,33 +564,24 @@ export default function Queue() {
     fetchQueue();
   };
 
-  // Handlers Simplificados (Todos usam sendQueueItems agora)
   const handleSendAll = async () => {
     if (pendingItems.length === 0) return;
-
-    // Sempre usa a lógica local (foreground) para evitar o erro do servidor
-    // Limitado pelo saldo restante
     const items = pendingItems.slice(0, remainingToday);
-
     if (items.length === 0) {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
-
     setSending(true);
     await sendQueueItems(items).finally(() => setSending(false));
   };
 
   const handleSendSelected = async () => {
     if (selectedPendingIds.length === 0) return;
-
     const items = pendingItems.filter((it) => selectedPendingIds.includes(it.id)).slice(0, remainingToday);
-
     if (items.length === 0) {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
-
     setSending(true);
     await sendQueueItems(items).finally(() => setSending(false));
     setSelectedIds({});
@@ -556,14 +590,10 @@ export default function Queue() {
   const handleSendOne = async (item: QueueItem) => {
     if (item.status !== "pending" && item.status !== "sent") return;
     if (sendingIds.has(item.id)) return;
-
     setSendingIds((prev) => new Set(prev).add(item.id));
-
-    // Reseta status se necessário
     if (item.status === "sent") {
       await supabase.from("my_queue").update({ status: "pending", last_error: null }).eq("id", item.id);
     }
-
     await sendQueueItems([item]).finally(() => {
       setSendingIds((prev) => {
         const next = new Set(prev);
@@ -577,20 +607,15 @@ export default function Queue() {
     if (item.status !== "failed") return;
     setRetryingId(item.id);
     await supabase.from("my_queue").update({ status: "pending", last_error: null }).eq("id", item.id);
-
-    // Simula item pendente para a função de envio
     const updatedItem = { ...item, status: "pending" };
     await sendQueueItems([updatedItem]).finally(() => setRetryingId(null));
   };
 
   const handleRetryAllFailed = async () => {
     if (failedItems.length === 0) return;
-
     const failedIds = failedItems.map((it) => it.id);
     await supabase.from("my_queue").update({ status: "pending", last_error: null }).in("id", failedIds);
-
     const updatedItems = failedItems.map((it) => ({ ...it, status: "pending" }));
-
     setSending(true);
     await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
   };
@@ -727,7 +752,6 @@ export default function Queue() {
         />
       )}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
