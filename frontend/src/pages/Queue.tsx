@@ -1149,6 +1149,46 @@ export default function Queue() {
                         <TableCell>{(item.public_jobs ?? item.manual_jobs)?.company}</TableCell>
                         <TableCell>{(item.public_jobs ?? item.manual_jobs)?.email}</TableCell>
                         <TableCell>
+                          {item.status === 'failed' && item.last_error ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-destructive/10 text-destructive border-destructive/30 cursor-help"
+                                >
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  {(() => {
+                                    const parsed = parseSmtpError(item.last_error ?? '');
+                                    return t(parsed.titleKey);
+                                  })()}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="font-semibold text-destructive text-xs">
+                                    {(() => {
+                                      const parsed = parseSmtpError(item.last_error ?? '');
+                                      return t(parsed.titleKey);
+                                    })()}
+                                  </p>
+                                  <p className="text-xs">
+                                    {(() => {
+                                      const parsed = parseSmtpError(item.last_error ?? '');
+                                      return t(parsed.descriptionKey);
+                                    })()}
+                                  </p>
+                                  {(() => {
+                                    const parsed = parseSmtpError(item.last_error ?? '');
+                                    return parsed.category === 'unknown' ? (
+                                      <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
+                                        {item.last_error}
+                                      </p>
+                                    ) : null;
+                                  })()}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
                           <Badge
                             variant={item.status === 'sent' ? 'default' : 'secondary'}
                             className={
@@ -1177,6 +1217,7 @@ export default function Queue() {
                               statusLabel(item.status)
                             )}
                           </Badge>
+                          )}
                         </TableCell>
 
                         {/* Resume View Tracking */}
