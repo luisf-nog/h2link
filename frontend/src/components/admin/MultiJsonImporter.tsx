@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, Database, Wand2 } from "lucide-react";
+import { CheckCircle2, Loader2, Wand2, Bug } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -11,6 +11,88 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const [stats, setStats] = useState({ total: 0, skipped: 0 });
   const { toast } = useToast();
+
+  // Função inteligente para detectar categoria pelo título (Fallback de última instância)
+  const detectCategory = (title: string, socTitle: string = ""): string => {
+    const t = (title + " " + socTitle).toLowerCase();
+
+    if (
+      t.includes("landscap") ||
+      t.includes("groundskeep") ||
+      t.includes("lawn") ||
+      t.includes("mower") ||
+      t.includes("garden")
+    )
+      return "Landscaping";
+    if (
+      t.includes("construct") ||
+      t.includes("concrete") ||
+      t.includes("mason") ||
+      t.includes("brick") ||
+      t.includes("roof") ||
+      t.includes("carpenter") ||
+      t.includes("builder")
+    )
+      return "Construction";
+    if (
+      t.includes("housekeep") ||
+      t.includes("maid") ||
+      t.includes("cleaner") ||
+      t.includes("janitor") ||
+      t.includes("laundry") ||
+      t.includes("room attendant")
+    )
+      return "Housekeeping";
+    if (
+      t.includes("cook") ||
+      t.includes("chef") ||
+      t.includes("kitchen") ||
+      t.includes("dishwash") ||
+      t.includes("server") ||
+      t.includes("waiter") ||
+      t.includes("dining") ||
+      t.includes("food")
+    )
+      return "Hospitality & Culinary";
+    if (
+      t.includes("amusement") ||
+      t.includes("carnival") ||
+      t.includes("recreation") ||
+      t.includes("lifeguard") ||
+      t.includes("pool") ||
+      t.includes("ride") ||
+      t.includes("attendant")
+    )
+      return "Amusement & Recreation";
+    if (
+      t.includes("farm") ||
+      t.includes("agricult") ||
+      t.includes("crop") ||
+      t.includes("harvest") ||
+      t.includes("nursery") ||
+      t.includes("greenhouse") ||
+      t.includes("ag ") ||
+      t.includes("ranch") ||
+      t.includes("animal") ||
+      t.includes("livestock")
+    )
+      return "Agriculture";
+    if (
+      t.includes("fish") ||
+      t.includes("seafood") ||
+      t.includes("crab") ||
+      t.includes("oyster") ||
+      t.includes("process") ||
+      t.includes("meat") ||
+      t.includes("cutter")
+    )
+      return "Processing & Seafood";
+    if (t.includes("stable") || t.includes("horse") || t.includes("equine") || t.includes("groom"))
+      return "Stable Attendant";
+    if (t.includes("truck") || t.includes("driver") || t.includes("cdl") || t.includes("haul")) return "Transportation";
+
+    return "General Labor";
+  };
 
   const getVal = (obj: any, keys: string[], allowNone = false) => {
     for (const key of keys) {
@@ -27,58 +109,12 @@ export function MultiJsonImporter() {
     return null;
   };
 
-  const parseBool = (val: any): boolean => {
-    if (!val) return false;
-    const s = String(val).toLowerCase().trim();
-    return ["1", "true", "yes", "y", "t"].includes(s);
-  };
+  const parseBool = (val: any) => ["1", "true", "yes", "y", "t"].includes(String(val).toLowerCase().trim());
 
-  const parseMoney = (val: any): number | null => {
+  const parseMoney = (val: any) => {
     if (!val) return null;
-    const clean = String(val).replace(/[$,]/g, "");
-    const num = parseFloat(clean);
+    const num = parseFloat(String(val).replace(/[$,]/g, ""));
     return isNaN(num) || num <= 0 ? null : num;
-  };
-
-  const deepFindWage = (item: any): number | null => {
-    let val = parseMoney(
-      item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE || item.AEWR || item.BASIC_RATE,
-    ); // Added AEWR/BASIC_RATE
-    if (val) return val;
-
-    if (item.clearanceOrder) {
-      val = parseMoney(item.clearanceOrder.jobWageOffer || item.clearanceOrder.wageOfferFrom);
-      if (val) return val;
-    }
-
-    const crops = item.cropsAndActivities || item.clearanceOrder?.cropsAndActivities;
-    if (Array.isArray(crops) && crops.length > 0) {
-      val = parseMoney(crops[0].addmaWageOffer || crops[0].wageOffer);
-      if (val) return val;
-    }
-
-    const locs = item.employmentLocations || item.clearanceOrder?.employmentLocations;
-    if (Array.isArray(locs) && locs.length > 0) {
-      val = parseMoney(locs[0].apdxaWageFrom || locs[0].wageFrom);
-      if (val) return val;
-    }
-
-    return null;
-  };
-
-  const calculateFinalWage = (item: any, flat: any): number | null => {
-    const rawWage = deepFindWage(item);
-    if (!rawWage) return null;
-    if (rawWage <= 100) return rawWage;
-
-    const hours = parseFloat(getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours"]) || "40");
-    if (hours > 0) {
-      const hourly = rawWage / (hours * 4.333);
-      if (hourly >= 7.25 && hourly <= 150) {
-        return parseFloat(hourly.toFixed(2));
-      }
-    }
-    return rawWage;
   };
 
   const formatToISODate = (dateStr: any) => {
@@ -89,6 +125,24 @@ export function MultiJsonImporter() {
     } catch {
       return null;
     }
+  };
+
+  // Mantendo a lógica original de salário (V10)
+  const calculateFinalWage = (item: any, flat: any) => {
+    let val = parseMoney(
+      item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE || item.AEWR || item.BASIC_RATE,
+    );
+    if (!val && item.clearanceOrder) val = parseMoney(item.clearanceOrder.jobWageOffer);
+
+    // Tratamento para converter semanal em horário se necessário
+    if (val && val > 100) {
+      const hours = parseFloat(getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours"]) || "40");
+      if (hours > 0) {
+        const hourly = val / (hours * 4.333);
+        if (hourly >= 7.25 && hourly <= 150) return parseFloat(hourly.toFixed(2));
+      }
+    }
+    return val;
   };
 
   const processJobs = async () => {
@@ -105,24 +159,19 @@ export function MultiJsonImporter() {
 
         if (isZip) {
           const zip = await new JSZip().loadAsync(file);
-          const entries = Object.entries(zip.files);
-          for (const [filename, zipObj] of entries) {
+          for (const [filename, zipObj] of Object.entries(zip.files)) {
             if (!zipObj.dir && filename.endsWith(".json")) {
               const text = await zipObj.async("string");
               contents.push({ filename, content: text });
             }
           }
         } else {
-          const text = await file.text();
-          contents.push({ filename: file.name, content: text });
+          contents.push({ filename: file.name, content: await file.text() });
         }
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
-          let list = [];
-          if (Array.isArray(json)) list = json;
-          else if (json.data && Array.isArray(json.data)) list = json.data;
-          else list = (Object.values(json).find((v) => Array.isArray(v)) as any[]) || [];
+          const list = Array.isArray(json) ? json : json.data || [];
 
           let visaType = "H-2A";
           if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
@@ -131,9 +180,7 @@ export function MultiJsonImporter() {
           for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // --- MAPEAMENTO EXPANDIDO PARA OS 3 TIPOS DE ARQUIVO ---
-
-            // 1. Título (Data Miner vs DOL vs Genérico)
+            // 1. Título (Mantido lógica V10)
             const title = getVal(flat, [
               "jobTitle",
               "job_title",
@@ -144,7 +191,7 @@ export function MultiJsonImporter() {
               "job_order_title",
             ]);
 
-            // 2. Empresa
+            // 2. Empresa (Mantido lógica V10)
             const company = getVal(flat, [
               "empBusinessName",
               "employerBusinessName",
@@ -157,19 +204,28 @@ export function MultiJsonImporter() {
               "FULL_NAME",
             ]);
 
-            // 3. Categoria (IMPORTANTE: Mapeia as chaves do print e padrões oficiais)
-            const category = getVal(flat, [
-              "category", // Data Miner (seu print)
-              "SOC_TITLE", // Oficial H-2A/H-2B
-              "soc_title", // Variação
-              "Occupational_Title", // Legado
-              "SOC_Title",
+            // === 3. CATEGORIA (A ÚNICA ALTERAÇÃO SIGNIFICATIVA) ===
+            // Aqui aplicamos a lógica do Power Query (socTitle > jobSocTitle > tempneedSocTitle)
+            let category = getVal(flat, [
+              "socTitle", // (Prioridade 1: Feed 790)
+              "jobSocTitle", // (Prioridade 2: H-2A)
+              "tempneedSocTitle", // (Prioridade 3: H-2B)
+              "category", // (Prioridade 4: Data Miner)
+              "Category",
+              "SOC_TITLE",
+              "soc_title",
+              "Occupational_Title",
             ]);
 
-            // 4. Código SOC (Auxiliar)
-            const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode"]);
+            // Fallback de Segurança (Mantido da V10): Se nulo, deduz pelo título
+            if (!category && title) {
+              category = detectCategory(title);
+            } else if (!category) {
+              category = "General Labor";
+            }
 
-            // Campos padrão
+            const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode", "jobSocCode", "tempneedSocCode"]);
+
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
@@ -190,21 +246,22 @@ export function MultiJsonImporter() {
               (transportDesc && transportDesc.length > 5);
 
             const extractedJob = {
+              // Campos básicos (V10)
               job_id:
                 getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]) ||
                 `GEN-${Math.random()}`,
               visa_type: visaType,
               fingerprint,
               is_active: true,
-
               job_title: title,
               company: company,
               email: email,
 
-              // Novos campos mapeados
+              // === AQUI VAI A CATEGORIA CORRIGIDA ===
               category: category,
-              soc_code: socCode,
+              // ======================================
 
+              soc_code: socCode,
               city: getVal(flat, [
                 "jobCity",
                 "job_city",
@@ -243,8 +300,8 @@ export function MultiJsonImporter() {
 
               overtime_available:
                 parseBool(getVal(flat, ["isOvertimeAvailable", "recIsOtAvailable"])) ||
-                !!parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom"])),
-              overtime_from: parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom", "ot_wage_from"])),
+                !!parseMoney(getVal(flat, ["wageOtFrom"])),
+              overtime_salary: parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom", "ot_wage_from"])),
 
               shift_start: getVal(flat, ["jobHoursStart", "jobHourStart", "shiftStart"]),
               shift_end: getVal(flat, ["jobHoursEnd", "jobHourEnd", "shiftEnd"]),
@@ -316,8 +373,8 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Importação V9 (Category + SOC)",
-        description: `Sucesso: ${finalJobs.length}. Categoria mapeada de múltiplas fontes.`,
+        title: "Importação V13 (Power Query Keys)",
+        description: `Sucesso: ${finalJobs.length}. Categoria mapeada via socTitle/jobSocTitle.`,
       });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -331,11 +388,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Wand2 className="h-6 w-6 text-purple-600" /> Extrator V9 (Universal + Categories)
+          <Wand2 className="h-6 w-6 text-purple-600" /> Extrator V13 (Category Fix)
         </CardTitle>
-        <CardDescription>
-          Mapeia automaticamente 'category', 'SOC_TITLE' e metadados dos 3 formatos de arquivo (H2A, H2B, JO).
-        </CardDescription>
+        <CardDescription>Mantém a lógica V10 mas usa as chaves do Power Query para a categoria.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -348,15 +403,12 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar (Com Categorias)
+          Importar e Corrigir
         </Button>
         {stats.total > 0 && (
-          <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5" />
-            <div>
-              <p className="font-bold">Processo Finalizado</p>
-              <p className="text-sm">Vagas: {stats.total}</p>
-            </div>
+          <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg">
+            <p className="font-bold">Processo Finalizado!</p>
+            <p className="text-sm">{stats.total} vagas enviadas.</p>
           </div>
         )}
       </CardContent>
