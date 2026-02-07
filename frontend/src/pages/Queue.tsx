@@ -71,38 +71,38 @@ type EmailTemplate = {
 
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
 
-// --- VARIAÇÕES DE TEXTO PARA EARLY ACCESS (ANTI-SPAM) ---
-// 10 Variações estruturalmente diferentes para evitar detecção de spam
+// --- VARIAÇÕES DE TEXTO SOBRE DOL PROCESSING (ANTI-SPAM) ---
+// Focadas no processo do Departamento de Trabalho (DOL), sem usar termos internos.
 const EARLY_ACCESS_VARIATIONS = [
-  // 1. Formal e Direto
-  "I am writing to express my interest in this position, acknowledging that it is currently in the 'Early Access' phase. I wanted to ensure my application is on file as soon as the process moves forward.",
+  // 1. Padrão Sugerido (Variação A)
+  "Attention: I am aware that this job was recently filed and is in initial processing with the Department of Labor (DOL). Understanding that final certification is pending, I am applying proactively.",
 
-  // 2. Proativo e Entusiasta
-  "Please consider this a proactive application. I am aware this job order is not yet fully approved (Early Access), but I am highly interested and available for this future opportunity.",
+  // 2. Foco na Prontidão
+  "I understand this job order is currently in initial processing with the DOL. I am submitting my application now to demonstrate my readiness and strong interest once certification is approved.",
 
-  // 3. Focado no Compromisso
-  "I understand this role is in the Early Access stage. I am submitting my resume in advance to demonstrate my strong commitment and availability for this upcoming season.",
+  // 3. Profissional e Ciente
+  "Acknowledging that this position is currently filed for processing with the Department of Labor, I would like to present my qualifications ahead of the final certification.",
 
-  // 4. Apresentação Antecipada
-  "Acknowledging that this position is currently in Early Access, I would like to present my qualifications ahead of time for your consideration.",
+  // 4. Interesse Antecipado
+  "I am writing to express my interest in this position, noting that it is currently under review by the DOL. I wanted to ensure my application is on file early in the process.",
 
-  // 5. "Head Start" (Saindo na frente)
-  "I am applying for this Early Access opportunity to get a head start. I understand the job order is pending final approval, but I am ready to proceed whenever you are.",
+  // 5. Disponibilidade
+  "Please note: I understand this job order is pending final DOL certification. I am reaching out proactively to confirm my availability for this upcoming season.",
 
-  // 6. Observador e Disponível
-  "I noticed this position is listed as Early Access. Although it is not fully open yet, I want to express my enthusiasm and availability to join your team as soon as possible.",
+  // 6. Head Start
+  "I noticed this position is in the initial filing stage with the Department of Labor. I am applying now to get a head start and express my enthusiasm for joining your team.",
 
-  // 7. Desejo Forte
-  "Regarding the Early Access status of this job: I am sending my details now to express my strong desire to be considered once the position is officially greenlit.",
+  // 7. Formal
+  "Regarding the current status of this job order with the DOL: I am sending my details to express my desire to be considered as soon as the position is fully certified.",
 
-  // 8. Não perder a chance
-  "I am aware that this job order is still pending finalization (Early Access). However, I did not want to miss the chance to introduce myself early as a strong candidate.",
+  // 8. Proativo
+  "I am applying proactively, understanding that this job order is currently in processing with the Department of Labor. I am highly interested and available.",
 
-  // 9. Interesse Genuíno
-  "To show my genuine interest, I am applying while this role is still in Early Access. Please review my attached resume for this future opening.",
+  // 9. Comprometimento
+  "Although I understand this job is still in the DOL processing phase, I wanted to reach out early to demonstrate my commitment and qualifications.",
 
-  // 10. Topo da Lista
-  "Recognizing this is an Early Access listing, I am reaching out proactively. I am fully available and would love to be at the top of your list when hiring begins.",
+  // 10. Directo
+  "I am aware that this opportunity is pending final DOL approval. Please accept my application as an expression of my strong interest in this future opening.",
 ];
 
 export default function Queue() {
@@ -425,14 +425,15 @@ export default function Queue() {
       let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
       let finalBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars) : "";
 
-      // --- LOGICA DE EARLY ACCESS (SPINTAX) ---
-      // Sorteia uma das 10 variações se for Early Access
+      // --- LOGICA DE EARLY ACCESS (DOL CONTEXT) ---
+      // Se a vaga for marcada internamente como "Early Access",
+      // adiciona um aviso sobre o processamento no DOL.
       if (visaType?.toLowerCase().includes("early access")) {
         const randomIndex = Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length);
         const randomIntro = EARLY_ACCESS_VARIATIONS[randomIndex];
         finalBody = randomIntro + "\n\n" + finalBody;
       }
-      // ----------------------------------------
+      // --------------------------------------------
 
       try {
         if (planTier === "black") {
@@ -445,7 +446,7 @@ export default function Queue() {
               // Garante que o texto de early access seja mantido com variação, se a IA não colocou
               if (
                 visaType?.toLowerCase().includes("early access") &&
-                !finalBody.toLowerCase().includes("early access")
+                !finalBody.toLowerCase().includes("department of labor")
               ) {
                 const randomIndex = Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length);
                 const randomIntro = EARLY_ACCESS_VARIATIONS[randomIndex];
