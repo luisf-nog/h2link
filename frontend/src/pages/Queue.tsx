@@ -798,26 +798,75 @@ export default function Queue() {
     }
   };
 
-  const handleSendOne = (item: QueueItem) => {
+  const handleSendOne = async (item: QueueItem) => {
     // Allow resending for 'pending' or 'sent' items (user can resend anytime)
     if (item.status !== 'pending' && item.status !== 'sent') return;
     if (sendingIds.has(item.id)) return; // Already sending this item
     
-    // Mark as sending immediately (fire and forget approach)
+    // Mark as sending immediately
     setSendingIds(prev => new Set(prev).add(item.id));
     
     // Update local state to show "processing" immediately
     setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'processing' } : q));
     
-    // Fire and forget - sendQueueItems now handles errors internally
-    sendQueueItems([item])
-      .finally(() => {
-        setSendingIds(prev => {
-          const next = new Set(prev);
-          next.delete(item.id);
-          return next;
-        });
+    const cleanup = () => {
+      setSendingIds(prev => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
       });
+    };
+
+    if (!isFree) {
+      // Premium tier: use process-queue (background) - more reliable
+      try {
+        // Ensure item is in pending state for process-queue to pick up
+        if (item.status === 'sent') {
+          await supabase.from('my_queue').update({ status: 'pending', last_error: null }).eq('id', item.id);
+        }
+        
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error(t('common.errors.no_session'));
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dalarhopratsgzmmzhxx.supabase.co';
+        const res = await fetchWithRetry(
+          `${supabaseUrl}/functions/v1/process-queue`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({}),
+          }
+        );
+        
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || payload?.ok === false) {
+          throw new Error(payload?.error || `HTTP ${res.status}`);
+        }
+        
+        toast({
+          title: t('queue.toasts.bg_started_title'),
+          description: t('queue.toasts.bg_started_desc'),
+        });
+        fetchQueue();
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+        const parsed = parseSmtpError(message);
+        toast({ title: t(parsed.titleKey), description: t(parsed.descriptionKey), variant: 'destructive', duration: 10000 });
+        fetchQueue();
+      } finally {
+        cleanup();
+      }
+    } else {
+      // Free tier: foreground send via send-email-custom
+      sendQueueItems([item])
+        .finally(() => {
+          cleanup();
+        });
+    }
   };
 
   const handleRetryOne = async (item: QueueItem) => {
