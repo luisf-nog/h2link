@@ -401,6 +401,7 @@ export default function Queue() {
     const { templates, token } = guard;
     const sentIds: string[] = [];
     const failedIds: string[] = [];
+    const failedErrors: string[] = [];
     let creditsRemaining = remainingToday;
 
     for (let idx = 0; idx < items.length; idx++) {
