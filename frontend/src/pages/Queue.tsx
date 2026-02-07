@@ -569,6 +569,7 @@ export default function Queue() {
         });
         
         failedIds.push(item.id);
+        failedErrors.push(message);
         
         // Continue to next item (don't break the loop!)
       }
