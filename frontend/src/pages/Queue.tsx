@@ -494,6 +494,7 @@ export default function Queue() {
         const sendProfile = pickSendProfile();
         const dedupeId = planTier === 'black' ? crypto.randomUUID() : undefined;
 
+        console.log(`[Queue] Enviando email para ${to}, queueId: ${item.id}`);
         const res = await fetchWithRetry(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`,
           {
@@ -513,7 +514,9 @@ export default function Queue() {
           }
         );
 
+        console.log(`[Queue] Resposta send-email-custom: ${res.status} ${res.statusText}`);
         const text = await res.text();
+        console.log(`[Queue] Resposta body:`, text);
         const payload = (() => {
           try {
             return JSON.parse(text);
@@ -523,6 +526,7 @@ export default function Queue() {
         })();
 
         if (!res.ok || payload?.success === false) {
+          console.error(`[Queue] Erro ao enviar email:`, payload);
           // Handle daily limit reached specifically
           if (res.status === 429 || payload?.error === 'daily_limit_reached') {
             setUpgradeDialogOpen(true);
@@ -531,12 +535,16 @@ export default function Queue() {
           }
           throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
         }
+        
+        console.log(`[Queue] Email enviado com sucesso para ${to}`);
 
         sentIds.push(item.id);
         creditsRemaining -= 1;
       } catch (e: unknown) {
         // Item failed, but continue with next item
         const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+        console.error(`[Queue] Erro ao processar item ${item.id}:`, e);
+        console.error(`[Queue] Mensagem de erro:`, message);
         const now = new Date().toISOString();
         
         // Update queue status to failed
