@@ -776,7 +776,8 @@ export default function Queue() {
       fetchQueue();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-      toast({ title: String(t('common.errors.send_failed')), description: String(message), variant: 'destructive' });
+      const parsed = parseSmtpError(message);
+      toast({ title: String(t(parsed.titleKey)), description: String(t(parsed.descriptionKey)), variant: 'destructive', duration: 10000 });
     } finally {
       setSending(false);
     }
