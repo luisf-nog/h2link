@@ -48,6 +48,7 @@ interface QueueItem {
   tracking_id?: string;
   created_at: string;
   send_count: number;
+  last_error?: string | null;
   public_jobs: {
     id: string;
     job_title: string;
