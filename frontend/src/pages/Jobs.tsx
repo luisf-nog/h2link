@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
-// IMPORTANTE: Importe o novo componente aqui (crie o arquivo se não existir na pasta correta)
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
 import { MobileJobCard } from "@/components/jobs/MobileJobCard";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +113,7 @@ export default function Jobs() {
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [showImporter, setShowImporter] = useState(false); // Novo estado para o importador JSON
+  const [showImporter, setShowImporter] = useState(false);
 
   const planTierCheck = profile?.plan_tier || "free";
   const isFreeUser = planTierCheck === "free";
@@ -212,7 +211,8 @@ export default function Jobs() {
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
 
-  const pageSize = 25;
+  // ALTERAÇÃO 1: Aumentado para 50 vagas por página
+  const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
 
   const buildOrSearch = (term: string) =>
@@ -223,17 +223,21 @@ export default function Jobs() {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let query = supabase
-      .from("public_jobs")
-      .select("*", { count: "exact" })
-      .eq("is_banned", false)
-      .order(sortKey, { ascending: sortDir === "asc", nullsFirst: false })
-      .range(from, to);
+    let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
 
+    // 1. Ordenação Primária (Usuário)
+    query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
+
+    // 2. Ordenação Secundária (Contexto)
     if (sortKey !== "posted_date") {
       query = query.order("posted_date", { ascending: false, nullsFirst: false });
     }
 
+    // ALTERAÇÃO 2: Critério de Desempate
+    // Garante que a paginação seja determinística (itens não mudam de página aleatoriamente)
+    query = query.order("id", { ascending: true });
+
+    // Aplica os filtros
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim()) query = query.or(buildOrSearch(searchTerm.trim()));
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
@@ -243,6 +247,9 @@ export default function Jobs() {
     const band = SALARY_BANDS.find((b) => b.value === salaryBand) ?? SALARY_BANDS[0];
     if (band.min !== null) query = query.gte("wage_from", band.min);
     if (band.max !== null) query = query.lte("wage_from", band.max);
+
+    // 3. Paginação (Sempre por último)
+    query = query.range(from, to);
 
     const { data, error, count } = await query;
 
