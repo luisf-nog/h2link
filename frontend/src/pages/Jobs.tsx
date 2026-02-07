@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS_CONFIG } from "@/config/plans.config";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +41,7 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
+// Helper para exibição de preço (Faixa ou Único)
 const renderPrice = (job: JobDetails) => {
   if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
     return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
@@ -218,26 +218,30 @@ export default function Jobs() {
 
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
 
+    // Ordenação
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
-
     if (sortKey !== "posted_date") {
       query = query.order("posted_date", { ascending: false, nullsFirst: false });
     }
-
+    // Desempate para paginação
     query = query.order("id", { ascending: true });
 
+    // Filtros
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim()) query = query.or(buildOrSearch(searchTerm.trim()));
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
 
-    // CORREÇÃO: Usando .eq (exato) para categoria, pois vem de um select
-    if (categoryFilter.trim()) query = query.eq("category", categoryFilter.trim());
+    // CORREÇÃO: Filtro de Categoria com match exato
+    if (categoryFilter.trim()) {
+      query = query.eq("category", categoryFilter.trim());
+    }
 
     const band = SALARY_BANDS.find((b) => b.value === salaryBand) ?? SALARY_BANDS[0];
     if (band.min !== null) query = query.gte("wage_from", band.min);
     if (band.max !== null) query = query.lte("wage_from", band.max);
 
+    // Paginação
     query = query.range(from, to);
 
     const { data, error, count } = await query;
@@ -279,22 +283,24 @@ export default function Jobs() {
     setLoading(false);
   };
 
-  // CORREÇÃO: Fetch simplificado e otimizado para categorias
+  // CORREÇÃO: Fetch de Categorias mais robusto
   const fetchCategories = async () => {
     setCategoriesLoading(true);
     try {
-      // Busca as categorias apenas das últimas 1000 vagas (mais rápido e suficiente)
+      // Busca categorias das últimas 2000 vagas para garantir cobertura
       const { data, error } = await supabase
         .from("public_jobs")
         .select("category")
         .not("category", "is", null)
+        .neq("category", "")
         .order("posted_date", { ascending: false })
-        .limit(1000);
+        .limit(2000);
 
       if (error) throw error;
 
-      // Extrai valores únicos
-      const categoriesRaw = (data?.map((r) => r.category).filter(Boolean) as string[]) || [];
+      // Limpa e normaliza os dados (trim)
+      const categoriesRaw = data?.map((r) => r.category?.trim()).filter((c): c is string => Boolean(c)) || [];
+
       const uniq = Array.from(new Set(categoriesRaw)).sort((a, b) => a.localeCompare(b));
       setCategories(uniq);
     } catch (err) {
@@ -319,6 +325,7 @@ export default function Jobs() {
     return base;
   }, [categories, categoryFilter]);
 
+  // Persist filters
   useEffect(() => {
     const t = window.setTimeout(() => {
       const next = new URLSearchParams();
@@ -607,7 +614,7 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        {/* Results */}
+        {/* Results (Mobile/Desktop) */}
         {isMobile ? (
           <div className="space-y-3">
             {loading ? (
@@ -768,12 +775,15 @@ export default function Jobs() {
                           {job.city}, {job.state}
                         </TableCell>
                         <TableCell>{typeof job.openings === "number" ? formatNumber(job.openings) : "-"}</TableCell>
+
+                        {/* CÉLULA DE SALÁRIO ATUALIZADA */}
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">{renderPrice(job)}</span>
                             <span className="text-[10px] text-muted-foreground uppercase">/{job.wage_unit || "h"}</span>
                           </div>
                         </TableCell>
+
                         <TableCell>
                           {(() => {
                             const badge = getVisaBadgeConfig(job.visa_type);
