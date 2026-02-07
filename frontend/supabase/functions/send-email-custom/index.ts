@@ -280,10 +280,12 @@ async function sendEmailSMTPTls(params: {
   rawMessage: string;
 }) {
   const { host, port, user, password, to, rawMessage } = params;
+  console.log(`[SMTP-TLS] Conectando a ${host}:${port} para ${to}`);
   const conn = await withTimeout(Deno.connectTls({ hostname: host, port }), 15000, "connectTls");
 
   try {
-    await withTimeout(readResponse(conn), 15000, "greeting");
+    const greeting = await withTimeout(readResponse(conn), 15000, "greeting");
+    console.log(`[SMTP-TLS] Greeting: ${greeting}`);
     await withTimeout(sendCommand(conn, "EHLO localhost", "250"), 15000, "EHLO");
 
     await withTimeout(sendCommand(conn, "AUTH LOGIN", "334"), 15000, "AUTH LOGIN");
@@ -307,14 +309,32 @@ async function sendEmailSMTPTls(params: {
       15000,
       "AUTH pass",
     );
+    console.log(`[SMTP-TLS] Autenticação bem-sucedida`);
 
     await withTimeout(sendCommand(conn, `MAIL FROM:<${user}>`, "250"), 15000, "MAIL FROM");
     await withTimeout(sendCommand(conn, `RCPT TO:<${to}>`, "250"), 15000, "RCPT TO");
     await withTimeout(sendCommand(conn, "DATA", "354"), 15000, "DATA");
 
     await withTimeout(writeAll(conn, encoder.encode(rawMessage + "\r\n.\r\n")), 60000, "write body");
-    await withTimeout(readResponse(conn, "250"), 20000, "DATA accept");
+    const dataResponse = await withTimeout(readResponse(conn, "250"), 20000, "DATA accept");
+    console.log(`[SMTP-TLS] Resposta DATA: ${dataResponse}`);
+    if (!dataResponse.startsWith("250")) {
+      throw new Error(`SMTP DATA falhou: ${dataResponse}`);
+    }
+    
+    // Aguardar resposta do QUIT antes de fechar a conexão
     await writeAll(conn, encoder.encode("QUIT\r\n"));
+    try {
+      const quitResponse = await withTimeout(readResponse(conn), 5000, "QUIT response");
+      console.log(`[SMTP-TLS] Resposta QUIT: ${quitResponse}`);
+    } catch (e) {
+      console.warn(`[SMTP-TLS] Timeout ao aguardar QUIT (não crítico): ${e}`);
+      // Ignorar timeout no QUIT, mas garantir que o email foi aceito
+    }
+    console.log(`[SMTP-TLS] Email enviado com sucesso para ${to}`);
+  } catch (error) {
+    console.error(`[SMTP-TLS] Erro ao enviar email para ${to}:`, error);
+    throw error;
   } finally {
     try {
       conn.close();
@@ -333,11 +353,13 @@ async function sendEmailSMTPStartTls(params: {
   rawMessage: string;
 }) {
   const { host, port, user, password, to, rawMessage } = params;
+  console.log(`[SMTP-STARTTLS] Conectando a ${host}:${port} para ${to}`);
 
   const tcpConn = (await withTimeout(Deno.connect({ hostname: host, port }), 15000, "connect")) as Deno.TcpConn;
 
   try {
-    await withTimeout(readResponse(tcpConn), 15000, "greeting");
+    const greeting = await withTimeout(readResponse(tcpConn), 15000, "greeting");
+    console.log(`[SMTP-STARTTLS] Greeting: ${greeting}`);
     await withTimeout(sendCommand(tcpConn, "EHLO localhost", "250"), 15000, "EHLO");
 
     await writeAll(tcpConn, encoder.encode("STARTTLS\r\n"));
@@ -367,14 +389,32 @@ async function sendEmailSMTPStartTls(params: {
       15000,
       "AUTH pass",
     );
+    console.log(`[SMTP-STARTTLS] Autenticação bem-sucedida`);
 
     await withTimeout(sendCommand(tlsConn, `MAIL FROM:<${user}>`, "250"), 15000, "MAIL FROM");
     await withTimeout(sendCommand(tlsConn, `RCPT TO:<${to}>`, "250"), 15000, "RCPT TO");
     await withTimeout(sendCommand(tlsConn, "DATA", "354"), 15000, "DATA");
 
     await withTimeout(writeAll(tlsConn, encoder.encode(rawMessage + "\r\n.\r\n")), 60000, "write body");
-    await withTimeout(readResponse(tlsConn, "250"), 20000, "DATA accept");
+    const dataResponse = await withTimeout(readResponse(tlsConn, "250"), 20000, "DATA accept");
+    console.log(`[SMTP-STARTTLS] Resposta DATA: ${dataResponse}`);
+    if (!dataResponse.startsWith("250")) {
+      throw new Error(`SMTP DATA falhou: ${dataResponse}`);
+    }
+    
+    // Aguardar resposta do QUIT antes de fechar a conexão
     await writeAll(tlsConn, encoder.encode("QUIT\r\n"));
+    try {
+      const quitResponse = await withTimeout(readResponse(tlsConn), 5000, "QUIT response");
+      console.log(`[SMTP-STARTTLS] Resposta QUIT: ${quitResponse}`);
+    } catch (e) {
+      console.warn(`[SMTP-STARTTLS] Timeout ao aguardar QUIT (não crítico): ${e}`);
+      // Ignorar timeout no QUIT, mas garantir que o email foi aceito
+    }
+    console.log(`[SMTP-STARTTLS] Email enviado com sucesso para ${to}`);
+  } catch (error) {
+    console.error(`[SMTP-STARTTLS] Erro ao enviar email para ${to}:`, error);
+    throw error;
   } finally {
     try {
       tcpConn.close();
