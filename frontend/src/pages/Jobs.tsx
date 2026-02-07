@@ -14,6 +14,8 @@ import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
 import { MobileJobCard } from "@/components/jobs/MobileJobCard";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -31,6 +33,8 @@ import {
   Clock,
   Loader2,
   Database,
+  ChevronsUpDown,
+  X,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -41,7 +45,6 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// Helper para exibição de preço (Faixa ou Único)
 const renderPrice = (job: JobDetails) => {
   if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
     return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
@@ -65,6 +68,7 @@ export default function Jobs() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
+  // --- Funções de Compartilhamento ---
   const handleShareJob = (job: Job) => {
     const shareUrl = getJobShareUrl(job.id);
     if (navigator.share) {
@@ -74,9 +78,7 @@ export default function Jobs() {
           text: `${t("jobs.shareText", "Job opportunity")}: ${job.job_title} ${t("jobs.in", "in")} ${job.city}, ${job.state}`,
           url: shareUrl,
         })
-        .catch(() => {
-          copyToClipboard(shareUrl);
-        });
+        .catch(() => copyToClipboard(shareUrl));
     } else {
       copyToClipboard(shareUrl);
     }
@@ -90,6 +92,7 @@ export default function Jobs() {
     });
   };
 
+  // --- Configurações e Hooks ---
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
@@ -100,6 +103,7 @@ export default function Jobs() {
   };
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // --- Estados de Dados ---
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -108,14 +112,11 @@ export default function Jobs() {
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 
-  const planTierCheck = profile?.plan_tier || "free";
-  const isFreeUser = planTierCheck === "free";
-  const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
-  const dailyLimitTotal = (PLANS_CONFIG[planTierCheck]?.limits?.daily_emails ?? 0) + referralBonus;
-  const creditsUsedToday = profile?.credits_used_today || 0;
-  const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
-
+  // --- Estados de Filtros ---
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => {
     const v = searchParams.get("visa") as VisaTypeFilter | null;
     if (v === "H-2A") return "H-2A";
@@ -127,39 +128,18 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get("category") ?? "");
 
-  const [categories, setCategories] = useState<string[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-
-  type SalaryBand = "any" | "lt15" | "15-18" | "18-22" | "22-26" | "26plus";
-  const SALARY_BANDS: Array<{ value: SalaryBand; label: string; min: number | null; max: number | null }> = [
-    { value: "any", label: t("jobs.salary.any"), min: null, max: null },
-    { value: "lt15", label: t("jobs.salary.lt15"), min: null, max: 14.99 },
-    { value: "15-18", label: t("jobs.salary.15_18"), min: 15, max: 18 },
-    { value: "18-22", label: t("jobs.salary.18_22"), min: 18, max: 22 },
-    { value: "22-26", label: t("jobs.salary.22_26"), min: 22, max: 26 },
-    { value: "26plus", label: t("jobs.salary.26plus"), min: 26, max: null },
-  ];
-
-  const deriveBandFromLegacyMinMax = (minRaw: string | null, maxRaw: string | null): SalaryBand => {
-    const parse = (v: string | null) => {
-      if (!v) return null;
-      const n = Number(String(v).trim().replace(",", "."));
-      return Number.isFinite(n) ? n : null;
-    };
-    const min = parse(minRaw);
-    const max = parse(maxRaw);
-    const match = SALARY_BANDS.find((b) => b.min === min && b.max === max);
-    return match?.value ?? "any";
-  };
-
-  const [salaryBand, setSalaryBand] = useState<SalaryBand>(() => {
-    const v = (searchParams.get("salary") as SalaryBand | null) ?? null;
-    if (v && SALARY_BANDS.some((b) => b.value === v)) return v;
-    return deriveBandFromLegacyMinMax(searchParams.get("min"), searchParams.get("max"));
+  // Multi-Select Category State
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    const catParam = searchParams.get("categories");
+    return catParam ? catParam.split(",") : [];
   });
 
+  // Split Salary State
+  const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
+  const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
+
+  // --- Ordenação e Paginação ---
   type SortKey =
     | "job_title"
     | "company"
@@ -199,15 +179,22 @@ export default function Jobs() {
     return Number.isFinite(p) && p > 0 ? p : 1;
   });
 
+  // --- Variaveis Derivadas ---
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
-
+  const isFreeUser = planTier === "free";
+  const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
+  const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
+  const creditsUsedToday = profile?.credits_used_today || 0;
+  const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
   const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
+  const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
+  const tableColSpan = 12;
 
+  // --- Helpers de Busca ---
   const buildOrSearch = (term: string) =>
     `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
 
@@ -223,7 +210,6 @@ export default function Jobs() {
     if (sortKey !== "posted_date") {
       query = query.order("posted_date", { ascending: false, nullsFirst: false });
     }
-    // Desempate para paginação
     query = query.order("id", { ascending: true });
 
     // Filtros
@@ -232,16 +218,19 @@ export default function Jobs() {
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
 
-    // CORREÇÃO: Filtro de Categoria com match exato
-    if (categoryFilter.trim()) {
-      query = query.eq("category", categoryFilter.trim());
+    // NOVO: Filtro Multi-Select de Categoria
+    if (selectedCategories.length > 0) {
+      query = query.in("category", selectedCategories);
     }
 
-    const band = SALARY_BANDS.find((b) => b.value === salaryBand) ?? SALARY_BANDS[0];
-    if (band.min !== null) query = query.gte("wage_from", band.min);
-    if (band.max !== null) query = query.lte("wage_from", band.max);
+    // NOVO: Filtro Salário Min/Max
+    if (minSalary && !isNaN(Number(minSalary))) {
+      query = query.gte("wage_from", Number(minSalary));
+    }
+    if (maxSalary && !isNaN(Number(maxSalary))) {
+      query = query.lte("wage_from", Number(maxSalary));
+    }
 
-    // Paginação
     query = query.range(from, to);
 
     const { data, error, count } = await query;
@@ -256,6 +245,7 @@ export default function Jobs() {
       setJobs(nextJobs);
       setTotalCount(count ?? 0);
 
+      // Carregar status da fila/reports se logado
       if (profile?.id && !planSettings.job_db_blur && nextJobs.length) {
         const ids = nextJobs.map((j) => j.id);
         const { data: queueRows } = await supabase
@@ -283,22 +273,19 @@ export default function Jobs() {
     setLoading(false);
   };
 
-  // CORREÇÃO: Fetch de Categorias mais robusto
   const fetchCategories = async () => {
     setCategoriesLoading(true);
     try {
-      // Busca categorias das últimas 2000 vagas para garantir cobertura
       const { data, error } = await supabase
         .from("public_jobs")
         .select("category")
         .not("category", "is", null)
         .neq("category", "")
         .order("posted_date", { ascending: false })
-        .limit(2000);
+        .limit(2000); // Amostra grande
 
       if (error) throw error;
 
-      // Limpa e normaliza os dados (trim)
       const categoriesRaw = data?.map((r) => r.category?.trim()).filter((c): c is string => Boolean(c)) || [];
 
       const uniq = Array.from(new Set(categoriesRaw)).sort((a, b) => a.localeCompare(b));
@@ -312,20 +299,13 @@ export default function Jobs() {
 
   useEffect(() => {
     fetchJobs();
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const categoryOptions = useMemo(() => {
-    const base = categories;
-    const current = categoryFilter.trim();
-    if (current && !base.includes(current)) return [current, ...base];
-    return base;
-  }, [categories, categoryFilter]);
-
-  // Persist filters
+  // Persistência na URL
   useEffect(() => {
     const t = window.setTimeout(() => {
       const next = new URLSearchParams();
@@ -333,8 +313,13 @@ export default function Jobs() {
       if (searchTerm.trim()) next.set("q", searchTerm.trim());
       if (stateFilter.trim()) next.set("state", stateFilter.trim());
       if (cityFilter.trim()) next.set("city", cityFilter.trim());
-      if (categoryFilter.trim()) next.set("category", categoryFilter.trim());
-      if (salaryBand !== "any") next.set("salary", salaryBand);
+
+      // Persiste array como string separada por vírgula
+      if (selectedCategories.length > 0) next.set("categories", selectedCategories.join(","));
+
+      if (minSalary) next.set("min_salary", minSalary);
+      if (maxSalary) next.set("max_salary", maxSalary);
+
       if (!(sortKey === "posted_date" && sortDir === "desc")) {
         next.set("sort", sortKey);
         next.set("dir", sortDir);
@@ -344,11 +329,23 @@ export default function Jobs() {
       if (current !== next.toString()) setSearchParams(next, { replace: true });
     }, 250);
     return () => window.clearTimeout(t);
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, salaryBand, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
 
-  const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
-  const tableColSpan = 12;
+  // --- Handlers de UI ---
+  const toggleCategory = (category: string) => {
+    setPage(1);
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
+    );
+  };
 
+  const clearCategories = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCategories([]);
+    setPage(1);
+  };
+
+  // --- Funções de Formatação ---
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return "-";
     if (months < 12) return t("jobs.table.experience_months", { count: months });
@@ -372,6 +369,7 @@ export default function Jobs() {
     return `$${salary.toFixed(2)}/h`;
   };
 
+  // --- Queue Handlers ---
   const addToQueue = async (job: Job) => {
     if (!profile) {
       setShowLoginDialog(true);
@@ -480,14 +478,11 @@ export default function Jobs() {
                 {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel })}
               </p>
             </div>
-
-            {/* Admin Tools */}
             {isAdmin && (
               <div className="flex gap-2">
                 <Dialog open={showImporter} onOpenChange={setShowImporter}>
                   <Button variant="outline" onClick={() => setShowImporter(true)}>
-                    <Database className="h-4 w-4 mr-2" />
-                    Importar JSON (Data Miner)
+                    <Database className="h-4 w-4 mr-2" /> Importar JSON (Data Miner)
                   </Button>
                   <DialogContent className="max-w-4xl p-0">
                     <MultiJsonImporter />
@@ -499,7 +494,7 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* --- FILTROS RENOVADOS --- */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -567,54 +562,114 @@ export default function Jobs() {
                   setPage(1);
                 }}
               />
-              <Select
-                value={categoryFilter.trim() ? categoryFilter : "__all__"}
-                onValueChange={(v) => {
-                  setCategoryFilter(v === "__all__" ? "" : v);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("jobs.filters.category")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">{t("jobs.filters.category_all")}</SelectItem>
-                  {categoriesLoading ? (
-                    <SelectItem value="__loading__" disabled>
-                      {t("common.loading")}
-                    </SelectItem>
-                  ) : (
-                    categoryOptions.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              <Select
-                value={salaryBand}
-                onValueChange={(v) => {
-                  setSalaryBand((v as SalaryBand) ?? "any");
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("jobs.salary.placeholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {SALARY_BANDS.map((b) => (
-                    <SelectItem key={b.value} value={b.value}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+              {/* FILTRO MULTI-SELECT CATEGORIA */}
+              <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={categoryPopoverOpen}
+                    className="justify-between text-muted-foreground font-normal overflow-hidden"
+                  >
+                    {selectedCategories.length > 0
+                      ? `${selectedCategories.length} selecionadas`
+                      : t("jobs.filters.category")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[250px]" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar categoria..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        {categories.map((category) => (
+                          <CommandItem key={category} value={category} onSelect={() => toggleCategory(category)}>
+                            <div
+                              className={cn(
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                selectedCategories.includes(category)
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50 [&_svg]:invisible",
+                              )}
+                            >
+                              <Check className={cn("h-4 w-4")} />
+                            </div>
+                            <span>{category}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                    {selectedCategories.length > 0 && (
+                      <div className="p-2 border-t">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-center text-xs h-8"
+                          onClick={clearCategories}
+                        >
+                          Limpar Filtros
+                        </Button>
+                      </div>
+                    )}
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {/* FILTRO SALARIO MIN / MAX */}
+              <div className="flex gap-2 col-span-1 sm:col-span-2 lg:col-span-2">
+                <div className="relative w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+                  <Input
+                    type="number"
+                    placeholder="Min Wage"
+                    className="pl-6"
+                    value={minSalary}
+                    onChange={(e) => {
+                      setMinSalary(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                <div className="relative w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+                  <Input
+                    type="number"
+                    placeholder="Max Wage"
+                    className="pl-6"
+                    value={maxSalary}
+                    onChange={(e) => {
+                      setMaxSalary(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Visualização das Tags Selecionadas */}
+            {selectedCategories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                <span className="text-xs text-muted-foreground self-center mr-2">Categorias:</span>
+                {selectedCategories.map((cat) => (
+                  <Badge key={cat} variant="secondary" className="px-2 py-1 gap-1 hover:bg-secondary/80">
+                    {cat}
+                    <X
+                      className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                      onClick={() => toggleCategory(cat)}
+                    />
+                  </Badge>
+                ))}
+                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearCategories}>
+                  Limpar tudo
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Results (Mobile/Desktop) */}
+        {/* Results */}
         {isMobile ? (
           <div className="space-y-3">
             {loading ? (
@@ -729,8 +784,7 @@ export default function Jobs() {
                     </TableHead>
                     <TableHead>
                       <div className="inline-flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        {t("jobs.table.headers.experience")}
+                        <Clock className="h-3.5 w-3.5" /> {t("jobs.table.headers.experience")}
                       </div>
                     </TableHead>
                     <TableHead>{t("jobs.table.headers.email")}</TableHead>
@@ -775,15 +829,12 @@ export default function Jobs() {
                           {job.city}, {job.state}
                         </TableCell>
                         <TableCell>{typeof job.openings === "number" ? formatNumber(job.openings) : "-"}</TableCell>
-
-                        {/* CÉLULA DE SALÁRIO ATUALIZADA */}
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">{renderPrice(job)}</span>
                             <span className="text-[10px] text-muted-foreground uppercase">/{job.wage_unit || "h"}</span>
                           </div>
                         </TableCell>
-
                         <TableCell>
                           {(() => {
                             const badge = getVisaBadgeConfig(job.visa_type);
@@ -838,7 +889,6 @@ export default function Jobs() {
           </Card>
         )}
 
-        {/* Dialogs */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(open) => {
