@@ -741,6 +741,7 @@ async function processOneUser(params: {
 }): Promise<{ processed: number; sent: number; failed: number }>
 {
   const { serviceClient, userId, maxItems, queueIds } = params;
+  console.log(`[processOneUser] Iniciando processamento para usuário ${userId}, maxItems: ${maxItems}, queueIds: ${queueIds?.length || 0}`);
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
