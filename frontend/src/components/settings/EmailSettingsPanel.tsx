@@ -14,6 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding";
 import { WarmupStatusWidget } from "@/components/dashboard/WarmupStatusWidget";
 import { getPlanLimit } from "@/config/plans.config";
+import { parseSmtpError } from "@/lib/smtpErrorParser";
 
 type Provider = "gmail" | "outlook";
 
