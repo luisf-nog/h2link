@@ -851,7 +851,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
     // ===== END AUTO-DOWNGRADE =====
     
-    return json(500, { success: false, error: errorMessage, critical: isCriticalError });
+    return json(500, { 
+      success: false, 
+      error: classifySmtpError(errorMessage).userMessage, 
+      error_category: classifySmtpError(errorMessage).category,
+      error_raw: errorMessage,
+      critical: isCriticalError 
+    });
   }
 };
 
