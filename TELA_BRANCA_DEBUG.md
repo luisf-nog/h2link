@@ -40,7 +40,7 @@ No painel do Lovable, verifique se estas variáveis estão configuradas:
 VITE_SUPABASE_URL=https://dalarhopratsgzmmzhxx.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_SUPABASE_PROJECT_ID=dalarhopratsgzmmzhxx
-VITE_BACKEND_URL=https://codebase-sync-69.preview.emergentagent.com
+VITE_BACKEND_URL=https://smtp-gmail-fix.preview.emergentagent.com
 VITE_APP_DOMAIN=h2linker.com
 ```
 
