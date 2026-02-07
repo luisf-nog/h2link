@@ -653,7 +653,10 @@ async function generateDiamondEmail(params: {
   prefs?: AIPreferences;
 }): Promise<{ subject: string; body: string }> {
   const { resumeData, job, visaType, prefs } = params;
-  const LOVABLE_API_KEY = requireEnv("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    throw new Error("LOVABLE_API_KEY not configured. AI email generation requires this environment variable.");
+  }
 
   const userPrefs = prefs || defaultPreferences;
   const systemPrompt = buildDynamicPromptForQueue(userPrefs);
@@ -949,6 +952,8 @@ async function processOneUser(params: {
     // Generate unique tracking_id for this specific send (declared outside try for error handling scope)
     const historyTrackingId = crypto.randomUUID();
 
+    console.log(`[process-queue] Processando item ${row.id} para usuário ${userId}`);
+
     try {
       let job:
         | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
@@ -1148,6 +1153,8 @@ async function processOneUser(params: {
       consecutiveErrors = 0;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Falha ao enviar";
+      console.error(`[process-queue] Erro ao processar item ${row.id} para ${job?.email || 'email desconhecido'}:`, err);
+      console.error(`[process-queue] Stack trace:`, err instanceof Error ? err.stack : 'N/A');
       await (serviceClient
         .from("my_queue")
         .update({
@@ -1300,6 +1307,8 @@ const handler = async (req: Request): Promise<Response> => {
     return json(200, { ok: true, mode: "user", ...r });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[process-queue] Erro no handler:", error);
+    console.error("[process-queue] Stack trace:", error instanceof Error ? error.stack : "N/A");
     return json(500, { ok: false, error: errorMessage });
   }
 };
