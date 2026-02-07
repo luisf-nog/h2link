@@ -207,6 +207,7 @@ export default function Queue() {
         tracking_id,
         created_at,
         send_count,
+        last_error,
         public_jobs (
           id,
           job_title,
