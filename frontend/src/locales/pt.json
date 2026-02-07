@@ -727,6 +727,18 @@
       "title": "SMTP não configurado",
       "description": "Suas credenciais SMTP não estão configuradas. Vá em Configurações > Email para configurar."
     },
+    "function_not_found": {
+      "title": "SMTP não configurado ou senha ausente",
+      "description": "Suas credenciais SMTP não foram encontradas. Vá em Configurações > Email, insira seu email e a Senha de App do Gmail e salve novamente."
+    },
+    "server_error": {
+      "title": "Erro interno do servidor",
+      "description": "Ocorreu um erro no servidor de email. Tente novamente em alguns minutos. Se persistir, reconfigure sua senha SMTP."
+    },
+    "session_expired": {
+      "title": "Sessão expirada",
+      "description": "Sua sessão expirou. Faça logout e login novamente para continuar enviando emails."
+    },
     "missing_email": {
       "title": "Email ausente",
       "description": "O email do destinatário está vazio. Verifique os dados da vaga."
