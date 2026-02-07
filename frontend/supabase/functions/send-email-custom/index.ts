@@ -440,6 +440,111 @@ function json(status: number, payload: unknown) {
   });
 }
 
+// ============ SMTP ERROR CLASSIFIER ============
+// Classifies raw SMTP errors into human-readable categories
+function classifySmtpError(rawMessage: string): { category: string; userMessage: string; rawError: string } {
+  const m = (rawMessage ?? "").toLowerCase();
+
+  // Authentication errors (535, 534, 530)
+  if (m.includes("535") || m.includes("username and password not accepted") || m.includes("invalid credentials") ||
+      (m.includes("auth") && (m.includes("fail") || m.includes("falhou") || m.includes("erro")))) {
+    return {
+      category: "auth_failed",
+      userMessage: "Senha de app incorreta ou expirada. Para Gmail, gere uma nova senha de app em: myaccount.google.com > Segurança > Senhas de app.",
+      rawError: rawMessage,
+    };
+  }
+
+  if (m.includes("534") || m.includes("application-specific password") || m.includes("app password") || m.includes("less secure")) {
+    return {
+      category: "app_password_required",
+      userMessage: "O Gmail exige uma Senha de App (não sua senha normal). Acesse myaccount.google.com > Segurança > Senhas de app para gerar uma.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Connection timeout
+  if (m.includes("timeout") || m.includes("timed out") || (m.includes("após") && m.includes("ms"))) {
+    return {
+      category: "connection_timeout",
+      userMessage: "Timeout de conexão com o servidor SMTP. Verifique sua internet e tente novamente.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Connection refused
+  if (m.includes("connection refused") || m.includes("conexão recusada") || m.includes("econnrefused")) {
+    return {
+      category: "connection_refused",
+      userMessage: "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail/Outlook) está correto nas configurações.",
+      rawError: rawMessage,
+    };
+  }
+
+  // TLS/SSL errors
+  if (m.includes("tls") || m.includes("ssl") || m.includes("handshake") || m.includes("certificate") || m.includes("starttls")) {
+    return {
+      category: "tls_error",
+      userMessage: "Erro de conexão segura (TLS/SSL). Verifique se o provedor selecionado está correto.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Recipient rejected (550, 551, 553)
+  if (m.includes("550") || m.includes("551") || m.includes("553") || m.includes("recipient rejected") ||
+      m.includes("user unknown") || m.includes("unknown user") || m.includes("mailbox not found") || m.includes("no such user")) {
+    return {
+      category: "recipient_rejected",
+      userMessage: "O email do destinatário foi rejeitado pelo servidor. O endereço pode não existir ou estar incorreto.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Mailbox full (552)
+  if (m.includes("552") || m.includes("mailbox full") || m.includes("over quota") || m.includes("storage")) {
+    return {
+      category: "mailbox_full",
+      userMessage: "A caixa de entrada do destinatário está cheia.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Rate limiting (421, 429)
+  if (m.includes("421") || m.includes("429") || m.includes("too many") || m.includes("rate limit") || m.includes("try again later")) {
+    return {
+      category: "rate_limited",
+      userMessage: "Limite de envio do servidor atingido. Aguarde um tempo antes de tentar novamente.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Spam/Block (554)
+  if (m.includes("554") || m.includes("blocked") || m.includes("blacklisted") || m.includes("spam") ||
+      m.includes("rejected") || m.includes("policy") || m.includes("abuse")) {
+    return {
+      category: "blocked_spam",
+      userMessage: "O email foi bloqueado por políticas anti-spam. Revise o conteúdo do template ou aguarde algumas horas.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Connection closed
+  if (m.includes("conexão smtp encerrada") || m.includes("connection closed") || m.includes("eof") || m.includes("broken pipe")) {
+    return {
+      category: "connection_closed",
+      userMessage: "O servidor SMTP encerrou a conexão inesperadamente. Tente novamente em alguns minutos.",
+      rawError: rawMessage,
+    };
+  }
+
+  // Unknown
+  return {
+    category: "unknown",
+    userMessage: `Erro ao enviar email: ${rawMessage}`,
+    rawError: rawMessage,
+  };
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
