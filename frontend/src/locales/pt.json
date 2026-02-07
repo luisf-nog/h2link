@@ -677,8 +677,78 @@
       "sent_desc": "{{count}} aplicações foram enviadas.",
       "partial_success_title": "Sucesso parcial",
       "partial_success_desc": "{{sent}} emails enviados, {{failed}} falharam. Verifique os itens com falha e tente novamente.",
-      "all_failed_desc": "Todos os {{count}} emails falharam. Verifique suas configurações SMTP."
+      "all_failed_desc": "Todos os {{count}} emails falharam. Verifique suas configurações SMTP.",
+      "all_failed_detail": "Todos os {{count}} emails falharam: {{reason}}",
+      "error_detail": "Erro: {{message}}"
     }
+  },
+  "smtp_errors": {
+    "auth_failed": {
+      "title": "Autenticação falhou",
+      "description": "Senha de app incorreta ou expirada. Para Gmail, gere uma nova senha de app em myaccount.google.com > Segurança > Senhas de app."
+    },
+    "app_password_required": {
+      "title": "Senha de app necessária",
+      "description": "O Gmail exige uma Senha de App (não sua senha normal). Acesse myaccount.google.com > Segurança > Senhas de app para gerar uma."
+    },
+    "connection_timeout": {
+      "title": "Timeout de conexão",
+      "description": "Não foi possível conectar ao servidor SMTP a tempo. Verifique sua internet e tente novamente."
+    },
+    "connection_refused": {
+      "title": "Conexão recusada",
+      "description": "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail/Outlook) está correto nas configurações."
+    },
+    "connection_closed": {
+      "title": "Conexão encerrada",
+      "description": "O servidor SMTP encerrou a conexão inesperadamente. Tente novamente em alguns minutos."
+    },
+    "tls_error": {
+      "title": "Erro de segurança (TLS/SSL)",
+      "description": "Falha na conexão segura com o servidor. Verifique se o provedor selecionado está correto."
+    },
+    "recipient_rejected": {
+      "title": "Destinatário rejeitado",
+      "description": "O email do destinatário foi rejeitado pelo servidor. O endereço pode não existir ou estar incorreto."
+    },
+    "mailbox_full": {
+      "title": "Caixa de entrada cheia",
+      "description": "A caixa de entrada do destinatário está cheia. Tente novamente mais tarde."
+    },
+    "rate_limited": {
+      "title": "Limite de envio atingido",
+      "description": "Você atingiu o limite de envios. Aguarde um tempo antes de tentar novamente ou faça upgrade do plano."
+    },
+    "blocked_spam": {
+      "title": "Bloqueado por spam",
+      "description": "O email foi bloqueado por políticas anti-spam do servidor. Revise o conteúdo do template ou aguarde algumas horas."
+    },
+    "smtp_not_configured": {
+      "title": "SMTP não configurado",
+      "description": "Suas credenciais SMTP não estão configuradas. Vá em Configurações > Email para configurar."
+    },
+    "missing_email": {
+      "title": "Email ausente",
+      "description": "O email do destinatário está vazio. Verifique os dados da vaga."
+    },
+    "invalid_domain": {
+      "title": "Domínio inválido",
+      "description": "O domínio do email do destinatário não existe ou não aceita emails."
+    },
+    "profile_incomplete": {
+      "title": "Perfil incompleto",
+      "description": "Complete seu perfil (nome, idade, telefone, email de contato) antes de enviar."
+    },
+    "no_template": {
+      "title": "Template não encontrado",
+      "description": "Nenhum template de email configurado. Crie um template em Configurações > Templates."
+    },
+    "unknown": {
+      "title": "Erro desconhecido",
+      "description": "Ocorreu um erro inesperado ao enviar. Tente novamente ou verifique as configurações SMTP."
+    },
+    "show_raw_error": "Detalhes técnicos",
+    "click_for_details": "Clique para ver detalhes do erro"
   },
   "plans": {
     "title": "Escolha seu Plano",
