@@ -729,6 +729,10 @@
       "title": "SMTP no configurado o contraseña faltante",
       "description": "Tus credenciales SMTP no fueron encontradas. Ve a Configuración > Email, ingresa tu email y la Contraseña de App de Gmail y guarda nuevamente."
     },
+    "function_not_deployed": {
+      "title": "Función de envío no disponible",
+      "description": "La función de envío de email no está accesible en el servidor. Intenta usar el botón 'Enviar Todos' (que usa otra ruta) o contacta soporte para verificar el deploy de Edge Functions en Supabase."
+    },
     "server_error": {
       "title": "Error interno del servidor",
       "description": "Ocurrió un error en el servidor de email. Intenta de nuevo en unos minutos. Si persiste, reconfigura tu contraseña SMTP."
