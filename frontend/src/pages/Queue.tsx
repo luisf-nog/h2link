@@ -728,7 +728,8 @@ export default function Queue() {
         setSelectedIds({});
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : t('common.errors.send_failed');
-        toast({ title: t('common.errors.send_failed'), description: message, variant: 'destructive' });
+        const parsed = parseSmtpError(message);
+        toast({ title: t(parsed.titleKey), description: t(parsed.descriptionKey), variant: 'destructive', duration: 10000 });
       } finally {
         setSending(false);
       }
