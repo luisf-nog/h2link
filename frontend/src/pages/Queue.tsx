@@ -15,10 +15,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, Flag } from 'lucide-react';
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, Flag, AlertCircle } from 'lucide-react';
 import { ReportJobButton } from '@/components/queue/ReportJobButton';
 import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@/lib/number';
+import { parseSmtpError } from '@/lib/smtpErrorParser';
 import { AddManualJobDialog } from '@/components/queue/AddManualJobDialog';
 import { SendHistoryDialog } from '@/components/queue/SendHistoryDialog';
 import { MobileQueueCard } from '@/components/queue/MobileQueueCard';
