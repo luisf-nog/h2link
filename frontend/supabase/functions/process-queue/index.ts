@@ -1202,20 +1202,31 @@ async function processOneUser(params: {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  console.log(`[process-queue] Handler chamado: ${req.method} ${req.url}`);
+  
+  if (req.method === "OPTIONS") {
+    console.log(`[process-queue] OPTIONS request, retornando CORS headers`);
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
+    console.log(`[process-queue] Validando variáveis de ambiente...`);
     const supabaseUrl = requireEnv("SUPABASE_URL");
     const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+    console.log(`[process-queue] Variáveis de ambiente validadas, criando cliente...`);
+    
     const serviceClient: any = createClient(
       supabaseUrl,
       supabaseServiceKey,
     );
+    console.log(`[process-queue] Cliente Supabase criado com sucesso`);
 
     const cronToken = req.headers.get("x-cron-token");
+    console.log(`[process-queue] Cron token presente: ${cronToken ? 'sim' : 'não'}`);
 
     // Mode A: cron calls without user session -> process multiple premium users
     if (cronToken) {
+      console.log(`[process-queue] Modo CRON detectado`);
       const { data: settings, error: settingsErr } = await serviceClient
         .from("app_settings")
         .select("cron_token")
@@ -1253,11 +1264,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Mode B: authenticated user request -> process only their own queue (premium only)
     const authHeader = req.headers.get("Authorization");
+    console.log(`[process-queue] Modo USER detectado, Authorization header: ${authHeader ? 'presente' : 'ausente'}`);
+    
     if (!authHeader?.startsWith("Bearer ")) {
+      console.log(`[process-queue] Erro: Authorization header inválido`);
       return json(401, { ok: false, error: "Unauthorized" });
     }
 
     const token = authHeader.replace("Bearer ", "");
+    console.log(`[process-queue] Token extraído, validando usuário...`);
+    
     const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
     const authClient = createClient(
       supabaseUrl,
@@ -1265,10 +1281,14 @@ const handler = async (req: Request): Promise<Response> => {
       { global: { headers: { Authorization: authHeader } } },
     );
     const { data: userData, error: userError } = await authClient.auth.getUser(token);
+    
     if (userError || !userData?.user?.id) {
+      console.log(`[process-queue] Erro na autenticação:`, userError);
       return json(401, { ok: false, error: "Unauthorized" });
     }
+    
     const userId = userData.user.id;
+    console.log(`[process-queue] Usuário autenticado: ${userId}`);
 
     const { data: profile } = await serviceClient
       .from("profiles")
@@ -1276,14 +1296,19 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", userId)
       .maybeSingle();
     const tier = (profile as { plan_tier?: PlanTier } | null)?.plan_tier ?? "free";
+    console.log(`[process-queue] Plan tier do usuário: ${tier}`);
+    
     if (tier === "free") {
+      console.log(`[process-queue] Usuário free tier, rejeitando requisição`);
       return json(403, { ok: false, error: "Free plan must keep the browser open" });
     }
 
     let body: any = null;
     try {
       body = await req.json();
-    } catch {
+      console.log(`[process-queue] Body recebido:`, JSON.stringify(body));
+    } catch (e) {
+      console.log(`[process-queue] Erro ao parsear body:`, e);
       body = null;
     }
 
@@ -1292,9 +1317,12 @@ const handler = async (req: Request): Promise<Response> => {
       : null;
     const safeIds = ids ? (ids as string[]).slice(0, 50) : undefined;
     const maxItems = safeIds ? safeIds.length : 5;
+    
+    console.log(`[process-queue] Processando ${maxItems} itens${safeIds ? ` (IDs específicos: ${safeIds.length})` : ' (todos pendentes)'}`);
 
     // Fire-and-forget: start processing in the background and return immediately.
     // This prevents the browser from timing out (which shows up as "Failed to fetch").
+    console.log(`[process-queue] Iniciando processamento em background...`);
     const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
     const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
     if (typeof waitUntil === "function") {
