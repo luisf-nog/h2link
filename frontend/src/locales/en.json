@@ -728,6 +728,18 @@
       "title": "SMTP not configured",
       "description": "Your SMTP credentials are not set up. Go to Settings > Email to configure."
     },
+    "function_not_found": {
+      "title": "SMTP not configured or password missing",
+      "description": "Your SMTP credentials were not found. Go to Settings > Email, enter your email and Gmail App Password, and save again."
+    },
+    "server_error": {
+      "title": "Internal server error",
+      "description": "An error occurred on the email server. Try again in a few minutes. If it persists, reconfigure your SMTP password."
+    },
+    "session_expired": {
+      "title": "Session expired",
+      "description": "Your session has expired. Log out and log back in to continue sending emails."
+    },
     "missing_email": {
       "title": "Email missing",
       "description": "The recipient's email is empty. Check the job data."
