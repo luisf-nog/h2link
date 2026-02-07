@@ -2,18 +2,21 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-// --- RECUPERADO DA MEMÓRIA ---
-// URL e Chave do seu projeto Supabase (H2 Linker / h2link)
+// --- CREDENCIAIS HARDCODED (Recuperadas do Histórico) ---
+// Isso resolve o erro "supabaseUrl is required" e "Invalid API Key"
 const SUPABASE_URL = "https://dalarhopratsgzmmzhxx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..XXXXX"; // (Chave pública abreviada para segurança, o Lovable deve ter a completa, senão me avise que busco a completa)
+const SUPABASE_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGFyaG9wcmF0c2d6bW16aHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM5NDksImV4cCI6MjA4NDY1OTk0OX0.CIV7u2pMSudse-Zpfqf8OHLkm_exZn0EaYXVEFwoXTQ";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// Fallback para variáveis de ambiente (caso o Lovable volte a injetar corretamente no futuro)
+const finalUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
+const finalKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY;
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(finalUrl, finalKey, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });
