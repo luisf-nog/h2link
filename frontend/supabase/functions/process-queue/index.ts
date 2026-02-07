@@ -1203,7 +1203,11 @@ async function processOneUser(params: {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log(`[process-queue] Handler chamado: ${req.method} ${req.url}`);
+  // Log imediato no início - antes de qualquer coisa
+  console.log(`[process-queue] ========== HANDLER INICIADO ==========`);
+  console.log(`[process-queue] Método: ${req.method}`);
+  console.log(`[process-queue] URL: ${req.url}`);
+  console.log(`[process-queue] Headers:`, JSON.stringify(Object.fromEntries(req.headers.entries())));
   
   if (req.method === "OPTIONS") {
     console.log(`[process-queue] OPTIONS request, retornando CORS headers`);
