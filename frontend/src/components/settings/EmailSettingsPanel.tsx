@@ -6,22 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding";
 import { WarmupStatusWidget } from "@/components/dashboard/WarmupStatusWidget";
 import { getPlanLimit } from "@/config/plans.config";
@@ -123,7 +112,11 @@ export function EmailSettingsPanel() {
       if (cancelled) return;
 
       if (error) {
-        toast({ title: t("smtp.toasts.load_templates_error_title"), description: error.message, variant: "destructive" });
+        toast({
+          title: t("smtp.toasts.load_templates_error_title"),
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
         setTemplates((data as EmailTemplate[]) ?? []);
       }
@@ -152,23 +145,14 @@ export function EmailSettingsPanel() {
 
     setSaving(true);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error(t("common.errors.no_session"));
-
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ provider, email, password: password.trim() || undefined }),
+      // CORREÇÃO: Usar supabase.functions.invoke em vez de fetch manual
+      const { data: payload, error: funcError } = await supabase.functions.invoke("save-smtp-credentials", {
+        body: { provider, email, password: password.trim() || undefined },
       });
 
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || payload?.success === false) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
+      if (funcError) throw funcError;
+      if (payload?.success === false) {
+        throw new Error(payload?.error || "Erro ao salvar credenciais");
       }
 
       if (password.trim().length > 0) {
@@ -189,19 +173,13 @@ export function EmailSettingsPanel() {
     if (!user?.id) return;
     setSavingProfile(true);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error(t("common.errors.no_session"));
-
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ provider, email, risk_profile: selectedProfile }),
+      // CORREÇÃO: Usar supabase.functions.invoke em vez de fetch manual
+      const { data: payload, error: funcError } = await supabase.functions.invoke("save-smtp-credentials", {
+        body: { provider, email, risk_profile: selectedProfile },
       });
 
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || payload?.success === false) throw new Error(payload?.error || `HTTP ${res.status}`);
+      if (funcError) throw funcError;
+      if (payload?.success === false) throw new Error(payload?.error || "Erro ao salvar perfil de risco");
 
       setRiskProfile(selectedProfile);
       const startLimits: Record<RiskProfile, number> = { conservative: 20, standard: 50, aggressive: 100 };
@@ -234,11 +212,6 @@ export function EmailSettingsPanel() {
 
     setSending(true);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error(t("common.errors.no_session"));
-
       const vars: Record<string, string> = {
         name: profile.full_name ?? "",
         age: String(profile.age ?? ""),
@@ -252,26 +225,14 @@ export function EmailSettingsPanel() {
       const finalSubject = applyTemplate(subject, vars);
       const finalBody = applyTemplate(body, vars);
 
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email-custom`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ to, subject: finalSubject, body: finalBody, provider }),
+      // CORREÇÃO: Usar supabase.functions.invoke em vez de fetch manual
+      const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
+        body: { to, subject: finalSubject, body: finalBody, provider },
       });
 
-      const text = await res.text();
-      const payload = (() => {
-        try {
-          return JSON.parse(text);
-        } catch {
-          return { error: text };
-        }
-      })();
-
-      if (!res.ok || payload?.success === false) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
+      if (funcError) throw funcError;
+      if (payload?.success === false) {
+        throw new Error(payload?.error || "Erro ao enviar email de teste");
       }
 
       toast({ title: t("smtp.toasts.test_sent") });
@@ -295,6 +256,7 @@ export function EmailSettingsPanel() {
   }
 
   const planTier = profile?.plan_tier || "free";
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const planMax = getPlanLimit(planTier, "daily_emails");
   // No referral bonus for paid tiers (this panel is for paid users only)
 
@@ -304,14 +266,10 @@ export function EmailSettingsPanel() {
   return (
     <div className="space-y-6">
       {/* Warmup Status Widget - show if risk profile is set */}
-      {riskProfile && planTier !== "free" && (
-        <WarmupStatusWidget />
-      )}
+      {riskProfile && planTier !== "free" && <WarmupStatusWidget />}
 
       {/* Warmup Onboarding - show if SMTP configured but no profile */}
-      {needsWarmupOnboarding && (
-        <EmailWarmupOnboarding onSelect={handleSaveRiskProfile} loading={savingProfile} />
-      )}
+      {needsWarmupOnboarding && <EmailWarmupOnboarding onSelect={handleSaveRiskProfile} loading={savingProfile} />}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -336,7 +294,11 @@ export function EmailSettingsPanel() {
 
           <div className="space-y-2">
             <Label>{t("smtp.fields.email")}</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("smtp.placeholders.email")} />
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t("smtp.placeholders.email")}
+            />
           </div>
 
           <div className="space-y-2">
@@ -353,9 +315,7 @@ export function EmailSettingsPanel() {
 
             <Accordion type="single" collapsible className="pt-2">
               <AccordionItem value="help">
-                <AccordionTrigger className="text-sm">
-                  {t("smtp.help.title")}
-                </AccordionTrigger>
+                <AccordionTrigger className="text-sm">{t("smtp.help.title")}</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4 text-sm text-muted-foreground">
                     <div className="space-y-2">
@@ -368,9 +328,11 @@ export function EmailSettingsPanel() {
                       <p className="font-medium text-foreground">{t("smtp.help.gmail_title")}</p>
                       <p className="text-xs">{t("smtp.help.gmail_warning")}</p>
                       <ol className="list-decimal pl-5 space-y-1">
-                        {String(t("smtp.help.gmail_steps")).split("\n").map((line, idx) => (
-                          <li key={idx}>{line}</li>
-                        ))}
+                        {String(t("smtp.help.gmail_steps"))
+                          .split("\n")
+                          .map((line, idx) => (
+                            <li key={idx}>{line}</li>
+                          ))}
                       </ol>
                       <p className="text-xs">{t("smtp.help.gmail_tip")}</p>
                     </div>
@@ -378,19 +340,23 @@ export function EmailSettingsPanel() {
                     <div className="space-y-2">
                       <p className="font-medium text-foreground">{t("smtp.help.outlook_title")}</p>
                       <ol className="list-decimal pl-5 space-y-1">
-                        {String(t("smtp.help.outlook_steps")).split("\n").map((line, idx) => (
-                          <li key={idx}>{line}</li>
-                        ))}
+                        {String(t("smtp.help.outlook_steps"))
+                          .split("\n")
+                          .map((line, idx) => (
+                            <li key={idx}>{line}</li>
+                          ))}
                       </ol>
                     </div>
 
                     <div className="space-y-2">
                       <p className="font-medium text-foreground">{t("smtp.help.faq_title")}</p>
                       <p>
-                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_safe")}</span> {t("smtp.help.faq_a_safe")}
+                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_safe")}</span>{" "}
+                        {t("smtp.help.faq_a_safe")}
                       </p>
                       <p>
-                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_where")}</span> {t("smtp.help.faq_a_where")}
+                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_where")}</span>{" "}
+                        {t("smtp.help.faq_a_where")}
                       </p>
                     </div>
                   </div>
@@ -446,11 +412,19 @@ export function EmailSettingsPanel() {
             </div>
             <div className="space-y-2">
               <Label>{t("smtp.test.fields.company")}</Label>
-              <Input value={testCompany} onChange={(e) => setTestCompany(e.target.value)} placeholder={t("smtp.test.placeholders.company")} />
+              <Input
+                value={testCompany}
+                onChange={(e) => setTestCompany(e.target.value)}
+                placeholder={t("smtp.test.placeholders.company")}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t("smtp.test.fields.position")}</Label>
-              <Input value={testPosition} onChange={(e) => setTestPosition(e.target.value)} placeholder={t("smtp.test.placeholders.position")} />
+              <Input
+                value={testPosition}
+                onChange={(e) => setTestPosition(e.target.value)}
+                placeholder={t("smtp.test.placeholders.position")}
+              />
             </div>
           </div>
 
