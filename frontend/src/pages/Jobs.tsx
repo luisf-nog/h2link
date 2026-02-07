@@ -223,12 +223,12 @@ export default function Jobs() {
       query = query.in("category", selectedCategories);
     }
 
-    // NOVO: Filtro Salário Min/Max
+    // NOVO: Filtro Salário Min/Max (CORRIGIDO: Usa 'salary' em vez de 'wage_from')
     if (minSalary && !isNaN(Number(minSalary))) {
-      query = query.gte("wage_from", Number(minSalary));
+      query = query.gte("salary", Number(minSalary));
     }
     if (maxSalary && !isNaN(Number(maxSalary))) {
-      query = query.lte("wage_from", Number(maxSalary));
+      query = query.lte("salary", Number(maxSalary));
     }
 
     query = query.range(from, to);
@@ -282,7 +282,7 @@ export default function Jobs() {
         .not("category", "is", null)
         .neq("category", "")
         .order("posted_date", { ascending: false })
-        .limit(2000); // Amostra grande
+        .limit(2000);
 
       if (error) throw error;
 
