@@ -80,7 +80,7 @@ export default function Queue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set()); // Track multiple individual sends
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
@@ -92,7 +92,6 @@ export default function Queue() {
 
   const planTier = profile?.plan_tier || "free";
   const isFreeUser = planTier === "free";
-  // Referral bonus only applies to free users
   const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
   const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
   const creditsUsedToday = profile?.credits_used_today || 0;
@@ -104,7 +103,6 @@ export default function Queue() {
     if (planTier === "gold") {
       return { xMailer: "Microsoft Outlook 16.0", userAgent: "Microsoft Outlook 16.0" };
     }
-
     if (planTier === "diamond") {
       const pool = [
         { xMailer: "iPhone Mail (20A362)", userAgent: "iPhone Mail (20A362)" },
@@ -114,13 +112,12 @@ export default function Queue() {
       ];
       return pool[Math.floor(Math.random() * pool.length)];
     }
-
     return {};
   };
 
   const getDelayMs = () => {
     if (planTier === "gold") return 15_000;
-    if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15s..45s
+    if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001);
     return 0;
   };
 
@@ -140,7 +137,6 @@ export default function Queue() {
 
       if (cancelled) return;
       if (error) {
-        // Best-effort: if we can't read it, don't block UI here.
         setSmtpReady(null);
         return;
       }
@@ -193,32 +189,9 @@ export default function Queue() {
       .from("my_queue")
       .select(
         `
-        id,
-        status,
-        sent_at,
-        opened_at,
-        profile_viewed_at,
-        tracking_id,
-        created_at,
-        send_count,
-        last_error,
-        public_jobs (
-          id,
-          job_title,
-          company,
-          email,
-          city,
-          state,
-          visa_type
-        ),
-        manual_jobs (
-          id,
-          company,
-          job_title,
-          email,
-          eta_number,
-          phone
-        )
+        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, send_count, last_error,
+        public_jobs (id, job_title, company, email, city, state, visa_type),
+        manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
       )
       .order("created_at", { ascending: false });
@@ -238,7 +211,6 @@ export default function Queue() {
 
   const removeFromQueue = async (id: string) => {
     const { error } = await supabase.from("my_queue").delete().eq("id", id);
-
     if (error) {
       toast({
         title: t("queue.toasts.remove_error_title"),
@@ -283,7 +255,6 @@ export default function Queue() {
 
   const ensureCanSend = async () => {
     if (smtpReady !== true) {
-      // If we don't know yet, verify now (best-effort) so we can show the correct popup.
       if (profile?.id) {
         const { data, error } = await supabase
           .from("smtp_credentials")
@@ -300,7 +271,6 @@ export default function Queue() {
           }
         }
       }
-
       if (smtpReady === false) {
         setSmtpDialogOpen(true);
         return { ok: false as const };
@@ -321,7 +291,6 @@ export default function Queue() {
       return { ok: false as const };
     }
 
-    // Templates are mandatory for Free/Gold/Diamond, optional for Black (AI generates per job).
     const { data: tplData, error: tplError } = await supabase
       .from("email_templates")
       .select("id,name,subject,body")
@@ -332,7 +301,6 @@ export default function Queue() {
     }
 
     const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
-    // Only Black uses dynamic AI generation, so templates are optional only for Black
     if (templates.length === 0 && planTier !== "black") {
       toast({
         title: t("queue.toasts.no_template_title"),
@@ -342,26 +310,11 @@ export default function Queue() {
       return { ok: false as const };
     }
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      toast({ title: t("common.errors.no_session"), description: sessionError.message, variant: "destructive" });
-      return { ok: false as const };
-    }
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      toast({
-        title: t("common.errors.no_session"),
-        description: t("common.errors.no_session"),
-        variant: "destructive",
-      });
-      return { ok: false as const };
-    }
-
-    return { ok: true as const, templates, token };
+    // Auth verification handled by client
+    return { ok: true as const, templates };
   };
 
   useEffect(() => {
-    // Keep selection in sync: only keep ids that are still pending
     setSelectedIds((prev) => {
       const next: Record<string, boolean> = {};
       for (const [id, checked] of Object.entries(prev)) {
@@ -370,6 +323,14 @@ export default function Queue() {
       return next;
     });
   }, [pendingIds]);
+
+  // CORREÇÃO: Função centralizada para chamar Edge Functions usando SDK
+  // Substitui o fetchWithRetry antigo que usava URLs manuais
+  const invokeEdgeFunction = async (functionName: string, body: any) => {
+    const { data, error } = await supabase.functions.invoke(functionName, { body });
+    if (error) throw error;
+    return data;
+  };
 
   const sendQueueItems = async (items: QueueItem[]) => {
     const guard = await ensureCanSend();
@@ -384,7 +345,6 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
-      // Stop if daily limit reached
       if (creditsRemaining <= 0) {
         toast({
           title: t("queue.toasts.daily_limit_reached_title"),
@@ -436,12 +396,10 @@ export default function Queue() {
       try {
         if (planTier === "black") {
           try {
-            // CORREÇÃO: Usando supabase.functions.invoke
-            const { data: payload, error: funcError } = await supabase.functions.invoke("generate-job-email", {
-              body: { queueId: item.id },
-            });
+            // CORREÇÃO: Usando invoke
+            const payload = await invokeEdgeFunction("generate-job-email", { queueId: item.id });
 
-            if (!funcError && payload?.success !== false && payload?.subject && payload?.body) {
+            if (payload?.success !== false && payload?.subject && payload?.body) {
               finalSubject = String(payload.subject);
               finalBody = String(payload.body);
             } else if (payload?.error === "resume_data_missing") {
@@ -469,21 +427,15 @@ export default function Queue() {
 
         console.log(`[Queue] Enviando email para ${to}, queueId: ${item.id}`);
 
-        // CORREÇÃO: Usando supabase.functions.invoke
-        const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
-          body: {
-            to,
-            subject: finalSubject,
-            body: finalBody,
-            queueId: item.id,
-            ...sendProfile,
-            dedupeId,
-          },
+        // CORREÇÃO: Usando invoke para enviar email
+        const payload = await invokeEdgeFunction("send-email-custom", {
+          to,
+          subject: finalSubject,
+          body: finalBody,
+          queueId: item.id,
+          ...sendProfile,
+          dedupeId,
         });
-
-        if (funcError) {
-          throw new Error(funcError.message || "Erro ao invocar função de envio");
-        }
 
         if (payload?.success === false) {
           console.error(`[Queue] Erro ao enviar email:`, payload);
@@ -495,7 +447,6 @@ export default function Queue() {
         }
 
         console.log(`[Queue] Email enviado com sucesso para ${to}`);
-
         sentIds.push(item.id);
         creditsRemaining -= 1;
       } catch (e: unknown) {
@@ -530,6 +481,7 @@ export default function Queue() {
       }
     }
 
+    // Update DB for successes
     for (const sentId of sentIds) {
       const currentItem = items.find((i) => i.id === sentId);
       const newCount = (currentItem?.send_count ?? 0) + 1;
@@ -544,6 +496,7 @@ export default function Queue() {
       });
     }
 
+    // Feedback
     if (sentIds.length > 0 && failedIds.length === 0) {
       toast({
         title: t("queue.toasts.sent_title"),
@@ -582,47 +535,14 @@ export default function Queue() {
     fetchQueue();
   };
 
-  const handleSendAll = async () => {
-    if (pendingItems.length === 0) return;
-
-    if (isFree) {
-      const slice = pendingItems.slice(0, remainingToday);
-      if (slice.length === 0) {
-        toast({
-          title: t("queue.toasts.daily_limit_reached_title"),
-          description: t("queue.toasts.daily_limit_reached_desc"),
-          variant: "destructive",
-        });
-        return;
-      }
-      setSending(true);
-      try {
-        await sendQueueItems(slice);
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-        const parsed = parseSmtpError(message);
-        toast({
-          title: t(parsed.titleKey),
-          description: t(parsed.descriptionKey),
-          variant: "destructive",
-          duration: 10000,
-        });
-      } finally {
-        setSending(false);
-      }
-      return;
-    }
-
-    setSending(true);
+  // Funções que usam process-queue (Background)
+  const callProcessQueue = async (payload: any) => {
     try {
-      // CORREÇÃO: Usando supabase.functions.invoke
-      const { data: payload, error: funcError } = await supabase.functions.invoke("process-queue", {
-        body: {},
-      });
+      // CORREÇÃO: Usando invoke
+      const data = await invokeEdgeFunction("process-queue", payload);
 
-      if (funcError) throw funcError;
-      if (payload?.ok === false) {
-        throw new Error(payload?.error || "Erro ao processar fila");
+      if (data?.ok === false) {
+        throw new Error(data?.error || "Erro ao processar fila");
       }
 
       toast({
@@ -644,70 +564,42 @@ export default function Queue() {
     }
   };
 
+  const handleSendAll = async () => {
+    if (pendingItems.length === 0) return;
+
+    if (isFree) {
+      const slice = pendingItems.slice(0, remainingToday);
+      if (slice.length === 0) {
+        toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
+        return;
+      }
+      setSending(true);
+      await sendQueueItems(slice).finally(() => setSending(false));
+      return;
+    }
+
+    setSending(true);
+    await callProcessQueue({});
+  };
+
   const handleSendSelected = async () => {
     if (selectedPendingIds.length === 0) return;
 
     if (isFree) {
       const items = pendingItems.filter((it) => selectedPendingIds.includes(it.id)).slice(0, remainingToday);
       if (items.length === 0) {
-        toast({
-          title: t("queue.toasts.daily_limit_reached_title"),
-          description: t("queue.toasts.daily_limit_reached_desc"),
-          variant: "destructive",
-        });
+        toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
         return;
       }
-
       setSending(true);
-      try {
-        await sendQueueItems(items);
-        setSelectedIds({});
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-        const parsed = parseSmtpError(message);
-        toast({
-          title: t(parsed.titleKey),
-          description: t(parsed.descriptionKey),
-          variant: "destructive",
-          duration: 10000,
-        });
-      } finally {
-        setSending(false);
-      }
+      await sendQueueItems(items).finally(() => setSending(false));
+      setSelectedIds({});
       return;
     }
 
     setSending(true);
-    try {
-      // CORREÇÃO: Usando supabase.functions.invoke
-      const { data: payload, error: funcError } = await supabase.functions.invoke("process-queue", {
-        body: { ids: selectedPendingIds },
-      });
-
-      if (funcError) throw funcError;
-      if (payload?.ok === false) {
-        throw new Error(payload?.error || "Erro ao processar fila");
-      }
-
-      toast({
-        title: String(t("queue.toasts.bg_started_selected_title")),
-        description: String(t("queue.toasts.bg_started_selected_desc", { count: selectedPendingIds.length })),
-      });
-
-      setSelectedIds({});
-      fetchQueue();
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-      const parsed = parseSmtpError(message);
-      toast({
-        title: String(t(parsed.titleKey)),
-        description: String(t(parsed.descriptionKey)),
-        variant: "destructive",
-        duration: 10000,
-      });
-    } finally {
-      setSending(false);
-    }
+    await callProcessQueue({ ids: selectedPendingIds });
+    setSelectedIds({});
   };
 
   const handleSendOne = async (item: QueueItem) => {
@@ -715,7 +607,6 @@ export default function Queue() {
     if (sendingIds.has(item.id)) return;
 
     setSendingIds((prev) => new Set(prev).add(item.id));
-
     setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing" } : q)));
 
     const cleanup = () => {
@@ -731,39 +622,12 @@ export default function Queue() {
         if (item.status === "sent") {
           await supabase.from("my_queue").update({ status: "pending", last_error: null }).eq("id", item.id);
         }
-
-        // CORREÇÃO: Usando supabase.functions.invoke
-        const { data: payload, error: funcError } = await supabase.functions.invoke("process-queue", {
-          body: {}, // Process queue should pick up pending items automatically
-        });
-
-        if (funcError) throw funcError;
-        if (payload?.ok === false) {
-          throw new Error(payload?.error || "Erro ao processar fila");
-        }
-
-        toast({
-          title: t("queue.toasts.bg_started_title"),
-          description: t("queue.toasts.bg_started_desc"),
-        });
-        fetchQueue();
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-        const parsed = parseSmtpError(message);
-        toast({
-          title: t(parsed.titleKey),
-          description: t(parsed.descriptionKey),
-          variant: "destructive",
-          duration: 10000,
-        });
-        fetchQueue();
+        await callProcessQueue({}); // Background pick up
       } finally {
         cleanup();
       }
     } else {
-      sendQueueItems([item]).finally(() => {
-        cleanup();
-      });
+      await sendQueueItems([item]).finally(cleanup);
     }
   };
 
@@ -777,31 +641,8 @@ export default function Queue() {
         const updatedItem = { ...item, status: "pending" };
         await sendQueueItems([updatedItem]);
       } else {
-        // CORREÇÃO: Usando supabase.functions.invoke
-        const { data: payload, error: funcError } = await supabase.functions.invoke("process-queue", {
-          body: {},
-        });
-
-        if (funcError) throw funcError;
-        if (payload?.ok === false) {
-          throw new Error(payload?.error || "Erro ao processar fila");
-        }
-
-        toast({
-          title: t("queue.toasts.bg_started_title"),
-          description: t("queue.toasts.bg_started_desc"),
-        });
-        fetchQueue();
+        await callProcessQueue({});
       }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-      const parsed = parseSmtpError(message);
-      toast({
-        title: t(parsed.titleKey),
-        description: t(parsed.descriptionKey),
-        variant: "destructive",
-        duration: 10000,
-      });
     } finally {
       setRetryingId(null);
     }
@@ -818,31 +659,8 @@ export default function Queue() {
         const updatedItems = failedItems.map((it) => ({ ...it, status: "pending" }));
         await sendQueueItems(updatedItems.slice(0, remainingToday));
       } else {
-        // CORREÇÃO: Usando supabase.functions.invoke
-        const { data: payload, error: funcError } = await supabase.functions.invoke("process-queue", {
-          body: {},
-        });
-
-        if (funcError) throw funcError;
-        if (payload?.ok === false) {
-          throw new Error(payload?.error || "Erro ao processar fila");
-        }
-
-        toast({
-          title: t("queue.toasts.bg_started_title"),
-          description: t("queue.toasts.bg_started_desc"),
-        });
-        fetchQueue();
+        await callProcessQueue({});
       }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("common.errors.send_failed");
-      const parsed = parseSmtpError(message);
-      toast({
-        title: t(parsed.titleKey),
-        description: t(parsed.descriptionKey),
-        variant: "destructive",
-        duration: 10000,
-      });
     } finally {
       setSending(false);
     }
@@ -890,7 +708,6 @@ export default function Queue() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Upgrade Dialog when daily limit is reached */}
       <AlertDialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -913,7 +730,6 @@ export default function Queue() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Premium Feature Dialog for Send All */}
       <AlertDialog open={premiumDialogOpen} onOpenChange={setPremiumDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -981,7 +797,6 @@ export default function Queue() {
         </div>
       </div>
 
-      {/* Sending Status Card - shows when items are processing */}
       {(processingItems.length > 0 || (sending && pendingItems.length > 0)) && (
         <SendingStatusCard
           processingCount={processingItems.length}
@@ -990,7 +805,6 @@ export default function Queue() {
         />
       )}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -1018,10 +832,8 @@ export default function Queue() {
         </Card>
       </div>
 
-      {/* Queue List */}
       <TooltipProvider>
         {isMobile ? (
-          /* Mobile View: Cards */
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t("queue.table.title")}</h2>
@@ -1077,7 +889,6 @@ export default function Queue() {
             )}
           </div>
         ) : (
-          /* Desktop View: Table */
           <Card>
             <CardHeader>
               <CardTitle>{t("queue.table.title")}</CardTitle>
@@ -1221,7 +1032,6 @@ export default function Queue() {
                           )}
                         </TableCell>
 
-                        {/* Resume View Tracking */}
                         <TableCell className="text-center">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1252,7 +1062,6 @@ export default function Queue() {
 
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            {/* Report button - only for public jobs */}
                             {item.public_jobs?.id && <ReportJobButton jobId={item.public_jobs.id} />}
 
                             {item.send_count > 0 && (
