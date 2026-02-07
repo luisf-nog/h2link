@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,6 @@ export function MultiJsonImporter() {
         const val = obj[key];
         if (typeof val === "string") {
           const clean = val.trim();
-          // Se allowNone for true, aceita "None". Se não, filtra.
           if (clean === "" || clean.toLowerCase() === "n/a" || clean.toLowerCase() === "null") continue;
           if (!allowNone && clean.toLowerCase() === "none") continue;
         }
@@ -42,7 +42,9 @@ export function MultiJsonImporter() {
   };
 
   const deepFindWage = (item: any): number | null => {
-    let val = parseMoney(item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE);
+    let val = parseMoney(
+      item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE || item.AEWR || item.BASIC_RATE,
+    ); // Added AEWR/BASIC_RATE
     if (val) return val;
 
     if (item.clearanceOrder) {
@@ -130,11 +132,50 @@ export function MultiJsonImporter() {
           for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
+            // --- MAPEAMENTO EXPANDIDO PARA OS 3 TIPOS DE ARQUIVO ---
+
+            // 1. Título (Data Miner vs DOL vs Genérico)
+            const title = getVal(flat, [
+              "jobTitle",
+              "job_title",
+              "tempneedJobtitle",
+              "JOB_TITLE",
+              "Job_Title",
+              "TITLE",
+              "job_order_title",
+            ]);
+
+            // 2. Empresa
+            const company = getVal(flat, [
+              "empBusinessName",
+              "employerBusinessName",
+              "legalName",
+              "empName",
+              "company",
+              "EMPLOYER_NAME",
+              "Employer_Name",
+              "employer_name",
+              "FULL_NAME",
+            ]);
+
+            // 3. Categoria (IMPORTANTE: Mapeia as chaves do print e padrões oficiais)
+            const category = getVal(flat, [
+              "category", // Data Miner (seu print)
+              "SOC_TITLE", // Oficial H-2A/H-2B
+              "soc_title", // Variação
+              "Occupational_Title", // Legado
+              "SOC_Title",
+            ]);
+
+            // 4. Código SOC (Auxiliar)
+            const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode"]);
+
+            // Campos padrão
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
-            const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle"]);
-            const start = formatToISODate(getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart"]));
-            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail"]);
-            const company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "empName"]);
+            const start = formatToISODate(
+              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
+            );
+            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
 
             if (!fein || !title || !start || !email || !company) {
               skippedCount++;
@@ -144,15 +185,15 @@ export function MultiJsonImporter() {
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
             const finalWage = calculateFinalWage(item, flat);
 
-            // LOGICA DE INFERÊNCIA (V8)
             const transportDesc = getVal(flat, ["transportDescEmp", "transportDescDaily"]);
-            // Se o boolean for null/false, mas tiver texto de descrição, assume TRUE.
             const transportBool =
               parseBool(getVal(flat, ["isEmploymentTransport", "recIsDailyTransport", "transportProvided"])) ||
               (transportDesc && transportDesc.length > 5);
 
             const extractedJob = {
-              job_id: getVal(flat, ["caseNumber", "jobOrderNumber"]) || `GEN-${Math.random()}`,
+              job_id:
+                getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]) ||
+                `GEN-${Math.random()}`,
               visa_type: visaType,
               fingerprint,
               is_active: true,
@@ -161,43 +202,61 @@ export function MultiJsonImporter() {
               company: company,
               email: email,
 
-              city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity"]),
-              state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState"]),
-              zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode"]),
-              worksite_address: getVal(flat, ["jobAddr1", "worksite_address", "empAddr1"]),
+              // Novos campos mapeados
+              category: category,
+              soc_code: socCode,
 
-              phone: getVal(flat, ["recApplyPhone", "emppocPhone", "employerPhone"]),
+              city: getVal(flat, [
+                "jobCity",
+                "job_city",
+                "worksite_city",
+                "empCity",
+                "addmbEmpCity",
+                "CITY",
+                "EMPLOYER_CITY",
+              ]),
+              state: getVal(flat, [
+                "jobState",
+                "job_state",
+                "worksite_state",
+                "empState",
+                "addmbEmpState",
+                "STATE",
+                "EMPLOYER_STATE",
+              ]),
+              zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode", "POSTAL_CODE", "EMPLOYER_POSTAL_CODE"]),
+              worksite_address: getVal(flat, ["jobAddr1", "worksite_address", "empAddr1", "WORKSITE_ADDRESS"]),
+
+              phone: getVal(flat, ["recApplyPhone", "emppocPhone", "employerPhone", "PHONE", "employer_phone"]),
               website: getVal(flat, ["recApplyUrl", "employerWebsite", "rec_url"]),
 
               start_date: start,
-              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd"])),
+              end_date: formatToISODate(
+                getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE", "expiration_date"]),
+              ),
               posted_date: formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "posted_date"])),
 
               salary: finalWage,
               wage_from: finalWage,
-              wage_to: finalWage,
+              wage_to: parseMoney(getVal(flat, ["wageTo", "wageOfferTo", "HIGHEST_RATE"])) || finalWage,
               wage_unit: "Hour",
               pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
 
-              // HORA EXTRA
               overtime_available:
                 parseBool(getVal(flat, ["isOvertimeAvailable", "recIsOtAvailable"])) ||
                 !!parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom"])),
               overtime_from: parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom", "ot_wage_from"])),
 
-              // TURNO (Mapeamento explícito para o seu JSON)
               shift_start: getVal(flat, ["jobHoursStart", "jobHourStart", "shiftStart"]),
               shift_end: getVal(flat, ["jobHoursEnd", "jobHourEnd", "shiftEnd"]),
               weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours"])) || null,
 
-              // BOOLEANOS
               job_is_lifting: parseBool(getVal(flat, ["jobIsLifting", "lifting"])),
               job_lifting_weight: getVal(flat, ["jobLiftingWeight", "liftingWeight"]),
               job_is_drug_screen: parseBool(getVal(flat, ["jobIsDrugScreen"])),
               job_is_driver: parseBool(getVal(flat, ["jobIsDriver", "driver"])),
               job_is_background: parseBool(getVal(flat, ["jobIsBackground"])),
 
-              // EDUCAÇÃO (Permite 'None' agora)
               education_required: getVal(
                 flat,
                 ["jobEducationLevel", "jobEducation", "educationLevel", "jobMinedu"],
@@ -205,7 +264,6 @@ export function MultiJsonImporter() {
               ),
               experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
 
-              // TEXTOS LONGOS
               job_min_special_req: getVal(flat, [
                 "jobMinspecialreq",
                 "jobAddReqinfo",
@@ -215,7 +273,6 @@ export function MultiJsonImporter() {
               wage_additional: getVal(flat, ["wageAdditional", "addSpecialPayInfo", "jobSpecialPayInfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
 
-              // TRANSPORTE E MORADIA (Com inferência)
               transport_provided: transportBool,
               transport_desc: transportDesc,
 
@@ -231,8 +288,11 @@ export function MultiJsonImporter() {
               is_meal_provision: parseBool(getVal(flat, ["isMealProvision"])),
               meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
 
-              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
-              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
+              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "JOB_DUTIES"]),
+              openings:
+                parseInt(
+                  getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos", "TOTAL_WORKERS_NEEDED"]),
+                ) || null,
             };
 
             const existing = rawJobsMap.get(fingerprint);
@@ -257,8 +317,8 @@ export function MultiJsonImporter() {
 
       setStats({ total: finalJobs.length, skipped: skippedCount });
       toast({
-        title: "Importação V8 (Inference Mode)",
-        description: `Sucesso: ${finalJobs.length}. Transporte inferido por texto.`,
+        title: "Importação V9 (Category + SOC)",
+        description: `Sucesso: ${finalJobs.length}. Categoria mapeada de múltiplas fontes.`,
       });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -272,10 +332,10 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Wand2 className="h-6 w-6 text-purple-600" /> Extrator V8 (Inference)
+          <Wand2 className="h-6 w-6 text-purple-600" /> Extrator V9 (Universal + Categories)
         </CardTitle>
         <CardDescription>
-          Deduz "True" se houver descrição, mesmo que a checkbox seja null. Aceita "None" em educação.
+          Mapeia automaticamente 'category', 'SOC_TITLE' e metadados dos 3 formatos de arquivo (H2A, H2B, JO).
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
@@ -289,7 +349,7 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-          Importar Inteligente
+          Importar (Com Categorias)
         </Button>
         {stats.total > 0 && (
           <div className="mt-4 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-2">
