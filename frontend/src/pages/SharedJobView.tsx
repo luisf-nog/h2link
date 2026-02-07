@@ -14,7 +14,8 @@ import {
   PhoneCall,
   AlertTriangle,
   Info,
-  Loader2, // Garanta que Loader2 está na lista de imports do 'lucide-react'
+  Loader2,
+  Users,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -110,15 +111,12 @@ export default function SharedJobView() {
   }, [jobId, locale, toast]);
 
   const renderPrice = (job: Job) => {
-    // 1. Faixa (H-2B)
     if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
       return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
     }
-    // 2. Valor Único (H-2A)
     if (job.wage_from) {
       return `$${job.wage_from.toFixed(2)}`;
     }
-    // 3. Legado
     if (job.salary) {
       return `$${job.salary.toFixed(2)}`;
     }
@@ -219,7 +217,7 @@ export default function SharedJobView() {
         <main className="container mx-auto px-4 py-8 max-w-4xl">
           <Card className="shadow-lg border-t-4 border-t-primary">
             <CardHeader className="space-y-4">
-              {/* Badges Row */}
+              {/* Badges Row - Simplificado para evitar duplicatas */}
               <div className="flex flex-wrap gap-2">
                 <Badge variant={badgeConfig.variant} className={`${badgeConfig.className} px-3 py-1 text-sm`}>
                   {badgeConfig.label}
@@ -227,11 +225,6 @@ export default function SharedJobView() {
                 {job.category && (
                   <Badge variant="outline" className="px-3 py-1 text-sm bg-background">
                     {job.category}
-                  </Badge>
-                )}
-                {isEarlyAccess(job.visa_type) && (
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
-                    Early Access
                   </Badge>
                 )}
               </div>
@@ -262,71 +255,85 @@ export default function SharedJobView() {
                 </Alert>
               )}
 
-              {/* Key Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-xl border">
+              {/* Layout unificado em 2 Colunas para Informações Principais */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 bg-muted/20 p-6 rounded-xl border">
+                {/* Salário */}
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">
-                    {locale === "pt" ? "Salário" : "Wage"}
-                  </p>
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <DollarSign className="h-4 w-4" />
+                    <span className="text-sm font-medium">{locale === "pt" ? "Salário" : "Wage"}</span>
+                  </div>
                   <p className="font-bold text-lg text-primary flex items-center gap-1">
                     {renderPrice(job)}
                     <span className="text-xs text-muted-foreground font-normal">/{job.wage_unit || "h"}</span>
                   </p>
                 </div>
+
+                {/* Vagas */}
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">
-                    {locale === "pt" ? "Vagas" : "Openings"}
-                  </p>
-                  <p className="font-bold text-lg">{job.openings ? formatNumber(job.openings) : "-"}</p>
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Users className="h-4 w-4" />
+                    <span className="text-sm font-medium">{locale === "pt" ? "Vagas Disponíveis" : "Openings"}</span>
+                  </div>
+                  <p className="font-medium text-lg">{job.openings ? formatNumber(job.openings) : "-"}</p>
                 </div>
+
+                {/* Data de Início */}
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">
-                    {locale === "pt" ? "Início" : "Start Date"}
-                  </p>
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm font-medium">{locale === "pt" ? "Data de Início" : "Start Date"}</span>
+                  </div>
                   <p className="font-medium text-lg">{formatDate(job.start_date)}</p>
                 </div>
+
+                {/* Data de Fim */}
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">
-                    {locale === "pt" ? "Fim" : "End Date"}
-                  </p>
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm font-medium">{locale === "pt" ? "Data de Término" : "End Date"}</span>
+                  </div>
                   <p className="font-medium text-lg">{formatDate(job.end_date)}</p>
                 </div>
-              </div>
 
-              {/* Detailed Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                {/* Carga Horária */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <Clock className="h-4 w-4" />
                     <span className="text-sm font-medium">{locale === "pt" ? "Carga Horária" : "Weekly Hours"}</span>
                   </div>
-                  <p className="text-foreground font-medium pl-6">{job.weekly_hours ? `${job.weekly_hours}h` : "-"}</p>
+                  <p className="text-foreground font-medium text-lg">
+                    {job.weekly_hours ? `${job.weekly_hours}h` : "-"}
+                  </p>
                 </div>
 
+                {/* Hora Extra */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <DollarSign className="h-4 w-4" />
                     <span className="text-sm font-medium">{locale === "pt" ? "Hora Extra" : "Overtime"}</span>
                   </div>
-                  <p className="text-foreground font-medium pl-6">
+                  <p className="text-foreground font-medium text-lg">
                     {job.overtime_salary ? `$${Number(job.overtime_salary).toFixed(2)}` : "-"}
                   </p>
                 </div>
 
+                {/* Experiência */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <Briefcase className="h-4 w-4" />
                     <span className="text-sm font-medium">{locale === "pt" ? "Experiência" : "Experience"}</span>
                   </div>
-                  <p className="text-foreground font-medium pl-6">{formatExperience(job.experience_months)}</p>
+                  <p className="text-foreground font-medium text-lg">{formatExperience(job.experience_months)}</p>
                 </div>
 
+                {/* Data de Publicação */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <Calendar className="h-4 w-4" />
                     <span className="text-sm font-medium">{locale === "pt" ? "Publicado em" : "Posted Date"}</span>
                   </div>
-                  <p className="text-foreground font-medium pl-6">{formatDate(job.posted_date)}</p>
+                  <p className="text-foreground font-medium text-lg">{formatDate(job.posted_date)}</p>
                 </div>
               </div>
 
