@@ -14,7 +14,7 @@ import {
   PhoneCall,
   AlertTriangle,
   Info,
-  Loader2, // Importado corretamente daqui
+  Loader2, // Importado corretamente do pacote
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "@/components/brand/BrandLogo";
