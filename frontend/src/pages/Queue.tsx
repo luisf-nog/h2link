@@ -538,7 +538,22 @@ export default function Queue() {
             // Mark this item as pending still, don't fail it
             break; // Stop processing, user needs to upgrade
           }
-          throw new Error(payload?.error || `Falha ao enviar para ${to} (HTTP ${res.status})`);
+          
+          // Detect specific HTTP errors with better messages
+          let errorMsg = payload?.error || '';
+          if (!errorMsg || errorMsg === text) {
+            // payload.error is empty or is raw HTML - function likely not deployed
+            if (res.status === 404) {
+              errorMsg = 'Edge Function send-email-custom não encontrada (HTTP 404). A função pode não estar deployada no Supabase. Use "Enviar Todos" para envio via background ou redeploy a função.';
+            } else if (res.status === 500) {
+              errorMsg = `Erro interno do servidor de email (HTTP 500). Verifique se as credenciais SMTP estão corretas em Configurações > Email.`;
+            } else if (res.status === 401 || res.status === 403) {
+              errorMsg = 'Sessão expirada. Faça logout e login novamente.';
+            } else {
+              errorMsg = `Falha ao enviar para ${to} (HTTP ${res.status})`;
+            }
+          }
+          throw new Error(errorMsg);
         }
         
         console.log(`[Queue] Email enviado com sucesso para ${to}`);
