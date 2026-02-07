@@ -217,7 +217,7 @@ export default function SharedJobView() {
         <main className="container mx-auto px-4 py-8 max-w-4xl">
           <Card className="shadow-lg border-t-4 border-t-primary">
             <CardHeader className="space-y-4">
-              {/* Badges Row - Simplificado para evitar duplicatas */}
+              {/* Badges Row - Removida duplicata de Early Access */}
               <div className="flex flex-wrap gap-2">
                 <Badge variant={badgeConfig.variant} className={`${badgeConfig.className} px-3 py-1 text-sm`}>
                   {badgeConfig.label}
