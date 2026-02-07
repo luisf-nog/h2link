@@ -427,6 +427,7 @@ export default function Queue() {
           last_attempt_at: new Date().toISOString(),
         }).eq('id', item.id);
         failedIds.push(item.id);
+        failedErrors.push('Email ausente');
         continue;
       }
 
