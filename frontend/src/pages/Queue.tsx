@@ -609,19 +609,24 @@ export default function Queue() {
         description: String(t('queue.toasts.sent_desc', { count: formatNumber(sentIds.length) } as any)),
       });
     } else if (sentIds.length > 0 && failedIds.length > 0) {
+      const firstError = failedErrors[0] ?? '';
+      const parsed = parseSmtpError(firstError);
       toast({
         title: String(t('queue.toasts.partial_success_title')),
         description: String(t('queue.toasts.partial_success_desc', { 
           sent: formatNumber(sentIds.length), 
           failed: formatNumber(failedIds.length) 
-        } as any)),
+        } as any)) + '\n' + t(parsed.descriptionKey),
         variant: 'default',
       });
     } else if (sentIds.length === 0 && failedIds.length > 0) {
+      const firstError = failedErrors[0] ?? '';
+      const parsed = parseSmtpError(firstError);
       toast({
-        title: String(t('common.errors.send_failed')),
-        description: String(t('queue.toasts.all_failed_desc', { count: formatNumber(failedIds.length) } as any)),
+        title: String(t(parsed.titleKey)),
+        description: t(parsed.descriptionKey) + (parsed.category === 'unknown' && firstError ? `\n\n${t('smtp_errors.show_raw_error')}: ${firstError}` : ''),
         variant: 'destructive',
+        duration: 12000,
       });
     }
 
