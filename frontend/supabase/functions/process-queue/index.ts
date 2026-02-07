@@ -76,6 +76,45 @@ function isCircuitBreakerError(message: string): boolean {
   return false;
 }
 
+// ============ SMTP ERROR CLASSIFIER ============
+function classifySmtpError(rawMessage: string): string {
+  const m = (rawMessage ?? "").toLowerCase();
+
+  if (m.includes("535") || m.includes("username and password not accepted") || m.includes("invalid credentials") ||
+      (m.includes("auth") && (m.includes("fail") || m.includes("falhou") || m.includes("erro")))) {
+    return "Senha de app incorreta ou expirada. Para Gmail, gere uma nova senha de app em: myaccount.google.com > Segurança > Senhas de app.";
+  }
+  if (m.includes("534") || m.includes("application-specific password") || m.includes("app password")) {
+    return "O Gmail exige uma Senha de App. Acesse myaccount.google.com > Segurança > Senhas de app para gerar uma.";
+  }
+  if (m.includes("timeout") || m.includes("timed out") || (m.includes("após") && m.includes("ms"))) {
+    return "Timeout de conexão com o servidor SMTP. Verifique sua internet e tente novamente.";
+  }
+  if (m.includes("connection refused") || m.includes("conexão recusada") || m.includes("econnrefused")) {
+    return "O servidor SMTP recusou a conexão. Verifique se o provedor está correto nas configurações.";
+  }
+  if (m.includes("tls") || m.includes("ssl") || m.includes("handshake") || m.includes("certificate")) {
+    return "Erro de conexão segura (TLS/SSL). Verifique se o provedor selecionado está correto.";
+  }
+  if (m.includes("550") || m.includes("551") || m.includes("553") || m.includes("recipient rejected") ||
+      m.includes("user unknown") || m.includes("unknown user")) {
+    return "Destinatário rejeitado pelo servidor. O endereço pode não existir.";
+  }
+  if (m.includes("552") || m.includes("mailbox full") || m.includes("over quota")) {
+    return "Caixa de entrada do destinatário cheia.";
+  }
+  if (m.includes("421") || m.includes("429") || m.includes("too many") || m.includes("rate limit")) {
+    return "Limite de envio do servidor atingido. Aguarde antes de tentar novamente.";
+  }
+  if (m.includes("554") || m.includes("blocked") || m.includes("blacklisted") || m.includes("spam") || m.includes("policy")) {
+    return "Bloqueado por políticas anti-spam. Revise o template ou aguarde algumas horas.";
+  }
+  if (m.includes("conexão smtp encerrada") || m.includes("connection closed") || m.includes("eof")) {
+    return "Servidor SMTP encerrou a conexão inesperadamente. Tente novamente.";
+  }
+  return `Erro ao enviar: ${rawMessage}`;
+}
+
 // ============ EMAIL VALIDATION ============
 
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
