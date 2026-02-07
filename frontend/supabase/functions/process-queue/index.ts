@@ -1196,8 +1196,10 @@ async function processOneUser(params: {
 
       consecutiveErrors = 0;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Falha ao enviar";
+      const rawMessage = err instanceof Error ? err.message : "Falha ao enviar";
+      const message = classifySmtpError(rawMessage);
       console.error(`[process-queue] Erro ao processar item ${row.id} para ${job?.email || 'email desconhecido'}:`, err);
+      console.error(`[process-queue] Erro classificado: ${message}`);
       console.error(`[process-queue] Stack trace:`, err instanceof Error ? err.stack : 'N/A');
       await (serviceClient
         .from("my_queue")
@@ -1223,7 +1225,7 @@ async function processOneUser(params: {
 
       failed += 1;
 
-      if (isCircuitBreakerError(message)) {
+      if (isCircuitBreakerError(rawMessage)) {
         consecutiveErrors += 1;
         await (serviceClient
           .from("profiles")
