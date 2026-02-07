@@ -42,8 +42,18 @@ export function parseSmtpError(rawMessage: string): ParsedSmtpError {
   const m = (rawMessage ?? '').toLowerCase();
 
   // --- HTTP-level errors (Edge Function issues) ---
+  // Edge Function not deployed (404 with empty body or specific message)
+  if (m.includes('edge function') && m.includes('não encontrada') || m.includes('edge function') && m.includes('not found')) {
+    return {
+      category: 'smtp_not_configured',
+      titleKey: 'smtp_errors.function_not_deployed.title',
+      descriptionKey: 'smtp_errors.function_not_deployed.description',
+      rawMessage,
+    };
+  }
+
   // HTTP 404 = Edge function not found OR SMTP credentials not saved
-  if (m.includes('http 404') || m.includes('(404)') || m.includes('not found')) {
+  if (m.includes('http 404') || m.includes('(404)')) {
     return {
       category: 'smtp_not_configured',
       titleKey: 'smtp_errors.function_not_found.title',
