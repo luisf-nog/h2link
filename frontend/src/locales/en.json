@@ -676,10 +676,80 @@
       "partial_success_title": "Partial success",
       "partial_success_desc": "{{sent}} emails sent, {{failed}} failed. Check the failed items and retry.",
       "all_failed_desc": "All {{count}} emails failed to send. Check your SMTP settings.",
+      "all_failed_detail": "All {{count}} emails failed: {{reason}}",
+      "error_detail": "Error: {{message}}",
       "bulk_premium_title": "Premium Feature",
       "bulk_premium_desc": "The bulk send (Send All) is exclusive to Premium plans. Upgrade to send everything at once.",
       "bulk_premium_cta": "View plans"
     }
+  },
+  "smtp_errors": {
+    "auth_failed": {
+      "title": "Authentication failed",
+      "description": "Incorrect or expired app password. For Gmail, generate a new App Password at myaccount.google.com > Security > App Passwords."
+    },
+    "app_password_required": {
+      "title": "App password required",
+      "description": "Gmail requires an App Password (not your regular password). Go to myaccount.google.com > Security > App Passwords to generate one."
+    },
+    "connection_timeout": {
+      "title": "Connection timeout",
+      "description": "Could not connect to the SMTP server in time. Check your internet and try again."
+    },
+    "connection_refused": {
+      "title": "Connection refused",
+      "description": "The SMTP server refused the connection. Check if the provider (Gmail/Outlook) is correct in settings."
+    },
+    "connection_closed": {
+      "title": "Connection closed",
+      "description": "The SMTP server closed the connection unexpectedly. Try again in a few minutes."
+    },
+    "tls_error": {
+      "title": "Security error (TLS/SSL)",
+      "description": "Secure connection to the server failed. Check if the selected provider is correct."
+    },
+    "recipient_rejected": {
+      "title": "Recipient rejected",
+      "description": "The recipient's email was rejected by the server. The address may not exist or be incorrect."
+    },
+    "mailbox_full": {
+      "title": "Mailbox full",
+      "description": "The recipient's mailbox is full. Try again later."
+    },
+    "rate_limited": {
+      "title": "Send limit reached",
+      "description": "You've reached the sending limit. Wait a while before trying again or upgrade your plan."
+    },
+    "blocked_spam": {
+      "title": "Blocked as spam",
+      "description": "The email was blocked by the server's anti-spam policies. Review the template content or wait a few hours."
+    },
+    "smtp_not_configured": {
+      "title": "SMTP not configured",
+      "description": "Your SMTP credentials are not set up. Go to Settings > Email to configure."
+    },
+    "missing_email": {
+      "title": "Email missing",
+      "description": "The recipient's email is empty. Check the job data."
+    },
+    "invalid_domain": {
+      "title": "Invalid domain",
+      "description": "The recipient's email domain does not exist or does not accept emails."
+    },
+    "profile_incomplete": {
+      "title": "Profile incomplete",
+      "description": "Complete your profile (name, age, phone, contact email) before sending."
+    },
+    "no_template": {
+      "title": "No template found",
+      "description": "No email template configured. Create a template in Settings > Templates."
+    },
+    "unknown": {
+      "title": "Unknown error",
+      "description": "An unexpected error occurred while sending. Try again or check your SMTP settings."
+    },
+    "show_raw_error": "Technical details",
+    "click_for_details": "Click for error details"
   },
   "plans": {
     "title": "Choose your plan",
