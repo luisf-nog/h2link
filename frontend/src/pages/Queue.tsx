@@ -826,9 +826,45 @@ export default function Queue() {
     try {
       // Reset status to pending first
       await supabase.from('my_queue').update({ status: 'pending', last_error: null }).eq('id', item.id);
-      // Refresh the item
-      const updatedItem = { ...item, status: 'pending' };
-      await sendQueueItems([updatedItem]);
+      
+      if (isFree) {
+        // Free tier: foreground send via send-email-custom
+        const updatedItem = { ...item, status: 'pending' };
+        await sendQueueItems([updatedItem]);
+      } else {
+        // Premium tier: use process-queue (background) which is always deployed
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error(t('common.errors.no_session'));
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dalarhopratsgzmmzhxx.supabase.co';
+        const res = await fetchWithRetry(
+          `${supabaseUrl}/functions/v1/process-queue`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({}),
+          }
+        );
+        
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || payload?.ok === false) {
+          throw new Error(payload?.error || `HTTP ${res.status}`);
+        }
+        
+        toast({
+          title: t('queue.toasts.bg_started_title'),
+          description: t('queue.toasts.bg_started_desc'),
+        });
+        fetchQueue();
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      const parsed = parseSmtpError(message);
+      toast({ title: t(parsed.titleKey), description: t(parsed.descriptionKey), variant: 'destructive', duration: 10000 });
     } finally {
       setRetryingId(null);
     }
@@ -842,9 +878,44 @@ export default function Queue() {
       const failedIds = failedItems.map((it) => it.id);
       await supabase.from('my_queue').update({ status: 'pending', last_error: null }).in('id', failedIds);
       
-      // Re-fetch and send
-      const updatedItems = failedItems.map((it) => ({ ...it, status: 'pending' }));
-      await sendQueueItems(updatedItems.slice(0, remainingToday));
+      if (isFree) {
+        // Free tier: foreground send
+        const updatedItems = failedItems.map((it) => ({ ...it, status: 'pending' }));
+        await sendQueueItems(updatedItems.slice(0, remainingToday));
+      } else {
+        // Premium tier: use process-queue (background)
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error(t('common.errors.no_session'));
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dalarhopratsgzmmzhxx.supabase.co';
+        const res = await fetchWithRetry(
+          `${supabaseUrl}/functions/v1/process-queue`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({}),
+          }
+        );
+        
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || payload?.ok === false) {
+          throw new Error(payload?.error || `HTTP ${res.status}`);
+        }
+        
+        toast({
+          title: t('queue.toasts.bg_started_title'),
+          description: t('queue.toasts.bg_started_desc'),
+        });
+        fetchQueue();
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t('common.errors.send_failed');
+      const parsed = parseSmtpError(message);
+      toast({ title: t(parsed.titleKey), description: t(parsed.descriptionKey), variant: 'destructive', duration: 10000 });
     } finally {
       setSending(false);
     }
