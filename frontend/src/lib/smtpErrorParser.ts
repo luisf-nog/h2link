@@ -41,6 +41,37 @@ export interface ParsedSmtpError {
 export function parseSmtpError(rawMessage: string): ParsedSmtpError {
   const m = (rawMessage ?? '').toLowerCase();
 
+  // --- HTTP-level errors (Edge Function issues) ---
+  // HTTP 404 = Edge function not found OR SMTP credentials not saved
+  if (m.includes('http 404') || m.includes('(404)') || m.includes('not found')) {
+    return {
+      category: 'smtp_not_configured',
+      titleKey: 'smtp_errors.function_not_found.title',
+      descriptionKey: 'smtp_errors.function_not_found.description',
+      rawMessage,
+    };
+  }
+
+  // HTTP 500 = Internal server error in edge function
+  if (m.includes('http 500') || m.includes('(500)') || m.includes('internal server error')) {
+    return {
+      category: 'unknown',
+      titleKey: 'smtp_errors.server_error.title',
+      descriptionKey: 'smtp_errors.server_error.description',
+      rawMessage,
+    };
+  }
+
+  // HTTP 401/403 = Authentication/authorization issue with Supabase
+  if (m.includes('http 401') || m.includes('http 403') || m.includes('(401)') || m.includes('(403)') || m.includes('unauthorized')) {
+    return {
+      category: 'unknown',
+      titleKey: 'smtp_errors.session_expired.title',
+      descriptionKey: 'smtp_errors.session_expired.description',
+      rawMessage,
+    };
+  }
+
   // --- Authentication errors ---
   if (
     m.includes('535') ||
