@@ -106,6 +106,7 @@ user_problem_statement: |
   1. No banco de dados foi incluído um novo tipo de visa_type (Early Access) porém na tabela de vagas não aparece esse novo badge. 
      Aparentemente duplicou a mesma vaga em dois tipos diferentes (H2A e H2B). Verificar e ajustar.
   2. Melhorar visualização do link de compartilhamento de vagas e mascarar URL para formato h2linker.com/jobs/id
+  3. Melhorar mensagens de erro de envio de email SMTP para diagnóstico sem acesso a logs do Supabase
 
 backend:
   - task: "Support for Early Access visa type"
@@ -121,6 +122,90 @@ backend:
         comment: "Backend já tinha suporte via migration SQL, não necessita mudanças"
 
 frontend:
+  - task: "SMTP Error Parser utility"
+    implemented: true
+    working: true
+    file: "frontend/src/lib/smtpErrorParser.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Criado parser que classifica erros SMTP em categorias user-friendly (auth_failed, connection_timeout, recipient_rejected, etc.)"
+
+  - task: "Improved error display in Queue page"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/Queue.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Adicionado last_error na interface e query. Badge de Failed agora mostra tooltip com erro classificado. Toasts mostram mensagem específica ao invés de genérica."
+
+  - task: "Improved error display in Mobile Queue Card"
+    implemented: true
+    working: true
+    file: "frontend/src/components/queue/MobileQueueCard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Mobile cards também mostram tooltip com erro classificado no badge Failed."
+
+  - task: "Improved error display in Email Settings test"
+    implemented: true
+    working: true
+    file: "frontend/src/components/settings/EmailSettingsPanel.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Toast de erro no email de teste agora usa parseSmtpError para exibir mensagem classificada."
+
+  - task: "SMTP error translations (pt/en/es)"
+    implemented: true
+    working: true
+    file: "frontend/src/locales/pt.json, en.json, es.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Adicionadas traduções para 15+ categorias de erros SMTP em 3 idiomas."
+
+  - task: "Edge Function send-email-custom error classifier"
+    implemented: true
+    working: "NA"
+    file: "frontend/supabase/functions/send-email-custom/index.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Adicionado classifySmtpError() na edge function. Retorna userMessage, category e rawError. NECESSITA DEPLOY NO SUPABASE."
+
+  - task: "Edge Function process-queue error classifier"
+    implemented: true
+    working: "NA"
+    file: "frontend/supabase/functions/process-queue/index.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Adicionado classifySmtpError() para background processing. Erros salvos em last_error agora são mensagens user-friendly. NECESSITA DEPLOY NO SUPABASE."
+
   - task: "Add visa type utility helper"
     implemented: true
     working: true
