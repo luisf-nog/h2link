@@ -4,7 +4,7 @@ import { z } from "https://esm.sh/zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 function json(status: number, payload: unknown) {
@@ -48,7 +48,6 @@ serve(async (req) => {
   if (req.method !== "POST") return json(405, { success: false, error: "Method not allowed" });
 
   try {
-    // 1. Auth validation
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       console.error("[generate-template] Missing or invalid Authorization header");
@@ -57,7 +56,6 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // 2. Parse body ONCE (before creating auth client)
     let rawBody: Record<string, unknown> = {};
     try {
       rawBody = await req.json();
@@ -66,7 +64,6 @@ serve(async (req) => {
     }
     console.log("[generate-template] Request body:", JSON.stringify(rawBody));
 
-    // 3. Validate user
     const authClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -82,7 +79,6 @@ serve(async (req) => {
     }
     console.log("[generate-template] Authenticated user:", userId);
 
-    // 4. Parse options from already-parsed body
     const optionsParsed = requestSchema.safeParse(rawBody);
     const options = optionsParsed.success ? optionsParsed.data : { length: "medium", tone: "direct", lines_per_paragraph: undefined };
     const length = options?.length ?? "medium";
@@ -90,7 +86,6 @@ serve(async (req) => {
     const linesPerParagraph = options?.lines_per_paragraph;
     console.log("[generate-template] Options:", { length, tone, linesPerParagraph });
 
-    // 5. Check daily usage
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -98,7 +93,6 @@ serve(async (req) => {
 
     const today = new Date().toISOString().slice(0, 10);
 
-    // Use limit(1) instead of maybeSingle() to avoid "multiple rows" error
     const { data: usageRows, error: usageErr } = await serviceClient
       .from("ai_daily_usage")
       .select("user_id,usage_date,template_generations")
@@ -108,29 +102,20 @@ serve(async (req) => {
     
     if (usageErr) {
       console.error("[generate-template] Usage query error:", usageErr.message);
-      // Don't throw - continue with default values
     }
     
     const usageRow = usageRows?.[0] ?? null;
-
     const currentDate = String((usageRow as any)?.usage_date ?? "");
-    let used = currentDate === today ? Number((usageRow as any)?.template_generations ?? 0) : 0;
-    console.log("[generate-template] Current usage:", { currentDate, today, used });
+    const used = currentDate === today ? Number((usageRow as any)?.template_generations ?? 0) : 0;
 
-    // Reset if date changed
     if (currentDate !== today) {
-      const { error: upsertErr } = await serviceClient
+      await serviceClient
         .from("ai_daily_usage")
         .upsert({ user_id: userId, usage_date: today, template_generations: 0, updated_at: new Date().toISOString() } as any);
-      
-      if (upsertErr) {
-        console.error("[generate-template] Upsert error:", upsertErr.message);
-      }
     }
 
     const LIMIT = 3;
     if (used >= LIMIT) {
-      console.log("[generate-template] Daily limit reached:", used);
       return json(429, {
         success: false,
         error: "Limite diário de IA atingido. Tente amanhã.",
@@ -139,15 +124,12 @@ serve(async (req) => {
       });
     }
 
-    // 6. Check AI API key
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       console.error("[generate-template] LOVABLE_API_KEY not configured");
       return json(500, { success: false, error: "AI not configured" });
     }
-    console.log("[generate-template] LOVABLE_API_KEY present:", LOVABLE_API_KEY.slice(0, 10) + "...");
 
-    // 7. Build prompts
     const lengthGuide = {
       short: "Keep it very short (3-4 sentences max, under 80 words).",
       medium: "Keep it concise (5-7 sentences, around 120 words).",
@@ -177,7 +159,6 @@ serve(async (req) => {
       "Include placeholders: {{company}}, {{position}}, {{name}}, {{phone}}, {{contact_email}}. " +
       "The email should feel genuine and personalized.";
 
-    // 8. Call AI Gateway
     console.log("[generate-template] Calling AI gateway...");
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -211,7 +192,6 @@ serve(async (req) => {
       return json(aiResp.status, { success: false, error: `AI error (${aiResp.status})`, details: errText.slice(0, 500) });
     }
 
-    // 9. Parse AI response
     const aiJson = await aiResp.json();
     const content = String(aiJson?.choices?.[0]?.message?.content ?? "").trim();
     console.log("[generate-template] AI content length:", content.length);
@@ -222,7 +202,6 @@ serve(async (req) => {
       parsed = JSON.parse(jsonCandidate);
     } catch (parseErr) {
       console.error("[generate-template] JSON parse error:", parseErr);
-      console.error("[generate-template] Raw content:", content.slice(0, 500));
       return json(500, { success: false, error: "AI returned invalid JSON", snippet: content.slice(0, 300) });
     }
 
@@ -232,7 +211,6 @@ serve(async (req) => {
       return json(500, { success: false, error: "AI output validation failed" });
     }
 
-    // 10. Increment usage
     const { error: rpcErr } = await serviceClient.rpc("increment_ai_usage", { p_user_id: userId, p_function_type: "template" });
     if (rpcErr) {
       console.error("[generate-template] RPC error (non-blocking):", rpcErr.message);
@@ -250,9 +228,7 @@ serve(async (req) => {
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    const stack = e instanceof Error ? e.stack : undefined;
     console.error("[generate-template] Unhandled error:", message);
-    console.error("[generate-template] Stack:", stack);
     return json(500, { success: false, error: message });
   }
 });
