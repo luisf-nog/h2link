@@ -206,23 +206,13 @@ export function TemplatesSettingsPanel() {
     setAiOptionsOpen(false);
     setGenerating(true);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error(t("common.errors.no_session"));
-
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-template`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ length: aiLength, tone: aiTone, lines_per_paragraph: aiLinesPerParagraph }),
+      const { data: payload, error: funcError } = await supabase.functions.invoke("generate-template", {
+        body: { length: aiLength, tone: aiTone, lines_per_paragraph: aiLinesPerParagraph },
       });
 
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || payload?.success === false) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
+      if (funcError) throw funcError;
+      if (payload?.success === false) {
+        throw new Error(payload?.error || "AI generation error");
       }
 
       setSubject(String(payload.subject ?? ""));
