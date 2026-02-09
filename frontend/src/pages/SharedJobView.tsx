@@ -13,11 +13,11 @@ import {
   Loader2,
   Users,
   ArrowRight,
-  Share2,
   Globe,
   CheckCircle2,
   GraduationCap,
   BookOpen,
+  Search, // Ícone para "Buscar Vagas"
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -31,7 +31,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
 import { formatNumber } from "@/lib/number";
-import { getJobShareUrl } from "@/lib/shareUtils";
 
 interface Job {
   id: string;
@@ -143,7 +142,6 @@ export default function SharedJobView() {
       : d.toLocaleDateString(locale, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
-  // --- Função auxiliar de Experiência ---
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return t("jobs.details.no_experience", "None");
     if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} months` });
@@ -164,30 +162,6 @@ export default function SharedJobView() {
     if (!job) return "";
     const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
     return `Hello, I am interested in the ${job.job_title} position at ${job.company}${location}. I would like to apply. Please let me know the next steps. Thank you.`;
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: t("jobs.details.copied", "Copied!"),
-      description: t("jobs.details.copy_success", "Text copied to clipboard."),
-    });
-  };
-
-  const handleShare = () => {
-    if (!job) return;
-    const shareUrl = getJobShareUrl(job.id);
-    if (navigator.share) {
-      navigator
-        .share({
-          title: job.job_title,
-          text: `Check out this job at ${job.company}`,
-          url: shareUrl,
-        })
-        .catch(() => copyToClipboard(shareUrl));
-    } else {
-      copyToClipboard(shareUrl);
-    }
   };
 
   if (loading) {
@@ -310,12 +284,6 @@ export default function SharedJobView() {
                       </span>
                     </div>
                   </div>
-
-                  <div className="hidden sm:flex shrink-0">
-                    <Button variant="outline" onClick={handleShare}>
-                      <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share", "Share")}
-                    </Button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -337,7 +305,7 @@ export default function SharedJobView() {
                 <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
                   <Timeline />
 
-                  {/* 2. EXPERIÊNCIA NECESSÁRIA (INCLUÍDA AQUI) */}
+                  {/* 2. EXPERIÊNCIA NECESSÁRIA */}
                   <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                     <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                       <GraduationCap className="h-6 w-6" />
@@ -413,18 +381,27 @@ export default function SharedJobView() {
                     </div>
                   </div>
 
-                  {/* Card Promocional (CTA) Sidebar - LINK CORRIGIDO PARA /auth */}
-                  <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-6 text-center space-y-4">
-                    <h3 className="font-bold text-primary text-lg">
-                      {locale === "pt" ? "Quer ver mais vagas como esta?" : "Want to see more jobs like this?"}
+                  {/* NOVO: CARD DE CONVITE PARA O HUB (Substituindo o antigo "Create Account") */}
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 text-center space-y-4">
+                    <div className="flex justify-center">
+                      <div className="bg-blue-100 p-3 rounded-full text-blue-600">
+                        <Search className="h-8 w-8" />
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-blue-900 text-lg">
+                      {locale === "pt" ? "Não é o que procura?" : "Not what you're looking for?"}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-blue-700">
                       {locale === "pt"
-                        ? "Crie sua conta grátis para acessar milhares de vagas H-2A e H-2B."
-                        : "Create a free account to access thousands of H-2A and H-2B jobs."}
+                        ? "Temos milhares de outras vagas H-2A e H-2B disponíveis. Navegue pelo nosso Hub e encontre a ideal."
+                        : "We have thousands of other H-2A and H-2B jobs available. Browse our Hub to find the perfect one."}
                     </p>
-                    <Button className="w-full shadow-md" size="lg" onClick={() => navigate("/auth")}>
-                      {locale === "pt" ? "Criar Conta Grátis" : "Create Free Account"}
+                    <Button
+                      className="w-full shadow-md bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                      size="lg"
+                      onClick={() => navigate("/jobs")}
+                    >
+                      {locale === "pt" ? "Ver Todas as Vagas" : "View All Jobs"}
                     </Button>
                   </div>
                 </div>
@@ -545,27 +522,24 @@ export default function SharedJobView() {
                       {t("jobs.details.company_contacts", "Company Contacts")}
                     </div>
 
-                    <div
-                      className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer"
-                      onClick={() => copyToClipboard(job.email)}
-                    >
-                      <div className="bg-white p-2 rounded-full border border-slate-200 text-blue-500">
-                        <Mail className="h-5 w-5" />
+                    {/* Nota: Removido "Click to copy" pois o botão principal é "Apply" */}
+                    <div className="flex flex-col gap-4">
+                      {/* Email */}
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <div className="bg-white p-2 rounded-full border border-slate-200 text-blue-500">
+                          <Mail className="h-5 w-5" />
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-xs text-slate-400 font-bold">
+                            {t("jobs.details.email_label", "EMAIL")}
+                          </span>
+                          <span className="truncate font-medium text-slate-700 text-base">{job.email}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="text-xs text-slate-400 font-bold">
-                          {t("jobs.details.email_label", "EMAIL")}
-                        </span>
-                        <span className="truncate font-medium text-slate-700 text-base select-all">{job.email}</span>
-                      </div>
-                    </div>
 
-                    {job.phone && (
-                      <div className="space-y-2">
-                        <div
-                          className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-green-200 transition-colors cursor-pointer"
-                          onClick={() => copyToClipboard(job.phone!)}
-                        >
+                      {/* Phone */}
+                      {job.phone && (
+                        <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
                           <div className="bg-white p-2 rounded-full border border-slate-200 text-green-500">
                             <Phone className="h-5 w-5" />
                           </div>
@@ -573,85 +547,49 @@ export default function SharedJobView() {
                             <span className="text-xs text-slate-400 font-bold">
                               {t("jobs.details.phone_label", "PHONE")}
                             </span>
-                            <span className="truncate font-medium text-slate-700 text-base select-all">
-                              {job.phone}
-                            </span>
+                            <span className="truncate font-medium text-slate-700 text-base">{job.phone}</span>
                           </div>
                         </div>
+                      )}
 
-                        <div className="grid grid-cols-3 gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full flex gap-1 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
-                            asChild
-                          >
-                            <a href={`tel:${job.phone}`}>
-                              <Phone className="h-4 w-4" /> {t("jobs.details.call_action", "Call")}
-                            </a>
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full flex gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                            asChild
-                          >
-                            <a href={`sms:${cleanPhone(job.phone)}?body=${encodedMessage}`}>
-                              <MessageCircle className="h-4 w-4" /> {t("jobs.details.sms_action", "SMS")}
-                            </a>
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full flex gap-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
-                            asChild
-                          >
+                      {/* Website */}
+                      {job.website && (
+                        <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <div className="bg-white p-2 rounded-full border border-slate-200 text-purple-500">
+                            <Globe className="h-5 w-5" />
+                          </div>
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-xs text-slate-400 font-bold">
+                              {t("jobs.details.website_label", "WEBSITE")}
+                            </span>
                             <a
-                              href={`https://wa.me/${cleanPhone(job.phone)}?text=${encodedMessage}`}
+                              href={job.website}
                               target="_blank"
                               rel="noopener noreferrer"
+                              className="truncate font-medium text-purple-700 hover:underline text-base"
                             >
-                              <WhatsAppIcon className="h-4 w-4" /> {t("jobs.details.whatsapp_action", "WhatsApp")}
+                              {t("jobs.details.visit_site", "Visit Official Site")}
                             </a>
-                          </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-
-                    {job.website && (
-                      <a
-                        href={job.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-purple-200 transition-colors hover:bg-purple-50"
-                      >
-                        <div className="bg-white p-2 rounded-full border border-slate-200 text-purple-500">
-                          <Globe className="h-5 w-5" />
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="text-xs text-slate-400 font-bold">
-                            {t("jobs.details.website_label", "WEBSITE")}
-                          </span>
-                          <span className="truncate font-medium text-purple-700 text-base">
-                            {t("jobs.details.visit_site", "Visit Official Site")}
-                          </span>
-                        </div>
-                      </a>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Mobile Sticky CTA - LINK CORRIGIDO PARA /auth */}
+            {/* Mobile Sticky CTA */}
             <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
               <Button className="flex-1 font-bold h-12 text-base shadow-md" onClick={() => navigate("/auth")}>
                 <CheckCircle2 className="h-5 w-5 mr-2" /> {locale === "pt" ? "Candidatar-se" : "Apply Now"}
               </Button>
-              <Button variant="outline" size="icon" className="h-12 w-12 border-slate-300" onClick={handleShare}>
-                <Share2 className="h-5 w-5 text-slate-600" />
+              <Button
+                variant="outline"
+                className="flex-1 h-12 text-base border-slate-300"
+                onClick={() => navigate("/jobs")}
+              >
+                <Search className="h-5 w-5 mr-2" /> {locale === "pt" ? "Ver Mais Vagas" : "View More Jobs"}
               </Button>
             </div>
           </Card>
