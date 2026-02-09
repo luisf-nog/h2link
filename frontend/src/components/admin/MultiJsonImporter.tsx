@@ -14,36 +14,81 @@ export function MultiJsonImporter() {
 
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
-    if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
+    if (
+      t.includes("landscap") ||
+      t.includes("groundskeep") ||
+      t.includes("lawn") ||
+      t.includes("mower") ||
+      t.includes("garden")
+    )
       return "Landscaping";
     if (
       t.includes("construct") ||
       t.includes("concrete") ||
       t.includes("mason") ||
       t.includes("brick") ||
-      t.includes("carpenter")
+      t.includes("roof") ||
+      t.includes("carpenter") ||
+      t.includes("builder")
     )
       return "Construction";
-    if (t.includes("housekeep") || t.includes("maid") || t.includes("cleaner") || t.includes("janitor"))
+    if (
+      t.includes("housekeep") ||
+      t.includes("maid") ||
+      t.includes("cleaner") ||
+      t.includes("janitor") ||
+      t.includes("laundry") ||
+      t.includes("room attendant")
+    )
       return "Housekeeping";
     if (
       t.includes("cook") ||
       t.includes("chef") ||
       t.includes("kitchen") ||
       t.includes("dishwash") ||
-      t.includes("server")
+      t.includes("server") ||
+      t.includes("waiter") ||
+      t.includes("dining") ||
+      t.includes("food")
     )
       return "Hospitality & Culinary";
-    if (t.includes("amusement") || t.includes("carnival") || t.includes("recreation") || t.includes("lifeguard"))
+    if (
+      t.includes("amusement") ||
+      t.includes("carnival") ||
+      t.includes("recreation") ||
+      t.includes("lifeguard") ||
+      t.includes("pool") ||
+      t.includes("ride") ||
+      t.includes("attendant")
+    )
       return "Amusement & Recreation";
     if (
       t.includes("farm") ||
       t.includes("agricult") ||
       t.includes("crop") ||
       t.includes("harvest") ||
-      t.includes("nursery")
+      t.includes("nursery") ||
+      t.includes("greenhouse") ||
+      t.includes("ag ") ||
+      t.includes("ranch") ||
+      t.includes("animal") ||
+      t.includes("livestock")
     )
       return "Agriculture";
+    if (
+      t.includes("fish") ||
+      t.includes("seafood") ||
+      t.includes("crab") ||
+      t.includes("oyster") ||
+      t.includes("process") ||
+      t.includes("meat") ||
+      t.includes("cutter")
+    )
+      return "Processing & Seafood";
+    if (t.includes("stable") || t.includes("horse") || t.includes("equine") || t.includes("groom"))
+      return "Stable Attendant";
+    if (t.includes("truck") || t.includes("driver") || t.includes("cdl") || t.includes("haul")) return "Transportation";
+
     return "General Labor";
   };
 
@@ -146,6 +191,7 @@ export function MultiJsonImporter() {
               "empName",
               "company",
               "EMPLOYER_NAME",
+              "FULL_NAME",
             ]);
 
             let category = getVal(flat, [
@@ -163,21 +209,22 @@ export function MultiJsonImporter() {
             const posted_date = formatToISODate(
               getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted", "form790AsOfDate"]),
             );
-            const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode", "jobSocCode", "tempneedSocCode"]);
+
+            // REMOVIDO: soc_code (Não existe no banco)
+            // const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode", "jobSocCode", "tempneedSocCode"]);
+
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
             );
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
 
-            // Validação mínima
             if (!fein || !title || !start || !email || !company) {
               skippedCount++;
               continue;
             }
 
-            // Gera um ID único baseado no Case Number (job_id)
-            // Se o JSON não tiver job_id, usamos o fingerprint como fallback no ID
+            // GERAÇÃO DO ID PARA UPSERT (EVITA DUPLICAR)
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
             const finalJobId = rawJobId || fingerprint;
@@ -189,18 +236,18 @@ export function MultiJsonImporter() {
               (transportDesc && transportDesc.length > 5);
 
             const extractedJob = {
-              job_id: finalJobId, // CHAVE PRIMÁRIA PARA O UPSERT
+              job_id: finalJobId, // Chave única
               visa_type: visaType,
               fingerprint: fingerprint,
-              is_active: true, // Reativar vaga se ela estiver inativa
+              is_active: true,
 
               job_title: title,
               company: company,
               email: email,
               category: category,
-              soc_code: socCode,
+              // soc_code: socCode, <--- REMOVIDO PARA CORRIGIR O ERRO
 
-              posted_date: posted_date, // Data corrigida (V14)
+              posted_date: posted_date,
 
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState", "STATE"]),
@@ -256,24 +303,23 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === MUDANÇA CRÍTICA: UPSERT DIRETO ===
+      // ENVIO EM LOTES (UPSERT)
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
 
-        // Upsert: Se 'job_id' existir, atualiza. Se não, insere.
         const { error } = await supabase.from("public_jobs").upsert(batch, {
-          onConflict: "job_id", // Campo chave para identificar duplicatas
-          ignoreDuplicates: false, // false = força a atualização (Overwrite)
+          onConflict: "job_id",
+          ignoreDuplicates: false,
         });
 
         if (error) throw error;
       }
 
-      setStats({ total: finalJobs.length, updated: 0, new: 0 }); // Supabase client básico não retorna contagem detalhada no upsert
+      setStats({ total: finalJobs.length, updated: 0, new: 0 });
       toast({
-        title: "Sincronização Concluída",
-        description: `${finalJobs.length} vagas processadas. Dados existentes foram atualizados.`,
+        title: "Sincronização com Sucesso!",
+        description: `${finalJobs.length} vagas processadas (Atualizadas/Criadas).`,
       });
     } catch (err: any) {
       toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
@@ -287,16 +333,14 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V15 (Upsert)
+          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V16 (Stable)
         </CardTitle>
-        <CardDescription>
-          Atualiza vagas existentes e insere novas automaticamente. Não precisa limpar o banco.
-        </CardDescription>
+        <CardDescription>Atualiza vagas existentes e corrige dados sem duplicar. (SOC Code removido).</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">Arraste seus arquivos JSON ou ZIP aqui</p>
+          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
         </div>
         <Button
           onClick={processJobs}
@@ -304,7 +348,7 @@ export function MultiJsonImporter() {
           className="w-full mt-4 h-12 text-lg font-bold bg-blue-600 hover:bg-blue-700"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Vagas
+          Sincronizar Agora
         </Button>
       </CardContent>
     </Card>
