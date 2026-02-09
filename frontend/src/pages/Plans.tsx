@@ -131,7 +131,7 @@ export default function Plans() {
 
     const features: FeatureItem[] = [];
 
-    // FIX: Cast options object to any to avoid overload mismatch
+    // CORREÇÃO: Usamos 'as any' no objeto de opções para satisfazer o overload do TypeScript
     features.push({
       key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) } as any) as string,
       icon: Mail,
@@ -143,7 +143,7 @@ export default function Plans() {
     } else if (config.limits.max_templates > 100) {
       features.push({ key: t("plans.features.unlimited_generation") as string, icon: Sparkles, highlight: true });
     } else {
-      // FIX: Cast options object to any
+      // CORREÇÃO: 'as any' aqui também
       features.push({
         key: t("plans.features.templates_saved", { count: config.limits.max_templates } as any) as string,
         icon: FileText,
