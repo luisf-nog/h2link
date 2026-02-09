@@ -9,7 +9,8 @@ import JSZip from "jszip";
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [stats, setStats] = useState({ updated: 0, created: 0 });
+  // Estado para mostrar progresso visual
+  const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
   const { toast } = useToast();
 
   // --- Funções Auxiliares (Mesmas de sempre) ---
@@ -101,11 +102,12 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
+    setProgress({ current: 0, total: 0, status: "Lendo arquivos..." });
 
     try {
       const rawJobsMap = new Map();
 
-      // 1. Parseamento dos Arquivos
+      // 1. Leitura
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents: { filename: string; content: string }[] = [];
@@ -161,7 +163,6 @@ export function MultiJsonImporter() {
 
             const finalJobId = rawJobId || fingerprint;
 
-            // Dados processados
             let category = getVal(flat, [
               "socTitle",
               "jobSocTitle",
@@ -238,81 +239,75 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === V23: BUSCA ANTECIPADA (PRE-EMPTIVE CHECK) ===
+      // 2. Busca Antecipada de IDs (Verificando duplicatas)
+      setProgress({ current: 0, total: finalJobs.length, status: "Verificando conflitos no banco..." });
 
       const allJobIds = finalJobs.map((j) => j.job_id);
       const allFingerprints = finalJobs.map((j) => j.fingerprint);
       const existingIdMap = new Map();
       const QUERY_BATCH = 1000;
 
-      // AQUI ESTÁ A MÁGICA:
-      // Não confiamos no erro. Nós baixamos os IDs existentes antes de tentar salvar.
-      // Se o fingerprint existe no banco, nós JÁ pegamos o ID dele aqui.
-
-      // 1. Mapear por Job ID
+      // Busca IDs existentes
       for (let i = 0; i < allJobIds.length; i += QUERY_BATCH) {
         const batch = allJobIds.slice(i, i + QUERY_BATCH);
         const { data } = await supabase.from("public_jobs").select("id, job_id").in("job_id", batch);
         if (data) data.forEach((row) => existingIdMap.set(row.job_id, row.id));
       }
 
-      // 2. Mapear por Fingerprint (Essa parte previne o erro uq_fingerprint)
+      // Busca Fingerprints existentes
       for (let i = 0; i < allFingerprints.length; i += QUERY_BATCH) {
         const batch = allFingerprints.slice(i, i + QUERY_BATCH);
         const { data } = await supabase.from("public_jobs").select("id, fingerprint").in("fingerprint", batch);
-        if (data) {
-          data.forEach((row) => existingIdMap.set(row.fingerprint, row.id));
-        }
+        if (data) data.forEach((row) => existingIdMap.set(row.fingerprint, row.id));
       }
 
-      // 3. Montar Lista Final com IDs Corrigidos
-      // Se acharmos o ID (seja por job_id OU por fingerprint), colocamos na vaga.
-      // Isso transforma um "Insert Proibido" em um "Update Permitido".
       const jobsToProcess = finalJobs.map((job) => {
         const existingUuid = existingIdMap.get(job.job_id) || existingIdMap.get(job.fingerprint);
-
-        if (existingUuid) {
-          return { ...job, id: existingUuid }; // Vai virar UPDATE
-        }
-        return job; // Vai virar INSERT
+        if (existingUuid) return { ...job, id: existingUuid };
+        return job;
       });
 
-      // 4. Enviar Tudo (Com segurança extra)
-      const SEND_BATCH = 500;
-      const updatedCount = jobsToProcess.filter((j) => j.id).length;
-      const newCount = jobsToProcess.length - updatedCount;
+      // 3. Envio em Micro-Lotes (MICRO-BATCHING)
+      // Reduzido para 50 para garantir que não dê timeout ou erro de tamanho
+      const SEND_BATCH = 50;
+      let processedCount = 0;
 
       for (let i = 0; i < jobsToProcess.length; i += SEND_BATCH) {
         const batch = jobsToProcess.slice(i, i + SEND_BATCH);
 
-        // Upsert inteligente:
-        // - Se tiver ID, atualiza.
-        // - Se não tiver ID, insere.
-        // - Se der conflito de job_id (raro aqui), ignora.
+        // Atualiza a barra de progresso
+        processedCount += batch.length;
+        setProgress({
+          current: processedCount,
+          total: jobsToProcess.length,
+          status: `Sincronizando: ${processedCount} de ${jobsToProcess.length}`,
+        });
+
+        // Pequena pausa para a UI não travar
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
         const { error } = await supabase.from("public_jobs").upsert(batch, {
-          onConflict: "job_id", // Fallback padrão
+          onConflict: "job_id",
           ignoreDuplicates: false,
         });
 
         if (error) {
-          // Se AINDA der erro (ex: uq_fingerprint passou batido na busca),
-          // tentamos salvar UM POR UM nesse lote para não perder os outros.
+          // Se der erro, tenta um por um (Modo de Emergência)
           console.warn("Erro no lote, tentando salvamento individual...", error.message);
-
           for (const singleJob of batch) {
             try {
               await supabase.from("public_jobs").upsert(singleJob);
             } catch (e) {
-              console.error("Falha ao salvar item único:", singleJob.job_title, e);
+              console.error(e);
             }
           }
         }
       }
 
-      setStats({ updated: updatedCount, created: newCount });
+      setProgress({ current: jobsToProcess.length, total: jobsToProcess.length, status: "Concluído!" });
       toast({
-        title: "Sincronização V23 (Pre-emptive)",
-        description: `Concluído! ${updatedCount} atualizados e ${newCount} novos. Conflitos resolvidos antes do envio.`,
+        title: "Sincronização V24 (Final)",
+        description: `Sucesso! ${jobsToProcess.length} vagas processadas em lotes pequenos.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -326,23 +321,41 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <ShieldCheck className="h-6 w-6 text-emerald-600" /> Sincronizador V23 (Pre-emptive)
+          <ShieldCheck className="h-6 w-6 text-emerald-600" /> Sincronizador V24 (Micro-Lotes)
         </CardTitle>
-        <CardDescription>Resolve conflitos de duplicidade baixando dados do banco ANTES de salvar.</CardDescription>
+        <CardDescription>Processamento otimizado com barra de progresso para evitar travamentos.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
           <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
         </div>
-        <Button
-          onClick={processJobs}
-          disabled={processing || files.length === 0}
-          className="w-full mt-4 h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700"
-        >
-          {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar e Resolver Conflitos
-        </Button>
+
+        <div className="mt-4">
+          {progress.total > 0 && (
+            <div className="mb-2 text-sm font-medium text-slate-600 flex justify-between">
+              <span>{progress.status}</span>
+              <span>{Math.round((progress.current / progress.total) * 100)}%</span>
+            </div>
+          )}
+
+          {/* Barra de Progresso Visual */}
+          <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
+            <div
+              className="bg-emerald-600 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
+            ></div>
+          </div>
+
+          <Button
+            onClick={processJobs}
+            disabled={processing || files.length === 0}
+            className="w-full h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700"
+          >
+            {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
+            Sincronizar Vagas
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
