@@ -143,12 +143,13 @@ export default function Dashboard() {
     fetchPersonalStats();
   }, [profile?.id, creditsUsed]);
 
-  // 2. Dados de Mercado (Paginação Robusta)
+  // 2. Dados de Mercado (CORREÇÃO DE PAGINAÇÃO 1000)
   useEffect(() => {
     const fetchMarketData = async () => {
       setJobMarketLoading(true);
 
-      const PAGE_SIZE = 2500;
+      // FIX: Supabase tem hard limit de 1000. Precisamos respeitar isso para o loop funcionar.
+      const PAGE_SIZE = 1000;
       let allRows: any[] = [];
       let page = 0;
       let hasMore = true;
@@ -161,16 +162,18 @@ export default function Dashboard() {
           const { data, error } = await supabase
             .from("public_jobs")
             .select("visa_type, category, state, salary, posted_date, job_id")
-            .eq("is_active", true)
+            .eq("is_active", true) // Apenas vagas ativas
             .range(from, to);
 
           if (error) throw error;
 
           if (data && data.length > 0) {
             allRows = [...allRows, ...data];
+            // Se o tamanho do dado retornado for menor que o limite, significa que acabou.
             if (data.length < PAGE_SIZE) {
               hasMore = false;
             } else {
+              // Se for igual a 1000, pode ter mais, continua.
               page++;
             }
           } else {
@@ -178,7 +181,7 @@ export default function Dashboard() {
           }
         }
 
-        // --- Processamento ---
+        // --- Processamento em Memória ---
         const counts = { h2a: 0, h2b: 0, early: 0 };
         const cats = new Map<string, number>();
         const states = new Map<string, number>();
@@ -192,6 +195,7 @@ export default function Dashboard() {
           const visa = (job.visa_type || "").trim();
           const jobId = (job.job_id || "").toUpperCase();
 
+          // Contagem de Tipos (Prioridade Lógica)
           if (jobId.startsWith("JO-") || visa.includes("Early Access")) {
             counts.early++;
           } else if (visa === "H-2B") {
@@ -200,21 +204,27 @@ export default function Dashboard() {
             counts.h2a++;
           }
 
+          // Categorias
           const c = job.category?.trim();
           if (c) cats.set(c, (cats.get(c) || 0) + 1);
 
+          // Estados
           const s = job.state?.trim();
           if (s) states.set(s, (states.get(s) || 0) + 1);
 
+          // Salários (Filtrando outliers para pegar apenas salários por hora válidos)
           if (job.salary && typeof job.salary === "number" && job.salary > 7 && job.salary < 150) {
             const acc = salaries.get(s || "Unknown") || { sum: 0, count: 0 };
             salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
           }
 
+          // Hot Jobs (24h)
           const pDate = new Date(job.posted_date);
-          if (!isNaN(pDate.getTime()) && pDate >= yesterday) hot++;
+          // Compara timestamps para precisão
+          if (!isNaN(pDate.getTime()) && pDate.getTime() >= yesterday.getTime()) hot++;
         });
 
+        // --- Ordenação e Top Lists ---
         setVisaCounts(counts);
         setHotCount(hot);
 
@@ -242,9 +252,10 @@ export default function Dashboard() {
             })),
         );
 
+        // Top 5 Estados Mais Bem Pagos (Média)
         const topSalaries = Array.from(salaries.entries())
           .map(([name, val]) => ({ name, avgSalary: val.sum / val.count, count: val.count }))
-          .filter((x) => x.count >= 5)
+          .filter((x) => x.count >= 5) // Mínimo de 5 vagas para relevância estatística
           .sort((a, b) => b.avgSalary - a.avgSalary)
           .slice(0, 5);
 
