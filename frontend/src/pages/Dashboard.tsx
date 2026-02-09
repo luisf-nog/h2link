@@ -28,7 +28,6 @@ import { PromoBanner } from "@/components/dashboard/PromoBanner";
 import { getCurrencyForLanguage } from "@/lib/pricing";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Mapeamento de Estados (Sigla -> Nome Completo)
 const US_STATES: Record<string, string> = {
@@ -111,7 +110,6 @@ export default function Dashboard() {
   const [topCategories, setTopCategories] = useState<Array<{ name: string; count: number; percent: number }>>([]);
   const [topStates, setTopStates] = useState<Array<{ name: string; count: number; percent: number }>>([]);
   const [topPayingStates, setTopPayingStates] = useState<Array<{ name: string; avgSalary: number }>>([]);
-  const [bestPaidState, setBestPaidState] = useState<{ name: string; avgSalary: number } | null>(null);
 
   const [queueCount, setQueueCount] = useState(0);
   const [sentThisMonth, setSentThisMonth] = useState(0);
@@ -143,12 +141,11 @@ export default function Dashboard() {
     fetchPersonalStats();
   }, [profile?.id, creditsUsed]);
 
-  // 2. Dados de Mercado (CORREÇÃO DE PAGINAÇÃO 1000)
+  // 2. Dados de Mercado (Paginação Robusta)
   useEffect(() => {
     const fetchMarketData = async () => {
       setJobMarketLoading(true);
 
-      // FIX: Supabase tem hard limit de 1000. Precisamos respeitar isso para o loop funcionar.
       const PAGE_SIZE = 1000;
       let allRows: any[] = [];
       let page = 0;
@@ -162,18 +159,16 @@ export default function Dashboard() {
           const { data, error } = await supabase
             .from("public_jobs")
             .select("visa_type, category, state, salary, posted_date, job_id")
-            .eq("is_active", true) // Apenas vagas ativas
+            .eq("is_active", true)
             .range(from, to);
 
           if (error) throw error;
 
           if (data && data.length > 0) {
             allRows = [...allRows, ...data];
-            // Se o tamanho do dado retornado for menor que o limite, significa que acabou.
             if (data.length < PAGE_SIZE) {
               hasMore = false;
             } else {
-              // Se for igual a 1000, pode ter mais, continua.
               page++;
             }
           } else {
@@ -181,21 +176,25 @@ export default function Dashboard() {
           }
         }
 
-        // --- Processamento em Memória ---
+        // --- Processamento ---
         const counts = { h2a: 0, h2b: 0, early: 0 };
         const cats = new Map<string, number>();
         const states = new Map<string, number>();
         const salaries = new Map<string, { sum: number; count: number }>();
         let hot = 0;
 
-        const now = new Date();
-        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        // Configuração de datas para Hot Jobs (Comparação por String YYYY-MM-DD para evitar fusos)
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const todayStr = today.toISOString().split("T")[0];
+        const yesterdayStr = yesterday.toISOString().split("T")[0];
 
         allRows.forEach((job) => {
           const visa = (job.visa_type || "").trim();
           const jobId = (job.job_id || "").toUpperCase();
 
-          // Contagem de Tipos (Prioridade Lógica)
           if (jobId.startsWith("JO-") || visa.includes("Early Access")) {
             counts.early++;
           } else if (visa === "H-2B") {
@@ -204,27 +203,26 @@ export default function Dashboard() {
             counts.h2a++;
           }
 
-          // Categorias
           const c = job.category?.trim();
           if (c) cats.set(c, (cats.get(c) || 0) + 1);
 
-          // Estados
           const s = job.state?.trim();
           if (s) states.set(s, (states.get(s) || 0) + 1);
 
-          // Salários (Filtrando outliers para pegar apenas salários por hora válidos)
           if (job.salary && typeof job.salary === "number" && job.salary > 7 && job.salary < 150) {
             const acc = salaries.get(s || "Unknown") || { sum: 0, count: 0 };
             salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
           }
 
-          // Hot Jobs (24h)
-          const pDate = new Date(job.posted_date);
-          // Compara timestamps para precisão
-          if (!isNaN(pDate.getTime()) && pDate.getTime() >= yesterday.getTime()) hot++;
+          // Lógica HOT JOBS Corrigida: Checa se a string da data é hoje ou ontem
+          if (job.posted_date) {
+            // job.posted_date vem como YYYY-MM-DD do banco
+            if (job.posted_date === todayStr || job.posted_date === yesterdayStr) {
+              hot++;
+            }
+          }
         });
 
-        // --- Ordenação e Top Lists ---
         setVisaCounts(counts);
         setHotCount(hot);
 
@@ -252,21 +250,13 @@ export default function Dashboard() {
             })),
         );
 
-        // Top 5 Estados Mais Bem Pagos (Média)
         const topSalaries = Array.from(salaries.entries())
           .map(([name, val]) => ({ name, avgSalary: val.sum / val.count, count: val.count }))
-          .filter((x) => x.count >= 5) // Mínimo de 5 vagas para relevância estatística
+          .filter((x) => x.count >= 5) // Mínimo de 5 vagas para relevância
           .sort((a, b) => b.avgSalary - a.avgSalary)
           .slice(0, 5);
 
         setTopPayingStates(topSalaries);
-
-        // Define o melhor estado para o card de destaque (o primeiro da lista)
-        if (topSalaries.length > 0) {
-          setBestPaidState(topSalaries[0]);
-        } else {
-          setBestPaidState(null);
-        }
       } catch (error) {
         console.error("Market data error:", error);
       } finally {
@@ -276,12 +266,6 @@ export default function Dashboard() {
 
     fetchMarketData();
   }, []);
-
-  const bestPaidStateLabel = useMemo(() => {
-    if (!bestPaidState) return null;
-    const fullName = US_STATES[bestPaidState.name] || bestPaidState.name;
-    return { name: fullName, amount: `$${bestPaidState.avgSalary.toFixed(2)} / hour` };
-  }, [bestPaidState]);
 
   const getTimeOfDayGreeting = () => {
     const hours = new Date().getHours();
@@ -463,7 +447,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* 1. Categorias */}
+            {/* 1. Categorias (Sem Scroll) */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -471,30 +455,28 @@ export default function Dashboard() {
                   {t("dashboard.market.top_categories", "Jobs by category")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
-                <ScrollArea className="h-[320px] pr-4">
-                  <div className="space-y-5">
-                    {jobMarketLoading
-                      ? Array(5)
-                          .fill(0)
-                          .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
-                      : topCategories.map((cat, i) => (
-                          <div key={cat.name} className="space-y-1.5">
-                            <div className="flex justify-between text-sm">
-                              <span className="font-medium text-slate-700 truncate max-w-[200px]" title={cat.name}>
-                                {cat.name}
-                              </span>
-                              <span className="font-bold text-slate-900">{formatNumber(cat.count)}</span>
-                            </div>
-                            <Progress value={cat.percent} className="h-1.5 bg-slate-100" />
+              <CardContent className="flex-1 pt-4">
+                <div className="space-y-5">
+                  {jobMarketLoading
+                    ? Array(5)
+                        .fill(0)
+                        .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
+                    : topCategories.map((cat, i) => (
+                        <div key={cat.name} className="space-y-1.5">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-slate-700 truncate max-w-[200px]" title={cat.name}>
+                              {cat.name}
+                            </span>
+                            <span className="font-bold text-slate-900">{formatNumber(cat.count)}</span>
                           </div>
-                        ))}
-                  </div>
-                </ScrollArea>
+                          <Progress value={cat.percent} className="h-1.5 bg-slate-100" />
+                        </div>
+                      ))}
+                </div>
               </CardContent>
             </Card>
 
-            {/* 2. Volume por Estado */}
+            {/* 2. Volume por Estado (Sem Scroll) */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -502,40 +484,38 @@ export default function Dashboard() {
                   {t("dashboard.market.top_states", "Most jobs by state")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
-                <ScrollArea className="h-[320px] pr-4">
-                  <div className="space-y-4">
-                    {jobMarketLoading
-                      ? Array(5)
-                          .fill(0)
-                          .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
-                      : topStates.map((st, i) => (
-                          <div
-                            key={st.name}
-                            className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-default group"
-                          >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold text-slate-700 shadow-sm border border-slate-100 group-hover:border-slate-300 transition-colors">
-                              {st.name}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {US_STATES[st.name] || st.name}
-                                </span>
-                                <span className="text-xs font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
-                                  {formatNumber(st.count)}
-                                </span>
-                              </div>
-                              <Progress value={st.percent} className="h-1.5 bg-slate-200" />
-                            </div>
+              <CardContent className="flex-1 pt-4">
+                <div className="space-y-4">
+                  {jobMarketLoading
+                    ? Array(5)
+                        .fill(0)
+                        .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
+                    : topStates.map((st, i) => (
+                        <div
+                          key={st.name}
+                          className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-default group"
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold text-slate-700 shadow-sm border border-slate-100 group-hover:border-slate-300 transition-colors">
+                            {st.name}
                           </div>
-                        ))}
-                  </div>
-                </ScrollArea>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-semibold text-slate-800">
+                                {US_STATES[st.name] || st.name}
+                              </span>
+                              <span className="text-xs font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                                {formatNumber(st.count)}
+                              </span>
+                            </div>
+                            <Progress value={st.percent} className="h-1.5 bg-slate-200" />
+                          </div>
+                        </div>
+                      ))}
+                </div>
               </CardContent>
             </Card>
 
-            {/* 3. Estados com Melhores Salários (LISTA TOP 5) */}
+            {/* 3. Estados com Melhores Salários (LISTA TOP 5 - Sem Scroll e Média Explícita) */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -543,37 +523,35 @@ export default function Dashboard() {
                   {t("dashboard.market.best_paid_states", "Highest Paying States")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
-                <ScrollArea className="h-[320px] pr-4">
-                  <div className="space-y-4">
-                    {jobMarketLoading
-                      ? Array(5)
-                          .fill(0)
-                          .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
-                      : topPayingStates.map((st, i) => (
-                          <div
-                            key={st.name}
-                            className="flex items-center gap-4 p-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 transition-colors cursor-default border border-emerald-100/50"
-                          >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700 shadow-sm">
-                              {i + 1}
-                            </div>
-                            <div className="flex-1">
-                              <span className="text-sm font-semibold text-slate-800 block">
-                                {US_STATES[st.name] || st.name}
-                              </span>
-                              <span className="text-sm font-bold text-emerald-700">
-                                ${st.avgSalary.toFixed(2)}{" "}
-                                <span className="text-xs font-normal text-emerald-600/70">/ hour</span>
-                              </span>
-                            </div>
+              <CardContent className="flex-1 pt-4">
+                <div className="space-y-4">
+                  {jobMarketLoading
+                    ? Array(5)
+                        .fill(0)
+                        .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
+                    : topPayingStates.map((st, i) => (
+                        <div
+                          key={st.name}
+                          className="flex items-center gap-4 p-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 transition-colors cursor-default border border-emerald-100/50"
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700 shadow-sm">
+                            {i + 1}
                           </div>
-                        ))}
-                    {!jobMarketLoading && topPayingStates.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center pt-10">No salary data available.</p>
-                    )}
-                  </div>
-                </ScrollArea>
+                          <div className="flex-1">
+                            <span className="text-sm font-semibold text-slate-800 block">
+                              {US_STATES[st.name] || st.name}
+                            </span>
+                            <span className="text-sm font-bold text-emerald-700">
+                              Avg. ${st.avgSalary.toFixed(2)}{" "}
+                              <span className="text-xs font-normal text-emerald-600/70">/ hour</span>
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  {!jobMarketLoading && topPayingStates.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center pt-10">No salary data available.</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
