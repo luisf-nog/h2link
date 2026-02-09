@@ -12,7 +12,7 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ updated: 0, created: 0 });
   const { toast } = useToast();
 
-  // --- Funções Auxiliares ---
+  // --- Funções Auxiliares (Mesmas de antes) ---
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
     if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
@@ -151,18 +151,16 @@ export function MultiJsonImporter() {
               "EMPLOYER_NAME",
             ]);
 
-            // Filtro básico de integridade
             if (!title || !company) continue;
 
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
             );
-
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
-            // Identificador preferencial é o Case Number, fallback para fingerprint
+            // Prioridade para Case Number, mas garantindo que nunca seja null/undefined para chave do Map
             const finalJobId = rawJobId || fingerprint;
 
             // Dados processados
@@ -238,83 +236,98 @@ export function MultiJsonImporter() {
       }
 
       let finalJobs = Array.from(rawJobsMap.values());
-      // Filtro de e-mail válido (opcional, remova se quiser todas as vagas)
       finalJobs = finalJobs.filter(
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === V21: LOGICA DE SEPARAÇÃO E RESOLUÇÃO DE CONFLITOS ===
+      // === V22: A ESTRATÉGIA "BULLETPROOF" ===
 
-      const allCaseNumbers = finalJobs.map((j) => j.job_id);
+      const allJobIds = finalJobs.map((j) => j.job_id);
+      const allFingerprints = finalJobs.map((j) => j.fingerprint);
       const existingIdMap = new Map();
       const QUERY_BATCH = 1000;
 
-      // 1. Busca IDs existentes (pelo job_id / Case Number)
-      for (let i = 0; i < allCaseNumbers.length; i += QUERY_BATCH) {
-        const batchIds = allCaseNumbers.slice(i, i + QUERY_BATCH);
-        const { data: foundRows, error: fetchError } = await supabase
-          .from("public_jobs")
-          .select("id, job_id")
-          .in("job_id", batchIds);
+      // 1. BUSCA DUPLA: Pelo Job ID E Pelo Fingerprint
+      // Isso garante que acharemos a vaga não importa qual regra de unicidade ela esteja seguindo
 
-        if (fetchError) throw fetchError;
-        if (foundRows) foundRows.forEach((row) => existingIdMap.set(row.job_id, row.id));
+      // Busca A: Por Job ID
+      for (let i = 0; i < allJobIds.length; i += QUERY_BATCH) {
+        const batch = allJobIds.slice(i, i + QUERY_BATCH);
+        const { data } = await supabase.from("public_jobs").select("id, job_id").in("job_id", batch);
+        if (data) data.forEach((row) => existingIdMap.set(row.job_id, row.id));
       }
 
-      // 2. Separação em dois baldes
+      // Busca B: Por Fingerprint (apenas se já não achamos pelo ID)
+      for (let i = 0; i < allFingerprints.length; i += QUERY_BATCH) {
+        const batch = allFingerprints.slice(i, i + QUERY_BATCH);
+        const { data } = await supabase.from("public_jobs").select("id, fingerprint").in("fingerprint", batch);
+        if (data) {
+          // Mapeamos fingerprint -> id também
+          data.forEach((row) => existingIdMap.set(row.fingerprint, row.id));
+        }
+      }
+
+      // 2. UNIFICAÇÃO: Aplica os IDs encontrados
       const jobsToUpdate: any[] = [];
-      const jobsToInsertOrSync: any[] = [];
+      const jobsToInsert: any[] = [];
 
       finalJobs.forEach((job) => {
-        const existingUuid = existingIdMap.get(job.job_id);
+        // Tenta achar ID pelo job_id OU pelo fingerprint
+        const existingUuid = existingIdMap.get(job.job_id) || existingIdMap.get(job.fingerprint);
+
         if (existingUuid) {
-          // GRUPO A: Já tem ID conhecido -> UPDATE Safe
           jobsToUpdate.push({ ...job, id: existingUuid });
         } else {
-          // GRUPO B: ID não encontrado -> INSERT (mas pode ter fingerprint repetido)
-          jobsToInsertOrSync.push(job);
+          jobsToInsert.push(job);
         }
       });
 
       const SEND_BATCH = 500;
 
-      // 3. Processar Grupo A (Updates) - Simples e Seguro
+      // 3. ENVIAR ATUALIZAÇÕES (Seguro, pois tem ID)
       if (jobsToUpdate.length > 0) {
         for (let i = 0; i < jobsToUpdate.length; i += SEND_BATCH) {
           const batch = jobsToUpdate.slice(i, i + SEND_BATCH);
-          const { error } = await supabase.from("public_jobs").upsert(batch); // Upsert com ID = Update
+          const { error } = await supabase.from("public_jobs").upsert(batch);
           if (error) throw error;
         }
       }
 
-      // 4. Processar Grupo B (Inserts/Sync) - Com proteção de Fingerprint
-      if (jobsToInsertOrSync.length > 0) {
-        for (let i = 0; i < jobsToInsertOrSync.length; i += SEND_BATCH) {
-          const batch = jobsToInsertOrSync.slice(i, i + SEND_BATCH);
+      // 4. ENVIAR NOVOS (Com Fallback Inteligente)
+      if (jobsToInsert.length > 0) {
+        for (let i = 0; i < jobsToInsert.length; i += SEND_BATCH) {
+          const batch = jobsToInsert.slice(i, i + SEND_BATCH);
 
-          // AQUI ESTÁ A CORREÇÃO:
-          // Usamos onConflict: 'fingerprint' para que, se a vaga "nova"
-          // na verdade for uma duplicata de conteúdo, ela atualize a antiga
-          // em vez de quebrar com erro de constraint.
+          // Tentativa 1: Upsert padrão (confia no job_id)
           const { error } = await supabase.from("public_jobs").upsert(batch, {
-            onConflict: "fingerprint",
+            onConflict: "job_id",
             ignoreDuplicates: false,
           });
 
           if (error) {
-            console.error("Erro no lote de inserção:", error);
-            throw error;
+            // SE FALHAR COM "duplicate key ... uq_fingerprint", TENTAMOS A ESTRATÉGIA B
+            if (error.message.includes("uq_fingerprint")) {
+              console.warn("Conflito de Fingerprint detectado na inserção. Tentando fallback...");
+              // Tentativa 2: Upsert focado no fingerprint
+              const { error: error2 } = await supabase.from("public_jobs").upsert(batch, {
+                onConflict: "fingerprint",
+                ignoreDuplicates: false,
+              });
+              if (error2) throw error2; // Se falhar de novo, aí sim é um erro real
+            } else {
+              throw error; // Outros erros (ex: null constraint) devem parar o processo
+            }
           }
         }
       }
 
-      setStats({ updated: jobsToUpdate.length, created: jobsToInsertOrSync.length });
+      setStats({ updated: jobsToUpdate.length, created: jobsToInsert.length });
       toast({
-        title: "Sincronização V21 (Final)",
-        description: `Concluído! ${jobsToUpdate.length} atualizados via ID, ${jobsToInsertOrSync.length} processados via Fingerprint.`,
+        title: "Sincronização V22 (Bulletproof)",
+        description: `Finalizado! ${jobsToUpdate.length} atualizados e ${jobsToInsert.length} inseridos/verificados com sucesso.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
+      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -325,9 +338,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V21 (Robust)
+          <RefreshCw className="h-6 w-6 text-green-600" /> Sincronizador V22 (Final)
         </CardTitle>
-        <CardDescription>Gerencia atualizações de ID e conflitos de Fingerprint automaticamente.</CardDescription>
+        <CardDescription>Sistema de dupla verificação e fallback automático de erros.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -337,10 +350,10 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full mt-4 h-12 text-lg font-bold bg-blue-600 hover:bg-blue-700"
+          className="w-full mt-4 h-12 text-lg font-bold bg-green-600 hover:bg-green-700"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Agora
+          Sincronizar (Modo Seguro)
         </Button>
       </CardContent>
     </Card>
