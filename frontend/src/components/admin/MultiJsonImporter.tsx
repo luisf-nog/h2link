@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, Database, CalendarCheck } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Calculator, CalendarClock } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -12,7 +12,7 @@ export function MultiJsonImporter() {
   const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
   const { toast } = useToast();
 
-  // --- Funções Auxiliares (Parser) ---
+  // --- Funções Auxiliares ---
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
     if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
@@ -82,22 +82,45 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- V28: MAPEAMENTO FOCADO EM DECISION_DATE ---
-  const determinePostedDate = (flatData: any, filename: string) => {
-    // Lista de prioridade absoluta para datas de aprovação
-    // Funciona para H-2A e H-2B
+  // --- V29: DECODIFICADOR JULIANO ---
+  // Transforma "JO-A-300-26036-..." em "2026-02-05"
+  const extractDateFromJobId = (jobId: string) => {
+    try {
+      if (!jobId) return null;
+
+      // Procura padrão YYDDD (ex: 26036) no meio do ID
+      // Regex: Procura hífen, seguido de 2 dígitos (ano), seguido de 3 dígitos (dia), seguido de hífen
+      const match = jobId.match(/-(\d{2})(\d{3})-/);
+
+      if (match) {
+        const yearShort = parseInt(match[1]); // 26
+        const dayOfYear = parseInt(match[2]); // 036
+
+        const yearFull = 2000 + yearShort; // 2026
+
+        // Cria data baseada no dia do ano
+        const date = new Date(yearFull, 0); // 1 de Jan
+        date.setDate(dayOfYear); // Soma os dias
+
+        return date.toISOString().split("T")[0];
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  };
+
+  const determinePostedDate = (flatData: any, jobId: string) => {
+    // 1. Prioridade Absoluta: Data de Aprovação (Decision)
     const decisionDate = getVal(flatData, [
       "DECISION_DATE",
       "decision_date",
       "DETERMINATION_DATE",
       "determination_date",
-      "CERTIFICATION_START_DATE", // Às vezes usado como proxy de aprovação
     ]);
-
     if (decisionDate) return formatToISODate(decisionDate);
 
-    // Se não tiver data de decisão (caso Early Access/Job Order),
-    // usamos a data de submissão como provisória.
+    // 2. Data de Submissão (Arquivo)
     const submissionDate = getVal(flatData, [
       "CASE_SUBMITTED",
       "case_submitted",
@@ -106,10 +129,14 @@ export function MultiJsonImporter() {
       "form790AsOfDate",
       "registryDate",
     ]);
-
     if (submissionDate) return formatToISODate(submissionDate);
 
-    // Fallback final
+    // 3. Fallback Infalível: Extrair do Job ID (V29)
+    // Se tudo falhar, usamos a data embutida no ID da vaga
+    const julianDate = extractDateFromJobId(jobId);
+    if (julianDate) return julianDate;
+
+    // 4. Último recurso
     return formatToISODate(getVal(flatData, ["posted_date", "date_posted"]));
   };
 
@@ -138,7 +165,6 @@ export function MultiJsonImporter() {
     try {
       const rawJobsMap = new Map();
 
-      // 1. Leitura
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents: { filename: string; content: string }[] = [];
@@ -205,9 +231,9 @@ export function MultiJsonImporter() {
             if (!category && title) category = detectCategory(title);
             else if (!category) category = "General Labor";
 
-            // --- DATA MAPEADA (Decision Date Priority) ---
-            const posted_date = determinePostedDate(flat, filename);
-            // ---------------------------------------------
+            // --- USO DA NOVA FUNÇÃO V29 (JULIAN DECODER) ---
+            const posted_date = determinePostedDate(flat, finalJobId);
+            // -----------------------------------------------
 
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
             const finalWage = calculateFinalWage(item, flat);
@@ -270,7 +296,6 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === ENVIO RPC ===
       const BATCH_SIZE = 1000;
       let processed = 0;
 
@@ -289,8 +314,8 @@ export function MultiJsonImporter() {
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação com Evolução de Data",
-        description: `Datas de aprovação (Decision Date) terão prioridade sobre datas de submissão.`,
+        title: "Importação V29 (Julian Fix)",
+        description: `Datas extraídas diretamente do ID da vaga (infalível).`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -304,10 +329,10 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <CalendarCheck className="h-6 w-6 text-teal-600" /> Sincronizador V28 (Decision Priority)
+          <Calculator className="h-6 w-6 text-pink-600" /> Sincronizador V29 (Julian Fix)
         </CardTitle>
         <CardDescription>
-          Atualiza vagas Early Access automaticamente quando a data de aprovação (Decision Date) estiver disponível.
+          Se o arquivo não tiver data, o sistema calcula a data original baseada no código da vaga.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
@@ -325,17 +350,17 @@ export function MultiJsonImporter() {
           )}
           <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
             <div
-              className="bg-teal-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-pink-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-teal-600 hover:bg-teal-700 text-white"
+            className="w-full h-12 text-lg font-bold bg-pink-600 hover:bg-pink-700 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Importar e Atualizar Aprovações
+            Importar com Cálculo de ID
           </Button>
         </div>
       </CardContent>
