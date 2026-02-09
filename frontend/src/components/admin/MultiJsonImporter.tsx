@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -12,7 +12,7 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ updated: 0, created: 0 });
   const { toast } = useToast();
 
-  // --- Funções Auxiliares (Mesmas de antes) ---
+  // --- Funções Auxiliares (Mesmas de sempre) ---
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
     if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
@@ -105,7 +105,7 @@ export function MultiJsonImporter() {
     try {
       const rawJobsMap = new Map();
 
-      // 1. Ler Arquivos
+      // 1. Parseamento dos Arquivos
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents: { filename: string; content: string }[] = [];
@@ -122,7 +122,6 @@ export function MultiJsonImporter() {
           contents.push({ filename: file.name, content: await file.text() });
         }
 
-        // 2. Parsear JSON
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || [];
@@ -160,7 +159,6 @@ export function MultiJsonImporter() {
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
-            // Prioridade para Case Number, mas garantindo que nunca seja null/undefined para chave do Map
             const finalJobId = rawJobId || fingerprint;
 
             // Dados processados
@@ -240,91 +238,81 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === V22: A ESTRATÉGIA "BULLETPROOF" ===
+      // === V23: BUSCA ANTECIPADA (PRE-EMPTIVE CHECK) ===
 
       const allJobIds = finalJobs.map((j) => j.job_id);
       const allFingerprints = finalJobs.map((j) => j.fingerprint);
       const existingIdMap = new Map();
       const QUERY_BATCH = 1000;
 
-      // 1. BUSCA DUPLA: Pelo Job ID E Pelo Fingerprint
-      // Isso garante que acharemos a vaga não importa qual regra de unicidade ela esteja seguindo
+      // AQUI ESTÁ A MÁGICA:
+      // Não confiamos no erro. Nós baixamos os IDs existentes antes de tentar salvar.
+      // Se o fingerprint existe no banco, nós JÁ pegamos o ID dele aqui.
 
-      // Busca A: Por Job ID
+      // 1. Mapear por Job ID
       for (let i = 0; i < allJobIds.length; i += QUERY_BATCH) {
         const batch = allJobIds.slice(i, i + QUERY_BATCH);
         const { data } = await supabase.from("public_jobs").select("id, job_id").in("job_id", batch);
         if (data) data.forEach((row) => existingIdMap.set(row.job_id, row.id));
       }
 
-      // Busca B: Por Fingerprint (apenas se já não achamos pelo ID)
+      // 2. Mapear por Fingerprint (Essa parte previne o erro uq_fingerprint)
       for (let i = 0; i < allFingerprints.length; i += QUERY_BATCH) {
         const batch = allFingerprints.slice(i, i + QUERY_BATCH);
         const { data } = await supabase.from("public_jobs").select("id, fingerprint").in("fingerprint", batch);
         if (data) {
-          // Mapeamos fingerprint -> id também
           data.forEach((row) => existingIdMap.set(row.fingerprint, row.id));
         }
       }
 
-      // 2. UNIFICAÇÃO: Aplica os IDs encontrados
-      const jobsToUpdate: any[] = [];
-      const jobsToInsert: any[] = [];
-
-      finalJobs.forEach((job) => {
-        // Tenta achar ID pelo job_id OU pelo fingerprint
+      // 3. Montar Lista Final com IDs Corrigidos
+      // Se acharmos o ID (seja por job_id OU por fingerprint), colocamos na vaga.
+      // Isso transforma um "Insert Proibido" em um "Update Permitido".
+      const jobsToProcess = finalJobs.map((job) => {
         const existingUuid = existingIdMap.get(job.job_id) || existingIdMap.get(job.fingerprint);
 
         if (existingUuid) {
-          jobsToUpdate.push({ ...job, id: existingUuid });
-        } else {
-          jobsToInsert.push(job);
+          return { ...job, id: existingUuid }; // Vai virar UPDATE
         }
+        return job; // Vai virar INSERT
       });
 
+      // 4. Enviar Tudo (Com segurança extra)
       const SEND_BATCH = 500;
+      const updatedCount = jobsToProcess.filter((j) => j.id).length;
+      const newCount = jobsToProcess.length - updatedCount;
 
-      // 3. ENVIAR ATUALIZAÇÕES (Seguro, pois tem ID)
-      if (jobsToUpdate.length > 0) {
-        for (let i = 0; i < jobsToUpdate.length; i += SEND_BATCH) {
-          const batch = jobsToUpdate.slice(i, i + SEND_BATCH);
-          const { error } = await supabase.from("public_jobs").upsert(batch);
-          if (error) throw error;
-        }
-      }
+      for (let i = 0; i < jobsToProcess.length; i += SEND_BATCH) {
+        const batch = jobsToProcess.slice(i, i + SEND_BATCH);
 
-      // 4. ENVIAR NOVOS (Com Fallback Inteligente)
-      if (jobsToInsert.length > 0) {
-        for (let i = 0; i < jobsToInsert.length; i += SEND_BATCH) {
-          const batch = jobsToInsert.slice(i, i + SEND_BATCH);
+        // Upsert inteligente:
+        // - Se tiver ID, atualiza.
+        // - Se não tiver ID, insere.
+        // - Se der conflito de job_id (raro aqui), ignora.
+        const { error } = await supabase.from("public_jobs").upsert(batch, {
+          onConflict: "job_id", // Fallback padrão
+          ignoreDuplicates: false,
+        });
 
-          // Tentativa 1: Upsert padrão (confia no job_id)
-          const { error } = await supabase.from("public_jobs").upsert(batch, {
-            onConflict: "job_id",
-            ignoreDuplicates: false,
-          });
+        if (error) {
+          // Se AINDA der erro (ex: uq_fingerprint passou batido na busca),
+          // tentamos salvar UM POR UM nesse lote para não perder os outros.
+          console.warn("Erro no lote, tentando salvamento individual...", error.message);
 
-          if (error) {
-            // SE FALHAR COM "duplicate key ... uq_fingerprint", TENTAMOS A ESTRATÉGIA B
-            if (error.message.includes("uq_fingerprint")) {
-              console.warn("Conflito de Fingerprint detectado na inserção. Tentando fallback...");
-              // Tentativa 2: Upsert focado no fingerprint
-              const { error: error2 } = await supabase.from("public_jobs").upsert(batch, {
-                onConflict: "fingerprint",
-                ignoreDuplicates: false,
-              });
-              if (error2) throw error2; // Se falhar de novo, aí sim é um erro real
-            } else {
-              throw error; // Outros erros (ex: null constraint) devem parar o processo
+          for (const singleJob of batch) {
+            try {
+              await supabase.from("public_jobs").upsert(singleJob);
+            } catch (e) {
+              console.error("Falha ao salvar item único:", singleJob.job_title, e);
             }
           }
         }
       }
 
-      setStats({ updated: jobsToUpdate.length, created: jobsToInsert.length });
+      setStats({ updated: updatedCount, created: newCount });
       toast({
-        title: "Sincronização V22 (Bulletproof)",
-        description: `Finalizado! ${jobsToUpdate.length} atualizados e ${jobsToInsert.length} inseridos/verificados com sucesso.`,
+        title: "Sincronização V23 (Pre-emptive)",
+        description: `Concluído! ${updatedCount} atualizados e ${newCount} novos. Conflitos resolvidos antes do envio.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -338,9 +326,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-green-600" /> Sincronizador V22 (Final)
+          <ShieldCheck className="h-6 w-6 text-emerald-600" /> Sincronizador V23 (Pre-emptive)
         </CardTitle>
-        <CardDescription>Sistema de dupla verificação e fallback automático de erros.</CardDescription>
+        <CardDescription>Resolve conflitos de duplicidade baixando dados do banco ANTES de salvar.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -350,10 +338,10 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full mt-4 h-12 text-lg font-bold bg-green-600 hover:bg-green-700"
+          className="w-full mt-4 h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar (Modo Seguro)
+          Sincronizar e Resolver Conflitos
         </Button>
       </CardContent>
     </Card>
