@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPlanLimit } from "@/config/plans.config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,6 +111,7 @@ export default function Dashboard() {
   const [topCategories, setTopCategories] = useState<Array<{ name: string; count: number; percent: number }>>([]);
   const [topStates, setTopStates] = useState<Array<{ name: string; count: number; percent: number }>>([]);
   const [topPayingStates, setTopPayingStates] = useState<Array<{ name: string; avgSalary: number }>>([]);
+  const [bestPaidState, setBestPaidState] = useState<{ name: string; avgSalary: number } | null>(null);
 
   const [queueCount, setQueueCount] = useState(0);
   const [sentThisMonth, setSentThisMonth] = useState(0);
@@ -142,15 +143,12 @@ export default function Dashboard() {
     fetchPersonalStats();
   }, [profile?.id, creditsUsed]);
 
-  // 2. Dados de Mercado (Paginação Robusta - Loop Infinito até acabar)
+  // 2. Dados de Mercado (Paginação Robusta)
   useEffect(() => {
     const fetchMarketData = async () => {
       setJobMarketLoading(true);
 
-      // O Supabase tem limite de 1000 linhas por request na API pública.
-      // Iteramos em blocos maiores para reduzir round-trips se o backend permitir,
-      // mas vamos usar 2000 como um bom balanço.
-      const PAGE_SIZE = 2000;
+      const PAGE_SIZE = 2500;
       let allRows: any[] = [];
       let page = 0;
       let hasMore = true;
@@ -170,7 +168,6 @@ export default function Dashboard() {
 
           if (data && data.length > 0) {
             allRows = [...allRows, ...data];
-            // Se recebemos menos que o tamanho da página, chegamos ao fim.
             if (data.length < PAGE_SIZE) {
               hasMore = false;
             } else {
@@ -181,7 +178,7 @@ export default function Dashboard() {
           }
         }
 
-        // --- Processamento em Memória ---
+        // --- Processamento ---
         const counts = { h2a: 0, h2b: 0, early: 0 };
         const cats = new Map<string, number>();
         const states = new Map<string, number>();
@@ -195,7 +192,6 @@ export default function Dashboard() {
           const visa = (job.visa_type || "").trim();
           const jobId = (job.job_id || "").toUpperCase();
 
-          // Contagem de Tipos (Prioridade Lógica)
           if (jobId.startsWith("JO-") || visa.includes("Early Access")) {
             counts.early++;
           } else if (visa === "H-2B") {
@@ -204,26 +200,21 @@ export default function Dashboard() {
             counts.h2a++;
           }
 
-          // Categorias
           const c = job.category?.trim();
           if (c) cats.set(c, (cats.get(c) || 0) + 1);
 
-          // Estados
           const s = job.state?.trim();
           if (s) states.set(s, (states.get(s) || 0) + 1);
 
-          // Salários (Filtrando outliers para pegar apenas salários por hora válidos)
           if (job.salary && typeof job.salary === "number" && job.salary > 7 && job.salary < 150) {
             const acc = salaries.get(s || "Unknown") || { sum: 0, count: 0 };
             salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
           }
 
-          // Hot Jobs (24h)
           const pDate = new Date(job.posted_date);
           if (!isNaN(pDate.getTime()) && pDate >= yesterday) hot++;
         });
 
-        // --- Ordenação e Top Lists ---
         setVisaCounts(counts);
         setHotCount(hot);
 
@@ -231,7 +222,7 @@ export default function Dashboard() {
         setTopCategories(
           Array.from(cats.entries())
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
+            .slice(0, 6)
             .map(([name, count]) => ({
               name,
               count,
@@ -243,7 +234,7 @@ export default function Dashboard() {
         setTopStates(
           Array.from(states.entries())
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
+            .slice(0, 6)
             .map(([name, count]) => ({
               name,
               count,
@@ -251,14 +242,20 @@ export default function Dashboard() {
             })),
         );
 
-        // Top 5 Estados Mais Bem Pagos (Média)
         const topSalaries = Array.from(salaries.entries())
           .map(([name, val]) => ({ name, avgSalary: val.sum / val.count, count: val.count }))
-          .filter((x) => x.count >= 5) // Mínimo de 5 vagas para relevância estatística
+          .filter((x) => x.count >= 5)
           .sort((a, b) => b.avgSalary - a.avgSalary)
           .slice(0, 5);
 
         setTopPayingStates(topSalaries);
+
+        // Define o melhor estado para o card de destaque (o primeiro da lista)
+        if (topSalaries.length > 0) {
+          setBestPaidState(topSalaries[0]);
+        } else {
+          setBestPaidState(null);
+        }
       } catch (error) {
         console.error("Market data error:", error);
       } finally {
@@ -268,6 +265,12 @@ export default function Dashboard() {
 
     fetchMarketData();
   }, []);
+
+  const bestPaidStateLabel = useMemo(() => {
+    if (!bestPaidState) return null;
+    const fullName = US_STATES[bestPaidState.name] || bestPaidState.name;
+    return { name: fullName, amount: `$${bestPaidState.avgSalary.toFixed(2)} / hour` };
+  }, [bestPaidState]);
 
   const getTimeOfDayGreeting = () => {
     const hours = new Date().getHours();
