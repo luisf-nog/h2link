@@ -12,6 +12,7 @@ export function MultiJsonImporter() {
   const [stats, setStats] = useState({ updated: 0, created: 0 });
   const { toast } = useToast();
 
+  // --- Funções Auxiliares ---
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
     if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
@@ -95,6 +96,7 @@ export function MultiJsonImporter() {
     }
     return val;
   };
+  // --------------------------
 
   const processJobs = async () => {
     if (files.length === 0) return;
@@ -103,6 +105,7 @@ export function MultiJsonImporter() {
     try {
       const rawJobsMap = new Map();
 
+      // 1. Ler Arquivos
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents: { filename: string; content: string }[] = [];
@@ -119,6 +122,7 @@ export function MultiJsonImporter() {
           contents.push({ filename: file.name, content: await file.text() });
         }
 
+        // 2. Parsear JSON
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || [];
@@ -147,6 +151,21 @@ export function MultiJsonImporter() {
               "EMPLOYER_NAME",
             ]);
 
+            // Filtro básico de integridade
+            if (!title || !company) continue;
+
+            const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
+            const start = formatToISODate(
+              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
+            );
+
+            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
+            const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
+
+            // Identificador preferencial é o Case Number, fallback para fingerprint
+            const finalJobId = rawJobId || fingerprint;
+
+            // Dados processados
             let category = getVal(flat, [
               "socTitle",
               "jobSocTitle",
@@ -162,20 +181,7 @@ export function MultiJsonImporter() {
             const posted_date = formatToISODate(
               getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted", "form790AsOfDate"]),
             );
-            const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
-            const start = formatToISODate(
-              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
-            );
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
-
-            if (!fein || !title || !start || !email || !company) {
-              continue;
-            }
-
-            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
-            const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
-            const finalJobId = rawJobId || fingerprint;
-
             const finalWage = calculateFinalWage(item, flat);
             const transportDesc = getVal(flat, ["transportDescEmp", "transportDescDaily"]);
             const transportBool =
@@ -192,33 +198,27 @@ export function MultiJsonImporter() {
               email: email,
               category: category,
               posted_date: posted_date,
-
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState", "STATE"]),
               zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode", "POSTAL_CODE"]),
               worksite_address: getVal(flat, ["jobAddr1", "worksite_address", "empAddr1"]),
               phone: getVal(flat, ["recApplyPhone", "emppocPhone", "employerPhone", "PHONE"]),
               website: getVal(flat, ["recApplyUrl", "employerWebsite"]),
-
               start_date: start,
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
-
               salary: finalWage,
               wage_from: finalWage,
               wage_to: parseMoney(getVal(flat, ["wageTo", "wageOfferTo", "HIGHEST_RATE"])) || finalWage,
               wage_unit: "Hour",
               pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
-
               weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours"])) || null,
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
               openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
-
               job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "specialRequirements"]),
               wage_additional: getVal(flat, ["wageAdditional", "addSpecialPayInfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
               education_required: getVal(flat, ["jobMinedu", "jobEducationLevel"], true),
               experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
-
               transport_provided: transportBool,
               transport_desc: transportDesc,
               housing_info: getVal(flat, ["housingAddInfo", "housingAdditionalInfo"]),
@@ -238,17 +238,18 @@ export function MultiJsonImporter() {
       }
 
       let finalJobs = Array.from(rawJobsMap.values());
+      // Filtro de e-mail válido (opcional, remova se quiser todas as vagas)
       finalJobs = finalJobs.filter(
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === V20: SPLIT STRATEGY (Atualizações vs Inserções) ===
+      // === V21: LOGICA DE SEPARAÇÃO E RESOLUÇÃO DE CONFLITOS ===
 
       const allCaseNumbers = finalJobs.map((j) => j.job_id);
       const existingIdMap = new Map();
       const QUERY_BATCH = 1000;
 
-      // 1. Descobrir quais já existem
+      // 1. Busca IDs existentes (pelo job_id / Case Number)
       for (let i = 0; i < allCaseNumbers.length; i += QUERY_BATCH) {
         const batchIds = allCaseNumbers.slice(i, i + QUERY_BATCH);
         const { data: foundRows, error: fetchError } = await supabase
@@ -260,23 +261,24 @@ export function MultiJsonImporter() {
         if (foundRows) foundRows.forEach((row) => existingIdMap.set(row.job_id, row.id));
       }
 
-      // 2. Separar em dois grupos
+      // 2. Separação em dois baldes
       const jobsToUpdate: any[] = [];
-      const jobsToInsert: any[] = [];
+      const jobsToInsertOrSync: any[] = [];
 
       finalJobs.forEach((job) => {
         const existingUuid = existingIdMap.get(job.job_id);
         if (existingUuid) {
-          // Se já existe, adicionamos o ID (UUID) para o UPDATE
+          // GRUPO A: Já tem ID conhecido -> UPDATE Safe
           jobsToUpdate.push({ ...job, id: existingUuid });
         } else {
-          // Se não existe, NÃO colocamos o campo 'id', para o banco gerar um novo (INSERT)
-          jobsToInsert.push(job);
+          // GRUPO B: ID não encontrado -> INSERT (mas pode ter fingerprint repetido)
+          jobsToInsertOrSync.push(job);
         }
       });
 
-      // 3. Enviar Atualizações (Com ID)
       const SEND_BATCH = 500;
+
+      // 3. Processar Grupo A (Updates) - Simples e Seguro
       if (jobsToUpdate.length > 0) {
         for (let i = 0; i < jobsToUpdate.length; i += SEND_BATCH) {
           const batch = jobsToUpdate.slice(i, i + SEND_BATCH);
@@ -285,23 +287,31 @@ export function MultiJsonImporter() {
         }
       }
 
-      // 4. Enviar Inserções (Sem ID)
-      // Usamos onConflict 'fingerprint' aqui para segurança extra, caso a vaga seja nova (job_id novo) mas duplicada no conteúdo
-      if (jobsToInsert.length > 0) {
-        for (let i = 0; i < jobsToInsert.length; i += SEND_BATCH) {
-          const batch = jobsToInsert.slice(i, i + SEND_BATCH);
+      // 4. Processar Grupo B (Inserts/Sync) - Com proteção de Fingerprint
+      if (jobsToInsertOrSync.length > 0) {
+        for (let i = 0; i < jobsToInsertOrSync.length; i += SEND_BATCH) {
+          const batch = jobsToInsertOrSync.slice(i, i + SEND_BATCH);
+
+          // AQUI ESTÁ A CORREÇÃO:
+          // Usamos onConflict: 'fingerprint' para que, se a vaga "nova"
+          // na verdade for uma duplicata de conteúdo, ela atualize a antiga
+          // em vez de quebrar com erro de constraint.
           const { error } = await supabase.from("public_jobs").upsert(batch, {
             onConflict: "fingerprint",
-            ignoreDuplicates: true, // Se bater no fingerprint, ignora (já que é insert)
+            ignoreDuplicates: false,
           });
-          if (error) throw error;
+
+          if (error) {
+            console.error("Erro no lote de inserção:", error);
+            throw error;
+          }
         }
       }
 
-      setStats({ updated: jobsToUpdate.length, created: jobsToInsert.length });
+      setStats({ updated: jobsToUpdate.length, created: jobsToInsertOrSync.length });
       toast({
-        title: "Sincronização V20 (Split)",
-        description: `Sucesso! ${jobsToUpdate.length} atualizadas, ${jobsToInsert.length} novas criadas.`,
+        title: "Sincronização V21 (Final)",
+        description: `Concluído! ${jobsToUpdate.length} atualizados via ID, ${jobsToInsertOrSync.length} processados via Fingerprint.`,
       });
     } catch (err: any) {
       toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
@@ -315,11 +325,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V20 (Final Split)
+          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V21 (Robust)
         </CardTitle>
-        <CardDescription>
-          Separa automaticamente novos registros de atualizações para evitar erros de ID nulo.
-        </CardDescription>
+        <CardDescription>Gerencia atualizações de ID e conflitos de Fingerprint automaticamente.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
