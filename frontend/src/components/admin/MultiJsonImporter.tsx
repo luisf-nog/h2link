@@ -176,7 +176,7 @@ export function MultiJsonImporter() {
 
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
-            // Se não tiver Case Number, usa o fingerprint como ID também
+            // Prioridade: ID oficial > Fingerprint
             const finalJobId = rawJobId || fingerprint;
 
             const finalWage = calculateFinalWage(item, flat);
@@ -186,10 +186,9 @@ export function MultiJsonImporter() {
               (transportDesc && transportDesc.length > 5);
 
             const extractedJob = {
-              // NÃO ENVIAMOS MAIS O ID (UUID) PARA DEIXAR O BANCO DECIDIR
               job_id: finalJobId,
               visa_type: visaType,
-              fingerprint: fingerprint, // CAMPO CHAVE DA CONSTRAINT
+              fingerprint: fingerprint,
               is_active: true,
               job_title: title,
               company: company,
@@ -236,8 +235,8 @@ export function MultiJsonImporter() {
               meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
             };
 
-            // Usamos fingerprint como chave do Map local para evitar duplicatas no próprio arquivo
-            rawJobsMap.set(fingerprint, extractedJob);
+            // Usamos job_id (Case Number) como chave do Map para unicidade lógica
+            rawJobsMap.set(finalJobId, extractedJob);
           }
         }
       }
@@ -247,24 +246,59 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === MUDANÇA CRÍTICA V18: UPSERT POR FINGERPRINT ===
-      // Já que o erro foi "unique constraint uq_fingerprint", usamos ela para resolver o conflito
-      const BATCH_SIZE = 500;
-      for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
-        const batch = finalJobs.slice(i, i + BATCH_SIZE);
+      // === V19: O GRANDE FIX ===
+      // 1. Coletar todos os Case Numbers (job_ids) que queremos inserir
+      const allCaseNumbers = finalJobs.map((j) => j.job_id);
 
-        const { error } = await supabase.from("public_jobs").upsert(batch, {
-          onConflict: "fingerprint", // <--- MUDAMOS DE job_id PARA fingerprint
-          ignoreDuplicates: false,
-        });
+      // 2. Buscar no banco quais deles JÁ EXISTEM e pegar o ID (UUID)
+      // Fazemos isso em lotes para não estourar a URL
+      const existingIdMap = new Map(); // Mapa: CaseNumber -> UUID
+      const QUERY_BATCH = 1000;
+
+      for (let i = 0; i < allCaseNumbers.length; i += QUERY_BATCH) {
+        const batchIds = allCaseNumbers.slice(i, i + QUERY_BATCH);
+        const { data: foundRows, error: fetchError } = await supabase
+          .from("public_jobs")
+          .select("id, job_id")
+          .in("job_id", batchIds);
+
+        if (fetchError) {
+          console.error("Erro ao buscar IDs existentes", fetchError);
+          throw fetchError;
+        }
+
+        if (foundRows) {
+          foundRows.forEach((row) => existingIdMap.set(row.job_id, row.id));
+        }
+      }
+
+      // 3. Preparar o UPSERT anexando o UUID nas vagas que já existem
+      const upsertReadyJobs = finalJobs.map((job) => {
+        const existingUuid = existingIdMap.get(job.job_id);
+        if (existingUuid) {
+          // Se achamos o UUID, anexamos ele. O Supabase fará UPDATE pela Primary Key.
+          // Isso ignora qualquer outro conflito de unique constraint.
+          return { ...job, id: existingUuid };
+        }
+        // Se não achamos, mandamos sem ID. O Supabase fará INSERT.
+        return job;
+      });
+
+      // 4. Enviar para o banco
+      const SEND_BATCH = 500;
+      for (let i = 0; i < upsertReadyJobs.length; i += SEND_BATCH) {
+        const batch = upsertReadyJobs.slice(i, i + SEND_BATCH);
+
+        // Upsert SEM onConflict. Deixamos a presença do ID (Primary Key) decidir.
+        const { error } = await supabase.from("public_jobs").upsert(batch);
 
         if (error) throw error;
       }
 
       setStats({ total: finalJobs.length });
       toast({
-        title: "Sincronização V18 (Fingerprint)",
-        description: `Sucesso! ${finalJobs.length} vagas processadas usando Fingerprint como chave.`,
+        title: "Sincronização V19 (Smart ID)",
+        description: `Sucesso! ${finalJobs.length} vagas processadas. Conflitos resolvidos via ID.`,
       });
     } catch (err: any) {
       toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
@@ -278,10 +312,10 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V18 (Fingerprint)
+          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V19 (Smart ID)
         </CardTitle>
         <CardDescription>
-          Resolve o conflito de chaves usando o identificador único (Fingerprint) do banco.
+          Busca IDs existentes antes de salvar para garantir atualização correta sem conflitos.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
