@@ -131,9 +131,9 @@ export default function Plans() {
 
     const features: FeatureItem[] = [];
 
-    // Cast as string to fix TS error
+    // FIX: Cast options object to any to avoid overload mismatch
     features.push({
-      key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) }) as string,
+      key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) } as any) as string,
       icon: Mail,
       highlight: true,
     });
@@ -143,8 +143,9 @@ export default function Plans() {
     } else if (config.limits.max_templates > 100) {
       features.push({ key: t("plans.features.unlimited_generation") as string, icon: Sparkles, highlight: true });
     } else {
+      // FIX: Cast options object to any
       features.push({
-        key: t("plans.features.templates_saved", { count: config.limits.max_templates }) as string,
+        key: t("plans.features.templates_saved", { count: config.limits.max_templates } as any) as string,
         icon: FileText,
       });
     }
