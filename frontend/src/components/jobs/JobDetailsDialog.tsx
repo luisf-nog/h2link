@@ -22,6 +22,8 @@ import {
   Users,
   MessageSquare,
   ArrowLeft,
+  GraduationCap,
+  BookOpen,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -155,9 +157,21 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">{t("jobs.details.view_details", "Ver detalhes")}</span>;
   };
 
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return t("jobs.details.no_experience", "Não exigida");
+    if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} meses` });
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (remainingMonths === 0) return t("jobs.table.experience_years", { count: years, defaultValue: `${years} anos` });
+    return t("jobs.table.experience_years_months", {
+      years,
+      months: remainingMonths,
+      defaultValue: `${years} anos e ${remainingMonths} meses`,
+    });
+  };
+
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  // Mensagem em Inglês (sempre), pois o empregador é americano
   const getMessage = () => {
     if (!job) return "";
     const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
@@ -329,6 +343,48 @@ export function JobDetailsDialog({
                     <span className="text-sm text-slate-500 leading-relaxed">{job.rec_pay_deductions}</span>
                   </div>
                 )}
+              </div>
+
+              {/* NOVA SEÇÃO: REQUISITOS (Posicionada APÓS o card de Salário) */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg border-b border-slate-100 pb-2 mb-2">
+                  <BookOpen className="h-6 w-6 text-slate-500" />{" "}
+                  <span>{t("jobs.details.requirements", "Requisitos")}</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-50 p-2 rounded-full text-blue-600 mt-0.5">
+                      <GraduationCap className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <span className="block text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                        {t("jobs.details.experience", "Experiência")}
+                      </span>
+                      <span className="text-lg font-medium text-slate-800">
+                        {formatExperience(job?.experience_months)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {job?.education_required && (
+                    <div className="flex items-start gap-3 pt-2 border-t border-slate-50">
+                      <div className="bg-purple-50 p-2 rounded-full text-purple-600 mt-0.5">
+                        <BookOpen className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                          {t("jobs.details.education", "Escolaridade")}
+                        </span>
+                        <span className="text-lg font-medium text-slate-800 capitalize">
+                          {job.education_required === "None"
+                            ? t("jobs.details.no_education", "Não exigida")
+                            : job.education_required}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
