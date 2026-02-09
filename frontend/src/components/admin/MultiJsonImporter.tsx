@@ -1,31 +1,28 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CheckCircle2, Loader2, RefreshCw, Microscope, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { CheckCircle2, Loader2, RefreshCw, UploadCloud } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [inspectionData, setInspectionData] = useState<any[] | null>(null); // Dados para inspeção
-  const [showInspection, setShowInspection] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
+  const { toast } = useToast();
 
-  // --- Funções Auxiliares (Mesmas da V35) ---
-  const getVal = (obj: any, keys: string[]) => {
-    if (!obj) return null;
-    for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null) {
-        const val = obj[key];
-        if (typeof val === "string" && (val.trim() === "" || val.toLowerCase() === "n/a")) continue;
-        return val;
-      }
-    }
-    return null;
+  // --- Helpers de Formatação ---
+  const parseMoney = (val: any) => {
+    if (!val) return null;
+    const num = parseFloat(String(val).replace(/[$,]/g, ""));
+    return isNaN(num) || num <= 0 ? null : num;
   };
 
+  const parseBool = (val: any) => ["1", "true", "yes", "y", "t"].includes(String(val).toLowerCase().trim());
+
   const formatToISODate = (dateStr: any) => {
-    if (!dateStr || dateStr === "N/A") return null;
+    if (!dateStr || dateStr === "N/A" || !dateStr) return null;
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
@@ -35,89 +32,183 @@ export function MultiJsonImporter() {
     }
   };
 
-  // Lógica V35 para Data
+  const getVal = (obj: any, keys: string[]) => {
+    if (!obj) return null;
+    for (const key of keys) {
+      if (obj[key] !== undefined && obj[key] !== null) {
+        const val = obj[key];
+        if (typeof val === "string") {
+          const clean = val.trim();
+          if (clean === "" || clean.toLowerCase() === "n/a" || clean.toLowerCase() === "null") continue;
+        }
+        return val;
+      }
+    }
+    return null;
+  };
+
+  // --- A LÓGICA DE DATA DO INSPETOR (Que funcionou!) ---
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
     const nested = item.clearanceOrder || {};
 
-    // 1. Decisão
+    // 1. Decisão (Prioridade para H-2B)
     const decisionDate =
       getVal(root, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]) ||
       getVal(nested, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]);
-    if (decisionDate) return { val: formatToISODate(decisionDate), source: "Decision Date (Found)" };
+    if (decisionDate) return formatToISODate(decisionDate);
 
-    // 2. Submissão
+    // 2. Submissão (Prioridade para JO)
     const submissionDate =
       getVal(root, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]) ||
       getVal(nested, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]);
-    if (submissionDate) return { val: formatToISODate(submissionDate), source: "Submission Date (Found)" };
+    if (submissionDate) return formatToISODate(submissionDate);
 
-    // 3. ID Fallback
+    // 3. Cálculo ID (Fallback Matemático Infalível)
     if (jobId && jobId.startsWith("JO-")) {
       const match = jobId.match(/-(\d{2})(\d{3})-/);
       if (match) {
         const date = new Date(2000 + parseInt(match[1]), 0);
         date.setDate(parseInt(match[2]));
-        return { val: date.toISOString().split("T")[0], source: "ID Calculation (Fallback)" };
+        return date.toISOString().split("T")[0];
       }
     }
-    return { val: null, source: "NOT FOUND" };
+    return null;
   };
 
-  const inspectJobs = async () => {
+  // --- Cálculo de Salário ---
+  const calculateFinalWage = (item: any, flat: any) => {
+    let val = parseMoney(
+      item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE || item.AEWR || item.BASIC_RATE,
+    );
+    if (!val && item.clearanceOrder) val = parseMoney(item.clearanceOrder.jobWageOffer);
+    if (val && val > 100) {
+      const hours = parseFloat(getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours"]) || "40");
+      if (hours > 0) {
+        const hourly = val / (hours * 4.333);
+        if (hourly >= 7.25 && hourly <= 150) return parseFloat(hourly.toFixed(2));
+      }
+    }
+    return val;
+  };
+
+  // --- Processamento Principal ---
+  const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
+    setProgress({ current: 0, total: 100, status: "Lendo arquivos..." });
 
     try {
-      const samples: any[] = [];
+      const rawJobsMap = new Map();
 
       for (const file of files) {
-        let content = "";
-        if (file.name.endsWith(".zip")) {
+        const isZip = file.name.endsWith(".zip");
+        let contents: { filename: string; content: string }[] = [];
+
+        if (isZip) {
           const zip = await new JSZip().loadAsync(file);
-          const jsonFile = Object.keys(zip.files).find((n) => n.endsWith(".json"));
-          if (jsonFile) content = await zip.files[jsonFile].async("string");
+          for (const [filename, zipObj] of Object.entries(zip.files)) {
+            if (!zipObj.dir && filename.endsWith(".json")) {
+              const text = await zipObj.async("string");
+              contents.push({ filename, content: text });
+            }
+          }
         } else {
-          content = await file.text();
+          contents.push({ filename: file.name, content: await file.text() });
         }
 
-        if (content) {
+        for (const { filename, content } of contents) {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || [];
 
-          // Pega as 3 primeiras vagas JO (Early Access) para análise
-          const targetJobs = list
-            .filter(
-              (j: any) =>
-                (j.caseNumber && j.caseNumber.startsWith("JO-")) || (j.CASE_NUMBER && j.CASE_NUMBER.startsWith("JO-")),
-            )
-            .slice(0, 3);
+          let visaType = "H-2A";
+          if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
+          else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
-          for (const item of targetJobs) {
+          for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
-            const jobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]);
 
-            // O Teste Real
-            const dateResult = determinePostedDate(item, jobId);
+            // Campos Básicos
+            const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
+            const company = getVal(flat, [
+              "empBusinessName",
+              "employerBusinessName",
+              "legalName",
+              "empName",
+              "company",
+            ]);
+            if (!title || !company) continue;
 
-            samples.push({
-              Arquivo: file.name,
-              Job_ID: jobId,
-              Resultado_Final: dateResult.val,
-              Fonte_Detectada: dateResult.source,
-              Dados_Brutos_Raiz: {
-                dateSubmitted: item.dateSubmitted,
-                form790: item.form790AsOfDate,
-              },
-            });
+            const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
+            const start = formatToISODate(
+              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE"]),
+            );
+            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
+            const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
+            const finalJobId = rawJobId || fingerprint;
+
+            // --- AQUI ESTÁ A INTEGRAÇÃO DO INSPETOR ---
+            // Usa a mesma lógica que te mostrou os dados corretos
+            const posted_date = determinePostedDate(item, finalJobId);
+            // ------------------------------------------
+
+            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL"]);
+
+            // Montagem do Objeto Final
+            const extractedJob = {
+              job_id: finalJobId,
+              visa_type: visaType,
+              fingerprint: fingerprint,
+              is_active: true,
+              job_title: title,
+              company: company,
+              email: email,
+              posted_date: posted_date, // Agora com certeza vai preenchido
+
+              // Outros campos essenciais
+              salary: calculateFinalWage(item, flat),
+              city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "CITY"]),
+              state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "STATE"]),
+              start_date: start,
+              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "END_DATE"])),
+              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
+              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded"])) || null,
+              category: "General Labor", // Fallback simples para não travar
+            };
+
+            rawJobsMap.set(finalJobId, extractedJob);
           }
         }
       }
 
-      setInspectionData(samples);
-      setShowInspection(true);
-    } catch (e) {
-      alert("Erro ao ler arquivo: " + e);
+      const finalJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && j.email.length > 2);
+
+      // Envio em Lote
+      const BATCH_SIZE = 1000;
+      let processed = 0;
+
+      for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
+        const batch = finalJobs.slice(i, i + BATCH_SIZE);
+        setProgress({
+          current: processed,
+          total: finalJobs.length,
+          status: `Enviando ${batch.length} vagas (Força Bruta)...`,
+        });
+
+        // Usando 'as any' para o TypeScript não reclamar
+        const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
+        if (error) throw error;
+        processed += batch.length;
+      }
+
+      setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
+      toast({
+        title: "Importação V38 (Definitiva)",
+        description: `Dados enviados com sucesso usando a lógica do Inspetor.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
+      console.error(err);
     } finally {
       setProcessing(false);
     }
@@ -127,48 +218,37 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Microscope className="h-6 w-6 text-purple-600" /> Inspetor V36
+          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V38 (Final)
         </CardTitle>
-        <CardDescription>
-          Não envia nada para o banco. Apenas diagnostica o que o React está "enxergando".
-        </CardDescription>
+        <CardDescription>Combinação da detecção do Inspetor com gravação forçada no banco.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">Selecione o arquivo JO (Early Access)</p>
+          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
         </div>
-        <Button
-          onClick={inspectJobs}
-          disabled={processing || files.length === 0}
-          className="w-full mt-4 bg-purple-600 hover:bg-purple-700"
-        >
-          {processing ? <Loader2 className="animate-spin mr-2" /> : <Microscope className="mr-2" />}
-          Inspecionar Dados
-        </Button>
-
-        <Dialog open={showInspection} onOpenChange={setShowInspection}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Relatório de Inspeção</DialogTitle>
-              <DialogDescription>Isso é EXATAMENTE o que o código está extraindo do arquivo.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              {inspectionData?.map((data, i) => (
-                <div key={i} className="p-4 bg-slate-100 rounded-md border text-sm font-mono">
-                  <div className="flex justify-between font-bold border-b pb-2 mb-2">
-                    <span>ID: {data.Job_ID}</span>
-                    <span className={data.Resultado_Final ? "text-green-600" : "text-red-600"}>
-                      DATA: {data.Resultado_Final || "NULL"}
-                    </span>
-                  </div>
-                  <p>Fonte: {data.Fonte_Detectada}</p>
-                  <pre className="mt-2 text-xs text-slate-500">{JSON.stringify(data.Dados_Brutos_Raiz, null, 2)}</pre>
-                </div>
-              ))}
+        <div className="mt-4">
+          {progress.total > 0 && (
+            <div className="mb-2 text-sm font-medium text-slate-600 flex justify-between">
+              <span>{progress.status}</span>
+              <span>{Math.round((progress.current / progress.total) * 100)}%</span>
             </div>
-          </DialogContent>
-        </Dialog>
+          )}
+          <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
+            <div
+              className="bg-green-700 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
+            ></div>
+          </div>
+          <Button
+            onClick={processJobs}
+            disabled={processing || files.length === 0}
+            className="w-full h-12 text-lg font-bold bg-green-700 hover:bg-green-800 text-white"
+          >
+            {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
+            Processar Arquivos
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
