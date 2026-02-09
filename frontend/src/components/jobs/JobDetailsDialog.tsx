@@ -134,8 +134,8 @@ export function JobDetailsDialog({
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: t("jobs.details.copied", "Copiado!"),
-      description: t("jobs.details.copy_success", "Texto copiado para a área de transferência."),
+      title: t("jobs.details.copied", "Copied!"),
+      description: t("jobs.details.copy_success", "Text copied to clipboard."),
     });
   };
 
@@ -153,20 +153,21 @@ export function JobDetailsDialog({
       return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)} / ${job.wage_unit || "hr"}`;
     if (job.wage_from) return `$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`;
     if (job.salary) return formatSalary(job.salary);
-    return <span className="text-muted-foreground italic">{t("jobs.details.view_details", "Ver detalhes")}</span>;
+    return <span className="text-muted-foreground italic">{t("jobs.details.view_details", "View Details")}</span>;
   };
 
-  // --- I18n: Formatação de Experiência ---
+  // --- CORREÇÃO: Padrões em Inglês ---
   const formatExperience = (months: number | null | undefined) => {
-    if (!months || months <= 0) return t("jobs.details.no_experience", "Não exigida");
-    if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} meses` });
+    if (!months || months <= 0) return t("jobs.details.no_experience", "None");
+    if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} months` });
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
-    if (remainingMonths === 0) return t("jobs.table.experience_years", { count: years, defaultValue: `${years} anos` });
+    if (remainingMonths === 0)
+      return t("jobs.table.experience_years", { count: years, defaultValue: `${years} years` });
     return t("jobs.table.experience_years_months", {
       years,
       months: remainingMonths,
-      defaultValue: `${years} anos e ${remainingMonths} meses`,
+      defaultValue: `${years} years ${remainingMonths} months`,
     });
   };
 
@@ -181,11 +182,12 @@ export function JobDetailsDialog({
   const messageText = getMessage();
   const encodedMessage = encodeURIComponent(messageText);
 
+  // --- CORREÇÃO: Padrões em Inglês na Timeline ---
   const Timeline = () => (
     <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
       <div className="flex flex-col items-center">
         <span className="font-semibold text-slate-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.posted", "Postada")}
+          {t("jobs.details.posted", "Posted")}
         </span>
         <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700">
           {formatDate(job?.posted_date)}
@@ -196,7 +198,7 @@ export function JobDetailsDialog({
       </div>
       <div className="flex flex-col items-center">
         <span className="font-semibold text-green-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.start", "Início")}
+          {t("jobs.details.start", "Start")}
         </span>
         <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-800 font-bold">
           {formatDate(job?.start_date)}
@@ -207,7 +209,7 @@ export function JobDetailsDialog({
       </div>
       <div className="flex flex-col items-center">
         <span className="font-semibold text-red-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.end", "Fim")}
+          {t("jobs.details.end", "End")}
         </span>
         <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-800 font-medium">
           {formatDate(job?.end_date)}
@@ -228,7 +230,7 @@ export function JobDetailsDialog({
               className="-ml-3 flex items-center gap-2 text-slate-600 hover:text-slate-900"
             >
               <ArrowLeft className="h-5 w-5" />
-              <span className="text-base font-semibold">{t("common.back", "Voltar")}</span>
+              <span className="text-base font-semibold">{t("common.back", "Back")}</span>
             </Button>
           </div>
 
@@ -265,15 +267,15 @@ export function JobDetailsDialog({
 
               <div className="hidden sm:flex gap-2 shrink-0">
                 <Button variant="outline" onClick={handleShare}>
-                  <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share", "Compartilhar")}
+                  <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share", "Share")}
                 </Button>
                 {isInQueue ? (
                   <Button variant="destructive" onClick={() => job && onRemoveFromQueue?.(job)}>
-                    <Trash2 className="h-4 w-4 mr-2" /> {t("jobs.details.remove", "Remover")}
+                    <Trash2 className="h-4 w-4 mr-2" /> {t("jobs.details.remove", "Remove")}
                   </Button>
                 ) : (
                   <Button onClick={() => job && onAddToQueue(job)} className="px-6 font-bold shadow-sm">
-                    <Plus className="h-4 w-4 mr-2" /> {t("jobs.details.save_job", "Salvar Vaga")}
+                    <Plus className="h-4 w-4 mr-2" /> {t("jobs.details.save_job", "Save Job")}
                   </Button>
                 )}
               </div>
@@ -299,26 +301,26 @@ export function JobDetailsDialog({
               {/* 1. LINHA DO TEMPO */}
               <Timeline />
 
-              {/* 2. EXPERIÊNCIA NECESSÁRIA (Posicionado entre Datas e Salário) */}
+              {/* 2. EXPERIÊNCIA NECESSÁRIA (Corrigido para Inglês) */}
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                 <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                   <GraduationCap className="h-6 w-6" />
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    {t("jobs.details.experience", "Experiência Necessária")}
+                    {t("jobs.details.experience", "Experience Required")}
                   </span>
                   <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                 </div>
               </div>
 
-              {/* 3. SALÁRIO */}
+              {/* 3. SALÁRIO (Corrigido para Inglês) */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-2 text-slate-600">
                     <Users className="h-5 w-5 text-blue-500" />
                     <span className="font-semibold text-base">
-                      {t("jobs.details.available_positions", "Vagas Disponíveis")}
+                      {t("jobs.details.available_positions", "Available Positions")}
                     </span>
                   </div>
                   <Badge className="text-lg px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
@@ -328,14 +330,14 @@ export function JobDetailsDialog({
 
                 <div>
                   <div className="flex items-center gap-2 text-green-700 font-bold text-lg mb-2">
-                    <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Remuneração")}</span>
+                    <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Compensation")}</span>
                   </div>
                   <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
                   {job?.pay_frequency && (
                     <p className="text-sm text-slate-500 font-medium capitalize mt-1">
                       {t("jobs.details.pay_frequency", {
                         frequency: job.pay_frequency,
-                        defaultValue: `Pagamento: ${job.pay_frequency}`,
+                        defaultValue: `Payment: ${job.pay_frequency}`,
                       })}
                     </p>
                   )}
@@ -344,7 +346,7 @@ export function JobDetailsDialog({
                 {job?.wage_additional && (
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <span className="text-xs font-bold uppercase text-green-800 block mb-1">
-                      {t("jobs.details.bonus", "Bônus / Adicional")}
+                      {t("jobs.details.bonus", "Bonus / Additional")}
                     </span>
                     <p className="text-base text-green-900 leading-snug">{job.wage_additional}</p>
                   </div>
@@ -353,22 +355,22 @@ export function JobDetailsDialog({
                 {job?.rec_pay_deductions && (
                   <div className="pt-2 border-t border-slate-100">
                     <span className="font-semibold text-slate-600 text-sm block mb-1">
-                      {t("jobs.details.deductions", "Deduções Previstas:")}
+                      {t("jobs.details.deductions", "Planned Deductions:")}
                     </span>
                     <span className="text-sm text-slate-500 leading-relaxed">{job.rec_pay_deductions}</span>
                   </div>
                 )}
               </div>
 
-              {/* 4. JORNADA DE TRABALHO */}
+              {/* 4. JORNADA DE TRABALHO (Corrigido para Inglês) */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
                   <Clock className="h-6 w-6 text-slate-500" />{" "}
-                  <span>{t("jobs.details.schedule", "Jornada de Trabalho")}</span>
+                  <span>{t("jobs.details.schedule", "Work Schedule")}</span>
                 </div>
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
                   <span className="text-slate-600 font-medium text-base">
-                    {t("jobs.details.weekly_hours", "Carga Horária Semanal:")}
+                    {t("jobs.details.weekly_hours", "Weekly Hours:")}
                   </span>
                   <span className="font-bold text-slate-900 text-xl">
                     {job?.weekly_hours ? `${job.weekly_hours}h` : "-"}
@@ -376,10 +378,10 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* 5. CONTATOS */}
+              {/* 5. CONTATOS (Corrigido para Inglês) */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  {t("jobs.details.company_contacts", "Contatos da Empresa")}
+                  {t("jobs.details.company_contacts", "Company Contacts")}
                 </div>
 
                 <div
@@ -406,7 +408,7 @@ export function JobDetailsDialog({
                       </div>
                       <div className="flex flex-col overflow-hidden">
                         <span className="text-xs text-slate-400 font-bold">
-                          {t("jobs.details.phone_label", "TELEFONE")}
+                          {t("jobs.details.phone_label", "PHONE")}
                         </span>
                         <span className="truncate font-medium text-slate-700 text-base select-all">{job.phone}</span>
                       </div>
@@ -420,7 +422,7 @@ export function JobDetailsDialog({
                         asChild
                       >
                         <a href={`tel:${job.phone}`}>
-                          <Phone className="h-4 w-4" /> {t("jobs.details.call_action", "Ligar")}
+                          <Phone className="h-4 w-4" /> {t("jobs.details.call_action", "Call")}
                         </a>
                       </Button>
 
@@ -468,7 +470,7 @@ export function JobDetailsDialog({
                         {t("jobs.details.website_label", "WEBSITE")}
                       </span>
                       <span className="truncate font-medium text-purple-700 text-base">
-                        {t("jobs.details.visit_site", "Visitar site oficial")}
+                        {t("jobs.details.visit_site", "Visit Official Site")}
                       </span>
                     </div>
                   </a>
@@ -481,7 +483,7 @@ export function JobDetailsDialog({
                 <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
                   <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-4 text-xl">
                     <AlertTriangle className="h-6 w-6" />{" "}
-                    {t("jobs.details.special_reqs", "Requisitos Especiais & Condições")}
+                    {t("jobs.details.special_reqs", "Special Requirements & Conditions")}
                   </h4>
                   <div className="prose prose-amber max-w-none">
                     <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
@@ -495,7 +497,7 @@ export function JobDetailsDialog({
                 <div className="space-y-4">
                   <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
                     <Briefcase className="h-7 w-7 text-blue-600" />{" "}
-                    {t("jobs.details.job_description", "Descrição da Vaga")}
+                    {t("jobs.details.job_description", "Job Description")}
                   </h4>
                   <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
                     <p className="text-base text-slate-700 leading-7 whitespace-pre-wrap">{job.job_duties}</p>
@@ -505,26 +507,25 @@ export function JobDetailsDialog({
 
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
                 <h4 className="font-bold flex items-center gap-2 text-slate-700 text-xl border-b border-slate-100 pb-3">
-                  <Home className="h-6 w-6 text-indigo-500" />{" "}
-                  {t("jobs.details.housing_info", "Informações de Moradia")}
+                  <Home className="h-6 w-6 text-indigo-500" /> {t("jobs.details.housing_info", "Housing Information")}
                 </h4>
 
                 <div className="flex flex-wrap gap-4 items-center">
                   <span className="text-slate-600 font-medium text-base">
-                    {t("jobs.details.housing_type", "Tipo de Acomodação:")}
+                    {t("jobs.details.housing_type", "Housing Type:")}
                   </span>
                   <Badge
                     variant="outline"
                     className="text-base py-1 px-4 bg-slate-50 text-slate-800 font-medium border-slate-300"
                   >
-                    {job?.housing_type || t("jobs.details.not_specified", "Não especificado")}
+                    {job?.housing_type || t("jobs.details.not_specified", "Not specified")}
                   </Badge>
                 </div>
 
                 {job?.housing_info && (
                   <div className="bg-slate-50 p-5 rounded-lg border border-slate-100">
                     <span className="text-xs font-bold uppercase text-slate-400 block mb-2">
-                      {t("jobs.details.additional_details", "Detalhes Adicionais")}
+                      {t("jobs.details.additional_details", "Additional Details")}
                     </span>
                     <p className="text-base text-slate-700 leading-relaxed">{job.housing_info}</p>
                   </div>
@@ -545,7 +546,7 @@ export function JobDetailsDialog({
 
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
-            <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job", "Salvar Vaga")}
+            <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job", "Save Job")}
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12 border-slate-300" onClick={handleShare}>
             <Share2 className="h-5 w-5 text-slate-600" />
