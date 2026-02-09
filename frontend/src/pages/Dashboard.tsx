@@ -13,13 +13,11 @@ import {
   Briefcase,
   MapPin,
   Search,
-  ArrowRight,
   Zap,
   Info,
   Tractor,
   Building2,
   DollarSign,
-  BarChart3,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,29 +141,37 @@ export default function Dashboard() {
     fetchPersonalStats();
   }, [profile?.id, creditsUsed]);
 
-  // 2. Dados de Mercado (Otimizado: Loop com Select Específico)
+  // 2. Dados de Mercado (Loop Completo - Sem Limite de 1000)
   useEffect(() => {
     const fetchMarketData = async () => {
       setJobMarketLoading(true);
 
-      const BATCH_SIZE = 2000;
-      const MAX_RECORDS = 15000; // Limite de segurança para não travar o browser
+      const BATCH_SIZE = 2500; // Aumentado para reduzir número de round-trips
       let allRows: any[] = [];
+      let page = 0;
+      let hasMore = true;
 
       try {
-        // Loop para buscar dados em chunks até atingir o limite ou acabar os dados
-        for (let i = 0; i < MAX_RECORDS; i += BATCH_SIZE) {
+        // Loop para buscar TUDO
+        while (hasMore) {
+          const from = page * BATCH_SIZE;
+          const to = from + BATCH_SIZE - 1;
+
           const { data, error } = await supabase
             .from("public_jobs")
             .select("visa_type, category, state, salary, posted_date, job_id")
-            .eq("is_active", true) // Apenas vagas ativas
-            .range(i, i + BATCH_SIZE - 1);
+            .eq("is_active", true)
+            .range(from, to);
 
           if (error) throw error;
-          if (!data || data.length === 0) break;
 
-          allRows = [...allRows, ...data];
-          if (data.length < BATCH_SIZE) break;
+          if (data && data.length > 0) {
+            allRows = [...allRows, ...data];
+            if (data.length < BATCH_SIZE) hasMore = false; // Acabou os dados
+            page++;
+          } else {
+            hasMore = false;
+          }
         }
 
         // --- Processamento em Memória ---
@@ -199,14 +205,15 @@ export default function Dashboard() {
           const s = job.state?.trim();
           if (s) states.set(s, (states.get(s) || 0) + 1);
 
-          // Salários (apenas hourly razoável para evitar outliers de monthly)
-          if (job.salary && job.salary > 0 && job.salary < 200) {
+          // Salários (Filtrando outliers para pegar apenas salários por hora válidos)
+          if (job.salary && job.salary > 7 && job.salary < 100) {
             const acc = salaries.get(s || "Unknown") || { sum: 0, count: 0 };
             salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
           }
 
           // Hot Jobs (24h)
-          if (new Date(job.posted_date) >= yesterday) hot++;
+          const pDate = new Date(job.posted_date);
+          if (!isNaN(pDate.getTime()) && pDate >= yesterday) hot++;
         });
 
         // --- Ordenação e Top Lists ---
@@ -237,6 +244,7 @@ export default function Dashboard() {
             })),
         );
 
+        // Média Salarial por Estado
         const bestState = Array.from(salaries.entries())
           .map(([name, val]) => ({ name, avgSalary: val.sum / val.count }))
           .filter((x) => x.avgSalary > 0)
@@ -257,7 +265,7 @@ export default function Dashboard() {
     if (!bestPaidState) return "-";
     // Traduz a sigla para nome completo se existir
     const fullName = US_STATES[bestPaidState.name] || bestPaidState.name;
-    return `${fullName} ($${bestPaidState.avgSalary.toFixed(2)}/h)`;
+    return { name: fullName, amount: `$${bestPaidState.avgSalary.toFixed(2)} / hour` };
   }, [bestPaidState]);
 
   const getTimeOfDayGreeting = () => {
@@ -266,6 +274,8 @@ export default function Dashboard() {
     if (hours < 18) return t("common.good_afternoon", "Good Afternoon");
     return t("common.good_evening", "Good Evening");
   };
+
+  const planLabel = t(`plans.tiers.${planTier}.label`, { defaultValue: planTier });
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -283,8 +293,11 @@ export default function Dashboard() {
             {/* Saudação e Contexto */}
             <div className="space-y-6">
               <div>
-                <Badge variant="outline" className="mb-3 border-white/20 text-white/80 bg-white/5 backdrop-blur-md">
-                  {t(`plans.tiers.${planTier}.label`)} Plan
+                <Badge
+                  variant="outline"
+                  className="mb-3 border-white/20 text-white/80 bg-white/5 backdrop-blur-md uppercase tracking-wide"
+                >
+                  {t("dashboard.plan_badge", { plan: planLabel, defaultValue: `${planLabel} Plan` })}
                 </Badge>
                 <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
                   {getTimeOfDayGreeting()}, <br />
@@ -292,7 +305,12 @@ export default function Dashboard() {
                     {profile?.full_name?.split(" ")[0] || t("common.user")}
                   </span>
                 </h1>
-                <p className="text-slate-400 text-lg mt-2 max-w-md">{t("dashboard.subtitle")}</p>
+                <p className="text-slate-400 text-lg mt-2 max-w-md">
+                  {t("dashboard.subtitle", {
+                    plan: planLabel,
+                    defaultValue: `Here is your ${planLabel} account summary`,
+                  })}
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-4">
@@ -319,7 +337,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <p className="text-sm font-medium text-slate-300 uppercase tracking-wider">
-                    {t("dashboard.credits.title")}
+                    {t("dashboard.credits.title", "Sending Credits")}
                   </p>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-5xl font-black text-white">{creditsRemaining}</span>
@@ -333,7 +351,7 @@ export default function Dashboard() {
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-slate-300 font-medium">
-                  <span>{t("dashboard.credits.used_today")}</span>
+                  <span>{t("dashboard.credits.used_today", "Used Today")}</span>
                   <span>{Math.round(usagePercent)}%</span>
                 </div>
                 <Progress
@@ -395,7 +413,9 @@ export default function Dashboard() {
               <Globe className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground">{t("dashboard.market.title")}</h2>
+              <h2 className="text-2xl font-bold text-foreground">
+                {t("dashboard.market.title", "Job Market Snapshot")}
+              </h2>
               <p className="text-muted-foreground text-sm">Real-time overview of the US Labor Market</p>
             </div>
           </div>
@@ -408,7 +428,7 @@ export default function Dashboard() {
               value={visaCounts.early}
               icon={Rocket}
               color="purple"
-              desc="Vagas Exclusivas"
+              desc={t("dashboard.market.early_access_desc", "Exclusive Jobs")}
             />
             <StatCard
               loading={jobMarketLoading}
@@ -416,7 +436,7 @@ export default function Dashboard() {
               value={visaCounts.h2a}
               icon={Tractor}
               color="emerald"
-              desc="Agricultura"
+              desc={t("dashboard.market.h2a_desc", "Agriculture")}
             />
             <StatCard
               loading={jobMarketLoading}
@@ -424,7 +444,7 @@ export default function Dashboard() {
               value={visaCounts.h2b}
               icon={Building2}
               color="blue"
-              desc="Não-Agrícola"
+              desc={t("dashboard.market.h2b_desc", "Non-Agricultural")}
             />
             <StatCard
               loading={jobMarketLoading}
@@ -432,18 +452,18 @@ export default function Dashboard() {
               value={hotCount}
               icon={Zap}
               color="amber"
-              desc="Novas Oportunidades"
+              desc={t("dashboard.market.hot_jobs_desc", "New Opportunities")}
             />
           </div>
 
           {/* Charts / Lists Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Top Categories */}
-            <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col">
+            <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Briefcase className="h-5 w-5 text-slate-500" />
-                  {t("dashboard.market.top_categories")}
+                  {t("dashboard.market.top_categories", "Jobs by category")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
@@ -474,11 +494,11 @@ export default function Dashboard() {
             </Card>
 
             {/* Top States */}
-            <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col">
+            <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-slate-500" />
-                  {t("dashboard.market.top_states")}
+                  {t("dashboard.market.top_states", "Most jobs by state")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
@@ -491,9 +511,9 @@ export default function Dashboard() {
                       : topStates.map((st, i) => (
                           <div
                             key={st.name}
-                            className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"
+                            className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-default group"
                           >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold text-slate-700 shadow-sm border border-slate-100">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold text-slate-700 shadow-sm border border-slate-100 group-hover:border-slate-300 transition-colors">
                               {st.name}
                             </div>
                             <div className="flex-1">
@@ -520,67 +540,33 @@ export default function Dashboard() {
 
             {/* Best Paid State & Insights */}
             <div className="lg:col-span-1 flex flex-col gap-6">
-              <Card className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-none shadow-lg relative overflow-hidden">
+              <Card className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-none shadow-lg relative overflow-hidden h-full flex flex-col justify-center">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                 <CardHeader>
                   <CardTitle className="text-white/90 flex items-center gap-2 text-lg">
-                    <DollarSign className="h-5 w-5" /> {t("dashboard.market.best_paid_state")}
+                    <DollarSign className="h-5 w-5" /> {t("dashboard.market.best_paid_state", "Best paid state (avg)")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-center py-8 relative z-10">
+                <CardContent className="text-center pb-10 relative z-10">
                   {jobMarketLoading ? (
                     <div className="h-10 w-32 bg-white/20 rounded animate-pulse mx-auto" />
                   ) : (
                     <>
-                      <h3 className="text-4xl font-extrabold tracking-tight mb-2">
-                        {bestPaidState ? US_STATES[bestPaidState.name] || bestPaidState.name : "-"}
-                      </h3>
-                      <p className="text-emerald-100 font-medium text-lg bg-emerald-800/30 inline-block px-4 py-1 rounded-full border border-emerald-500/30">
-                        {bestPaidState ? `$${bestPaidState.avgSalary.toFixed(2)} / hour` : "-"}
+                      <h3 className="text-3xl font-extrabold tracking-tight mb-3">{bestPaidStateLabel.name}</h3>
+                      <p className="text-emerald-100 font-bold text-xl bg-emerald-800/30 inline-block px-5 py-2 rounded-full border border-emerald-500/30 backdrop-blur-sm">
+                        {bestPaidStateLabel.amount}
                       </p>
-                      <p className="text-xs text-emerald-200/80 mt-4 max-w-[200px] mx-auto">
-                        Based on average hourly wages from active job listings.
+                      <p className="text-xs text-emerald-200/80 mt-6 max-w-[220px] mx-auto leading-relaxed">
+                        {t(
+                          "dashboard.market.salary_disclaimer",
+                          "Based on average hourly wages from active job listings.",
+                        )}
                       </p>
                     </>
                   )}
                 </CardContent>
               </Card>
-
-              <Card className="border-slate-200 shadow-sm flex-1 flex flex-col justify-center items-center text-center p-6 bg-slate-50/50">
-                <div className="p-4 bg-white rounded-full shadow-sm mb-4">
-                  <BarChart3 className="h-8 w-8 text-blue-600" />
-                </div>
-                <h4 className="font-bold text-slate-800 text-lg mb-2">Data Insights</h4>
-                <p className="text-sm text-slate-500 mb-4">
-                  We analyze thousands of job applications daily to bring you these trends.
-                </p>
-              </Card>
             </div>
-          </div>
-        </div>
-
-        {/* QUICK ACTIONS FOOTER */}
-        <div className="pt-8 border-t border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">{t("dashboard.next_steps.title")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ActionButton
-              icon={Search}
-              title={t("dashboard.next_steps.step1_title")}
-              desc={t("dashboard.next_steps.step1_desc")}
-              href="/jobs"
-            />
-            <ActionButton
-              icon={ListTodo}
-              title={t("dashboard.next_steps.step2_title")}
-              desc={t("dashboard.next_steps.step2_desc")}
-              href="/queue"
-            />
-            <ActionButton
-              icon={Mail}
-              title={t("dashboard.next_steps.step3_title")}
-              desc={t("dashboard.next_steps.step3_desc")}
-              href="/settings"
-            />
           </div>
         </div>
       </div>
@@ -600,7 +586,7 @@ function StatCard({ loading, title, value, icon: Icon, color, desc }: any) {
 
   return (
     <Card
-      className={`border-l-4 shadow-sm hover:shadow-md transition-all duration-200 ${colors[color].replace("bg-", "border-l-")}`}
+      className={`border-l-4 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1 ${colors[color].replace("bg-", "border-l-")}`}
     >
       <CardContent className="p-5">
         <div className="flex justify-between items-start">
@@ -617,23 +603,5 @@ function StatCard({ loading, title, value, icon: Icon, color, desc }: any) {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function ActionButton({ icon: Icon, title, desc, href }: any) {
-  return (
-    <Button
-      variant="outline"
-      className="h-auto py-4 px-6 flex flex-col items-center gap-3 hover:border-primary/50 hover:bg-primary/5 group transition-all duration-300 bg-white border-slate-200 shadow-sm"
-      onClick={() => (window.location.href = href)}
-    >
-      <div className="p-3 rounded-full bg-slate-50 group-hover:bg-primary/10 transition-colors">
-        <Icon className="h-5 w-5 text-slate-500 group-hover:text-primary transition-colors" />
-      </div>
-      <div className="text-center">
-        <span className="font-bold text-slate-800 group-hover:text-primary block text-base">{title}</span>
-        <span className="text-xs text-slate-500 font-normal mt-1 block max-w-[200px]">{desc}</span>
-      </div>
-    </Button>
   );
 }
