@@ -40,7 +40,6 @@ export default function Plans() {
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
 
-  // Monitora retorno do Stripe (Sucesso ou Cancelamento)
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
@@ -85,36 +84,26 @@ export default function Plans() {
     };
   };
 
-  // --- LÓGICA DE PAGAMENTO (MANTIDA INTACTA) ---
   const handleCheckout = async (planId: PlanTier) => {
     if (planId === "free") return;
 
     setLoadingPlan(planId);
-    const plan = PLANS_CONFIG[planId];
-    // Define qual ID de preço usar baseada na moeda do usuário
-    const priceId = currency === "BRL" ? plan.price.stripe_id_brl : plan.price.stripe_id_usd;
-
-    if (!priceId) {
-      toast({
-        title: t("plans.toasts.error_title"),
-        description: "Price ID not configured",
-        variant: "destructive",
-      });
-      setLoadingPlan(null);
-      return;
-    }
-
     try {
-      // Chama a Edge Function do Supabase para criar a sessão do Stripe
+      const plan = PLANS_CONFIG[planId];
+      const priceId = currency === "BRL" ? plan.price.stripe_id_brl : plan.price.stripe_id_usd;
+
+      if (!priceId) {
+        throw new Error("Price ID not configured");
+      }
+
       const { data, error } = await supabase.functions.invoke("create-payment", {
         body: { priceId },
       });
 
       if (error) throw error;
 
-      // Redireciona o usuário para o Checkout do Stripe
       if (data?.url) {
-        window.open(data.url, "_blank");
+        window.open(data.url, "_self");
       } else {
         throw new Error("No checkout URL returned");
       }
@@ -142,87 +131,79 @@ export default function Plans() {
 
     const features: FeatureItem[] = [];
 
-    // 1. Limite Diário de Emails (Core Value)
     features.push({
-      key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) } as any),
+      key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) }) as string,
       icon: Mail,
       highlight: true,
     });
 
-    // 2. Templates
     if (planId === "free") {
-      features.push({ key: t("plans.features.basic_template"), icon: FileText });
+      features.push({ key: t("plans.features.basic_template") as string, icon: FileText });
     } else if (config.limits.max_templates > 100) {
-      features.push({ key: t("plans.features.unlimited_generation"), icon: Sparkles, highlight: true });
+      features.push({ key: t("plans.features.unlimited_generation") as string, icon: Sparkles, highlight: true });
     } else {
       features.push({
-        key: t("plans.features.templates_saved", { count: config.limits.max_templates } as any),
+        key: t("plans.features.templates_saved", { count: config.limits.max_templates }) as string,
         icon: FileText,
       });
     }
 
-    // 3. Recursos de IA (Carta de Apresentação)
     if (planId !== "free") {
       if (usesDynamicAI(planId)) {
         features.push({
-          key: t("plans.features.ai_real_writer"),
+          key: t("plans.features.ai_real_writer") as string,
           icon: Zap,
           highlight: true,
           tooltipKey: "plans.features.ai_real_writer_tooltip",
         });
       } else {
-        features.push({ key: t("plans.features.auto_fill_templates"), icon: FileText });
+        features.push({ key: t("plans.features.auto_fill_templates") as string, icon: FileText });
       }
     }
 
-    // 4. Rastreamento de Currículo (Resume Tracking)
     if (config.features.resume_view_tracking) {
       features.push({
-        key: t("plans.features.resume_view_tracking"),
+        key: t("plans.features.resume_view_tracking") as string,
         icon: Eye,
         highlight: true,
         tooltipKey: "plans.features.resume_view_tracking_tooltip",
       });
     }
 
-    // 5. Envio em Nuvem (Cloud)
     if (config.features.cloud_sending) {
-      features.push({ key: t("plans.features.cloud_sending"), icon: Cloud });
+      features.push({ key: t("plans.features.cloud_sending") as string, icon: Cloud });
     }
 
-    // 6. Análise de Currículo (Resume Parsing)
     if (config.features.resume_parsing) {
       if (planId === "black") {
-        features.push({ key: t("plans.features.resume_advanced"), icon: FileText });
+        features.push({ key: t("plans.features.resume_advanced") as string, icon: FileText });
       } else {
-        features.push({ key: t("plans.features.resume_basic"), icon: FileText });
+        features.push({ key: t("plans.features.resume_basic") as string, icon: FileText });
       }
     }
 
-    // 7. Delay Inteligente (Performance)
     if (planId === "black") {
       features.push({
-        key: t("plans.features.delay_black"),
+        key: t("plans.features.delay_black") as string,
         icon: Clock,
         tooltipKey: "plans.features.delay_black_tooltip",
       });
     } else if (planId === "diamond") {
       features.push({
-        key: t("plans.features.delay_diamond"),
+        key: t("plans.features.delay_diamond") as string,
         icon: Clock,
         tooltipKey: "plans.features.delay_diamond_tooltip",
       });
     } else if (planId === "gold") {
       features.push({
-        key: t("plans.features.delay_gold"),
+        key: t("plans.features.delay_gold") as string,
         icon: Clock,
         tooltipKey: "plans.features.delay_gold_tooltip",
       });
     }
 
-    // 8. Suporte Prioritário
     if (config.features.priority_support) {
-      features.push({ key: t("plans.features.priority_support"), icon: Headphones });
+      features.push({ key: t("plans.features.priority_support") as string, icon: Headphones });
     }
 
     return features;
@@ -258,7 +239,6 @@ export default function Plans() {
   return (
     <TooltipProvider>
       <div className="space-y-12 pb-12">
-        {/* Header Section */}
         <div className="text-center space-y-6 pt-8">
           <PromotionCountdown />
 
@@ -266,7 +246,6 @@ export default function Plans() {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">{t("plans.title")}</h1>
             <p className="text-xl text-slate-600">{t("plans.subtitle")}</p>
 
-            {/* Banner Vitalício Gigante */}
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 to-emerald-500/20 text-emerald-800 px-6 py-3 rounded-full border border-emerald-500/30 shadow-sm animate-pulse">
               <InfinityIcon className="h-6 w-6" />
               <span className="font-bold text-lg uppercase tracking-wide">
@@ -276,7 +255,6 @@ export default function Plans() {
           </div>
         </div>
 
-        {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto px-4">
           {plans.map((plan) => {
             const isCurrentPlan = currentPlan === plan.id;
@@ -299,7 +277,6 @@ export default function Plans() {
                   isCurrentPlan && "ring-4 ring-primary/20 ring-offset-2",
                 )}
               >
-                {/* Badges de Topo */}
                 {isPopular && (
                   <div className="absolute -top-4 left-0 right-0 flex justify-center">
                     <span className="bg-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md uppercase tracking-wider">
@@ -327,7 +304,6 @@ export default function Plans() {
                     <div className="flex items-baseline justify-center gap-1">
                       <span className="text-4xl font-extrabold text-slate-900">{priceInfo.current}</span>
                     </div>
-                    {/* Badge Vitalício Individual */}
                     {plan.id !== "free" && (
                       <Badge
                         variant="outline"
@@ -342,7 +318,6 @@ export default function Plans() {
                 <Separator />
 
                 <CardContent className="flex-1 flex flex-col gap-6 pt-6">
-                  {/* Lista de Features */}
                   <ul className="space-y-4 flex-1">
                     {features.map((feature, i) => {
                       const Icon = feature.icon;
@@ -385,7 +360,6 @@ export default function Plans() {
                     })}
                   </ul>
 
-                  {/* Botão de Ação - CHAMA handleCheckout */}
                   <Button
                     className={cn("w-full py-6 text-base font-bold shadow-md transition-all", btnClass)}
                     onClick={() => handleCheckout(plan.id)}
@@ -408,7 +382,6 @@ export default function Plans() {
           })}
         </div>
 
-        {/* Footer Notes */}
         <div className="max-w-3xl mx-auto px-4 text-center space-y-4">
           <div className="bg-slate-100/50 border border-slate-200 rounded-lg p-4">
             <p className="text-sm text-slate-600">{t("plans.referral_note")}</p>
