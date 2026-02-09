@@ -1,80 +1,31 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, Eye, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CheckCircle2, Loader2, RefreshCw, Microscope, AlertTriangle } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
-  const [debugInfo, setDebugInfo] = useState<string | null>(null); // Mostra o que encontrou
-  const { toast } = useToast();
+  const [inspectionData, setInspectionData] = useState<any[] | null>(null); // Dados para inspeção
+  const [showInspection, setShowInspection] = useState(false);
 
-  // --- Funções Auxiliares ---
-  const detectCategory = (title: string, socTitle: string = ""): string => {
-    const t = (title + " " + socTitle).toLowerCase();
-    if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
-      return "Landscaping";
-    if (
-      t.includes("construct") ||
-      t.includes("concrete") ||
-      t.includes("mason") ||
-      t.includes("brick") ||
-      t.includes("carpenter")
-    )
-      return "Construction";
-    if (t.includes("housekeep") || t.includes("maid") || t.includes("cleaner") || t.includes("janitor"))
-      return "Housekeeping";
-    if (
-      t.includes("cook") ||
-      t.includes("chef") ||
-      t.includes("kitchen") ||
-      t.includes("dishwash") ||
-      t.includes("server")
-    )
-      return "Hospitality & Culinary";
-    if (t.includes("amusement") || t.includes("carnival") || t.includes("recreation") || t.includes("lifeguard"))
-      return "Amusement & Recreation";
-    if (
-      t.includes("farm") ||
-      t.includes("agricult") ||
-      t.includes("crop") ||
-      t.includes("harvest") ||
-      t.includes("nursery")
-    )
-      return "Agriculture";
-    return "General Labor";
-  };
-
-  const getVal = (obj: any, keys: string[], allowNone = false) => {
+  // --- Funções Auxiliares (Mesmas da V35) ---
+  const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
     for (const key of keys) {
       if (obj[key] !== undefined && obj[key] !== null) {
         const val = obj[key];
-        if (typeof val === "string") {
-          const clean = val.trim();
-          if (clean === "" || clean.toLowerCase() === "n/a" || clean.toLowerCase() === "null") continue;
-          if (!allowNone && clean.toLowerCase() === "none") continue;
-        }
+        if (typeof val === "string" && (val.trim() === "" || val.toLowerCase() === "n/a")) continue;
         return val;
       }
     }
     return null;
   };
 
-  const parseBool = (val: any) => ["1", "true", "yes", "y", "t"].includes(String(val).toLowerCase().trim());
-
-  const parseMoney = (val: any) => {
-    if (!val) return null;
-    const num = parseFloat(String(val).replace(/[$,]/g, ""));
-    return isNaN(num) || num <= 0 ? null : num;
-  };
-
   const formatToISODate = (dateStr: any) => {
-    if (!dateStr || dateStr === "N/A" || !dateStr) return null;
+    if (!dateStr || dateStr === "N/A") return null;
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
@@ -84,249 +35,89 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- NOVA ESTRATÉGIA DE DATA ---
-  const extractDateFromJobId = (jobId: string) => {
-    try {
-      if (!jobId) return null;
-      // Padrão YYDDD (ex: -26036-)
-      const match = jobId.match(/-(\d{2})(\d{3})-/);
-      if (match) {
-        const yearShort = parseInt(match[1]); // 26
-        const dayOfYear = parseInt(match[2]); // 036
-        const yearFull = 2000 + yearShort; // 2026
-        const date = new Date(yearFull, 0); // 1 de Jan
-        date.setDate(dayOfYear);
-        return date.toISOString().split("T")[0];
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  };
-
+  // Lógica V35 para Data
   const determinePostedDate = (item: any, jobId: string) => {
-    // Acessa DIRETAMENTE o objeto raiz e o clearanceOrder separadamente
-    // Isso evita que um null no clearanceOrder apague o valor da raiz
     const root = item || {};
     const nested = item.clearanceOrder || {};
 
-    // 1. Decisão (Prioridade)
+    // 1. Decisão
     const decisionDate =
-      getVal(root, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued", "DETERMINATION_DATE"]) ||
+      getVal(root, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]) ||
       getVal(nested, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]);
+    if (decisionDate) return { val: formatToISODate(decisionDate), source: "Decision Date (Found)" };
 
-    if (decisionDate) return formatToISODate(decisionDate);
-
-    // 2. Submissão (Comum em JO/H2A)
+    // 2. Submissão
     const submissionDate =
-      getVal(root, ["CASE_SUBMITTED", "case_submitted", "dateSubmitted", "date_submitted", "form790AsOfDate"]) ||
-      getVal(nested, ["CASE_SUBMITTED", "case_submitted", "dateSubmitted", "date_submitted", "form790AsOfDate"]);
+      getVal(root, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]) ||
+      getVal(nested, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]);
+    if (submissionDate) return { val: formatToISODate(submissionDate), source: "Submission Date (Found)" };
 
-    if (submissionDate) return formatToISODate(submissionDate);
-
-    // 3. Genérico
-    const genericDate = getVal(root, ["posted_date", "date_posted"]) || getVal(nested, ["posted_date", "date_posted"]);
-    if (genericDate) return formatToISODate(genericDate);
-
-    // 4. Último Recurso: Cálculo pelo ID (Backup Matemático)
+    // 3. ID Fallback
     if (jobId && jobId.startsWith("JO-")) {
-      return extractDateFromJobId(jobId);
-    }
-
-    return null;
-  };
-
-  const calculateFinalWage = (item: any, flat: any) => {
-    let val = parseMoney(
-      item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE || item.AEWR || item.BASIC_RATE,
-    );
-    if (!val && item.clearanceOrder) val = parseMoney(item.clearanceOrder.jobWageOffer);
-
-    if (val && val > 100) {
-      const hours = parseFloat(getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours"]) || "40");
-      if (hours > 0) {
-        const hourly = val / (hours * 4.333);
-        if (hourly >= 7.25 && hourly <= 150) return parseFloat(hourly.toFixed(2));
+      const match = jobId.match(/-(\d{2})(\d{3})-/);
+      if (match) {
+        const date = new Date(2000 + parseInt(match[1]), 0);
+        date.setDate(parseInt(match[2]));
+        return { val: date.toISOString().split("T")[0], source: "ID Calculation (Fallback)" };
       }
     }
-    return val;
+    return { val: null, source: "NOT FOUND" };
   };
-  // --------------------------
 
-  const processJobs = async () => {
+  const inspectJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setDebugInfo(null);
-    setProgress({ current: 0, total: 100, status: "Analisando arquivo..." });
 
     try {
-      const rawJobsMap = new Map();
+      const samples: any[] = [];
 
       for (const file of files) {
-        const isZip = file.name.endsWith(".zip");
-        let contents: { filename: string; content: string }[] = [];
-
-        if (isZip) {
+        let content = "";
+        if (file.name.endsWith(".zip")) {
           const zip = await new JSZip().loadAsync(file);
-          for (const [filename, zipObj] of Object.entries(zip.files)) {
-            if (!zipObj.dir && filename.endsWith(".json")) {
-              const text = await zipObj.async("string");
-              contents.push({ filename, content: text });
-            }
-          }
+          const jsonFile = Object.keys(zip.files).find((n) => n.endsWith(".json"));
+          if (jsonFile) content = await zip.files[jsonFile].async("string");
         } else {
-          contents.push({ filename: file.name, content: await file.text() });
+          content = await file.text();
         }
 
-        for (const { filename, content } of contents) {
+        if (content) {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || [];
 
-          let visaType = "H-2A";
-          if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
-          else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
+          // Pega as 3 primeiras vagas JO (Early Access) para análise
+          const targetJobs = list
+            .filter(
+              (j: any) =>
+                (j.caseNumber && j.caseNumber.startsWith("JO-")) || (j.CASE_NUMBER && j.CASE_NUMBER.startsWith("JO-")),
+            )
+            .slice(0, 3);
 
-          for (const item of list) {
-            // Objeto Flat apenas para dados gerais, NÃO para data crítica
+          for (const item of targetJobs) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
+            const jobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]);
 
-            const title = getVal(flat, [
-              "jobTitle",
-              "job_title",
-              "tempneedJobtitle",
-              "JOB_TITLE",
-              "TITLE",
-              "job_order_title",
-            ]);
-            const company = getVal(flat, [
-              "empBusinessName",
-              "employerBusinessName",
-              "legalName",
-              "empName",
-              "company",
-              "EMPLOYER_NAME",
-            ]);
+            // O Teste Real
+            const dateResult = determinePostedDate(item, jobId);
 
-            if (!title || !company) continue;
-
-            const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
-            const start = formatToISODate(
-              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
-            );
-            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
-            const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
-
-            const finalJobId = rawJobId || fingerprint;
-            let category = getVal(flat, [
-              "socTitle",
-              "jobSocTitle",
-              "tempneedSocTitle",
-              "category",
-              "Category",
-              "SOC_TITLE",
-              "soc_title",
-            ]);
-            if (!category && title) category = detectCategory(title);
-            else if (!category) category = "General Labor";
-
-            // --- USO DA NOVA LÓGICA V35 ---
-            // Passamos o 'item' original (sem achatamento) para preservar a estrutura
-            const posted_date = determinePostedDate(item, finalJobId);
-
-            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
-            const finalWage = calculateFinalWage(item, flat);
-            const transportDesc = getVal(flat, ["transportDescEmp", "transportDescDaily"]);
-            const transportBool =
-              parseBool(getVal(flat, ["isEmploymentTransport", "recIsDailyTransport", "transportProvided"])) ||
-              (transportDesc && transportDesc.length > 5);
-
-            const extractedJob = {
-              job_id: finalJobId,
-              visa_type: visaType,
-              fingerprint: fingerprint,
-              is_active: true,
-              job_title: title,
-              company: company,
-              email: email,
-              category: category,
-              posted_date: posted_date,
-              city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
-              state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState", "STATE"]),
-              zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode", "POSTAL_CODE"]),
-              worksite_address: getVal(flat, ["jobAddr1", "worksite_address", "empAddr1"]),
-              phone: getVal(flat, ["recApplyPhone", "emppocPhone", "employerPhone", "PHONE"]),
-              website: getVal(flat, ["recApplyUrl", "employerWebsite"]),
-              start_date: start,
-              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
-              salary: finalWage,
-              wage_from: finalWage,
-              wage_to: parseMoney(getVal(flat, ["wageTo", "wageOfferTo", "HIGHEST_RATE"])) || finalWage,
-              wage_unit: "Hour",
-              pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
-              weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours"])) || null,
-              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
-              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"])) || null,
-              job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "specialRequirements"]),
-              wage_additional: getVal(flat, ["wageAdditional", "addSpecialPayInfo"]),
-              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
-              education_required: getVal(flat, ["jobMinedu", "jobEducationLevel"], true),
-              experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experience_required"])) || null,
-              transport_provided: transportBool,
-              transport_desc: transportDesc,
-              housing_info: getVal(flat, ["housingAddInfo", "housingAdditionalInfo"]),
-              housing_type: getVal(flat, ["housingType"]) || item.housingLocations?.[0]?.addmbHousingType,
-              housing_addr: getVal(flat, ["housingAddr1"]) || item.housingLocations?.[0]?.addmbHousingAddr1,
-              housing_city: getVal(flat, ["housingCity"]) || item.housingLocations?.[0]?.addmbHousingCity,
-              housing_state: getVal(flat, ["housingState"]) || item.housingLocations?.[0]?.addmbHousingState,
-              housing_zip: getVal(flat, ["housingPostcode"]) || item.housingLocations?.[0]?.addmbHousingPostcode,
-              housing_capacity: parseInt(getVal(flat, ["housingTotalOccupy", "housing_capacity"])) || null,
-              is_meal_provision: parseBool(getVal(flat, ["isMealProvision"])),
-              meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
-            };
-
-            rawJobsMap.set(finalJobId, extractedJob);
+            samples.push({
+              Arquivo: file.name,
+              Job_ID: jobId,
+              Resultado_Final: dateResult.val,
+              Fonte_Detectada: dateResult.source,
+              Dados_Brutos_Raiz: {
+                dateSubmitted: item.dateSubmitted,
+                form790: item.form790AsOfDate,
+              },
+            });
           }
         }
       }
 
-      const finalJobs = Array.from(rawJobsMap.values()).filter(
-        (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
-      );
-
-      // === DEBUG VISUAL ===
-      if (finalJobs.length > 0) {
-        // Pega um exemplo para mostrar ao usuário
-        const sample = finalJobs.find((j) => j.job_id.startsWith("JO-")) || finalJobs[0];
-        setDebugInfo(
-          `V35 Check: ${sample.job_id} -> Data Detectada: ${sample.posted_date || "NENHUMA (Isso seria um erro)"}`,
-        );
-      }
-      // ====================
-
-      const BATCH_SIZE = 1000;
-      let processed = 0;
-
-      for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
-        const batch = finalJobs.slice(i, i + BATCH_SIZE);
-        setProgress({
-          current: processed,
-          total: finalJobs.length,
-          status: `Enviando ${batch.length} vagas...`,
-        });
-
-        const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
-        if (error) throw error;
-        processed += batch.length;
-      }
-
-      setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
-      toast({
-        title: "Importação V35 Concluída",
-        description: `Dados enviados. Verifique o alerta de debug visual acima.`,
-      });
-    } catch (err: any) {
-      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
-      console.error(err);
+      setInspectionData(samples);
+      setShowInspection(true);
+    } catch (e) {
+      alert("Erro ao ler arquivo: " + e);
     } finally {
       setProcessing(false);
     }
@@ -336,49 +127,48 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Eye className="h-6 w-6 text-blue-800" /> Sincronizador V35 (Visual Debug)
+          <Microscope className="h-6 w-6 text-purple-600" /> Inspetor V36
         </CardTitle>
-        <CardDescription>Acesso direto aos dados brutos para evitar perda de data.</CardDescription>
+        <CardDescription>
+          Não envia nada para o banco. Apenas diagnostica o que o React está "enxergando".
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
+          <p className="mt-2 text-sm text-slate-500">Selecione o arquivo JO (Early Access)</p>
         </div>
+        <Button
+          onClick={inspectJobs}
+          disabled={processing || files.length === 0}
+          className="w-full mt-4 bg-purple-600 hover:bg-purple-700"
+        >
+          {processing ? <Loader2 className="animate-spin mr-2" /> : <Microscope className="mr-2" />}
+          Inspecionar Dados
+        </Button>
 
-        {/* ÁREA DE DEBUG VISUAL */}
-        {debugInfo && (
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-            <div>
-              <h4 className="font-bold text-yellow-800 text-sm">Auditoria de Dados:</h4>
-              <p className="text-yellow-700 text-sm font-mono">{debugInfo}</p>
+        <Dialog open={showInspection} onOpenChange={setShowInspection}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Relatório de Inspeção</DialogTitle>
+              <DialogDescription>Isso é EXATAMENTE o que o código está extraindo do arquivo.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {inspectionData?.map((data, i) => (
+                <div key={i} className="p-4 bg-slate-100 rounded-md border text-sm font-mono">
+                  <div className="flex justify-between font-bold border-b pb-2 mb-2">
+                    <span>ID: {data.Job_ID}</span>
+                    <span className={data.Resultado_Final ? "text-green-600" : "text-red-600"}>
+                      DATA: {data.Resultado_Final || "NULL"}
+                    </span>
+                  </div>
+                  <p>Fonte: {data.Fonte_Detectada}</p>
+                  <pre className="mt-2 text-xs text-slate-500">{JSON.stringify(data.Dados_Brutos_Raiz, null, 2)}</pre>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
-
-        <div className="mt-4">
-          {progress.total > 0 && (
-            <div className="mb-2 text-sm font-medium text-slate-600 flex justify-between">
-              <span>{progress.status}</span>
-              <span>{Math.round((progress.current / progress.total) * 100)}%</span>
-            </div>
-          )}
-          <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
-            <div
-              className="bg-blue-800 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
-            ></div>
-          </div>
-          <Button
-            onClick={processJobs}
-            disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-blue-800 hover:bg-blue-900 text-white"
-          >
-            {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Importar V35
-          </Button>
-        </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
