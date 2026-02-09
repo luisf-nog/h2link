@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, Calculator, CalendarClock } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Calculator } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -82,26 +82,18 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- V29: DECODIFICADOR JULIANO ---
-  // Transforma "JO-A-300-26036-..." em "2026-02-05"
+  // --- DECODIFICADOR JULIANO ---
   const extractDateFromJobId = (jobId: string) => {
     try {
       if (!jobId) return null;
-
-      // Procura padrão YYDDD (ex: 26036) no meio do ID
-      // Regex: Procura hífen, seguido de 2 dígitos (ano), seguido de 3 dígitos (dia), seguido de hífen
       const match = jobId.match(/-(\d{2})(\d{3})-/);
 
       if (match) {
         const yearShort = parseInt(match[1]); // 26
         const dayOfYear = parseInt(match[2]); // 036
-
         const yearFull = 2000 + yearShort; // 2026
-
-        // Cria data baseada no dia do ano
         const date = new Date(yearFull, 0); // 1 de Jan
         date.setDate(dayOfYear); // Soma os dias
-
         return date.toISOString().split("T")[0];
       }
     } catch (e) {
@@ -111,7 +103,7 @@ export function MultiJsonImporter() {
   };
 
   const determinePostedDate = (flatData: any, jobId: string) => {
-    // 1. Prioridade Absoluta: Data de Aprovação (Decision)
+    // 1. Prioridade Absoluta: Data de Aprovação
     const decisionDate = getVal(flatData, [
       "DECISION_DATE",
       "decision_date",
@@ -120,7 +112,7 @@ export function MultiJsonImporter() {
     ]);
     if (decisionDate) return formatToISODate(decisionDate);
 
-    // 2. Data de Submissão (Arquivo)
+    // 2. Data de Submissão
     const submissionDate = getVal(flatData, [
       "CASE_SUBMITTED",
       "case_submitted",
@@ -131,12 +123,10 @@ export function MultiJsonImporter() {
     ]);
     if (submissionDate) return formatToISODate(submissionDate);
 
-    // 3. Fallback Infalível: Extrair do Job ID (V29)
-    // Se tudo falhar, usamos a data embutida no ID da vaga
+    // 3. Fallback Infalível: Extrair do Job ID
     const julianDate = extractDateFromJobId(jobId);
     if (julianDate) return julianDate;
 
-    // 4. Último recurso
     return formatToISODate(getVal(flatData, ["posted_date", "date_posted"]));
   };
 
@@ -231,9 +221,8 @@ export function MultiJsonImporter() {
             if (!category && title) category = detectCategory(title);
             else if (!category) category = "General Labor";
 
-            // --- USO DA NOVA FUNÇÃO V29 (JULIAN DECODER) ---
+            // --- DATA ---
             const posted_date = determinePostedDate(flat, finalJobId);
-            // -----------------------------------------------
 
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
             const finalWage = calculateFinalWage(item, flat);
@@ -307,7 +296,9 @@ export function MultiJsonImporter() {
           status: `Enviando ${batch.length} vagas (Server-Side)...`,
         });
 
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
+        // FIX: Usando 'as any' para evitar erro de TypeScript com a nova função
+        const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
+
         if (error) throw error;
         processed += batch.length;
       }
