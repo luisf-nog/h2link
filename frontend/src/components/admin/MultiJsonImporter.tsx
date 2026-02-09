@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, Layers } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Eye, AlertTriangle } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
+  const [debugInfo, setDebugInfo] = useState<string | null>(null); // Mostra o que encontrou
   const { toast } = useToast();
 
   // --- Funções Auxiliares ---
@@ -49,8 +50,9 @@ export function MultiJsonImporter() {
   };
 
   const getVal = (obj: any, keys: string[], allowNone = false) => {
+    if (!obj) return null;
     for (const key of keys) {
-      if (obj && obj[key] !== undefined && obj[key] !== null) {
+      if (obj[key] !== undefined && obj[key] !== null) {
         const val = obj[key];
         if (typeof val === "string") {
           const clean = val.trim();
@@ -82,11 +84,11 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- PLANO B: Decodificador Matemático de ID ---
+  // --- NOVA ESTRATÉGIA DE DATA ---
   const extractDateFromJobId = (jobId: string) => {
     try {
       if (!jobId) return null;
-      // Busca padrão YYDDD (ex: -26036-)
+      // Padrão YYDDD (ex: -26036-)
       const match = jobId.match(/-(\d{2})(\d{3})-/);
       if (match) {
         const yearShort = parseInt(match[1]); // 26
@@ -102,37 +104,31 @@ export function MultiJsonImporter() {
     return null;
   };
 
-  // --- ESTRATÉGIA HÍBRIDA (Mapeamento + Matemática) ---
-  const determinePostedDate = (flatData: any, jobId: string) => {
-    // 1. Tenta achar DATA DE DECISÃO (Aprovação) - Prioridade Máxima
-    const decisionDate = getVal(flatData, [
-      "DECISION_DATE",
-      "decision_date",
-      "dateAcceptanceLtrIssued", // Crucial para H-2B
-      "DETERMINATION_DATE",
-      "determination_date",
-      "CERTIFICATION_START_DATE",
-    ]);
+  const determinePostedDate = (item: any, jobId: string) => {
+    // Acessa DIRETAMENTE o objeto raiz e o clearanceOrder separadamente
+    // Isso evita que um null no clearanceOrder apague o valor da raiz
+    const root = item || {};
+    const nested = item.clearanceOrder || {};
+
+    // 1. Decisão (Prioridade)
+    const decisionDate =
+      getVal(root, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued", "DETERMINATION_DATE"]) ||
+      getVal(nested, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]);
+
     if (decisionDate) return formatToISODate(decisionDate);
 
-    // 2. Tenta achar DATA DE SUBMISSÃO
-    const submissionDate = getVal(flatData, [
-      "CASE_SUBMITTED",
-      "case_submitted",
-      "dateSubmitted",
-      "date_submitted",
-      "dateApplicationSubmitted", // Crucial para H-2B
-      "form790AsOfDate",
-      "registryDate",
-    ]);
+    // 2. Submissão (Comum em JO/H2A)
+    const submissionDate =
+      getVal(root, ["CASE_SUBMITTED", "case_submitted", "dateSubmitted", "date_submitted", "form790AsOfDate"]) ||
+      getVal(nested, ["CASE_SUBMITTED", "case_submitted", "dateSubmitted", "date_submitted", "form790AsOfDate"]);
+
     if (submissionDate) return formatToISODate(submissionDate);
 
-    // 3. Fallback Genérico
-    const genericDate = getVal(flatData, ["posted_date", "date_posted"]);
+    // 3. Genérico
+    const genericDate = getVal(root, ["posted_date", "date_posted"]) || getVal(nested, ["posted_date", "date_posted"]);
     if (genericDate) return formatToISODate(genericDate);
 
-    // 4. PLANO B: Se tudo acima falhou (retornou null), CALCULA PELO ID
-    // Isso garante que vagas JO- nunca fiquem vazias
+    // 4. Último Recurso: Cálculo pelo ID (Backup Matemático)
     if (jobId && jobId.startsWith("JO-")) {
       return extractDateFromJobId(jobId);
     }
@@ -160,7 +156,8 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setProgress({ current: 0, total: 100, status: "Lendo arquivos..." });
+    setDebugInfo(null);
+    setProgress({ current: 0, total: 100, status: "Analisando arquivo..." });
 
     try {
       const rawJobsMap = new Map();
@@ -190,6 +187,7 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
+            // Objeto Flat apenas para dados gerais, NÃO para data crítica
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
             const title = getVal(flat, [
@@ -231,9 +229,9 @@ export function MultiJsonImporter() {
             if (!category && title) category = detectCategory(title);
             else if (!category) category = "General Labor";
 
-            // --- ESTRATÉGIA V34 ---
-            // Passamos o 'finalJobId' para que ele possa usar a matemática se o JSON falhar
-            const posted_date = determinePostedDate(flat, finalJobId);
+            // --- USO DA NOVA LÓGICA V35 ---
+            // Passamos o 'item' original (sem achatamento) para preservar a estrutura
+            const posted_date = determinePostedDate(item, finalJobId);
 
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
             const finalWage = calculateFinalWage(item, flat);
@@ -251,7 +249,7 @@ export function MultiJsonImporter() {
               company: company,
               email: email,
               category: category,
-              posted_date: posted_date, // Agora vai sempre preenchido!
+              posted_date: posted_date,
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState", "STATE"]),
               zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode", "POSTAL_CODE"]),
@@ -291,10 +289,19 @@ export function MultiJsonImporter() {
         }
       }
 
-      let finalJobs = Array.from(rawJobsMap.values());
-      finalJobs = finalJobs.filter(
+      const finalJobs = Array.from(rawJobsMap.values()).filter(
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
+
+      // === DEBUG VISUAL ===
+      if (finalJobs.length > 0) {
+        // Pega um exemplo para mostrar ao usuário
+        const sample = finalJobs.find((j) => j.job_id.startsWith("JO-")) || finalJobs[0];
+        setDebugInfo(
+          `V35 Check: ${sample.job_id} -> Data Detectada: ${sample.posted_date || "NENHUMA (Isso seria um erro)"}`,
+        );
+      }
+      // ====================
 
       const BATCH_SIZE = 1000;
       let processed = 0;
@@ -304,7 +311,7 @@ export function MultiJsonImporter() {
         setProgress({
           current: processed,
           total: finalJobs.length,
-          status: `Enviando ${batch.length} vagas (Server-Side)...`,
+          status: `Enviando ${batch.length} vagas...`,
         });
 
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
@@ -314,8 +321,8 @@ export function MultiJsonImporter() {
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação V34 (Final)",
-        description: `Datas lidas ou calculadas com sucesso.`,
+        title: "Importação V35 Concluída",
+        description: `Dados enviados. Verifique o alerta de debug visual acima.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -329,17 +336,26 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Layers className="h-6 w-6 text-orange-600" /> Sincronizador V34 (Hybrid)
+          <Eye className="h-6 w-6 text-blue-800" /> Sincronizador V35 (Visual Debug)
         </CardTitle>
-        <CardDescription>
-          Combina leitura de arquivo + cálculo matemático para garantir que a data nunca fique vazia.
-        </CardDescription>
+        <CardDescription>Acesso direto aos dados brutos para evitar perda de data.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
           <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
         </div>
+
+        {/* ÁREA DE DEBUG VISUAL */}
+        {debugInfo && (
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-yellow-800 text-sm">Auditoria de Dados:</h4>
+              <p className="text-yellow-700 text-sm font-mono">{debugInfo}</p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           {progress.total > 0 && (
@@ -350,17 +366,17 @@ export function MultiJsonImporter() {
           )}
           <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
             <div
-              className="bg-orange-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-blue-800 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white"
+            className="w-full h-12 text-lg font-bold bg-blue-800 hover:bg-blue-900 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Importar Garantido
+            Importar V35
           </Button>
         </div>
       </CardContent>
