@@ -3,12 +3,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -19,10 +20,12 @@ serve(async (req) => {
       return new Response('Job ID required', { status: 400, headers: corsHeaders });
     }
 
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch job data
     const { data: job, error } = await supabase
       .from('public_jobs')
       .select('*')
@@ -33,9 +36,11 @@ serve(async (req) => {
       return new Response('Job not found', { status: 404, headers: corsHeaders });
     }
 
+    // Build meta tags
     const visaType = job.visa_type || 'H-2B';
     const location = `${job.city}, ${job.state}`;
 
+    // Salary display: prefer wage_from/wage_to range, fallback to salary
     let salaryText = '';
     if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
       salaryText = `$${Number(job.wage_from).toFixed(2)} - $${Number(job.wage_to).toFixed(2)}/${job.wage_unit || 'hr'}`;
@@ -46,8 +51,11 @@ serve(async (req) => {
     }
 
     const openingsText = job.openings ? `${job.openings} opening${job.openings > 1 ? 's' : ''}` : '';
+
+    // Title: concise and impactful
     const title = `${job.job_title} — ${job.company}`;
 
+    // Description: pack key details for WhatsApp/Facebook preview
     const descParts: string[] = [];
     descParts.push(`📍 ${location}`);
     if (salaryText) descParts.push(`💰 ${salaryText}`);
@@ -60,13 +68,18 @@ serve(async (req) => {
     const shareUrl = `${appUrl}/job/${job.id}`;
     const logoUrl = 'https://storage.googleapis.com/gpt-engineer-file-uploads/qLZbvqI1JJV7s7qLCqiN2u0iNM93/uploads/1769111120896-Gemini_Generated_Image_yeubloyeubloyeub.png';
 
+    // Generate HTML with meta tags
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Basic Meta Tags -->
     <title>${title} | H2 Linker</title>
     <meta name="description" content="${description}">
+    
+    <!-- Open Graph / Facebook / WhatsApp -->
     <meta property="og:type" content="article">
     <meta property="og:url" content="${shareUrl}">
     <meta property="og:title" content="${title}">
@@ -76,13 +89,19 @@ serve(async (req) => {
     <meta property="og:image:height" content="630">
     <meta property="og:site_name" content="H2 Linker">
     <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="${shareUrl}">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${logoUrl}">
+    
+    <!-- Redirect to React app -->
     <meta http-equiv="refresh" content="0;url=${shareUrl}">
-    <script>window.location.href = "${shareUrl}";</script>
+    <script>
+        window.location.href = "${shareUrl}";
+    </script>
 </head>
 <body>
     <h1>${title}</h1>
@@ -98,9 +117,9 @@ serve(async (req) => {
         'Content-Type': 'text/html; charset=utf-8',
       },
     });
-  } catch (err) {
-    console.error('Error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (error) {
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
