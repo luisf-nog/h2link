@@ -13,6 +13,7 @@ import {
   Briefcase,
   MapPin,
   Search,
+  ArrowRight,
   Zap,
   Info,
   Tractor,
@@ -146,7 +147,7 @@ export default function Dashboard() {
     const fetchMarketData = async () => {
       setJobMarketLoading(true);
 
-      const BATCH_SIZE = 2500; // Aumentado para reduzir número de round-trips
+      const BATCH_SIZE = 2500;
       let allRows: any[] = [];
       let page = 0;
       let hasMore = true;
@@ -167,7 +168,7 @@ export default function Dashboard() {
 
           if (data && data.length > 0) {
             allRows = [...allRows, ...data];
-            if (data.length < BATCH_SIZE) hasMore = false; // Acabou os dados
+            if (data.length < BATCH_SIZE) hasMore = false;
             page++;
           } else {
             hasMore = false;
@@ -205,7 +206,7 @@ export default function Dashboard() {
           const s = job.state?.trim();
           if (s) states.set(s, (states.get(s) || 0) + 1);
 
-          // Salários (Filtrando outliers para pegar apenas salários por hora válidos)
+          // Salários
           if (job.salary && job.salary > 7 && job.salary < 100) {
             const acc = salaries.get(s || "Unknown") || { sum: 0, count: 0 };
             salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
@@ -262,8 +263,7 @@ export default function Dashboard() {
   }, []);
 
   const bestPaidStateLabel = useMemo(() => {
-    if (!bestPaidState) return "-";
-    // Traduz a sigla para nome completo se existir
+    if (!bestPaidState) return null;
     const fullName = US_STATES[bestPaidState.name] || bestPaidState.name;
     return { name: fullName, amount: `$${bestPaidState.avgSalary.toFixed(2)} / hour` };
   }, [bestPaidState]);
@@ -280,17 +280,14 @@ export default function Dashboard() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-8 pb-12 animate-in fade-in duration-700">
-        {/* Banner Promocional (Apenas Free BR) */}
         {profile && isFreeUser && currency === "BRL" && <PromoBanner />}
 
         {/* --- HEADER: HERO SECTION --- */}
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl">
-          {/* Efeitos de Fundo */}
           <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
 
           <div className="relative z-10 p-8 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Saudação e Contexto */}
             <div className="space-y-6">
               <div>
                 <Badge
@@ -332,7 +329,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Card de Créditos (HUD Style) */}
             <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-6 lg:max-w-md ml-auto w-full">
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -354,11 +350,7 @@ export default function Dashboard() {
                   <span>{t("dashboard.credits.used_today", "Used Today")}</span>
                   <span>{Math.round(usagePercent)}%</span>
                 </div>
-                <Progress
-                  value={usagePercent}
-                  className="h-2.5 bg-slate-700"
-                  indicatorClassName="bg-gradient-to-r from-blue-500 to-emerald-400"
-                />
+                <Progress value={usagePercent} className="h-2.5 bg-slate-700" />
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10">
@@ -379,7 +371,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Widgets Area */}
         <div className="grid grid-cols-1 gap-6">
           {planTier !== "free" && <WarmupStatusWidget />}
 
@@ -406,7 +397,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* --- MARKET INTELLIGENCE --- */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
@@ -420,7 +410,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               loading={jobMarketLoading}
@@ -456,9 +445,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Charts / Lists Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Top Categories */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -481,11 +468,7 @@ export default function Dashboard() {
                               </span>
                               <span className="font-bold text-slate-900">{formatNumber(cat.count)}</span>
                             </div>
-                            <Progress
-                              value={cat.percent}
-                              className="h-1.5 bg-slate-100"
-                              indicatorClassName="bg-blue-500"
-                            />
+                            <Progress value={cat.percent} className="h-1.5 bg-slate-100" />
                           </div>
                         ))}
                   </div>
@@ -493,7 +476,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Top States */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -525,11 +507,7 @@ export default function Dashboard() {
                                   {formatNumber(st.count)}
                                 </span>
                               </div>
-                              <Progress
-                                value={st.percent}
-                                className="h-1.5 bg-slate-200"
-                                indicatorClassName="bg-emerald-500"
-                              />
+                              <Progress value={st.percent} className="h-1.5 bg-slate-200" />
                             </div>
                           </div>
                         ))}
@@ -538,7 +516,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Best Paid State & Insights */}
             <div className="lg:col-span-1 flex flex-col gap-6">
               <Card className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-none shadow-lg relative overflow-hidden h-full flex flex-col justify-center">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -552,9 +529,11 @@ export default function Dashboard() {
                     <div className="h-10 w-32 bg-white/20 rounded animate-pulse mx-auto" />
                   ) : (
                     <>
-                      <h3 className="text-3xl font-extrabold tracking-tight mb-3">{bestPaidStateLabel.name}</h3>
+                      <h3 className="text-3xl font-extrabold tracking-tight mb-3">
+                        {bestPaidStateLabel ? bestPaidStateLabel.name : "-"}
+                      </h3>
                       <p className="text-emerald-100 font-bold text-xl bg-emerald-800/30 inline-block px-5 py-2 rounded-full border border-emerald-500/30 backdrop-blur-sm">
-                        {bestPaidStateLabel.amount}
+                        {bestPaidStateLabel ? bestPaidStateLabel.amount : "-"}
                       </p>
                       <p className="text-xs text-emerald-200/80 mt-6 max-w-[220px] mx-auto leading-relaxed">
                         {t(
@@ -573,8 +552,6 @@ export default function Dashboard() {
     </TooltipProvider>
   );
 }
-
-// --- Subcomponents ---
 
 function StatCard({ loading, title, value, icon: Icon, color, desc }: any) {
   const colors: Record<string, string> = {
@@ -603,5 +580,23 @@ function StatCard({ loading, title, value, icon: Icon, color, desc }: any) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ActionButton({ icon: Icon, title, desc, href }: any) {
+  return (
+    <Button
+      variant="outline"
+      className="h-auto py-4 px-6 flex flex-col items-center gap-3 hover:border-primary/50 hover:bg-primary/5 group transition-all duration-300 bg-white border-slate-200 shadow-sm"
+      onClick={() => (window.location.href = href)}
+    >
+      <div className="p-3 rounded-full bg-slate-50 group-hover:bg-primary/10 transition-colors">
+        <Icon className="h-5 w-5 text-slate-500 group-hover:text-primary transition-colors" />
+      </div>
+      <div className="text-center">
+        <span className="font-bold text-slate-800 group-hover:text-primary block text-base">{title}</span>
+        <span className="text-xs text-slate-500 font-normal mt-1 block max-w-[200px]">{desc}</span>
+      </div>
+    </Button>
   );
 }
