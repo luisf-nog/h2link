@@ -33,7 +33,6 @@ import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/l
 import { formatNumber } from "@/lib/number";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// Interface expandida para bater com os dados do JobDetails
 interface Job {
   id: string;
   job_id: string;
@@ -91,7 +90,6 @@ export default function SharedJobView() {
   useEffect(() => {
     async function fetchJob() {
       if (!jobId) {
-        console.error("No jobId provided");
         setLoading(false);
         return;
       }
@@ -145,6 +143,7 @@ export default function SharedJobView() {
       : d.toLocaleDateString(locale, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
+  // --- Função auxiliar de Experiência ---
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return t("jobs.details.no_experience", "None");
     if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} months` });
@@ -258,7 +257,7 @@ export default function SharedJobView() {
       <JobMetaTags job={job} />
 
       <div className="min-h-screen bg-slate-50/50 pb-12">
-        {/* HEADER GLOBAL - PONTE PARA O SITE */}
+        {/* HEADER GLOBAL - LINK CORRIGIDO PARA /auth */}
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div
@@ -338,7 +337,7 @@ export default function SharedJobView() {
                 <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
                   <Timeline />
 
-                  {/* 2. EXPERIÊNCIA NECESSÁRIA (Posicionado entre Datas e Salário) */}
+                  {/* 2. EXPERIÊNCIA NECESSÁRIA (INCLUÍDA AQUI) */}
                   <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                     <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                       <GraduationCap className="h-6 w-6" />
@@ -414,7 +413,7 @@ export default function SharedJobView() {
                     </div>
                   </div>
 
-                  {/* Card Promocional (CTA) Sidebar */}
+                  {/* Card Promocional (CTA) Sidebar - LINK CORRIGIDO PARA /auth */}
                   <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-6 text-center space-y-4">
                     <h3 className="font-bold text-primary text-lg">
                       {locale === "pt" ? "Quer ver mais vagas como esta?" : "Want to see more jobs like this?"}
@@ -646,7 +645,7 @@ export default function SharedJobView() {
               </div>
             </div>
 
-            {/* Mobile Sticky CTA */}
+            {/* Mobile Sticky CTA - LINK CORRIGIDO PARA /auth */}
             <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
               <Button className="flex-1 font-bold h-12 text-base shadow-md" onClick={() => navigate("/auth")}>
                 <CheckCircle2 className="h-5 w-5 mr-2" /> {locale === "pt" ? "Candidatar-se" : "Apply Now"}
