@@ -38,31 +38,13 @@ serve(async (req) => {
 
     // Build meta tags
     const visaType = job.visa_type || 'H-2B';
+    const title = `${visaType}: ${job.job_title} - ${job.company}`;
     const location = `${job.city}, ${job.state}`;
-
-    // Salary display: prefer wage_from/wage_to range, fallback to salary
-    let salaryText = '';
-    if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
-      salaryText = `$${Number(job.wage_from).toFixed(2)} - $${Number(job.wage_to).toFixed(2)}/${job.wage_unit || 'hr'}`;
-    } else if (job.wage_from) {
-      salaryText = `$${Number(job.wage_from).toFixed(2)}/${job.wage_unit || 'hr'}`;
-    } else if (job.salary) {
-      salaryText = `$${Number(job.salary).toFixed(2)}/${job.wage_unit || 'hr'}`;
-    }
-
-    const openingsText = job.openings ? `${job.openings} opening${job.openings > 1 ? 's' : ''}` : '';
-
-    // Title: concise and impactful
-    const title = `${job.job_title} — ${job.company}`;
-
-    // Description: pack key details for WhatsApp/Facebook preview
-    const descParts: string[] = [];
-    descParts.push(`📍 ${location}`);
-    if (salaryText) descParts.push(`💰 ${salaryText}`);
-    if (openingsText) descParts.push(`👥 ${openingsText}`);
-    descParts.push(`🛂 ${visaType}`);
-    if (job.start_date) descParts.push(`📅 Start: ${job.start_date}`);
-    const description = descParts.join(' • ');
+    const salary = job.salary ? `$${job.salary.toFixed(2)}/hr` : '';
+    
+    const descriptionParts = ['Job opportunity', visaType, location];
+    if (salary) descriptionParts.push(salary);
+    const description = descriptionParts.join(' • ');
 
     const appUrl = Deno.env.get('APP_URL') || 'https://h2linker.com';
     const shareUrl = `${appUrl}/job/${job.id}`;
