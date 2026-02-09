@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, Database } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Database, CalendarCheck } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -72,13 +72,45 @@ export function MultiJsonImporter() {
   };
 
   const formatToISODate = (dateStr: any) => {
-    if (!dateStr || dateStr === "N/A") return null;
+    if (!dateStr || dateStr === "N/A" || !dateStr) return null;
     try {
       const d = new Date(dateStr);
-      return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString().split("T")[0];
     } catch {
       return null;
     }
+  };
+
+  // --- V28: MAPEAMENTO FOCADO EM DECISION_DATE ---
+  const determinePostedDate = (flatData: any, filename: string) => {
+    // Lista de prioridade absoluta para datas de aprovação
+    // Funciona para H-2A e H-2B
+    const decisionDate = getVal(flatData, [
+      "DECISION_DATE",
+      "decision_date",
+      "DETERMINATION_DATE",
+      "determination_date",
+      "CERTIFICATION_START_DATE", // Às vezes usado como proxy de aprovação
+    ]);
+
+    if (decisionDate) return formatToISODate(decisionDate);
+
+    // Se não tiver data de decisão (caso Early Access/Job Order),
+    // usamos a data de submissão como provisória.
+    const submissionDate = getVal(flatData, [
+      "CASE_SUBMITTED",
+      "case_submitted",
+      "dateSubmitted",
+      "date_submitted",
+      "form790AsOfDate",
+      "registryDate",
+    ]);
+
+    if (submissionDate) return formatToISODate(submissionDate);
+
+    // Fallback final
+    return formatToISODate(getVal(flatData, ["posted_date", "date_posted"]));
   };
 
   const calculateFinalWage = (item: any, flat: any) => {
@@ -172,9 +204,11 @@ export function MultiJsonImporter() {
             ]);
             if (!category && title) category = detectCategory(title);
             else if (!category) category = "General Labor";
-            const posted_date = formatToISODate(
-              getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted", "form790AsOfDate"]),
-            );
+
+            // --- DATA MAPEADA (Decision Date Priority) ---
+            const posted_date = determinePostedDate(flat, filename);
+            // ---------------------------------------------
+
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
             const finalWage = calculateFinalWage(item, flat);
             const transportDesc = getVal(flat, ["transportDescEmp", "transportDescDaily"]);
@@ -236,36 +270,27 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === V26: ENVIO PARA O SERVIDOR (RPC) ===
-      // Agora mandamos lotes grandes direto para a função SQL processar
-
-      const BATCH_SIZE = 1000; // O servidor aguenta muito mais que o cliente
+      // === ENVIO RPC ===
+      const BATCH_SIZE = 1000;
       let processed = 0;
 
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
-
         setProgress({
           current: processed,
           total: finalJobs.length,
-          status: `Enviando ${batch.length} vagas para o servidor...`,
+          status: `Enviando ${batch.length} vagas (Server-Side)...`,
         });
 
-        // Chama a função SQL criada no Passo 1
-        const { data, error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
-
-        if (error) {
-          console.error("Erro no servidor:", error);
-          throw error;
-        }
-
+        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
+        if (error) throw error;
         processed += batch.length;
       }
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação Server-Side Concluída",
-        description: `O servidor processou ${finalJobs.length} vagas com sucesso.`,
+        title: "Importação com Evolução de Data",
+        description: `Datas de aprovação (Decision Date) terão prioridade sobre datas de submissão.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -279,9 +304,11 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Database className="h-6 w-6 text-purple-700" /> Importador Server-Side (RPC)
+          <CalendarCheck className="h-6 w-6 text-teal-600" /> Sincronizador V28 (Decision Priority)
         </CardTitle>
-        <CardDescription>Processamento de alta velocidade executado diretamente no Banco de Dados.</CardDescription>
+        <CardDescription>
+          Atualiza vagas Early Access automaticamente quando a data de aprovação (Decision Date) estiver disponível.
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -298,17 +325,17 @@ export function MultiJsonImporter() {
           )}
           <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
             <div
-              className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-teal-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-purple-700 hover:bg-purple-800 text-white"
+            className="w-full h-12 text-lg font-bold bg-teal-600 hover:bg-teal-700 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Iniciar Processamento Server-Side
+            Importar e Atualizar Aprovações
           </Button>
         </div>
       </CardContent>
