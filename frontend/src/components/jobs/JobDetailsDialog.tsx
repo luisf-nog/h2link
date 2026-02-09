@@ -22,7 +22,7 @@ import {
   Users,
   MessageSquare,
   ArrowLeft,
-  GraduationCap, // Mantive este ícone para a experiência (pode ser trocado se preferir)
+  GraduationCap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -156,6 +156,7 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">{t("jobs.details.view_details", "Ver detalhes")}</span>;
   };
 
+  // --- I18n: Formatação de Experiência ---
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return t("jobs.details.no_experience", "Não exigida");
     if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} meses` });
@@ -298,7 +299,7 @@ export function JobDetailsDialog({
               {/* 1. LINHA DO TEMPO */}
               <Timeline />
 
-              {/* 2. EXPERIÊNCIA NECESSÁRIA (Exclusivo e Destacado) */}
+              {/* 2. EXPERIÊNCIA NECESSÁRIA (Posicionado entre Datas e Salário) */}
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                 <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                   <GraduationCap className="h-6 w-6" />
