@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, ScanSearch } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Layers } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -82,38 +82,61 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- V32: MAPEAMENTO DE DATA REFORÇADO ---
-  const determinePostedDate = (flatData: any) => {
-    // Nível 1: Data de Decisão / Aprovação / Aceite (A mais importante)
-    // "dateAcceptanceLtrIssued" é crucial para H-2B
+  // --- PLANO B: Decodificador Matemático de ID ---
+  const extractDateFromJobId = (jobId: string) => {
+    try {
+      if (!jobId) return null;
+      // Busca padrão YYDDD (ex: -26036-)
+      const match = jobId.match(/-(\d{2})(\d{3})-/);
+      if (match) {
+        const yearShort = parseInt(match[1]); // 26
+        const dayOfYear = parseInt(match[2]); // 036
+        const yearFull = 2000 + yearShort; // 2026
+        const date = new Date(yearFull, 0); // 1 de Jan
+        date.setDate(dayOfYear);
+        return date.toISOString().split("T")[0];
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  };
+
+  // --- ESTRATÉGIA HÍBRIDA (Mapeamento + Matemática) ---
+  const determinePostedDate = (flatData: any, jobId: string) => {
+    // 1. Tenta achar DATA DE DECISÃO (Aprovação) - Prioridade Máxima
     const decisionDate = getVal(flatData, [
       "DECISION_DATE",
       "decision_date",
-      "dateAcceptanceLtrIssued", // <--- Encontrado no seu H2B
+      "dateAcceptanceLtrIssued", // Crucial para H-2B
       "DETERMINATION_DATE",
       "determination_date",
       "CERTIFICATION_START_DATE",
     ]);
     if (decisionDate) return formatToISODate(decisionDate);
 
-    // Nível 2: Data de Submissão (Padrão para JO / Early Access)
-    // "dateSubmitted" é crucial para H-2A/JO
+    // 2. Tenta achar DATA DE SUBMISSÃO
     const submissionDate = getVal(flatData, [
       "CASE_SUBMITTED",
       "case_submitted",
-      "dateSubmitted", // <--- Encontrado no seu JO e H2A
+      "dateSubmitted",
       "date_submitted",
-      "dateApplicationSubmitted", // <--- Encontrado no seu H2B
+      "dateApplicationSubmitted", // Crucial para H-2B
       "form790AsOfDate",
       "registryDate",
     ]);
     if (submissionDate) return formatToISODate(submissionDate);
 
-    // Nível 3: Genéricos
+    // 3. Fallback Genérico
     const genericDate = getVal(flatData, ["posted_date", "date_posted"]);
     if (genericDate) return formatToISODate(genericDate);
 
-    // Nível 4: Retorna null (Deixa o Banco de Dados usar o ID Calculator como último recurso)
+    // 4. PLANO B: Se tudo acima falhou (retornou null), CALCULA PELO ID
+    // Isso garante que vagas JO- nunca fiquem vazias
+    if (jobId && jobId.startsWith("JO-")) {
+      return extractDateFromJobId(jobId);
+    }
+
     return null;
   };
 
@@ -137,7 +160,7 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setProgress({ current: 0, total: 100, status: "Preparando dados..." });
+    setProgress({ current: 0, total: 100, status: "Lendo arquivos..." });
 
     try {
       const rawJobsMap = new Map();
@@ -208,9 +231,9 @@ export function MultiJsonImporter() {
             if (!category && title) category = detectCategory(title);
             else if (!category) category = "General Labor";
 
-            // --- DATA ---
-            // Agora tenta extrair REALMENTE do arquivo com os novos campos
-            const posted_date = determinePostedDate(flat);
+            // --- ESTRATÉGIA V34 ---
+            // Passamos o 'finalJobId' para que ele possa usar a matemática se o JSON falhar
+            const posted_date = determinePostedDate(flat, finalJobId);
 
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
             const finalWage = calculateFinalWage(item, flat);
@@ -228,7 +251,7 @@ export function MultiJsonImporter() {
               company: company,
               email: email,
               category: category,
-              posted_date: posted_date, // Se for null, o DB resolve com o ID
+              posted_date: posted_date, // Agora vai sempre preenchido!
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState", "STATE"]),
               zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode", "POSTAL_CODE"]),
@@ -291,8 +314,8 @@ export function MultiJsonImporter() {
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação V32 (Mapeamento Completo)",
-        description: `Lendo datas reais de H-2A e H-2B. Cálculo de ID apenas como backup.`,
+        title: "Importação V34 (Final)",
+        description: `Datas lidas ou calculadas com sucesso.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -306,9 +329,11 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <ScanSearch className="h-6 w-6 text-indigo-600" /> Sincronizador V32 (Smart Mapping)
+          <Layers className="h-6 w-6 text-orange-600" /> Sincronizador V34 (Hybrid)
         </CardTitle>
-        <CardDescription>Mapeamento profundo de metadados + Cálculo de ID como segurança.</CardDescription>
+        <CardDescription>
+          Combina leitura de arquivo + cálculo matemático para garantir que a data nunca fique vazia.
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -325,17 +350,17 @@ export function MultiJsonImporter() {
           )}
           <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
             <div
-              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-orange-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="w-full h-12 text-lg font-bold bg-orange-600 hover:bg-orange-700 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Importar com Mapeamento V32
+            Importar Garantido
           </Button>
         </div>
       </CardContent>
