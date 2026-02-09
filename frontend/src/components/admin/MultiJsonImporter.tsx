@@ -3,17 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Database } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  // Estado para mostrar progresso visual
   const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
   const { toast } = useToast();
 
-  // --- Funções Auxiliares (Mesmas de sempre) ---
+  // --- Funções Auxiliares (Parser) ---
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
     if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
@@ -102,7 +101,7 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setProgress({ current: 0, total: 0, status: "Lendo arquivos..." });
+    setProgress({ current: 0, total: 100, status: "Preparando dados..." });
 
     try {
       const rawJobsMap = new Map();
@@ -162,7 +161,6 @@ export function MultiJsonImporter() {
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
 
             const finalJobId = rawJobId || fingerprint;
-
             let category = getVal(flat, [
               "socTitle",
               "jobSocTitle",
@@ -174,7 +172,6 @@ export function MultiJsonImporter() {
             ]);
             if (!category && title) category = detectCategory(title);
             else if (!category) category = "General Labor";
-
             const posted_date = formatToISODate(
               getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted", "form790AsOfDate"]),
             );
@@ -239,75 +236,36 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // 2. Busca Antecipada de IDs (Verificando duplicatas)
-      setProgress({ current: 0, total: finalJobs.length, status: "Verificando conflitos no banco..." });
+      // === V26: ENVIO PARA O SERVIDOR (RPC) ===
+      // Agora mandamos lotes grandes direto para a função SQL processar
 
-      const allJobIds = finalJobs.map((j) => j.job_id);
-      const allFingerprints = finalJobs.map((j) => j.fingerprint);
-      const existingIdMap = new Map();
-      const QUERY_BATCH = 1000;
+      const BATCH_SIZE = 1000; // O servidor aguenta muito mais que o cliente
+      let processed = 0;
 
-      // Busca IDs existentes
-      for (let i = 0; i < allJobIds.length; i += QUERY_BATCH) {
-        const batch = allJobIds.slice(i, i + QUERY_BATCH);
-        const { data } = await supabase.from("public_jobs").select("id, job_id").in("job_id", batch);
-        if (data) data.forEach((row) => existingIdMap.set(row.job_id, row.id));
-      }
+      for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
+        const batch = finalJobs.slice(i, i + BATCH_SIZE);
 
-      // Busca Fingerprints existentes
-      for (let i = 0; i < allFingerprints.length; i += QUERY_BATCH) {
-        const batch = allFingerprints.slice(i, i + QUERY_BATCH);
-        const { data } = await supabase.from("public_jobs").select("id, fingerprint").in("fingerprint", batch);
-        if (data) data.forEach((row) => existingIdMap.set(row.fingerprint, row.id));
-      }
-
-      const jobsToProcess = finalJobs.map((job) => {
-        const existingUuid = existingIdMap.get(job.job_id) || existingIdMap.get(job.fingerprint);
-        if (existingUuid) return { ...job, id: existingUuid };
-        return job;
-      });
-
-      // 3. Envio em Micro-Lotes (MICRO-BATCHING)
-      // Reduzido para 50 para garantir que não dê timeout ou erro de tamanho
-      const SEND_BATCH = 50;
-      let processedCount = 0;
-
-      for (let i = 0; i < jobsToProcess.length; i += SEND_BATCH) {
-        const batch = jobsToProcess.slice(i, i + SEND_BATCH);
-
-        // Atualiza a barra de progresso
-        processedCount += batch.length;
         setProgress({
-          current: processedCount,
-          total: jobsToProcess.length,
-          status: `Sincronizando: ${processedCount} de ${jobsToProcess.length}`,
+          current: processed,
+          total: finalJobs.length,
+          status: `Enviando ${batch.length} vagas para o servidor...`,
         });
 
-        // Pequena pausa para a UI não travar
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        const { error } = await supabase.from("public_jobs").upsert(batch, {
-          onConflict: "job_id",
-          ignoreDuplicates: false,
-        });
+        // Chama a função SQL criada no Passo 1
+        const { data, error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
 
         if (error) {
-          // Se der erro, tenta um por um (Modo de Emergência)
-          console.warn("Erro no lote, tentando salvamento individual...", error.message);
-          for (const singleJob of batch) {
-            try {
-              await supabase.from("public_jobs").upsert(singleJob);
-            } catch (e) {
-              console.error(e);
-            }
-          }
+          console.error("Erro no servidor:", error);
+          throw error;
         }
+
+        processed += batch.length;
       }
 
-      setProgress({ current: jobsToProcess.length, total: jobsToProcess.length, status: "Concluído!" });
+      setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Sincronização V24 (Final)",
-        description: `Sucesso! ${jobsToProcess.length} vagas processadas em lotes pequenos.`,
+        title: "Importação Server-Side Concluída",
+        description: `O servidor processou ${finalJobs.length} vagas com sucesso.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -321,9 +279,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <ShieldCheck className="h-6 w-6 text-emerald-600" /> Sincronizador V24 (Micro-Lotes)
+          <Database className="h-6 w-6 text-purple-700" /> Importador Server-Side (RPC)
         </CardTitle>
-        <CardDescription>Processamento otimizado com barra de progresso para evitar travamentos.</CardDescription>
+        <CardDescription>Processamento de alta velocidade executado diretamente no Banco de Dados.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -338,22 +296,19 @@ export function MultiJsonImporter() {
               <span>{Math.round((progress.current / progress.total) * 100)}%</span>
             </div>
           )}
-
-          {/* Barra de Progresso Visual */}
           <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
             <div
-              className="bg-emerald-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
-
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700"
+            className="w-full h-12 text-lg font-bold bg-purple-700 hover:bg-purple-800 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Sincronizar Vagas
+            Iniciar Processamento Server-Side
           </Button>
         </div>
       </CardContent>
