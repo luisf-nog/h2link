@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, Calculator } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, ScanSearch } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -82,52 +82,39 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- DECODIFICADOR JULIANO ---
-  const extractDateFromJobId = (jobId: string) => {
-    try {
-      if (!jobId) return null;
-      const match = jobId.match(/-(\d{2})(\d{3})-/);
-
-      if (match) {
-        const yearShort = parseInt(match[1]); // 26
-        const dayOfYear = parseInt(match[2]); // 036
-        const yearFull = 2000 + yearShort; // 2026
-        const date = new Date(yearFull, 0); // 1 de Jan
-        date.setDate(dayOfYear); // Soma os dias
-        return date.toISOString().split("T")[0];
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  };
-
-  const determinePostedDate = (flatData: any, jobId: string) => {
-    // 1. Prioridade Absoluta: Data de Aprovação
+  // --- V32: MAPEAMENTO DE DATA REFORÇADO ---
+  const determinePostedDate = (flatData: any) => {
+    // Nível 1: Data de Decisão / Aprovação / Aceite (A mais importante)
+    // "dateAcceptanceLtrIssued" é crucial para H-2B
     const decisionDate = getVal(flatData, [
       "DECISION_DATE",
       "decision_date",
+      "dateAcceptanceLtrIssued", // <--- Encontrado no seu H2B
       "DETERMINATION_DATE",
       "determination_date",
+      "CERTIFICATION_START_DATE",
     ]);
     if (decisionDate) return formatToISODate(decisionDate);
 
-    // 2. Data de Submissão
+    // Nível 2: Data de Submissão (Padrão para JO / Early Access)
+    // "dateSubmitted" é crucial para H-2A/JO
     const submissionDate = getVal(flatData, [
       "CASE_SUBMITTED",
       "case_submitted",
-      "dateSubmitted",
+      "dateSubmitted", // <--- Encontrado no seu JO e H2A
       "date_submitted",
+      "dateApplicationSubmitted", // <--- Encontrado no seu H2B
       "form790AsOfDate",
       "registryDate",
     ]);
     if (submissionDate) return formatToISODate(submissionDate);
 
-    // 3. Fallback Infalível: Extrair do Job ID
-    const julianDate = extractDateFromJobId(jobId);
-    if (julianDate) return julianDate;
+    // Nível 3: Genéricos
+    const genericDate = getVal(flatData, ["posted_date", "date_posted"]);
+    if (genericDate) return formatToISODate(genericDate);
 
-    return formatToISODate(getVal(flatData, ["posted_date", "date_posted"]));
+    // Nível 4: Retorna null (Deixa o Banco de Dados usar o ID Calculator como último recurso)
+    return null;
   };
 
   const calculateFinalWage = (item: any, flat: any) => {
@@ -222,7 +209,8 @@ export function MultiJsonImporter() {
             else if (!category) category = "General Labor";
 
             // --- DATA ---
-            const posted_date = determinePostedDate(flat, finalJobId);
+            // Agora tenta extrair REALMENTE do arquivo com os novos campos
+            const posted_date = determinePostedDate(flat);
 
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
             const finalWage = calculateFinalWage(item, flat);
@@ -240,7 +228,7 @@ export function MultiJsonImporter() {
               company: company,
               email: email,
               category: category,
-              posted_date: posted_date,
+              posted_date: posted_date, // Se for null, o DB resolve com o ID
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "addmbEmpState", "STATE"]),
               zip: getVal(flat, ["jobPostcode", "worksite_zip", "empPostcode", "POSTAL_CODE"]),
@@ -296,17 +284,15 @@ export function MultiJsonImporter() {
           status: `Enviando ${batch.length} vagas (Server-Side)...`,
         });
 
-        // FIX: Usando 'as any' para evitar erro de TypeScript com a nova função
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
-
         if (error) throw error;
         processed += batch.length;
       }
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação V29 (Julian Fix)",
-        description: `Datas extraídas diretamente do ID da vaga (infalível).`,
+        title: "Importação V32 (Mapeamento Completo)",
+        description: `Lendo datas reais de H-2A e H-2B. Cálculo de ID apenas como backup.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -320,11 +306,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <Calculator className="h-6 w-6 text-pink-600" /> Sincronizador V29 (Julian Fix)
+          <ScanSearch className="h-6 w-6 text-indigo-600" /> Sincronizador V32 (Smart Mapping)
         </CardTitle>
-        <CardDescription>
-          Se o arquivo não tiver data, o sistema calcula a data original baseada no código da vaga.
-        </CardDescription>
+        <CardDescription>Mapeamento profundo de metadados + Cálculo de ID como segurança.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -341,17 +325,17 @@ export function MultiJsonImporter() {
           )}
           <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
             <div
-              className="bg-pink-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
-            className="w-full h-12 text-lg font-bold bg-pink-600 hover:bg-pink-700 text-white"
+            className="w-full h-12 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Importar com Cálculo de ID
+            Importar com Mapeamento V32
           </Button>
         </div>
       </CardContent>
