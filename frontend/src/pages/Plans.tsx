@@ -131,6 +131,7 @@ export default function Plans() {
 
     const features: FeatureItem[] = [];
 
+    // Fix TS error by casting
     features.push({
       key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) }) as string,
       icon: Mail,
