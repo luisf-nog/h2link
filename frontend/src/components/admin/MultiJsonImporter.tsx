@@ -9,7 +9,7 @@ import JSZip from "jszip";
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [stats, setStats] = useState({ total: 0 });
+  const [stats, setStats] = useState({ updated: 0, created: 0 });
   const { toast } = useToast();
 
   const detectCategory = (title: string, socTitle: string = ""): string => {
@@ -99,7 +99,6 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    let skippedCount = 0;
 
     try {
       const rawJobsMap = new Map();
@@ -170,13 +169,11 @@ export function MultiJsonImporter() {
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "employer_email"]);
 
             if (!fein || !title || !start || !email || !company) {
-              skippedCount++;
               continue;
             }
 
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
-            // Prioridade: ID oficial > Fingerprint
             const finalJobId = rawJobId || fingerprint;
 
             const finalWage = calculateFinalWage(item, flat);
@@ -235,7 +232,6 @@ export function MultiJsonImporter() {
               meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
             };
 
-            // Usamos job_id (Case Number) como chave do Map para unicidade lógica
             rawJobsMap.set(finalJobId, extractedJob);
           }
         }
@@ -246,15 +242,13 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // === V19: O GRANDE FIX ===
-      // 1. Coletar todos os Case Numbers (job_ids) que queremos inserir
-      const allCaseNumbers = finalJobs.map((j) => j.job_id);
+      // === V20: SPLIT STRATEGY (Atualizações vs Inserções) ===
 
-      // 2. Buscar no banco quais deles JÁ EXISTEM e pegar o ID (UUID)
-      // Fazemos isso em lotes para não estourar a URL
-      const existingIdMap = new Map(); // Mapa: CaseNumber -> UUID
+      const allCaseNumbers = finalJobs.map((j) => j.job_id);
+      const existingIdMap = new Map();
       const QUERY_BATCH = 1000;
 
+      // 1. Descobrir quais já existem
       for (let i = 0; i < allCaseNumbers.length; i += QUERY_BATCH) {
         const batchIds = allCaseNumbers.slice(i, i + QUERY_BATCH);
         const { data: foundRows, error: fetchError } = await supabase
@@ -262,43 +256,52 @@ export function MultiJsonImporter() {
           .select("id, job_id")
           .in("job_id", batchIds);
 
-        if (fetchError) {
-          console.error("Erro ao buscar IDs existentes", fetchError);
-          throw fetchError;
-        }
-
-        if (foundRows) {
-          foundRows.forEach((row) => existingIdMap.set(row.job_id, row.id));
-        }
+        if (fetchError) throw fetchError;
+        if (foundRows) foundRows.forEach((row) => existingIdMap.set(row.job_id, row.id));
       }
 
-      // 3. Preparar o UPSERT anexando o UUID nas vagas que já existem
-      const upsertReadyJobs = finalJobs.map((job) => {
+      // 2. Separar em dois grupos
+      const jobsToUpdate: any[] = [];
+      const jobsToInsert: any[] = [];
+
+      finalJobs.forEach((job) => {
         const existingUuid = existingIdMap.get(job.job_id);
         if (existingUuid) {
-          // Se achamos o UUID, anexamos ele. O Supabase fará UPDATE pela Primary Key.
-          // Isso ignora qualquer outro conflito de unique constraint.
-          return { ...job, id: existingUuid };
+          // Se já existe, adicionamos o ID (UUID) para o UPDATE
+          jobsToUpdate.push({ ...job, id: existingUuid });
+        } else {
+          // Se não existe, NÃO colocamos o campo 'id', para o banco gerar um novo (INSERT)
+          jobsToInsert.push(job);
         }
-        // Se não achamos, mandamos sem ID. O Supabase fará INSERT.
-        return job;
       });
 
-      // 4. Enviar para o banco
+      // 3. Enviar Atualizações (Com ID)
       const SEND_BATCH = 500;
-      for (let i = 0; i < upsertReadyJobs.length; i += SEND_BATCH) {
-        const batch = upsertReadyJobs.slice(i, i + SEND_BATCH);
-
-        // Upsert SEM onConflict. Deixamos a presença do ID (Primary Key) decidir.
-        const { error } = await supabase.from("public_jobs").upsert(batch);
-
-        if (error) throw error;
+      if (jobsToUpdate.length > 0) {
+        for (let i = 0; i < jobsToUpdate.length; i += SEND_BATCH) {
+          const batch = jobsToUpdate.slice(i, i + SEND_BATCH);
+          const { error } = await supabase.from("public_jobs").upsert(batch); // Upsert com ID = Update
+          if (error) throw error;
+        }
       }
 
-      setStats({ total: finalJobs.length });
+      // 4. Enviar Inserções (Sem ID)
+      // Usamos onConflict 'fingerprint' aqui para segurança extra, caso a vaga seja nova (job_id novo) mas duplicada no conteúdo
+      if (jobsToInsert.length > 0) {
+        for (let i = 0; i < jobsToInsert.length; i += SEND_BATCH) {
+          const batch = jobsToInsert.slice(i, i + SEND_BATCH);
+          const { error } = await supabase.from("public_jobs").upsert(batch, {
+            onConflict: "fingerprint",
+            ignoreDuplicates: true, // Se bater no fingerprint, ignora (já que é insert)
+          });
+          if (error) throw error;
+        }
+      }
+
+      setStats({ updated: jobsToUpdate.length, created: jobsToInsert.length });
       toast({
-        title: "Sincronização V19 (Smart ID)",
-        description: `Sucesso! ${finalJobs.length} vagas processadas. Conflitos resolvidos via ID.`,
+        title: "Sincronização V20 (Split)",
+        description: `Sucesso! ${jobsToUpdate.length} atualizadas, ${jobsToInsert.length} novas criadas.`,
       });
     } catch (err: any) {
       toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
@@ -312,10 +315,10 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V19 (Smart ID)
+          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V20 (Final Split)
         </CardTitle>
         <CardDescription>
-          Busca IDs existentes antes de salvar para garantir atualização correta sem conflitos.
+          Separa automaticamente novos registros de atualizações para evitar erros de ID nulo.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
