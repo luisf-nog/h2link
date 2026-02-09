@@ -22,8 +22,7 @@ import {
   Users,
   MessageSquare,
   ArrowLeft,
-  GraduationCap,
-  BookOpen,
+  GraduationCap, // Mantive este ícone para a experiência (pode ser trocado se preferir)
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -299,45 +298,16 @@ export function JobDetailsDialog({
               {/* 1. LINHA DO TEMPO */}
               <Timeline />
 
-              {/* 2. REQUISITOS (NOVA POSIÇÃO: ACIMA DO SALÁRIO) */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg border-b border-slate-100 pb-2 mb-2">
-                  <BookOpen className="h-5 w-5 text-slate-500" />{" "}
-                  <span>{t("jobs.details.requirements", "Requisitos")}</span>
+              {/* 2. EXPERIÊNCIA NECESSÁRIA (Exclusivo e Destacado) */}
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                  <GraduationCap className="h-6 w-6" />
                 </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-50 p-2 rounded-full text-blue-600 mt-0.5">
-                      <GraduationCap className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        {t("jobs.details.experience", "Experiência")}
-                      </span>
-                      <span className="text-base font-semibold text-slate-700">
-                        {formatExperience(job?.experience_months)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {job?.education_required && (
-                    <div className="flex items-start gap-3 pt-3 border-t border-slate-50">
-                      <div className="bg-purple-50 p-2 rounded-full text-purple-600 mt-0.5">
-                        <BookOpen className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                          {t("jobs.details.education", "Escolaridade")}
-                        </span>
-                        <span className="text-base font-semibold text-slate-700 capitalize">
-                          {job.education_required === "None"
-                            ? t("jobs.details.no_education", "Não exigida")
-                            : job.education_required}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                <div>
+                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {t("jobs.details.experience", "Experiência Necessária")}
+                  </span>
+                  <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                 </div>
               </div>
 
