@@ -14,81 +14,36 @@ export function MultiJsonImporter() {
 
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
-    if (
-      t.includes("landscap") ||
-      t.includes("groundskeep") ||
-      t.includes("lawn") ||
-      t.includes("mower") ||
-      t.includes("garden")
-    )
+    if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
       return "Landscaping";
     if (
       t.includes("construct") ||
       t.includes("concrete") ||
       t.includes("mason") ||
       t.includes("brick") ||
-      t.includes("roof") ||
-      t.includes("carpenter") ||
-      t.includes("builder")
+      t.includes("carpenter")
     )
       return "Construction";
-    if (
-      t.includes("housekeep") ||
-      t.includes("maid") ||
-      t.includes("cleaner") ||
-      t.includes("janitor") ||
-      t.includes("laundry") ||
-      t.includes("room attendant")
-    )
+    if (t.includes("housekeep") || t.includes("maid") || t.includes("cleaner") || t.includes("janitor"))
       return "Housekeeping";
     if (
       t.includes("cook") ||
       t.includes("chef") ||
       t.includes("kitchen") ||
       t.includes("dishwash") ||
-      t.includes("server") ||
-      t.includes("waiter") ||
-      t.includes("dining") ||
-      t.includes("food")
+      t.includes("server")
     )
       return "Hospitality & Culinary";
-    if (
-      t.includes("amusement") ||
-      t.includes("carnival") ||
-      t.includes("recreation") ||
-      t.includes("lifeguard") ||
-      t.includes("pool") ||
-      t.includes("ride") ||
-      t.includes("attendant")
-    )
+    if (t.includes("amusement") || t.includes("carnival") || t.includes("recreation") || t.includes("lifeguard"))
       return "Amusement & Recreation";
     if (
       t.includes("farm") ||
       t.includes("agricult") ||
       t.includes("crop") ||
       t.includes("harvest") ||
-      t.includes("nursery") ||
-      t.includes("greenhouse") ||
-      t.includes("ag ") ||
-      t.includes("ranch") ||
-      t.includes("animal") ||
-      t.includes("livestock")
+      t.includes("nursery")
     )
       return "Agriculture";
-    if (
-      t.includes("fish") ||
-      t.includes("seafood") ||
-      t.includes("crab") ||
-      t.includes("oyster") ||
-      t.includes("process") ||
-      t.includes("meat") ||
-      t.includes("cutter")
-    )
-      return "Processing & Seafood";
-    if (t.includes("stable") || t.includes("horse") || t.includes("equine") || t.includes("groom"))
-      return "Stable Attendant";
-    if (t.includes("truck") || t.includes("driver") || t.includes("cdl") || t.includes("haul")) return "Transportation";
-
     return "General Labor";
   };
 
@@ -209,10 +164,6 @@ export function MultiJsonImporter() {
             const posted_date = formatToISODate(
               getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted", "form790AsOfDate"]),
             );
-
-            // REMOVIDO: soc_code (Não existe no banco)
-            // const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode", "jobSocCode", "tempneedSocCode"]);
-
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
@@ -224,7 +175,6 @@ export function MultiJsonImporter() {
               continue;
             }
 
-            // GERAÇÃO DO ID PARA UPSERT (EVITA DUPLICAR)
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
             const finalJobId = rawJobId || fingerprint;
@@ -236,17 +186,14 @@ export function MultiJsonImporter() {
               (transportDesc && transportDesc.length > 5);
 
             const extractedJob = {
-              job_id: finalJobId, // Chave única
+              job_id: finalJobId,
               visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
-
               job_title: title,
               company: company,
               email: email,
               category: category,
-              // soc_code: socCode, <--- REMOVIDO PARA CORRIGIR O ERRO
-
               posted_date: posted_date,
 
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
@@ -303,23 +250,43 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // ENVIO EM LOTES (UPSERT)
-      const BATCH_SIZE = 500;
-      for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
-        const batch = finalJobs.slice(i, i + BATCH_SIZE);
+      // === ESTRATÉGIA V17: BUSCAR IDs EXISTENTES PARA DRIBLAR A FALTA DE CONSTRAINT ===
+      const jobIds = finalJobs.map((j) => j.job_id);
 
-        const { error } = await supabase.from("public_jobs").upsert(batch, {
-          onConflict: "job_id",
-          ignoreDuplicates: false,
-        });
+      // Busca no banco quais desses job_ids já existem e pega o UUID (id) deles
+      const { data: existingRows } = await supabase.from("public_jobs").select("id, job_id").in("job_id", jobIds);
+
+      // Cria um mapa rápido: job_id -> uuid
+      const existingIdMap = new Map();
+      if (existingRows) {
+        existingRows.forEach((row) => existingIdMap.set(row.job_id, row.id));
+      }
+
+      // Adiciona o campo 'id' (UUID) nas vagas que já existem
+      // Isso força o 'upsert' a atualizar a linha correta pelo ID primário
+      const upsertReadyJobs = finalJobs.map((job) => {
+        const existingUuid = existingIdMap.get(job.job_id);
+        if (existingUuid) {
+          return { ...job, id: existingUuid }; // Inclui o UUID para fazer UPDATE
+        }
+        return job; // Sem UUID, o banco faz INSERT
+      });
+
+      // Envia em lotes
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < upsertReadyJobs.length; i += BATCH_SIZE) {
+        const batch = upsertReadyJobs.slice(i, i + BATCH_SIZE);
+
+        // Agora podemos rodar upsert sem onConflict, pois temos o ID primário nas atualizações
+        const { error } = await supabase.from("public_jobs").upsert(batch);
 
         if (error) throw error;
       }
 
       setStats({ total: finalJobs.length, updated: 0, new: 0 });
       toast({
-        title: "Sincronização com Sucesso!",
-        description: `${finalJobs.length} vagas processadas (Atualizadas/Criadas).`,
+        title: "Sincronização V17 (Smart Upsert)",
+        description: `Sucesso! ${finalJobs.length} vagas processadas sem erros de constraint.`,
       });
     } catch (err: any) {
       toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
@@ -333,9 +300,11 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V16 (Stable)
+          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V17 (Smart Upsert)
         </CardTitle>
-        <CardDescription>Atualiza vagas existentes e corrige dados sem duplicar. (SOC Code removido).</CardDescription>
+        <CardDescription>
+          Resolve automaticamente conflitos de duplicação sem precisar de ajustes no banco.
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
