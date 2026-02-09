@@ -3,92 +3,47 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, Wand2, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [stats, setStats] = useState({ total: 0, updated: 0, new: 0 });
+  const [stats, setStats] = useState({ total: 0 });
   const { toast } = useToast();
 
   const detectCategory = (title: string, socTitle: string = ""): string => {
     const t = (title + " " + socTitle).toLowerCase();
-    if (
-      t.includes("landscap") ||
-      t.includes("groundskeep") ||
-      t.includes("lawn") ||
-      t.includes("mower") ||
-      t.includes("garden")
-    )
+    if (t.includes("landscap") || t.includes("groundskeep") || t.includes("lawn") || t.includes("mower"))
       return "Landscaping";
     if (
       t.includes("construct") ||
       t.includes("concrete") ||
       t.includes("mason") ||
       t.includes("brick") ||
-      t.includes("roof") ||
-      t.includes("carpenter") ||
-      t.includes("builder")
+      t.includes("carpenter")
     )
       return "Construction";
-    if (
-      t.includes("housekeep") ||
-      t.includes("maid") ||
-      t.includes("cleaner") ||
-      t.includes("janitor") ||
-      t.includes("laundry") ||
-      t.includes("room attendant")
-    )
+    if (t.includes("housekeep") || t.includes("maid") || t.includes("cleaner") || t.includes("janitor"))
       return "Housekeeping";
     if (
       t.includes("cook") ||
       t.includes("chef") ||
       t.includes("kitchen") ||
       t.includes("dishwash") ||
-      t.includes("server") ||
-      t.includes("waiter") ||
-      t.includes("dining") ||
-      t.includes("food")
+      t.includes("server")
     )
       return "Hospitality & Culinary";
-    if (
-      t.includes("amusement") ||
-      t.includes("carnival") ||
-      t.includes("recreation") ||
-      t.includes("lifeguard") ||
-      t.includes("pool") ||
-      t.includes("ride") ||
-      t.includes("attendant")
-    )
+    if (t.includes("amusement") || t.includes("carnival") || t.includes("recreation") || t.includes("lifeguard"))
       return "Amusement & Recreation";
     if (
       t.includes("farm") ||
       t.includes("agricult") ||
       t.includes("crop") ||
       t.includes("harvest") ||
-      t.includes("nursery") ||
-      t.includes("greenhouse") ||
-      t.includes("ag ") ||
-      t.includes("ranch") ||
-      t.includes("animal") ||
-      t.includes("livestock")
+      t.includes("nursery")
     )
       return "Agriculture";
-    if (
-      t.includes("fish") ||
-      t.includes("seafood") ||
-      t.includes("crab") ||
-      t.includes("oyster") ||
-      t.includes("process") ||
-      t.includes("meat") ||
-      t.includes("cutter")
-    )
-      return "Processing & Seafood";
-    if (t.includes("stable") || t.includes("horse") || t.includes("equine") || t.includes("groom"))
-      return "Stable Attendant";
-    if (t.includes("truck") || t.includes("driver") || t.includes("cdl") || t.includes("haul")) return "Transportation";
-
     return "General Labor";
   };
 
@@ -191,7 +146,6 @@ export function MultiJsonImporter() {
               "empName",
               "company",
               "EMPLOYER_NAME",
-              "FULL_NAME",
             ]);
 
             let category = getVal(flat, [
@@ -209,10 +163,6 @@ export function MultiJsonImporter() {
             const posted_date = formatToISODate(
               getVal(flat, ["dateAcceptanceLtrIssued", "posted_date", "dateSubmitted", "form790AsOfDate"]),
             );
-
-            // REMOVIDO: soc_code (Não existe no banco)
-            // const socCode = getVal(flat, ["soc_code", "SOC_CODE", "socCode", "jobSocCode", "tempneedSocCode"]);
-
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE", "begin_date"]),
@@ -224,9 +174,9 @@ export function MultiJsonImporter() {
               continue;
             }
 
-            // GERAÇÃO DO ID PARA UPSERT (EVITA DUPLICAR)
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]);
             const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
+            // Se não tiver Case Number, usa o fingerprint como ID também
             const finalJobId = rawJobId || fingerprint;
 
             const finalWage = calculateFinalWage(item, flat);
@@ -236,17 +186,15 @@ export function MultiJsonImporter() {
               (transportDesc && transportDesc.length > 5);
 
             const extractedJob = {
-              job_id: finalJobId, // Chave única
+              // NÃO ENVIAMOS MAIS O ID (UUID) PARA DEIXAR O BANCO DECIDIR
+              job_id: finalJobId,
               visa_type: visaType,
-              fingerprint: fingerprint,
+              fingerprint: fingerprint, // CAMPO CHAVE DA CONSTRAINT
               is_active: true,
-
               job_title: title,
               company: company,
               email: email,
               category: category,
-              // soc_code: socCode, <--- REMOVIDO PARA CORRIGIR O ERRO
-
               posted_date: posted_date,
 
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "addmbEmpCity", "CITY"]),
@@ -264,11 +212,6 @@ export function MultiJsonImporter() {
               wage_to: parseMoney(getVal(flat, ["wageTo", "wageOfferTo", "HIGHEST_RATE"])) || finalWage,
               wage_unit: "Hour",
               pay_frequency: getVal(flat, ["jobPayFrequency", "pay_frequency"]),
-
-              overtime_available:
-                parseBool(getVal(flat, ["isOvertimeAvailable", "recIsOtAvailable"])) ||
-                !!parseMoney(getVal(flat, ["wageOtFrom"])),
-              overtime_salary: parseMoney(getVal(flat, ["wageOtFrom", "overtimeWageFrom", "ot_wage_from"])),
 
               weekly_hours: parseFloat(getVal(flat, ["jobHoursTotal", "basicHours"])) || null,
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
@@ -293,7 +236,8 @@ export function MultiJsonImporter() {
               meal_charge: parseMoney(getVal(flat, ["mealCharge"])),
             };
 
-            rawJobsMap.set(finalJobId, extractedJob);
+            // Usamos fingerprint como chave do Map local para evitar duplicatas no próprio arquivo
+            rawJobsMap.set(fingerprint, extractedJob);
           }
         }
       }
@@ -303,23 +247,24 @@ export function MultiJsonImporter() {
         (job) => job.email && job.email.length > 2 && !job.email.toLowerCase().includes("null"),
       );
 
-      // ENVIO EM LOTES (UPSERT)
+      // === MUDANÇA CRÍTICA V18: UPSERT POR FINGERPRINT ===
+      // Já que o erro foi "unique constraint uq_fingerprint", usamos ela para resolver o conflito
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
 
         const { error } = await supabase.from("public_jobs").upsert(batch, {
-          onConflict: "job_id",
+          onConflict: "fingerprint", // <--- MUDAMOS DE job_id PARA fingerprint
           ignoreDuplicates: false,
         });
 
         if (error) throw error;
       }
 
-      setStats({ total: finalJobs.length, updated: 0, new: 0 });
+      setStats({ total: finalJobs.length });
       toast({
-        title: "Sincronização com Sucesso!",
-        description: `${finalJobs.length} vagas processadas (Atualizadas/Criadas).`,
+        title: "Sincronização V18 (Fingerprint)",
+        description: `Sucesso! ${finalJobs.length} vagas processadas usando Fingerprint como chave.`,
       });
     } catch (err: any) {
       toast({ title: "Erro na Sincronização", description: err.message, variant: "destructive" });
@@ -333,9 +278,11 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V16 (Stable)
+          <RefreshCw className="h-6 w-6 text-blue-600" /> Sincronizador V18 (Fingerprint)
         </CardTitle>
-        <CardDescription>Atualiza vagas existentes e corrige dados sem duplicar. (SOC Code removido).</CardDescription>
+        <CardDescription>
+          Resolve o conflito de chaves usando o identificador único (Fingerprint) do banco.
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
