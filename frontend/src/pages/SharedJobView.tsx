@@ -3,36 +3,33 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   MapPin,
   DollarSign,
-  Calendar,
   Briefcase,
   Home,
   Clock,
   Mail,
   Phone,
   MessageCircle,
-  PhoneCall,
   AlertTriangle,
-  Info,
   Loader2,
   Users,
   ArrowRight,
   Share2,
-  CheckCircle2,
   Globe,
+  CheckCircle2,
+  GraduationCap,
+  BookOpen,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { JobMetaTags } from "@/components/jobs/JobMetaTags";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
-import { getWhatsAppUrl, getSmsUrl, getPhoneCallUrl, isMobileNumber } from "@/lib/phone";
 import { formatNumber } from "@/lib/number";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
@@ -148,9 +145,22 @@ export default function SharedJobView() {
       : d.toLocaleDateString(locale, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return t("jobs.details.no_experience", "None");
+    if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} months` });
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (remainingMonths === 0)
+      return t("jobs.table.experience_years", { count: years, defaultValue: `${years} years` });
+    return t("jobs.table.experience_years_months", {
+      years,
+      months: remainingMonths,
+      defaultValue: `${years} years ${remainingMonths} months`,
+    });
+  };
+
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  // Mensagem padrão para contato
   const getMessage = () => {
     if (!job) return "";
     const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
@@ -160,8 +170,8 @@ export default function SharedJobView() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: t("jobs.details.copied", "Copiado!"),
-      description: t("jobs.details.copy_success", "Texto copiado para a área de transferência."),
+      title: t("jobs.details.copied", "Copied!"),
+      description: t("jobs.details.copy_success", "Text copied to clipboard."),
     });
   };
 
@@ -212,7 +222,7 @@ export default function SharedJobView() {
     <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
       <div className="flex flex-col items-center">
         <span className="font-semibold text-slate-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.posted", "Postada")}
+          {t("jobs.details.posted", "Posted")}
         </span>
         <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700">
           {formatDate(job?.posted_date)}
@@ -223,7 +233,7 @@ export default function SharedJobView() {
       </div>
       <div className="flex flex-col items-center">
         <span className="font-semibold text-green-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.start", "Início")}
+          {t("jobs.details.start", "Start")}
         </span>
         <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-800 font-bold">
           {formatDate(job?.start_date)}
@@ -234,7 +244,7 @@ export default function SharedJobView() {
       </div>
       <div className="flex flex-col items-center">
         <span className="font-semibold text-red-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.end", "Fim")}
+          {t("jobs.details.end", "End")}
         </span>
         <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-800 font-medium">
           {formatDate(job?.end_date)}
@@ -248,7 +258,7 @@ export default function SharedJobView() {
       <JobMetaTags job={job} />
 
       <div className="min-h-screen bg-slate-50/50 pb-12">
-        {/* Header */}
+        {/* HEADER GLOBAL - PONTE PARA O SITE */}
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div
@@ -259,10 +269,10 @@ export default function SharedJobView() {
               <span className="font-bold text-xl hidden sm:inline-block">H2 Linker</span>
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => navigate("/login")}>
+              <Button variant="ghost" onClick={() => navigate("/auth")}>
                 {locale === "pt" ? "Entrar" : "Login"}
               </Button>
-              <Button onClick={() => navigate("/signup")}>{locale === "pt" ? "Criar Conta" : "Sign Up"}</Button>
+              <Button onClick={() => navigate("/auth")}>{locale === "pt" ? "Criar Conta" : "Sign Up"}</Button>
             </div>
           </div>
         </header>
@@ -270,7 +280,7 @@ export default function SharedJobView() {
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8 max-w-7xl">
           <Card className="shadow-lg border-t-4 border-t-primary overflow-hidden">
-            {/* Header Interno do Job (Igual ao Modal) */}
+            {/* Header Interno do Job */}
             <div className="p-6 bg-white border-b">
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-start">
@@ -302,10 +312,9 @@ export default function SharedJobView() {
                     </div>
                   </div>
 
-                  {/* Botão de Share no Desktop */}
                   <div className="hidden sm:flex shrink-0">
                     <Button variant="outline" onClick={handleShare}>
-                      <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share", "Compartilhar")}
+                      <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share", "Share")}
                     </Button>
                   </div>
                 </div>
@@ -322,12 +331,27 @@ export default function SharedJobView() {
               </Alert>
             )}
 
-            {/* GRID LAYOUT PRINCIPAL (1/3 ESQUERDA, 2/3 DIREITA) */}
+            {/* GRID LAYOUT PRINCIPAL */}
             <div className="p-6 bg-slate-50/30">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* --- COLUNA ESQUERDA (SIDEBAR) --- */}
-                <div className="lg:col-span-4 space-y-6">
+                <div className="lg:col-span-4 space-y-6 order-2 lg:order-1">
                   <Timeline />
+
+                  {/* 2. EXPERIÊNCIA NECESSÁRIA (Posicionado entre Datas e Salário) */}
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                      <GraduationCap className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        {t("jobs.details.experience", "Experience Required")}
+                      </span>
+                      <span className="text-xl font-bold text-slate-800">
+                        {formatExperience(job?.experience_months)}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Card de Salário e Vagas */}
                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
@@ -335,7 +359,7 @@ export default function SharedJobView() {
                       <div className="flex items-center gap-2 text-slate-600">
                         <Users className="h-5 w-5 text-blue-500" />
                         <span className="font-semibold text-base">
-                          {t("jobs.details.available_positions", "Vagas Disponíveis")}
+                          {t("jobs.details.available_positions", "Available Positions")}
                         </span>
                       </div>
                       <Badge className="text-lg px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
@@ -345,7 +369,7 @@ export default function SharedJobView() {
 
                     <div>
                       <div className="flex items-center gap-2 text-green-700 font-bold text-lg mb-2">
-                        <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Remuneração")}</span>
+                        <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Compensation")}</span>
                       </div>
                       <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderPrice(job)}</p>
                       {job.pay_frequency && (
@@ -358,7 +382,7 @@ export default function SharedJobView() {
                     {job.wage_additional && (
                       <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                         <span className="text-xs font-bold uppercase text-green-800 block mb-1">
-                          {t("jobs.details.bonus", "Bônus / Adicional")}
+                          {t("jobs.details.bonus", "Bonus / Additional")}
                         </span>
                         <p className="text-base text-green-900 leading-snug">{job.wage_additional}</p>
                       </div>
@@ -367,7 +391,7 @@ export default function SharedJobView() {
                     {job.rec_pay_deductions && (
                       <div className="pt-2 border-t border-slate-100">
                         <span className="font-semibold text-slate-600 text-sm block mb-1">
-                          {t("jobs.details.deductions", "Deduções Previstas:")}
+                          {t("jobs.details.deductions", "Planned Deductions:")}
                         </span>
                         <span className="text-sm text-slate-500 leading-relaxed">{job.rec_pay_deductions}</span>
                       </div>
@@ -378,11 +402,11 @@ export default function SharedJobView() {
                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
                       <Clock className="h-6 w-6 text-slate-500" />{" "}
-                      <span>{t("jobs.details.schedule", "Jornada de Trabalho")}</span>
+                      <span>{t("jobs.details.schedule", "Work Schedule")}</span>
                     </div>
                     <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
                       <span className="text-slate-600 font-medium text-base">
-                        {t("jobs.details.weekly_hours", "Carga Horária Semanal:")}
+                        {t("jobs.details.weekly_hours", "Weekly Hours:")}
                       </span>
                       <span className="font-bold text-slate-900 text-xl">
                         {job.weekly_hours ? `${job.weekly_hours}h` : "-"}
@@ -390,10 +414,136 @@ export default function SharedJobView() {
                     </div>
                   </div>
 
-                  {/* Card de Contato */}
+                  {/* Card Promocional (CTA) Sidebar */}
+                  <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-6 text-center space-y-4">
+                    <h3 className="font-bold text-primary text-lg">
+                      {locale === "pt" ? "Quer ver mais vagas como esta?" : "Want to see more jobs like this?"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {locale === "pt"
+                        ? "Crie sua conta grátis para acessar milhares de vagas H-2A e H-2B."
+                        : "Create a free account to access thousands of H-2A and H-2B jobs."}
+                    </p>
+                    <Button className="w-full shadow-md" size="lg" onClick={() => navigate("/auth")}>
+                      {locale === "pt" ? "Criar Conta Grátis" : "Create Free Account"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* --- COLUNA DIREITA (CONTEÚDO PRINCIPAL) --- */}
+                <div className="lg:col-span-8 space-y-8 order-1 lg:order-2">
+                  {/* Requisitos Especiais */}
+                  {job.job_min_special_req && (
+                    <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
+                      <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-4 text-xl">
+                        <AlertTriangle className="h-6 w-6" />{" "}
+                        {t("jobs.details.special_reqs", "Special Requirements & Conditions")}
+                      </h4>
+                      <div className="prose prose-amber max-w-none">
+                        <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
+                          {job.job_min_special_req}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Descrição da Vaga */}
+                  {job.job_duties && (
+                    <div className="space-y-4">
+                      <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
+                        <Briefcase className="h-7 w-7 text-blue-600" />{" "}
+                        {t("jobs.details.job_description", "Job Description")}
+                      </h4>
+                      <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+                        <p className="text-base text-slate-700 leading-7 whitespace-pre-wrap">{job.job_duties}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* NOVA SEÇÃO: REQUISITOS (Experiência + Escolaridade) */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2 text-slate-800 font-bold text-lg border-b border-slate-100 pb-2 mb-2">
+                      <BookOpen className="h-6 w-6 text-slate-500" />{" "}
+                      <span>{t("jobs.details.requirements", "Requirements")}</span>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-blue-50 p-2 rounded-full text-blue-600 mt-0.5">
+                          <GraduationCap className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                            {t("jobs.details.experience", "Experience Required")}
+                          </span>
+                          <span className="text-lg font-medium text-slate-800">
+                            {formatExperience(job.experience_months)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {job.education_required && (
+                        <div className="flex items-start gap-3 pt-2 border-t border-slate-50">
+                          <div className="bg-purple-50 p-2 rounded-full text-purple-600 mt-0.5">
+                            <BookOpen className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <span className="block text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                              {t("jobs.details.education", "Education")}
+                            </span>
+                            <span className="text-lg font-medium text-slate-800 capitalize">
+                              {job.education_required === "None"
+                                ? t("jobs.details.no_education", "Not required")
+                                : job.education_required}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Informações de Moradia */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
+                    <h4 className="font-bold flex items-center gap-2 text-slate-700 text-xl border-b border-slate-100 pb-3">
+                      <Home className="h-6 w-6 text-indigo-500" />{" "}
+                      {t("jobs.details.housing_info", "Housing Information")}
+                    </h4>
+
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <span className="text-slate-600 font-medium text-base">
+                        {t("jobs.details.housing_type", "Housing Type:")}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-base py-1 px-4 bg-slate-50 text-slate-800 font-medium border-slate-300"
+                      >
+                        {job.housing_type || t("jobs.details.not_specified", "Not specified")}
+                      </Badge>
+                    </div>
+
+                    {job.housing_info && (
+                      <div className="bg-slate-50 p-5 rounded-lg border border-slate-100">
+                        <span className="text-xs font-bold uppercase text-slate-400 block mb-2">
+                          {t("jobs.details.additional_details", "Additional Details")}
+                        </span>
+                        <p className="text-base text-slate-700 leading-relaxed">{job.housing_info}</p>
+                      </div>
+                    )}
+
+                    {job.housing_addr && (
+                      <div className="flex gap-2 text-base text-slate-600 items-start pt-2 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                        <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-indigo-500" />
+                        <span className="font-medium">
+                          {job.housing_addr}, {job.housing_city}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contatos */}
                   <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      {t("jobs.details.company_contacts", "Contatos da Empresa")}
+                      {t("jobs.details.company_contacts", "Company Contacts")}
                     </div>
 
                     <div
@@ -422,7 +572,7 @@ export default function SharedJobView() {
                           </div>
                           <div className="flex flex-col overflow-hidden">
                             <span className="text-xs text-slate-400 font-bold">
-                              {t("jobs.details.phone_label", "TELEFONE")}
+                              {t("jobs.details.phone_label", "PHONE")}
                             </span>
                             <span className="truncate font-medium text-slate-700 text-base select-all">
                               {job.phone}
@@ -438,7 +588,7 @@ export default function SharedJobView() {
                             asChild
                           >
                             <a href={`tel:${job.phone}`}>
-                              <Phone className="h-4 w-4" /> {t("jobs.details.call_action", "Ligar")}
+                              <Phone className="h-4 w-4" /> {t("jobs.details.call_action", "Call")}
                             </a>
                           </Button>
 
@@ -486,94 +636,10 @@ export default function SharedJobView() {
                             {t("jobs.details.website_label", "WEBSITE")}
                           </span>
                           <span className="truncate font-medium text-purple-700 text-base">
-                            {t("jobs.details.visit_site", "Visitar site")}
+                            {t("jobs.details.visit_site", "Visit Official Site")}
                           </span>
                         </div>
                       </a>
-                    )}
-                  </div>
-
-                  {/* Card Promocional (CTA) Sidebar */}
-                  <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-6 text-center space-y-4">
-                    <h3 className="font-bold text-primary text-lg">
-                      {locale === "pt" ? "Quer se candidatar?" : "Want to apply?"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {locale === "pt"
-                        ? "Crie sua conta grátis para enviar seu currículo."
-                        : "Create a free account to send your resume."}
-                    </p>
-                    <Button className="w-full shadow-md" size="lg" onClick={() => navigate("/signup")}>
-                      {locale === "pt" ? "Criar Conta" : "Sign Up"}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* --- COLUNA DIREITA (CONTEÚDO PRINCIPAL) --- */}
-                <div className="lg:col-span-8 space-y-8">
-                  {/* Requisitos Especiais */}
-                  {job.job_min_special_req && (
-                    <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
-                      <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-4 text-xl">
-                        <AlertTriangle className="h-6 w-6" />{" "}
-                        {t("jobs.details.special_reqs", "Requisitos Especiais & Condições")}
-                      </h4>
-                      <div className="prose prose-amber max-w-none">
-                        <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
-                          {job.job_min_special_req}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Descrição da Vaga */}
-                  {job.job_duties && (
-                    <div className="space-y-4">
-                      <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
-                        <Briefcase className="h-7 w-7 text-blue-600" />{" "}
-                        {t("jobs.details.job_description", "Descrição da Vaga")}
-                      </h4>
-                      <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
-                        <p className="text-base text-slate-700 leading-7 whitespace-pre-wrap">{job.job_duties}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Informações de Moradia */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
-                    <h4 className="font-bold flex items-center gap-2 text-slate-700 text-xl border-b border-slate-100 pb-3">
-                      <Home className="h-6 w-6 text-indigo-500" />{" "}
-                      {t("jobs.details.housing_info", "Informações de Moradia")}
-                    </h4>
-
-                    <div className="flex flex-wrap gap-4 items-center">
-                      <span className="text-slate-600 font-medium text-base">
-                        {t("jobs.details.housing_type", "Tipo de Acomodação:")}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-base py-1 px-4 bg-slate-50 text-slate-800 font-medium border-slate-300"
-                      >
-                        {job.housing_type || t("jobs.details.not_specified", "Não especificado")}
-                      </Badge>
-                    </div>
-
-                    {job.housing_info && (
-                      <div className="bg-slate-50 p-5 rounded-lg border border-slate-100">
-                        <span className="text-xs font-bold uppercase text-slate-400 block mb-2">
-                          {t("jobs.details.additional_details", "Detalhes Adicionais")}
-                        </span>
-                        <p className="text-base text-slate-700 leading-relaxed">{job.housing_info}</p>
-                      </div>
-                    )}
-
-                    {job.housing_addr && (
-                      <div className="flex gap-2 text-base text-slate-600 items-start pt-2 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-                        <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-indigo-500" />
-                        <span className="font-medium">
-                          {job.housing_addr}, {job.housing_city}
-                        </span>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -582,7 +648,7 @@ export default function SharedJobView() {
 
             {/* Mobile Sticky CTA */}
             <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-              <Button className="flex-1 font-bold h-12 text-base shadow-md" onClick={() => navigate("/signup")}>
+              <Button className="flex-1 font-bold h-12 text-base shadow-md" onClick={() => navigate("/auth")}>
                 <CheckCircle2 className="h-5 w-5 mr-2" /> {locale === "pt" ? "Candidatar-se" : "Apply Now"}
               </Button>
               <Button variant="outline" size="icon" className="h-12 w-12 border-slate-300" onClick={handleShare}>
