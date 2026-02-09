@@ -296,8 +296,52 @@ export function JobDetailsDialog({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/30">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-6">
+              {/* 1. LINHA DO TEMPO */}
               <Timeline />
 
+              {/* 2. REQUISITOS (NOVA POSIÇÃO: ACIMA DO SALÁRIO) */}
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg border-b border-slate-100 pb-2 mb-2">
+                  <BookOpen className="h-5 w-5 text-slate-500" />{" "}
+                  <span>{t("jobs.details.requirements", "Requisitos")}</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-50 p-2 rounded-full text-blue-600 mt-0.5">
+                      <GraduationCap className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        {t("jobs.details.experience", "Experiência")}
+                      </span>
+                      <span className="text-base font-semibold text-slate-700">
+                        {formatExperience(job?.experience_months)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {job?.education_required && (
+                    <div className="flex items-start gap-3 pt-3 border-t border-slate-50">
+                      <div className="bg-purple-50 p-2 rounded-full text-purple-600 mt-0.5">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          {t("jobs.details.education", "Escolaridade")}
+                        </span>
+                        <span className="text-base font-semibold text-slate-700 capitalize">
+                          {job.education_required === "None"
+                            ? t("jobs.details.no_education", "Não exigida")
+                            : job.education_required}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. SALÁRIO */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-2 text-slate-600">
@@ -345,48 +389,7 @@ export function JobDetailsDialog({
                 )}
               </div>
 
-              {/* NOVA SEÇÃO: REQUISITOS (Posicionada APÓS o card de Salário) */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg border-b border-slate-100 pb-2 mb-2">
-                  <BookOpen className="h-6 w-6 text-slate-500" />{" "}
-                  <span>{t("jobs.details.requirements", "Requisitos")}</span>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-50 p-2 rounded-full text-blue-600 mt-0.5">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <span className="block text-sm font-semibold text-slate-500 uppercase tracking-wide">
-                        {t("jobs.details.experience", "Experiência")}
-                      </span>
-                      <span className="text-lg font-medium text-slate-800">
-                        {formatExperience(job?.experience_months)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {job?.education_required && (
-                    <div className="flex items-start gap-3 pt-2 border-t border-slate-50">
-                      <div className="bg-purple-50 p-2 rounded-full text-purple-600 mt-0.5">
-                        <BookOpen className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <span className="block text-sm font-semibold text-slate-500 uppercase tracking-wide">
-                          {t("jobs.details.education", "Escolaridade")}
-                        </span>
-                        <span className="text-lg font-medium text-slate-800 capitalize">
-                          {job.education_required === "None"
-                            ? t("jobs.details.no_education", "Não exigida")
-                            : job.education_required}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
+              {/* 4. JORNADA DE TRABALHO */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
                   <Clock className="h-6 w-6 text-slate-500" />{" "}
@@ -402,6 +405,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
+              {/* 5. CONTATOS */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                   {t("jobs.details.company_contacts", "Contatos da Empresa")}
