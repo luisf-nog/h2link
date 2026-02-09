@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.reset-daily-credits]
 verify_jwt = false
+
+[functions.render-job-meta]
+verify_jwt = false
