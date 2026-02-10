@@ -465,7 +465,7 @@ export type Database = {
           overtime_to: number | null
           pay_frequency: string | null
           phone: string | null
-          posted_date: string
+          posted_date: string | null
           rec_pay_deductions: string | null
           requirements: string | null
           salary: number | null
@@ -532,7 +532,7 @@ export type Database = {
           overtime_to?: number | null
           pay_frequency?: string | null
           phone?: string | null
-          posted_date?: string
+          posted_date?: string | null
           rec_pay_deductions?: string | null
           requirements?: string | null
           salary?: number | null
@@ -599,7 +599,7 @@ export type Database = {
           overtime_to?: number | null
           pay_frequency?: string | null
           phone?: string | null
-          posted_date?: string
+          posted_date?: string | null
           rec_pay_deductions?: string | null
           requirements?: string | null
           salary?: number | null
@@ -860,6 +860,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      process_jobs_bulk: { Args: { jobs_data: Json }; Returns: Json }
       track_profile_view: {
         Args: { p_queue_id?: string; p_token: string }
         Returns: {

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.reset-daily-credits]
 verify_jwt = false
+
+[functions.convert-resume]
+verify_jwt = false
