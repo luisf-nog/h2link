@@ -1,20 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-// Tenta pegar as variáveis. Se não existirem (ainda), usa uma string vazia.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// --- CONFIGURAÇÃO MANUAL (Fallbacks) ---
+// Usamos estes valores caso as variáveis de ambiente (import.meta.env) falhem no carregamento.
+const PROJECT_URL = "https://dalarhopratsgzmmzhxx.supabase.co";
+const ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGFyaG9wcmF0c2d6bW16aHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM5NDksImV4cCI6MjA4NDY1OTk0OX0.CIV7u2pMSudse-Zpfqf8OHLkm_exZn0EaYXVEFwoXTQ";
 
-// LOG DE DEPURAÇÃO (Aparecerá no console do navegador se falhar)
+// Tenta pegar do .env, se não existir, usa o valor direto (Hardcoded)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || PROJECT_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ANON_KEY;
+
+// Log para confirmar que carregou (pode remover depois se quiser limpar o console)
+console.log(
+  `✅ Supabase Client initialized via: ${import.meta.env.VITE_SUPABASE_URL ? "Environment Variables" : "Hardcoded Fallback"}`,
+);
+
 if (!supabaseUrl || !supabaseKey) {
-  console.warn("⚠️ Supabase Env Vars missing directly in client.ts. Using placeholders to prevent crash.");
+  console.error("❌ ERRO CRÍTICO: Credenciais do Supabase não encontradas.");
 }
 
-// O TRUQUE: Usamos um fallback ('https://...') para que o construtor do createClient
-// NÃO jogue o erro "supabaseUrl is required".
-// Assim o app abre, e se a variável carregar depois ou se for erro de configuração,
-// o erro aparecerá apenas quando você tentar fazer uma query, não na tela branca.
-export const supabase = createClient<Database>(
-  supabaseUrl || "https://placeholder-project.supabase.co",
-  supabaseKey || "placeholder-anon-key",
-);
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
