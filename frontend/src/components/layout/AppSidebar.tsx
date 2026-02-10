@@ -41,7 +41,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 export function AppSidebar() {
   const { profile, user, smtpStatus, signOut } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { state, setOpen, setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
   const { isAdmin } = useIsAdmin();
@@ -52,12 +52,16 @@ export function AppSidebar() {
   const needsSmtpSetup = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
   const isFreeUser = profile?.plan_tier === "free" || !profile?.plan_tier;
 
+  // Lógica de tradução para o status "Em breve"
+  const soonLabel = i18n.language.startsWith("pt") ? "Em breve" : "Soon";
+
   const menuItems = [
     { title: t("nav.dashboard"), url: "/dashboard", icon: LayoutDashboard },
     { title: t("nav.jobs"), url: "/jobs", icon: Search },
     { title: t("nav.queue"), url: "/queue", icon: ListTodo },
     ...(isFreeUser ? [{ title: t("nav.referrals"), url: "/referrals", icon: Users }] : []),
     { title: t("nav.plans"), url: "/plans", icon: Diamond },
+    // ITEM ESPECIAL: Resume AI (Coming Soon)
     {
       title: "Resume AI",
       url: "/resume-converter",
@@ -100,13 +104,13 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-sidebar-border bg-sidebar" // Garante a cor de fundo do tema
+      className="border-r border-sidebar-border bg-sidebar"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <SidebarHeader className="p-3 border-b border-sidebar-border/50">
         {!collapsed && (
-          <div className="text-xs font-bold text-sidebar-foreground/90 uppercase tracking-wider px-3">
+          <div className="text-[10px] font-black text-sidebar-foreground/40 uppercase tracking-[0.2em] px-3">
             {t("common.menu")}
           </div>
         )}
@@ -125,9 +129,9 @@ export function AppSidebar() {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild={!item.comingSoon && !isLocked}
-                        tooltip={item.comingSoon ? `${item.title} (Em breve)` : item.title}
+                        tooltip={item.comingSoon ? `${item.title} (${soonLabel})` : item.title}
                         className={cn(
-                          "transition-all duration-200",
+                          "transition-all duration-200 h-11",
                           collapsed && !isMobile && "justify-center",
                           item.comingSoon && "opacity-50 cursor-not-allowed hover:bg-transparent",
                         )}
@@ -146,55 +150,56 @@ export function AppSidebar() {
                         }}
                       >
                         {item.comingSoon ? (
+                          // RENDERIZAÇÃO ESPECIAL DO ITEM "COMING SOON"
                           <div
                             className={cn(
-                              "flex items-center gap-3 rounded-lg text-sidebar-foreground/70 px-3 py-2.5 w-full",
+                              "flex items-center gap-3 rounded-lg px-3 w-full group",
                               collapsed && !isMobile && "justify-center px-0",
                             )}
                           >
-                            <item.icon className="h-5 w-5 shrink-0 opacity-70" />
+                            <div className="relative flex items-center justify-center">
+                              <item.icon className="h-5 w-5 shrink-0 text-sidebar-foreground/40" />
+                              <Lock
+                                className="absolute -bottom-1 -right-1 h-2.5 w-2.5 text-amber-500"
+                                strokeWidth={3}
+                              />
+                            </div>
                             {(!collapsed || isMobile) && (
-                              <div className="flex items-center justify-between flex-1 min-w-0">
-                                <span className="truncate">{item.title}</span>
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] px-1 py-0 h-4 border-sidebar-foreground/30 text-sidebar-foreground/50"
-                                >
-                                  Soon
+                              <div className="flex items-center justify-between flex-1 min-w-0 ml-1">
+                                <span className="truncate text-sidebar-foreground/40 text-sm font-medium">
+                                  {item.title}
+                                </span>
+                                <Badge className="text-[8px] font-bold px-1.5 py-0 h-4 bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-tighter">
+                                  {soonLabel}
                                 </Badge>
                               </div>
                             )}
                           </div>
                         ) : isLocked ? (
+                          // ITEM BLOQUEADO (REQUER LOGIN)
                           <div
                             className={cn(
-                              "flex items-center gap-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/50 cursor-pointer px-3 py-2.5 w-full group",
+                              "flex items-center gap-3 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/30 cursor-pointer px-3 w-full group",
                               collapsed && !isMobile && "justify-center px-0",
                             )}
                           >
-                            <div className="relative">
-                              <item.icon className="h-5 w-5 shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" />
-                              <Lock className="absolute -top-1.5 -right-1.5 h-3 w-3 text-amber-400 fill-amber-400" />
-                            </div>
-                            {(!collapsed || isMobile) && (
-                              <span className="flex-1 truncate text-sidebar-foreground/80 group-hover:text-sidebar-foreground">
-                                {item.title}
-                              </span>
-                            )}
+                            <item.icon className="h-5 w-5 shrink-0 opacity-70 group-hover:opacity-100" />
+                            {(!collapsed || isMobile) && <span className="flex-1 truncate text-sm">{item.title}</span>}
                           </div>
                         ) : (
+                          // ITEM NORMAL (NAVLINK)
                           <NavLink
                             to={item.url}
                             className={cn(
-                              "flex items-center gap-3 rounded-lg text-sidebar-foreground/90 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors relative w-full px-3 py-2.5",
+                              "flex items-center gap-3 rounded-lg text-sidebar-foreground/80 hover:text-white hover:bg-sidebar-accent transition-all relative w-full px-3 h-full",
                               collapsed && !isMobile && "justify-center px-0",
                             )}
-                            activeClassName="bg-sidebar-accent text-white shadow-sm font-semibold"
+                            activeClassName="bg-sidebar-accent text-white shadow-sm font-bold border-l-2 border-primary"
                           >
                             <item.icon className="h-5 w-5 shrink-0" />
                             {(!collapsed || isMobile) && (
-                              <div className="flex items-center justify-between flex-1">
-                                <span className="truncate">{item.title}</span>
+                              <div className="flex items-center justify-between flex-1 min-w-0">
+                                <span className="truncate text-sm">{item.title}</span>
                                 {item.needsAttention && (
                                   <AlertCircle className="h-4 w-4 text-destructive animate-pulse" />
                                 )}
@@ -212,10 +217,10 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {isAdmin && (
-          <SidebarGroup className="mt-4 border-t border-sidebar-border/30 pt-4">
+          <SidebarGroup className="mt-4 border-t border-sidebar-border/20 pt-4">
             {!collapsed && (
-              <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] font-bold px-3">
-                ADMIN PANEL
+              <SidebarGroupLabel className="text-sidebar-foreground/30 text-[9px] font-black px-3 tracking-[0.2em] uppercase">
+                Admin
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
@@ -225,19 +230,19 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       tooltip={item.title}
-                      className={cn(collapsed && !isMobile && "justify-center")}
+                      className={cn("h-11", collapsed && !isMobile && "justify-center")}
                     >
                       <NavLink
                         to={item.url}
                         onClick={handleNavClick}
                         className={cn(
-                          "flex items-center gap-3 rounded-lg text-sidebar-foreground/80 hover:text-white hover:bg-sidebar-accent transition-colors relative px-3 py-2.5",
+                          "flex items-center gap-3 rounded-lg text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent transition-colors px-3 h-full",
                           collapsed && !isMobile ? "justify-center px-0" : "w-full",
                         )}
                         activeClassName="bg-sidebar-accent text-white font-bold"
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
-                        {(!collapsed || isMobile) && <span className="flex-1 truncate">{item.title}</span>}
+                        {(!collapsed || isMobile) && <span className="flex-1 truncate text-sm">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -248,42 +253,47 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border/50 bg-sidebar-accent/10">
+      <SidebarFooter className="p-4 border-t border-sidebar-border/50">
         <div className="flex flex-col gap-3">
           {(!collapsed || isMobile) && (
-            <div className="text-xs font-medium text-sidebar-foreground/60 truncate px-2">{profile?.email}</div>
+            <div className="text-[10px] font-medium text-sidebar-foreground/40 truncate px-2">{profile?.email}</div>
           )}
           <Button
             variant="ghost"
             size={collapsed && !isMobile ? "icon" : "sm"}
             onClick={signOut}
             className={cn(
-              "text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-all",
+              "text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all h-9",
               collapsed && !isMobile ? "mx-auto" : "justify-start px-2",
             )}
           >
             <LogOut className={cn("h-4 w-4", (!collapsed || isMobile) && "mr-2")} />
-            {(!collapsed || isMobile) && <span className="font-medium">{t("common.logout")}</span>}
+            {(!collapsed || isMobile) && (
+              <span className="font-bold text-xs uppercase tracking-wider">{t("common.logout")}</span>
+            )}
           </Button>
         </div>
       </SidebarFooter>
 
+      {/* MODAL DE LOGIN (ESTILIZADO) */}
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="sm:max-w-md bg-white text-slate-900 border-none">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-              <Lock className="h-5 w-5 text-amber-500 fill-amber-500" />
+        <DialogContent className="sm:max-w-md bg-white text-slate-900 border-none shadow-2xl rounded-2xl">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="flex items-center gap-2 text-xl font-black text-slate-900 uppercase tracking-tight">
+              <Lock className="h-5 w-5 text-amber-500" strokeWidth={3} />
               {t("loginDialog.title")}
             </DialogTitle>
-            <DialogDescription className="text-slate-600">{t("loginDialog.descriptionGeneric")}</DialogDescription>
+            <DialogDescription className="text-slate-500 font-medium">
+              {t("loginDialog.descriptionGeneric")}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
-              <p className="text-sm text-slate-700 leading-relaxed">{t("loginDialog.benefit")}</p>
+          <div className="space-y-6 pt-4">
+            <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+              <p className="text-sm text-slate-600 leading-relaxed">{t("loginDialog.benefit")}</p>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <Button
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11"
+                className="w-full bg-slate-900 hover:bg-black text-white font-bold h-12 rounded-xl shadow-lg transition-transform active:scale-95"
                 onClick={() => {
                   setShowLoginDialog(false);
                   navigate("/auth");
@@ -294,7 +304,7 @@ export function AppSidebar() {
               </Button>
               <Button
                 variant="ghost"
-                className="w-full text-slate-500 hover:text-slate-900"
+                className="w-full text-slate-400 hover:text-slate-900 font-bold"
                 onClick={() => setShowLoginDialog(false)}
               >
                 {t("loginDialog.ctaContinue")}
