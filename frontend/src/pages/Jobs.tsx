@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+// IMPORT CORRIGIDO AQUI EMBAIXO:
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -39,6 +40,7 @@ import {
   Landmark,
   ShieldAlert,
   Briefcase,
+  Rocket,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -54,7 +56,6 @@ function OnboardingModal() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Usando v4 para garantir que apareça novamente para teste
     const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v4");
     if (!hasSeen) {
       const timer = setTimeout(() => setOpen(true), 600);
@@ -619,7 +620,7 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* --- FILTROS --- */}
+        {/* --- FILTROS RENOVADOS --- */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -1014,20 +1015,7 @@ export default function Jobs() {
           </Card>
         )}
 
-        <JobDetailsDialog
-          open={!!selectedJob}
-          onOpenChange={(open) => {
-            if (!open) setSelectedJob(null);
-          }}
-          job={selectedJob}
-          planSettings={planSettings}
-          formatSalary={formatSalary}
-          onAddToQueue={(job) => addToQueue(job as Job)}
-          onRemoveFromQueue={(job) => removeFromQueue(job as Job)}
-          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-          onShare={(job) => handleShareJob(job as Job)}
-        />
-
+        {/* DIALOGOS DE UPGRADE E LOGIN (Mantidos abaixo) */}
         <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
           <DialogContent>
             <DialogHeader>
@@ -1088,6 +1076,7 @@ export default function Jobs() {
           </DialogContent>
         </Dialog>
 
+        {/* PAGINATION */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">{t("jobs.pagination.page_of", { page, totalPages })}</p>
           <div className="flex gap-2">
@@ -1107,6 +1096,21 @@ export default function Jobs() {
             </Button>
           </div>
         </div>
+
+        {/* JOB DETAILS DIALOG */}
+        <JobDetailsDialog
+          open={!!selectedJob}
+          onOpenChange={(open) => {
+            if (!open) setSelectedJob(null);
+          }}
+          job={selectedJob}
+          planSettings={planSettings}
+          formatSalary={formatSalary}
+          onAddToQueue={(job) => addToQueue(job as Job)}
+          onRemoveFromQueue={(job) => removeFromQueue(job as Job)}
+          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+          onShare={(job) => handleShareJob(job as Job)}
+        />
       </div>
     </TooltipProvider>
   );
