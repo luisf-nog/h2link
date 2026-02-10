@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, Brain, Lock, BarChart3, Upload } from 'lucide-react';
+import { LayoutDashboard, Search, ListTodo, Diamond, Settings, LogOut, Users, AlertCircle, Brain, Lock, BarChart3, Upload, FileText } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -56,6 +56,7 @@ export function AppSidebar() {
     // Referrals only visible for free users
     ...(isFreeUser ? [{ title: t('nav.referrals'), url: '/referrals', icon: Users }] : []),
     { title: t('nav.plans'), url: '/plans', icon: Diamond },
+    { title: t('nav.resumeConverter', 'Resume Converter'), url: '/resume-converter', icon: FileText },
     { title: t('nav.settings'), url: '/settings', icon: Settings, needsAttention: needsSmtpSetup },
   ];
 
@@ -120,7 +121,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <TooltipProvider>
                 {menuItems.map((item) => {
-                  const requiresAuth = item.url === '/settings' || item.url === '/queue' || item.url === '/referrals';
+                  const requiresAuth = item.url === '/settings' || item.url === '/queue' || item.url === '/referrals' || item.url === '/resume-converter';
                   
                   return (
                   <SidebarMenuItem key={item.title}>

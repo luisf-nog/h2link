@@ -23,20 +23,21 @@ import { useTranslation } from "react-i18next";
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from "@/lib/pricing";
 import { formatNumber } from "@/lib/number";
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Loader2 } from "lucide-react";
 import { PromotionCountdown } from "@/components/plans/PromotionCountdown";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 
 export default function Plans() {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, refreshProfile, session } = useAuth(); // Adicione session se disponível no seu contexto, ou use profile
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate(); // Hook de navegação
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
-  const currentPlan = (profile?.plan_tier || "free") as PlanTier;
 
+  const currentPlan = (profile?.plan_tier || "free") as PlanTier;
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
 
@@ -44,14 +45,14 @@ export default function Plans() {
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
       toast({
-        title: t("plans.toasts.payment_success_title"),
-        description: t("plans.toasts.payment_success_desc"),
+        title: t("plans.toasts.payment_success_title") as string,
+        description: t("plans.toasts.payment_success_desc") as string,
       });
       setSearchParams({});
       refreshProfile();
     } else if (paymentStatus === "canceled") {
       toast({
-        title: t("plans.toasts.payment_canceled_title"),
+        title: t("plans.toasts.payment_canceled_title") as string,
         variant: "destructive",
       });
       setSearchParams({});
@@ -76,7 +77,7 @@ export default function Plans() {
       originalAmount = originalUsd;
     }
 
-    if (amount === 0) return { current: t("plans.free"), original: null };
+    if (amount === 0) return { current: t("plans.free") as string, original: null };
 
     return {
       current: formatCurrency(amount, currency, locale),
@@ -85,6 +86,18 @@ export default function Plans() {
   };
 
   const handleCheckout = async (planId: PlanTier) => {
+    // 1. Verificação de Autenticação (Bloqueio Preventivo)
+    // Se não tiver perfil ou sessão, redireciona para login antes de tentar checkout
+    if (!profile) {
+      toast({
+        title: t("common.login_required", "Login Required") as string,
+        description: t("plans.toasts.login_to_subscribe", "Please log in to upgrade your plan.") as string,
+      });
+      // Redireciona para auth mantendo a intenção ou apenas para a página de auth
+      navigate("/auth");
+      return;
+    }
+
     if (planId === "free") return;
 
     setLoadingPlan(planId);
@@ -100,7 +113,13 @@ export default function Plans() {
         body: { priceId },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Tratamento específico se a Edge Function retornar erro de Auth mesmo assim
+        if (error.message && error.message.includes("not authenticated")) {
+          throw new Error("User session expired. Please login again.");
+        }
+        throw error;
+      }
 
       if (data?.url) {
         window.open(data.url, "_self");
@@ -109,8 +128,15 @@ export default function Plans() {
       }
     } catch (error) {
       console.error("Checkout error:", error);
+
+      // Se for erro de sessão expirada, redireciona
+      if (error instanceof Error && error.message.includes("session expired")) {
+        navigate("/auth");
+        return;
+      }
+
       toast({
-        title: t("plans.toasts.error_title"),
+        title: t("plans.toasts.error_title") as string,
         description: error instanceof Error ? error.message : "Failed to create checkout",
         variant: "destructive",
       });
@@ -131,7 +157,6 @@ export default function Plans() {
 
     const features: FeatureItem[] = [];
 
-    // CORREÇÃO: Usamos 'as any' no objeto de opções para satisfazer o overload do TypeScript
     features.push({
       key: t("plans.features.daily_emails", { count: formatNumber(config.limits.daily_emails) } as any) as string,
       icon: Mail,
@@ -143,7 +168,6 @@ export default function Plans() {
     } else if (config.limits.max_templates > 100) {
       features.push({ key: t("plans.features.unlimited_generation") as string, icon: Sparkles, highlight: true });
     } else {
-      // CORREÇÃO: 'as any' aqui também
       features.push({
         key: t("plans.features.templates_saved", { count: config.limits.max_templates } as any) as string,
         icon: FileText,
@@ -347,7 +371,7 @@ export default function Plans() {
                                     {feature.key}
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent>{t(feature.tooltipKey!)}</TooltipContent>
+                                <TooltipContent>{t(feature.tooltipKey!) as string}</TooltipContent>
                               </Tooltip>
                             ) : (
                               <span
