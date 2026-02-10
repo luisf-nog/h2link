@@ -23,6 +23,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminImport from "./pages/AdminImport";
 import PublicProfile from "./pages/PublicProfile";
 import SharedJobView from "./pages/SharedJobView";
+import ResumeConverter from "./pages/ResumeConverter";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +140,14 @@ const AppRoutes = () => (
       }
     />
     <Route path="/job/:jobId" element={<SharedJobView />} />
+    <Route
+      path="/resume-converter"
+      element={
+        <ProtectedRoute>
+          <ResumeConverter />
+        </ProtectedRoute>
+      }
+    />
     <Route
       path="/plans"
       element={
