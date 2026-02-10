@@ -36,9 +36,8 @@ import {
   ChevronsUpDown,
   X,
   Bot,
-  Landmark,
-  ShieldAlert,
   Briefcase,
+  ShieldAlert,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -59,11 +58,9 @@ const renderPrice = (job: JobDetails) => {
   return "-";
 };
 
-// --- ONBOARDING MODAL ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
-
   useEffect(() => {
     const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v6");
     if (!hasSeen) {
@@ -71,40 +68,29 @@ function OnboardingModal() {
       return () => clearTimeout(timer);
     }
   }, []);
-
   const handleClose = () => {
     localStorage.setItem("hasSeenJobOnboarding_v6", "true");
     setOpen(false);
   };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-2xl bg-white rounded-xl">
-        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between text-white">
+        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between text-white font-bold">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700">
-              <Briefcase className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold tracking-tight">H2 Linker Platform</h2>
-              <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Official Automation Tool</p>
-            </div>
+            <Briefcase className="h-6 w-6" />
+            <span>H2 Linker Platform</span>
           </div>
         </div>
-        <div className="bg-slate-50 border-b border-slate-100 px-8 py-6">
-          <div className="flex gap-4 text-slate-700">
-            <ShieldAlert className="h-6 w-6 shrink-0 mt-1" />
-            <div>
-              <h3 className="text-slate-900 font-bold text-base">Service Transparency</h3>
-              <p className="text-slate-600 text-sm mt-1 leading-relaxed">
-                H2 Linker is a software provider. We automate your outreach, but hiring decisions are made by employers.
-              </p>
-            </div>
+        <div className="p-8 space-y-4">
+          <div className="flex gap-4 bg-amber-50 p-4 rounded-lg border border-amber-100">
+            <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0" />
+            <p className="text-sm text-amber-900 leading-relaxed">
+              <strong>{t("onboarding.disclaimer_title", "Important Notice:")}</strong> We are a software provider, not
+              an agency. We connect you to official listings via automation.
+            </p>
           </div>
-        </div>
-        <div className="p-8 space-y-6">
-          <Button onClick={handleClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 shadow-lg">
-            I Understand - Let's Start
+          <Button onClick={handleClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12">
+            {t("onboarding.cta", "Get Started")}
           </Button>
         </div>
       </DialogContent>
@@ -125,6 +111,7 @@ export default function Jobs() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // ESTADOS PRINCIPAIS
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -133,12 +120,12 @@ export default function Jobs() {
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
-
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
+  // FILTROS
   const [visaType, setVisaType] = useState<VisaTypeFilter>((searchParams.get("visa") as VisaTypeFilter) || "all");
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(searchParams.get("state") ?? "");
@@ -157,6 +144,7 @@ export default function Jobs() {
   const pageSize = 50;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
+  // DATA FETCHING
   const fetchJobs = async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
@@ -191,7 +179,6 @@ export default function Jobs() {
           .eq("user_id", profile.id)
           .in("job_id", ids);
         setQueuedJobIds(new Set(qData?.map((r) => r.job_id)));
-
         const { data: rData } = await supabase.from("job_reports").select("job_id, reason").in("job_id", ids);
         const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
         rData?.forEach((row) => {
@@ -206,11 +193,25 @@ export default function Jobs() {
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from("public_jobs")
+      .select("category")
+      .not("category", "is", null)
+      .neq("category", "")
+      .limit(1000);
+    const uniq = Array.from(new Set(data?.map((r) => r.category?.trim()).filter(Boolean) as string[])).sort();
+    setCategories(uniq);
+  };
+
   useEffect(() => {
     fetchJobs();
   }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
-  // --- LÓGICA DE ADICIONAR À FILA AJUSTADA (REMOVIDO TRIGGER DE ENVIO) ---
+  // --- LÓGICA DE ADIÇÃO À FILA (AJUSTE SOLICITADO: REMOVIDO DISPARO DE EMAIL) ---
   const addToQueue = async (job: Job) => {
     if (!profile) return setShowLoginDialog(true);
     if (planSettings.job_db_blur) return setShowUpgradeDialog(true);
@@ -218,12 +219,12 @@ export default function Jobs() {
 
     setProcessingJobIds((p) => new Set(p).add(job.id));
 
-    // ATENÇÃO: Aqui realizamos APENAS a inserção no banco de dados.
-    // O envio de e-mail é feito EXCLUSIVAMENTE na página de Fila (/queue).
+    // EXCLUSIVO: Apenas inserção no banco com status pending.
+    // Nenhuma chamada de Edge Function ou Função de Envio é permitida aqui.
     const { error } = await supabase.from("my_queue").insert({
       user_id: profile.id,
       job_id: job.id,
-      status: "pending", // Forçamos o status para pending para evitar gatilhos automáticos
+      status: "pending",
     });
 
     if (error) {
@@ -231,8 +232,8 @@ export default function Jobs() {
     } else {
       setQueuedJobIds((p) => new Set(p).add(job.id));
       toast({
-        title: "Vaga na Fila!",
-        description: `${job.job_title} foi salva. Vá para a aba 'Fila' para realizar o envio.`,
+        title: t("jobs.toasts.added_title", "Vaga na Fila!"),
+        description: t("jobs.toasts.added_desc", { title: job.job_title }),
       });
     }
     setProcessingJobIds((p) => {
@@ -250,20 +251,42 @@ export default function Jobs() {
     setPage(1);
   };
 
-  const formatDate = (d: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "-");
+  const formatDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString(i18n.language === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }) : "-";
+  const formatExperience = (m: number | null) =>
+    !m || m <= 0 ? "-" : m < 12 ? `${m}m` : `${Math.floor(m / 12)}y ${m % 12}m`;
 
   return (
     <TooltipProvider>
       <div className="space-y-6">
         <OnboardingModal />
 
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-          {isAdmin && <JobImportDialog />}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
+              <p className="text-muted-foreground mt-1">
+                {t("jobs.subtitle", { totalCount: formatNumber(totalCount) })}
+              </p>
+            </div>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Dialog open={showImporter} onOpenChange={setShowImporter}>
+                  <Button variant="outline" onClick={() => setShowImporter(true)}>
+                    <Database className="h-4 w-4 mr-2" /> Import
+                  </Button>
+                  <DialogContent className="max-w-4xl p-0">
+                    <MultiJsonImporter />
+                  </DialogContent>
+                </Dialog>
+                <JobImportDialog />
+              </div>
+            )}
+          </div>
         </div>
 
         <Card>
-          <CardHeader className="pb-3 flex flex-row items-center gap-4">
+          <CardHeader className="pb-3 flex flex-col md:flex-row gap-4">
             <Select
               value={visaType}
               onValueChange={(v) => {
@@ -292,6 +315,78 @@ export default function Jobs() {
               />
             </div>
           </CardHeader>
+          <CardContent className="pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <Input
+              placeholder={t("jobs.filters.state")}
+              value={stateFilter}
+              onChange={(e) => {
+                setStateFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              placeholder={t("jobs.filters.city")}
+              value={cityFilter}
+              onChange={(e) => {
+                setCityFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-between text-muted-foreground font-normal">
+                  {selectedCategories.length > 0 ? `${selectedCategories.length} selected` : t("jobs.filters.category")}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[250px]" align="start">
+                <Command>
+                  <CommandInput placeholder="Filter..." />
+                  <CommandList>
+                    <CommandEmpty>No category.</CommandEmpty>
+                    <CommandGroup>
+                      {categories.map((c) => (
+                        <CommandItem
+                          key={c}
+                          onSelect={() => {
+                            setSelectedCategories((prev) =>
+                              prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+                            );
+                            setPage(1);
+                          }}
+                        >
+                          <Check
+                            className={cn("mr-2 h-4 w-4", selectedCategories.includes(c) ? "opacity-100" : "opacity-0")}
+                          />
+                          {c}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <div className="flex gap-2 col-span-1 lg:col-span-2">
+              <Input
+                type="number"
+                placeholder="Min $"
+                value={minSalary}
+                onChange={(e) => {
+                  setMinSalary(e.target.value);
+                  setPage(1);
+                }}
+              />
+              <Input
+                type="number"
+                placeholder="Max $"
+                value={maxSalary}
+                onChange={(e) => {
+                  setMaxSalary(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </CardContent>
         </Card>
 
         {isMobile ? (
@@ -300,10 +395,12 @@ export default function Jobs() {
               <MobileJobCard
                 key={j.id}
                 job={j}
+                isBlurred={planSettings.job_db_blur}
                 isQueued={queuedJobIds.has(j.id)}
                 onAddToQueue={() => addToQueue(j)}
                 onClick={() => handleRowClick(j)}
                 formatDate={formatDate}
+                reportData={jobReports[j.id]}
               />
             ))}
           </div>
@@ -313,44 +410,80 @@ export default function Jobs() {
               <TableHeader>
                 <TableRow>
                   <TableHead onClick={() => toggleSort("job_title")} className="cursor-pointer">
-                    Title
+                    Title <ArrowUpDown className="inline h-3 w-3" />
                   </TableHead>
                   <TableHead onClick={() => toggleSort("company")} className="cursor-pointer">
-                    Company
+                    Company <ArrowUpDown className="inline h-3 w-3" />
                   </TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead onClick={() => toggleSort("city")} className="cursor-pointer">
+                    Location <ArrowUpDown className="inline h-3 w-3" />
+                  </TableHead>
                   <TableHead onClick={() => toggleSort("salary")} className="cursor-pointer">
-                    Wage
+                    Wage <ArrowUpDown className="inline h-3 w-3" />
                   </TableHead>
                   <TableHead>Visa</TableHead>
+                  <TableHead onClick={() => toggleSort("posted_date")} className="cursor-pointer">
+                    Posted <ArrowUpDown className="inline h-3 w-3" />
+                  </TableHead>
+                  <TableHead onClick={() => toggleSort("start_date")} className="cursor-pointer">
+                    Start <ArrowUpDown className="inline h-3 w-3" />
+                  </TableHead>
+                  <TableHead onClick={() => toggleSort("end_date")} className="cursor-pointer">
+                    End <ArrowUpDown className="inline h-3 w-3" />
+                  </TableHead>
+                  <TableHead>Exp.</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
+                    <TableCell colSpan={11} className="text-center py-10">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : (
                   jobs.map((j) => (
                     <TableRow key={j.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleRowClick(j)}>
-                      <TableCell className="font-medium">{j.job_title}</TableCell>
-                      <TableCell className={cn(planSettings.job_db_blur && "blur-sm")}>{j.company}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium text-xs">
+                        <div className="flex items-center gap-2">
+                          {jobReports[j.id] && (
+                            <JobWarningBadge reportCount={jobReports[j.id].count} reasons={jobReports[j.id].reasons} />
+                          )}
+                          <span className="truncate max-w-[120px]">{j.job_title}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className={cn("text-xs", planSettings.job_db_blur && "blur-sm")}>
+                        <span className="truncate max-w-[100px] block">{j.company}</span>
+                      </TableCell>
+                      <TableCell className="text-xs">
                         {j.city}, {j.state}
                       </TableCell>
-                      <TableCell>{renderPrice(j)}</TableCell>
+                      <TableCell className="text-xs font-mono">{renderPrice(j)}</TableCell>
                       <TableCell>
                         {(() => {
                           const b = getVisaBadgeConfig(j.visa_type);
                           return (
-                            <Badge variant={b.variant} className={b.className}>
+                            <Badge variant={b.variant} className={cn("text-[10px] px-1 shadow-none", b.className)}>
                               {b.label}
                             </Badge>
                           );
                         })()}
+                      </TableCell>
+                      <TableCell className="text-[10px]">{formatDate(j.posted_date)}</TableCell>
+                      <TableCell className="text-[10px]">{formatDate(j.start_date)}</TableCell>
+                      <TableCell className="text-[10px]">{formatDate(j.end_date)}</TableCell>
+                      <TableCell className="text-[10px]">{formatExperience(j.experience_months)}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "text-[10px] truncate max-w-[80px] block",
+                            planSettings.job_db_blur && "blur-sm",
+                          )}
+                        >
+                          {j.email}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -385,10 +518,10 @@ export default function Jobs() {
           </p>
           <div className="flex gap-2">
             <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Prev
+              {t("common.previous")}
             </Button>
             <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              Next
+              {t("common.next")}
             </Button>
           </div>
         </div>
