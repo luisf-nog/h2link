@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -42,10 +35,10 @@ import {
   Database,
   ChevronsUpDown,
   X,
-  Bot, // NOVO
-  Landmark, // NOVO
-  ShieldAlert, // NOVO
-  Rocket, // NOVO
+  Bot,
+  Landmark,
+  ShieldAlert,
+  Briefcase,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -56,120 +49,123 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// --- COMPONENTE DE ONBOARDING (NOVO) ---
+// --- COMPONENTE DE ONBOARDING (DESIGN FOCO EM RESPONSABILIDADE) ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Verifica se o usuário já viu o tutorial
-    const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v2");
+    // Usando v4 para garantir que apareça novamente para teste
+    const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v4");
     if (!hasSeen) {
-      // Pequeno delay para não aparecer abruptamente
-      const timer = setTimeout(() => setOpen(true), 1000);
+      const timer = setTimeout(() => setOpen(true), 600);
       return () => clearTimeout(timer);
     }
   }, []);
 
   const handleClose = () => {
-    localStorage.setItem("hasSeenJobOnboarding_v2", "true");
+    localStorage.setItem("hasSeenJobOnboarding_v4", "true");
     setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Rocket className="h-6 w-6 text-primary" />
-            Welcome to H2 Linker
-          </DialogTitle>
-          <DialogDescription className="text-base">Your Automation Advantage for Official H-2 Jobs.</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6 py-4">
-          {/* Step 1 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                <Bot className="h-6 w-6" />
-              </div>
+      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-2xl bg-white rounded-xl">
+        {/* CABEÇALHO SÓBRIO */}
+        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700">
+              <Briefcase className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h4 className="font-semibold text-foreground text-lg">1. Setup Your AI Profile</h4>
-              <p className="text-muted-foreground text-sm mt-1">
-                Configure your profile once. Our AI will generate professional, personalized email applications for you
-                automatically tailored to each job description.
-              </p>
+              <h2 className="text-xl font-bold text-white tracking-tight">H2 Linker Platform</h2>
+              <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Official Automation Tool</p>
             </div>
           </div>
+        </div>
 
-          {/* Step 2 */}
+        {/* ÁREA DE DESTAQUE: RESPONSABILIDADE (PRIMEIRA VISÃO) */}
+        <div className="bg-amber-50 border-b border-amber-100 px-8 py-5">
           <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-                <Landmark className="h-6 w-6" />
-              </div>
+            <div className="flex-shrink-0 mt-1">
+              <ShieldAlert className="h-6 w-6 text-amber-600" />
             </div>
             <div>
-              <h4 className="font-semibold text-foreground text-lg">2. Official DOL Job Data</h4>
-              <p className="text-muted-foreground text-sm mt-1">
-                Access official H-2A and H-2B job orders extracted directly from the{" "}
-                <strong>US Department of Labor (DOL)</strong>. These are verified, government-filed opportunities.
-              </p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                <Zap className="h-6 w-6" />
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground text-lg">3. Bulk Automation</h4>
-              <p className="text-muted-foreground text-sm mt-1">
-                Stop applying one by one. Select multiple official jobs and click <strong>"Send to Recruiters"</strong>.
-                We automate the email delivery to up to <strong>450 employers per day</strong>.
-              </p>
-            </div>
-          </div>
-
-          {/* DISCLAIMER BOX */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
-            <ShieldAlert className="h-6 w-6 text-amber-700 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <h5 className="font-bold text-amber-800 text-sm">Important Transparency Notice</h5>
-              <p className="text-amber-700 text-xs leading-relaxed">
-                H2 Linker is a <strong>software technology provider</strong>, NOT a recruitment agency.
-                <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                  <li>
-                    We <strong>do not</strong> hire workers or guarantee job placement.
-                  </li>
-                  <li>
-                    We <strong>do not</strong> promise responses from employers.
-                  </li>
-                  <li>
-                    We provide the <strong>automation tools</strong> to connect you efficiently with public job
-                    listings.
-                  </li>
-                </ul>
+              <h3 className="text-amber-900 font-bold text-base">Important Disclaimer: We Are Not an Agency</h3>
+              <p className="text-amber-800 text-sm mt-1 leading-relaxed">
+                H2 Linker provides <strong>software technology</strong> to automate your applications. We do not
+                interview, hire, or guarantee job placement. We simply connect you to official public job listings
+                efficiently.
               </p>
             </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button onClick={handleClose} size="lg" className="w-full sm:w-auto">
-            I Understand & Accept - Let's Start!
-          </Button>
-        </DialogFooter>
+        {/* FEATURES - FORMATO "SYSTEM SPECS" */}
+        <div className="p-8 space-y-6">
+          <div className="grid gap-6">
+            {/* Feature 1 */}
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center">
+                  <Landmark className="h-5 w-5 text-slate-700" />
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-900 text-sm">Official DOL Data Source</h4>
+                <p className="text-slate-600 text-sm mt-0.5">
+                  Access verified H-2A/H-2B job orders sourced directly from the US Department of Labor.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center">
+                  <Bot className="h-5 w-5 text-slate-700" />
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-900 text-sm">AI Application Engine</h4>
+                <p className="text-slate-600 text-sm mt-0.5">
+                  Our system generates professional, context-aware cover letters for every single application.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-slate-700" />
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-900 text-sm">Bulk Outreach Protocol</h4>
+                <p className="text-slate-600 text-sm mt-0.5">
+                  Select official jobs and automate email delivery. Capacity up to 450 recruiters/day.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <Button
+              onClick={handleClose}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-11"
+            >
+              I Understand & Accept
+            </Button>
+            <p className="text-center text-xs text-slate-400 mt-3">
+              By continuing, you acknowledge that H2 Linker is a tool for self-directed job search.
+            </p>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-// --- FIM DO COMPONENTE DE ONBOARDING ---
+// --- FIM DO COMPONENTE ---
 
 const renderPrice = (job: JobDetails) => {
   if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
@@ -623,7 +619,7 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* --- FILTROS RENOVADOS --- */}
+        {/* --- FILTROS --- */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
