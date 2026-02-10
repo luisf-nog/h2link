@@ -7,8 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// IMPORT CORRIGIDO AQUI EMBAIXO:
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -51,12 +57,13 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// --- COMPONENTE DE ONBOARDING (DESIGN FOCO EM RESPONSABILIDADE) ---
+// --- COMPONENTE DE ONBOARDING (DESIGN PREMIUM & PODER DE AUTOMAÇÃO) ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v4");
+    // Versão 6 para garantir atualização de design para o usuário
+    const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v6");
     if (!hasSeen) {
       const timer = setTimeout(() => setOpen(true), 600);
       return () => clearTimeout(timer);
@@ -64,7 +71,7 @@ function OnboardingModal() {
   }, []);
 
   const handleClose = () => {
-    localStorage.setItem("hasSeenJobOnboarding_v4", "true");
+    localStorage.setItem("hasSeenJobOnboarding_v6", "true");
     setOpen(false);
   };
 
@@ -74,8 +81,8 @@ function OnboardingModal() {
         {/* CABEÇALHO SÓBRIO */}
         <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700">
-              <Briefcase className="h-5 w-5 text-white" />
+            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 text-white">
+              <Briefcase className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">H2 Linker Platform</h2>
@@ -84,18 +91,19 @@ function OnboardingModal() {
           </div>
         </div>
 
-        {/* ÁREA DE DESTAQUE: RESPONSABILIDADE (PRIMEIRA VISÃO) */}
-        <div className="bg-amber-50 border-b border-amber-100 px-8 py-5">
+        {/* ÁREA DE DESTAQUE: RESPONSABILIDADE & TRANSPARÊNCIA (PRIMEIRA VISÃO) */}
+        <div className="bg-slate-50 border-b border-slate-100 px-8 py-6">
           <div className="flex gap-4">
-            <div className="flex-shrink-0 mt-1">
-              <ShieldAlert className="h-6 w-6 text-amber-600" />
+            <div className="flex-shrink-0 mt-1 text-slate-700">
+              <ShieldAlert className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-amber-900 font-bold text-base">Important Disclaimer: We Are Not an Agency</h3>
-              <p className="text-amber-800 text-sm mt-1 leading-relaxed">
-                H2 Linker provides <strong>software technology</strong> to automate your applications. We do not
-                interview, hire, or guarantee job placement. We simply connect you to official public job listings
-                efficiently.
+              <h3 className="text-slate-900 font-bold text-base">Service Transparency & Role</h3>
+              <p className="text-slate-600 text-sm mt-1 leading-relaxed">
+                H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency. We
+                provide the high-performance tools to automate your outreach, but the final hiring decision and
+                interview process rest solely between you and the employer. We do not guarantee employment, but we{" "}
+                <strong>drastically increase your speed and reach</strong>.
               </p>
             </div>
           </div>
@@ -104,47 +112,52 @@ function OnboardingModal() {
         {/* FEATURES - FORMATO "SYSTEM SPECS" */}
         <div className="p-8 space-y-6">
           <div className="grid gap-6">
-            {/* Feature 1 */}
-            <div className="flex gap-4 items-start">
+            {/* Feature 1: Early Access */}
+            <div className="flex gap-4 items-start group">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center">
-                  <Landmark className="h-5 w-5 text-slate-700" />
+                <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+                  <Clock className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Official DOL Data Source</h4>
+                <h4 className="font-semibold text-slate-900 text-sm">Exclusive Early Access Data</h4>
                 <p className="text-slate-600 text-sm mt-0.5">
-                  Access verified H-2A/H-2B job orders sourced directly from the US Department of Labor.
+                  Apply before the crowd. We extract official job orders directly from the{" "}
+                  <strong>US Department of Labor (DOL)</strong> the moment they are filed, giving you a massive head
+                  start.
                 </p>
               </div>
             </div>
 
-            {/* Feature 2 */}
-            <div className="flex gap-4 items-start">
+            {/* Feature 2: Smart Templates */}
+            <div className="flex gap-4 items-start group">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-slate-700" />
+                <div className="h-10 w-10 rounded-md bg-purple-50 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
+                  <Bot className="h-5 w-5 text-purple-600" />
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-900 text-sm">AI Application Engine</h4>
+                <h4 className="font-semibold text-slate-900 text-sm">Adaptive AI Email Engine</h4>
                 <p className="text-slate-600 text-sm mt-0.5">
-                  Our system generates professional, context-aware cover letters for every single application.
+                  Our AI generates <strong>dynamic templates</strong> that automatically adapt to each specific job
+                  title and company name, ensuring a perfect, personalized first impression for every employer.
                 </p>
               </div>
             </div>
 
-            {/* Feature 3 */}
-            <div className="flex gap-4 items-start">
+            {/* Feature 3: Automation */}
+            <div className="flex gap-4 items-start group">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-slate-700" />
+                <div className="h-10 w-10 rounded-md bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+                  <Zap className="h-5 w-5 text-emerald-600" />
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Bulk Outreach Protocol</h4>
+                <h4 className="font-semibold text-slate-900 text-sm">High-Speed Bulk Automation</h4>
                 <p className="text-slate-600 text-sm mt-0.5">
-                  Select official jobs and automate email delivery. Capacity up to 450 recruiters/day.
+                  We handle the communication for you. Select your target jobs and{" "}
+                  <strong>automate the entire sending process</strong>, reaching up to 450 recruiters daily while you
+                  stay productive.
                 </p>
               </div>
             </div>
@@ -153,12 +166,12 @@ function OnboardingModal() {
           <div className="pt-4 border-t border-slate-100">
             <Button
               onClick={handleClose}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-11"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all active:scale-[0.98]"
             >
-              I Understand & Accept
+              I Understand - Let's Start
             </Button>
-            <p className="text-center text-xs text-slate-400 mt-3">
-              By continuing, you acknowledge that H2 Linker is a tool for self-directed job search.
+            <p className="text-center text-[10px] text-slate-400 mt-4 uppercase tracking-widest font-bold">
+              Secure Official Data • AI Automation • Pro Technology
             </p>
           </div>
         </div>
@@ -166,7 +179,6 @@ function OnboardingModal() {
     </Dialog>
   );
 }
-// --- FIM DO COMPONENTE ---
 
 const renderPrice = (job: JobDetails) => {
   if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
@@ -191,7 +203,6 @@ export default function Jobs() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
-  // --- Funções de Compartilhamento ---
   const handleShareJob = (job: Job) => {
     const shareUrl = getJobShareUrl(job.id);
     if (navigator.share) {
@@ -215,7 +226,6 @@ export default function Jobs() {
     });
   };
 
-  // --- Configurações e Hooks ---
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
@@ -226,7 +236,6 @@ export default function Jobs() {
   };
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // --- Estados de Dados ---
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -239,7 +248,6 @@ export default function Jobs() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 
-  // --- Estados de Filtros ---
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => {
     const v = searchParams.get("visa") as VisaTypeFilter | null;
     if (v === "H-2A") return "H-2A";
@@ -251,18 +259,13 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-
-  // Multi-Select Category State
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
     const catParam = searchParams.get("categories");
     return catParam ? catParam.split(",") : [];
   });
-
-  // Split Salary State
   const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
   const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
 
-  // --- Ordenação e Paginação ---
   type SortKey =
     | "job_title"
     | "company"
@@ -302,7 +305,6 @@ export default function Jobs() {
     return Number.isFinite(p) && p > 0 ? p : 1;
   });
 
-  // --- Variaveis Derivadas ---
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const planTier = profile?.plan_tier || "free";
@@ -317,7 +319,6 @@ export default function Jobs() {
   const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
   const tableColSpan = 12;
 
-  // --- Helpers de Busca ---
   const buildOrSearch = (term: string) =>
     `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
 
@@ -325,50 +326,29 @@ export default function Jobs() {
     setLoading(true);
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
 
-    // Ordenação
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
-    if (sortKey !== "posted_date") {
-      query = query.order("posted_date", { ascending: false, nullsFirst: false });
-    }
+    if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false, nullsFirst: false });
     query = query.order("id", { ascending: true });
 
-    // Filtros
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim()) query = query.or(buildOrSearch(searchTerm.trim()));
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
-
-    // NOVO: Filtro Multi-Select de Categoria
-    if (selectedCategories.length > 0) {
-      query = query.in("category", selectedCategories);
-    }
-
-    // NOVO: Filtro Salário Min/Max (CORRIGIDO: Usa 'salary' em vez de 'wage_from')
-    if (minSalary && !isNaN(Number(minSalary))) {
-      query = query.gte("salary", Number(minSalary));
-    }
-    if (maxSalary && !isNaN(Number(maxSalary))) {
-      query = query.lte("salary", Number(maxSalary));
-    }
+    if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
+    if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
+    if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
 
     query = query.range(from, to);
-
     const { data, error, count } = await query;
 
     if (error) {
-      console.error("Error fetching jobs:", error);
       toast({ title: t("jobs.toasts.load_error_title"), description: error.message, variant: "destructive" });
-      setJobs([]);
-      setTotalCount(0);
     } else {
       const nextJobs = (data as Job[]) || [];
       setJobs(nextJobs);
       setTotalCount(count ?? 0);
-
-      // Carregar status da fila/reports se logado
       if (profile?.id && !planSettings.job_db_blur && nextJobs.length) {
         const ids = nextJobs.map((j) => j.id);
         const { data: queueRows } = await supabase
@@ -377,20 +357,15 @@ export default function Jobs() {
           .eq("user_id", profile.id)
           .in("job_id", ids);
         setQueuedJobIds(new Set((queueRows ?? []).map((r) => r.job_id)));
-
         const { data: reportRows } = await supabase.from("job_reports").select("job_id, reason").in("job_id", ids);
         const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
         for (const row of reportRows ?? []) {
           if (!reportsMap[row.job_id]) reportsMap[row.job_id] = { count: 0, reasons: [] };
           reportsMap[row.job_id].count++;
-          if (!reportsMap[row.job_id].reasons.includes(row.reason as ReportReason)) {
+          if (!reportsMap[row.job_id].reasons.includes(row.reason as ReportReason))
             reportsMap[row.job_id].reasons.push(row.reason as ReportReason);
-          }
         }
         setJobReports(reportsMap);
-      } else {
-        setQueuedJobIds(new Set());
-        setJobReports({});
       }
     }
     setLoading(false);
@@ -406,15 +381,13 @@ export default function Jobs() {
         .neq("category", "")
         .order("posted_date", { ascending: false })
         .limit(2000);
-
       if (error) throw error;
-
-      const categoriesRaw = data?.map((r) => r.category?.trim()).filter((c): c is string => Boolean(c)) || [];
-
-      const uniq = Array.from(new Set(categoriesRaw)).sort((a, b) => a.localeCompare(b));
+      const uniq = Array.from(new Set(data?.map((r) => r.category?.trim()).filter(Boolean) as string[])).sort((a, b) =>
+        a.localeCompare(b),
+      );
       setCategories(uniq);
     } catch (err) {
-      console.warn("Error fetching categories:", err);
+      console.warn(err);
     } finally {
       setCategoriesLoading(false);
     }
@@ -423,12 +396,10 @@ export default function Jobs() {
   useEffect(() => {
     fetchJobs();
   }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
-
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  // Persistência na URL
   useEffect(() => {
     const t = window.setTimeout(() => {
       const next = new URLSearchParams();
@@ -436,25 +407,19 @@ export default function Jobs() {
       if (searchTerm.trim()) next.set("q", searchTerm.trim());
       if (stateFilter.trim()) next.set("state", stateFilter.trim());
       if (cityFilter.trim()) next.set("city", cityFilter.trim());
-
-      // Persiste array como string separada por vírgula
       if (selectedCategories.length > 0) next.set("categories", selectedCategories.join(","));
-
       if (minSalary) next.set("min_salary", minSalary);
       if (maxSalary) next.set("max_salary", maxSalary);
-
       if (!(sortKey === "posted_date" && sortDir === "desc")) {
         next.set("sort", sortKey);
         next.set("dir", sortDir);
       }
       next.set("page", String(page));
-      const current = searchParams.toString();
-      if (current !== next.toString()) setSearchParams(next, { replace: true });
+      setSearchParams(next, { replace: true });
     }, 250);
     return () => window.clearTimeout(t);
   }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
 
-  // --- Handlers de UI ---
   const toggleCategory = (category: string) => {
     setPage(1);
     setSelectedCategories((prev) =>
@@ -468,31 +433,24 @@ export default function Jobs() {
     setPage(1);
   };
 
-  // --- Funções de Formatação ---
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return "-";
     if (months < 12) return t("jobs.table.experience_months", { count: months });
     const years = Math.floor(months / 12);
-    const remainingMonths = months % 12;
-    if (remainingMonths === 0) return t("jobs.table.experience_years", { count: years });
-    return t("jobs.table.experience_years_months", { years, months: remainingMonths });
+    const rem = months % 12;
+    return rem === 0
+      ? t("jobs.table.experience_years", { count: years })
+      : t("jobs.table.experience_years_months", { years, months: rem });
   };
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
-    const s = String(date).trim();
-    if (!s) return "-";
-    const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T00:00:00Z`) : new Date(s);
-    if (Number.isNaN(d.getTime())) return s;
-    return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
   };
 
-  const formatSalary = (salary: number | null) => {
-    if (!salary) return "-";
-    return `$${salary.toFixed(2)}/h`;
-  };
+  const formatSalary = (salary: number | null) => (salary ? `$${salary.toFixed(2)}/h` : "-");
 
-  // --- Queue Handlers ---
   const addToQueue = async (job: Job) => {
     if (!profile) {
       setShowLoginDialog(true);
@@ -503,28 +461,21 @@ export default function Jobs() {
       return;
     }
     if (queuedJobIds.has(job.id)) return;
-
     setQueuedJobIds((prev) => new Set(prev).add(job.id));
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
-
     const { error } = await supabase.from("my_queue").insert({ user_id: profile?.id, job_id: job.id });
     setProcessingJobIds((prev) => {
-      const next = new Set(prev);
-      next.delete(job.id);
-      return next;
+      const n = new Set(prev);
+      n.delete(job.id);
+      return n;
     });
-
-    if (error) {
-      if (error.code !== "23505") {
-        setQueuedJobIds((prev) => {
-          const next = new Set(prev);
-          next.delete(job.id);
-          return next;
-        });
-        toast({ title: t("common.errors.generic"), description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: t("jobs.toasts.already_in_queue_title"), description: t("jobs.toasts.already_in_queue_desc") });
-      }
+    if (error && error.code !== "23505") {
+      setQueuedJobIds((prev) => {
+        const n = new Set(prev);
+        n.delete(job.id);
+        return n;
+      });
+      toast({ title: t("common.errors.generic"), description: error.message, variant: "destructive" });
     } else {
       toast({ title: "✓ Vaga adicionada!", description: `${job.job_title} foi adicionada à sua fila.` });
     }
@@ -533,26 +484,18 @@ export default function Jobs() {
   const removeFromQueue = async (job: Job) => {
     if (!profile?.id) return;
     const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
-    if (error) {
-      toast({ title: t("common.errors.delete_failed"), description: error.message, variant: "destructive" });
-    } else {
+    if (error) toast({ title: t("common.errors.delete_failed"), variant: "destructive" });
+    else {
       setQueuedJobIds((prev) => {
-        const next = new Set(prev);
-        next.delete(job.id);
-        return next;
+        const n = new Set(prev);
+        n.delete(job.id);
+        return n;
       });
       setSelectedJob(null);
-      toast({
-        title: t("jobs.toasts.remove_success_title"),
-        description: t("jobs.toasts.remove_success_desc", { jobTitle: job.job_title }),
-      });
     }
   };
 
-  const handleRowClick = (job: Job) => {
-    if (planSettings.job_db_blur) setShowUpgradeDialog(true);
-    else setSelectedJob(job);
-  };
+  const handleRowClick = (job: Job) => (planSettings.job_db_blur ? setShowUpgradeDialog(true) : setSelectedJob(job));
 
   const toggleSort = (key: SortKey, defaultDir: SortDir = "asc") => {
     setPage(1);
@@ -572,18 +515,14 @@ export default function Jobs() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* MODAL DE BOAS-VINDAS INSERIDO AQUI */}
         <OnboardingModal />
 
-        {/* Banner Limit */}
         {isFreeLimitReached && (
           <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Zap className="h-5 w-5 text-primary" />
-              </div>
+              <Zap className="h-5 w-5 text-primary" />
               <div>
-                <p className="font-medium text-foreground">{t("jobs.upgrade_banner.title")}</p>
+                <p className="font-medium">{t("jobs.upgrade_banner.title")}</p>
                 <p className="text-sm text-muted-foreground">
                   {t("jobs.upgrade_banner.description", { limit: dailyLimitTotal })}
                 </p>
@@ -595,11 +534,10 @@ export default function Jobs() {
           </div>
         )}
 
-        {/* Header & Actions */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{t("nav.jobs")}</h1>
+              <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
               <p className="text-muted-foreground mt-1">
                 {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel })}
               </p>
@@ -608,7 +546,7 @@ export default function Jobs() {
               <div className="flex gap-2">
                 <Dialog open={showImporter} onOpenChange={setShowImporter}>
                   <Button variant="outline" onClick={() => setShowImporter(true)}>
-                    <Database className="h-4 w-4 mr-2" /> Importar JSON (Data Miner)
+                    <Database className="h-4 w-4 mr-2" /> Importar JSON
                   </Button>
                   <DialogContent className="max-w-4xl p-0">
                     <MultiJsonImporter />
@@ -620,41 +558,36 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* --- FILTROS RENOVADOS --- */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={visaType}
-                    onValueChange={(v) => {
-                      setVisaType(v as VisaTypeFilter);
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {VISA_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex items-center text-muted-foreground">
-                        <Info className="h-4 w-4" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t("jobs.filters.visa.h2a_info")}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={visaType}
+                  onValueChange={(v) => {
+                    setVisaType(v as VisaTypeFilter);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VISA_TYPE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("jobs.filters.visa.h2a_info")}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -688,16 +621,9 @@ export default function Jobs() {
                   setPage(1);
                 }}
               />
-
-              {/* FILTRO MULTI-SELECT CATEGORIA */}
               <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={categoryPopoverOpen}
-                    className="justify-between text-muted-foreground font-normal overflow-hidden"
-                  >
+                  <Button variant="outline" className="justify-between text-muted-foreground font-normal">
                     {selectedCategories.length > 0
                       ? `${selectedCategories.length} selecionadas`
                       : t("jobs.filters.category")}
@@ -708,33 +634,28 @@ export default function Jobs() {
                   <Command>
                     <CommandInput placeholder="Buscar categoria..." />
                     <CommandList>
-                      <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                      <CommandEmpty>Nenhuma categoria.</CommandEmpty>
                       <CommandGroup>
-                        {categories.map((category) => (
-                          <CommandItem key={category} value={category} onSelect={() => toggleCategory(category)}>
+                        {categories.map((c) => (
+                          <CommandItem key={c} onSelect={() => toggleCategory(c)}>
                             <div
                               className={cn(
                                 "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                selectedCategories.includes(category)
+                                selectedCategories.includes(c)
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50 [&_svg]:invisible",
                               )}
                             >
-                              <Check className={cn("h-4 w-4")} />
+                              <Check className="h-4 w-4" />
                             </div>
-                            <span>{category}</span>
+                            {c}
                           </CommandItem>
                         ))}
                       </CommandGroup>
                     </CommandList>
                     {selectedCategories.length > 0 && (
                       <div className="p-2 border-t">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-center text-xs h-8"
-                          onClick={clearCategories}
-                        >
+                        <Button variant="ghost" size="sm" className="w-full text-xs" onClick={clearCategories}>
                           Limpar Filtros
                         </Button>
                       </div>
@@ -742,14 +663,12 @@ export default function Jobs() {
                   </Command>
                 </PopoverContent>
               </Popover>
-
-              {/* FILTRO SALARIO MIN / MAX */}
               <div className="flex gap-2 col-span-1 sm:col-span-2 lg:col-span-2">
                 <div className="relative w-full">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
                   <Input
                     type="number"
-                    placeholder="Min Wage"
+                    placeholder="Min"
                     className="pl-6"
                     value={minSalary}
                     onChange={(e) => {
@@ -762,7 +681,7 @@ export default function Jobs() {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
                   <Input
                     type="number"
-                    placeholder="Max Wage"
+                    placeholder="Max"
                     className="pl-6"
                     value={maxSalary}
                     onChange={(e) => {
@@ -773,21 +692,15 @@ export default function Jobs() {
                 </div>
               </div>
             </div>
-
-            {/* Visualização das Tags Selecionadas */}
             {selectedCategories.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
-                <span className="text-xs text-muted-foreground self-center mr-2">Categorias:</span>
-                {selectedCategories.map((cat) => (
-                  <Badge key={cat} variant="secondary" className="px-2 py-1 gap-1 hover:bg-secondary/80">
-                    {cat}
-                    <X
-                      className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground"
-                      onClick={() => toggleCategory(cat)}
-                    />
+                {selectedCategories.map((c) => (
+                  <Badge key={c} variant="secondary" className="gap-1">
+                    {c}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => toggleCategory(c)} />
                   </Badge>
                 ))}
-                <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={clearCategories}>
+                <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={clearCategories}>
                   Limpar tudo
                 </Button>
               </div>
@@ -795,28 +708,27 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        {/* Results */}
         {isMobile ? (
           <div className="space-y-3">
             {loading ? (
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">{t("jobs.table.loading")}</CardContent>
+                <CardContent className="p-8 text-center">{t("jobs.table.loading")}</CardContent>
               </Card>
             ) : jobs.length === 0 ? (
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">{t("jobs.table.empty")}</CardContent>
+                <CardContent className="p-8 text-center">{t("jobs.table.empty")}</CardContent>
               </Card>
             ) : (
-              jobs.map((job) => (
+              jobs.map((j) => (
                 <MobileJobCard
-                  key={job.id}
-                  job={job}
+                  key={j.id}
+                  job={j}
                   isBlurred={planSettings.job_db_blur}
-                  isQueued={queuedJobIds.has(job.id)}
-                  onAddToQueue={() => addToQueue(job)}
-                  onClick={() => handleRowClick(job)}
+                  isQueued={queuedJobIds.has(j.id)}
+                  onAddToQueue={() => addToQueue(j)}
+                  onClick={() => handleRowClick(j)}
                   formatDate={formatDate}
-                  reportData={jobReports[job.id]}
+                  reportData={jobReports[j.id]}
                 />
               ))
             )}
@@ -828,91 +740,51 @@ export default function Jobs() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("job_title", "asc")}
-                      >
+                      <button onClick={() => toggleSort("job_title")}>
                         {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("company", "asc")}
-                      >
+                      <button onClick={() => toggleSort("company")}>
                         {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("city", "asc")}
-                      >
+                      <button onClick={() => toggleSort("city")}>
                         {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("openings", "desc")}
-                      >
+                      <button onClick={() => toggleSort("openings")}>
                         {t("jobs.table.headers.openings")} <SortIcon active={sortKey === "openings"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("salary", "desc")}
-                      >
+                      <button onClick={() => toggleSort("salary")}>
                         {t("jobs.table.headers.salary")} <SortIcon active={sortKey === "salary"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("visa_type", "asc")}
-                      >
+                      <button onClick={() => toggleSort("visa_type")}>
                         {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("posted_date", "desc")}
-                      >
+                      <button onClick={() => toggleSort("posted_date")}>
                         {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("start_date", "asc")}
-                      >
+                      <button onClick={() => toggleSort("start_date")}>
                         {t("jobs.table.headers.start")} <SortIcon active={sortKey === "start_date"} dir={sortDir} />
                       </button>
                     </TableHead>
                     <TableHead>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 hover:underline"
-                        onClick={() => toggleSort("end_date", "asc")}
-                      >
+                      <button onClick={() => toggleSort("end_date")}>
                         {t("jobs.table.headers.end")} <SortIcon active={sortKey === "end_date"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
-                      <div className="inline-flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" /> {t("jobs.table.headers.experience")}
-                      </div>
-                    </TableHead>
+                    <TableHead>{t("jobs.table.headers.experience")}</TableHead>
                     <TableHead>{t("jobs.table.headers.email")}</TableHead>
                     <TableHead className="text-right">{t("jobs.table.headers.action")}</TableHead>
                   </TableRow>
@@ -931,75 +803,71 @@ export default function Jobs() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    jobs.map((job) => (
-                      <TableRow
-                        key={job.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleRowClick(job)}
-                      >
+                    jobs.map((j) => (
+                      <TableRow key={j.id} className="cursor-pointer" onClick={() => handleRowClick(j)}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            {jobReports[job.id] && (
+                            {jobReports[j.id] && (
                               <JobWarningBadge
-                                reportCount={jobReports[job.id].count}
-                                reasons={jobReports[job.id].reasons}
+                                reportCount={jobReports[j.id].count}
+                                reasons={jobReports[j.id].reasons}
                               />
                             )}
-                            {job.job_title}
+                            {j.job_title}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={cn(planSettings.job_db_blur && "blur-sm select-none")}>{job.company}</span>
+                          <span className={cn(planSettings.job_db_blur && "blur-sm select-none")}>{j.company}</span>
                         </TableCell>
                         <TableCell>
-                          {job.city}, {job.state}
+                          {j.city}, {j.state}
                         </TableCell>
-                        <TableCell>{typeof job.openings === "number" ? formatNumber(job.openings) : "-"}</TableCell>
+                        <TableCell>{j.openings ?? "-"}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{renderPrice(job)}</span>
-                            <span className="text-[10px] text-muted-foreground uppercase">/{job.wage_unit || "h"}</span>
+                            <span className="font-medium">{renderPrice(j)}</span>
+                            <span className="text-[10px] uppercase text-muted-foreground">/{j.wage_unit || "h"}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           {(() => {
-                            const badge = getVisaBadgeConfig(job.visa_type);
+                            const b = getVisaBadgeConfig(j.visa_type);
                             return (
-                              <Badge variant={badge.variant} className={badge.className}>
-                                {badge.label}
+                              <Badge variant={b.variant} className={b.className}>
+                                {b.label}
                               </Badge>
                             );
                           })()}
                         </TableCell>
-                        <TableCell>{formatDate(job.posted_date)}</TableCell>
-                        <TableCell>{formatDate(job.start_date)}</TableCell>
-                        <TableCell>{formatDate(job.end_date)}</TableCell>
+                        <TableCell>{formatDate(j.posted_date)}</TableCell>
+                        <TableCell>{formatDate(j.start_date)}</TableCell>
+                        <TableCell>{formatDate(j.end_date)}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {formatExperience(job.experience_months)}
+                          {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell>
-                          <span className={cn(planSettings.job_db_blur && "blur-sm select-none")}>{job.email}</span>
+                          <span className={cn(planSettings.job_db_blur && "blur-sm select-none")}>{j.email}</span>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             size="sm"
-                            variant={!planSettings.job_db_blur && queuedJobIds.has(job.id) ? "default" : "outline"}
+                            variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
                             className={cn(
                               !planSettings.job_db_blur &&
-                                queuedJobIds.has(job.id) &&
-                                "bg-primary hover:bg-primary/90 text-primary-foreground border-primary",
+                                queuedJobIds.has(j.id) &&
+                                "bg-primary text-primary-foreground border-primary",
                             )}
-                            disabled={!planSettings.job_db_blur && queuedJobIds.has(job.id)}
+                            disabled={!planSettings.job_db_blur && queuedJobIds.has(j.id)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              addToQueue(job);
+                              addToQueue(j);
                             }}
                           >
                             {planSettings.job_db_blur ? (
                               <Lock className="h-4 w-4" />
-                            ) : processingJobIds.has(job.id) ? (
+                            ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : queuedJobIds.has(job.id) ? (
+                            ) : queuedJobIds.has(j.id) ? (
                               <Check className="h-4 w-4" />
                             ) : (
                               <Plus className="h-4 w-4" />
@@ -1015,68 +883,6 @@ export default function Jobs() {
           </Card>
         )}
 
-        {/* DIALOGOS DE UPGRADE E LOGIN (Mantidos abaixo) */}
-        <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" />
-                {t("jobs.upgrade.title")}
-              </DialogTitle>
-              <DialogDescription>{t("jobs.upgrade.description")}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-plan-gold/10 border border-plan-gold/30">
-                <h4 className="font-semibold text-plan-gold">{t("plans.tiers.gold.label")}</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {t("jobs.upgrade.gold_desc", { price: formatPlanPrice("gold") })}
-                </p>
-              </div>
-              <div className="p-4 rounded-lg bg-plan-diamond/10 border border-plan-diamond/30">
-                <h4 className="font-semibold text-plan-diamond">{t("plans.tiers.diamond.label")}</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {t("jobs.upgrade.diamond_desc", { price: formatPlanPrice("diamond") })}
-                </p>
-              </div>
-              <Button className="w-full" onClick={() => (window.location.href = "/plans")}>
-                {t("jobs.upgrade.cta")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" />
-                {t("loginDialog.title")}
-              </DialogTitle>
-              <DialogDescription>{t("loginDialog.descriptionQueue")}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
-                <p className="text-sm text-foreground">{t("loginDialog.benefit")}</p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    setShowLoginDialog(false);
-                    navigate("/auth");
-                  }}
-                >
-                  {t("loginDialog.ctaLogin")}
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => setShowLoginDialog(false)}>
-                  {t("loginDialog.ctaContinue")}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* PAGINATION */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">{t("jobs.pagination.page_of", { page, totalPages })}</p>
           <div className="flex gap-2">
@@ -1097,20 +903,73 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* JOB DETAILS DIALOG */}
         <JobDetailsDialog
           open={!!selectedJob}
-          onOpenChange={(open) => {
-            if (!open) setSelectedJob(null);
-          }}
+          onOpenChange={(o) => !o && setSelectedJob(null)}
           job={selectedJob}
           planSettings={planSettings}
           formatSalary={formatSalary}
-          onAddToQueue={(job) => addToQueue(job as Job)}
-          onRemoveFromQueue={(job) => removeFromQueue(job as Job)}
+          onAddToQueue={(j) => addToQueue(j as Job)}
+          onRemoveFromQueue={(j) => removeFromQueue(j as Job)}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-          onShare={(job) => handleShareJob(job as Job)}
+          onShare={(j) => handleShareJob(j as Job)}
         />
+
+        <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                {t("jobs.upgrade.title")}
+              </DialogTitle>
+              <DialogDescription>{t("jobs.upgrade.description")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-plan-gold/10 border border-plan-gold/30">
+                <h4 className="font-semibold text-plan-gold">{t("plans.tiers.gold.label")}</h4>
+                <p className="text-sm mt-1">{t("jobs.upgrade.gold_desc", { price: formatPlanPrice("gold") })}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-plan-diamond/10 border border-plan-diamond/30">
+                <h4 className="font-semibold text-plan-diamond">{t("plans.tiers.diamond.label")}</h4>
+                <p className="text-sm mt-1">{t("jobs.upgrade.diamond_desc", { price: formatPlanPrice("diamond") })}</p>
+              </div>
+              <Button className="w-full" onClick={() => (window.location.href = "/plans")}>
+                {t("jobs.upgrade.cta")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-primary" />
+                {t("loginDialog.title")}
+              </DialogTitle>
+              <DialogDescription>{t("loginDialog.descriptionQueue")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+                <p className="text-sm">{t("loginDialog.benefit")}</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setShowLoginDialog(false);
+                    navigate("/auth");
+                  }}
+                >
+                  {t("loginDialog.ctaLogin")}
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setShowLoginDialog(false)}>
+                  {t("loginDialog.ctaContinue")}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
