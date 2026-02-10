@@ -49,7 +49,21 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// --- COMPONENTE DE ONBOARDING (RESTANTE DA LÓGICA E DESIGN) ---
+// --- FUNÇÃO DE AUXÍLIO DE PREÇO (RESTAURADA) ---
+const renderPrice = (job: JobDetails) => {
+  if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
+    return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
+  }
+  if (job.wage_from) {
+    return `$${job.wage_from.toFixed(2)}`;
+  }
+  if (job.salary) {
+    return `$${job.salary.toFixed(2)}`;
+  }
+  return "-";
+};
+
+// --- COMPONENTE DE ONBOARDING ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -70,8 +84,8 @@ function OnboardingModal() {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-2xl bg-white rounded-xl">
-        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3 text-white">
+        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between text-white">
+          <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700">
               <Briefcase className="h-5 w-5" />
             </div>
@@ -84,17 +98,22 @@ function OnboardingModal() {
           </div>
         </div>
         <div className="bg-slate-50 border-b border-slate-100 px-8 py-6">
-          <div className="flex gap-4">
-            <ShieldAlert className="h-6 w-6 text-slate-700 shrink-0 mt-1" />
+          <div className="flex gap-4 text-slate-700">
+            <ShieldAlert className="h-6 w-6 shrink-0 mt-1" />
             <div>
               <h3 className="text-slate-900 font-bold text-base">
                 {t("onboarding.transparency_title", "Service Transparency")}
               </h3>
-              <p className="text-slate-600 text-sm mt-1 leading-relaxed">{t("onboarding.transparency_body")}</p>
+              <p className="text-slate-600 text-sm mt-1 leading-relaxed">
+                {t(
+                  "onboarding.transparency_body",
+                  "H2 Linker is a technology provider. We are not a recruitment agency. Our tools automate your outreach, but hiring is up to the employer.",
+                )}
+              </p>
             </div>
           </div>
         </div>
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-6 text-slate-700">
           <div className="grid gap-6">
             <div className="flex gap-4 items-start group">
               <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
@@ -102,7 +121,9 @@ function OnboardingModal() {
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">{t("onboarding.step1_title", "Early Access")}</h4>
-                <p className="text-slate-600 text-sm mt-0.5">{t("onboarding.step1_body")}</p>
+                <p className="text-slate-600 text-sm mt-0.5">
+                  {t("onboarding.step1_body", "Apply before the crowd. Data directly from the DOL.")}
+                </p>
               </div>
             </div>
             <div className="flex gap-4 items-start group">
@@ -110,8 +131,10 @@ function OnboardingModal() {
                 <Bot className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h4 className="font-semibold text-slate-900 text-sm">{t("onboarding.step2_title", "AI Engine")}</h4>
-                <p className="text-slate-600 text-sm mt-0.5">{t("onboarding.step2_body")}</p>
+                <h4 className="font-semibold text-slate-900 text-sm">{t("onboarding.step2_title", "Adaptive AI")}</h4>
+                <p className="text-slate-600 text-sm mt-0.5">
+                  {t("onboarding.step2_body", "Smart templates tailored to each employer.")}
+                </p>
               </div>
             </div>
           </div>
@@ -124,7 +147,10 @@ function OnboardingModal() {
   );
 }
 
-// --- LOGICA PRINCIPAL DO HUB ---
+interface Job extends JobDetails {
+  id: string;
+}
+
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -134,7 +160,7 @@ export default function Jobs() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Estados RESTAURADOS
+  // Estados
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -144,13 +170,12 @@ export default function Jobs() {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 
-  // Estados de Dialogs
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
-  // Estados de Filtros e URL Sync
+  // Filtros
   const [visaType, setVisaType] = useState<VisaTypeFilter>((searchParams.get("visa") as VisaTypeFilter) || "all");
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(searchParams.get("state") ?? "");
@@ -169,7 +194,6 @@ export default function Jobs() {
   const pageSize = 50;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // --- BUSCA DE VAGAS ---
   const fetchJobs = async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
@@ -205,7 +229,6 @@ export default function Jobs() {
           .in("job_id", ids);
         setQueuedJobIds(new Set(qData?.map((r) => r.job_id)));
 
-        // Report logic
         const { data: rData } = await supabase.from("job_reports").select("job_id, reason").in("job_id", ids);
         const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
         rData?.forEach((row) => {
@@ -220,7 +243,6 @@ export default function Jobs() {
     setLoading(false);
   };
 
-  // --- BUSCA DE CATEGORIAS ---
   const fetchCategories = async () => {
     const { data } = await supabase
       .from("public_jobs")
@@ -239,19 +261,6 @@ export default function Jobs() {
     fetchCategories();
   }, []);
 
-  // Sync URL Params
-  useEffect(() => {
-    const next = new URLSearchParams();
-    if (visaType !== "all") next.set("visa", visaType);
-    if (searchTerm) next.set("q", searchTerm);
-    if (selectedCategories.length) next.set("categories", selectedCategories.join(","));
-    next.set("sort", sortKey);
-    next.set("dir", sortDir);
-    next.set("page", String(page));
-    setSearchParams(next, { replace: true });
-  }, [visaType, searchTerm, selectedCategories, sortKey, sortDir, page]);
-
-  // --- AÇÕES ---
   const addToQueue = async (job: Job) => {
     if (!profile) return setShowLoginDialog(true);
     if (planSettings.job_db_blur) return setShowUpgradeDialog(true);
@@ -260,7 +269,7 @@ export default function Jobs() {
     const { error } = await supabase.from("my_queue").insert({ user_id: profile.id, job_id: job.id });
     if (!error) {
       setQueuedJobIds((p) => new Set(p).add(job.id));
-      toast({ title: t("jobs.toasts.added"), description: `${job.job_title} ${t("jobs.toasts.added_desc")}` });
+      toast({ title: t("jobs.toasts.added", "Added"), description: `${job.job_title} added to queue.` });
     }
     setProcessingJobIds((p) => {
       const n = new Set(p);
@@ -277,22 +286,18 @@ export default function Jobs() {
     setPage(1);
   };
 
-  const handleShareJob = (job: Job) => {
-    const url = getJobShareUrl(job.id);
-    navigator.clipboard.writeText(url);
-    toast({ title: t("jobs.share.copied") });
-  };
+  const formatDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString(i18n.language === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" }) : "-";
 
   return (
     <TooltipProvider>
       <div className="space-y-6">
         <OnboardingModal />
 
-        {/* HEADER RESTAURADO */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{t("nav.jobs")}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{t("nav.jobs", "Jobs")}</h1>
               <p className="text-muted-foreground mt-1">
                 {t("jobs.subtitle", { totalCount: formatNumber(totalCount) })}
               </p>
@@ -301,7 +306,7 @@ export default function Jobs() {
               <div className="flex gap-2">
                 <Dialog open={showImporter} onOpenChange={setShowImporter}>
                   <Button variant="outline" onClick={() => setShowImporter(true)}>
-                    <Database className="h-4 w-4 mr-2" /> {t("admin.import_json")}
+                    <Database className="h-4 w-4 mr-2" /> Import
                   </Button>
                   <DialogContent className="max-w-4xl p-0">
                     <MultiJsonImporter />
@@ -313,45 +318,39 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* FILTROS COMPLETOS RESTAURADOS */}
         <Card>
           <CardHeader className="pb-3 flex flex-col md:flex-row gap-4">
-            <div className="flex items-center gap-2">
-              <Select
-                value={visaType}
-                onValueChange={(v) => {
-                  setVisaType(v as VisaTypeFilter);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Visa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {VISA_TYPE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={visaType}
+              onValueChange={(v) => {
+                setVisaType(v as VisaTypeFilter);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Visa Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {VISA_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t("jobs.search.placeholder")}
+                placeholder={t("jobs.search.placeholder", "Search...")}
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
           </CardHeader>
           <CardContent className="pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <Input
-              placeholder={t("jobs.filters.state")}
+              placeholder={t("jobs.filters.state", "State")}
               value={stateFilter}
               onChange={(e) => {
                 setStateFilter(e.target.value);
@@ -359,7 +358,7 @@ export default function Jobs() {
               }}
             />
             <Input
-              placeholder={t("jobs.filters.city")}
+              placeholder={t("jobs.filters.city", "City")}
               value={cityFilter}
               onChange={(e) => {
                 setCityFilter(e.target.value);
@@ -369,7 +368,9 @@ export default function Jobs() {
             <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="justify-between text-muted-foreground font-normal overflow-hidden">
-                  {selectedCategories.length > 0 ? `${selectedCategories.length} selected` : t("jobs.filters.category")}
+                  {selectedCategories.length > 0
+                    ? `${selectedCategories.length} selected`
+                    : t("jobs.filters.category", "Category")}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -423,18 +424,17 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        {/* TABELA E MOBILE VIEW RESTAURADOS */}
         {isMobile ? (
           <div className="space-y-3">
-            {jobs.map((job) => (
+            {jobs.map((j) => (
               <MobileJobCard
-                key={job.id}
-                job={job}
-                isQueued={queuedJobIds.has(job.id)}
-                onAddToQueue={() => addToQueue(job)}
-                onClick={() => handleRowClick(job)}
+                key={j.id}
+                job={j}
+                isBlurred={planSettings.job_db_blur}
+                isQueued={queuedJobIds.has(j.id)}
+                onAddToQueue={() => addToQueue(j)}
+                onClick={() => handleRowClick(j)}
                 formatDate={formatDate}
-                reportData={jobReports[job.id]}
               />
             ))}
           </div>
@@ -521,20 +521,20 @@ export default function Jobs() {
           </Card>
         )}
 
-        {/* PAGINAÇÃO RESTAURADA */}
         <div className="flex justify-between items-center py-4">
-          <p className="text-sm text-muted-foreground">{t("jobs.pagination.page_of", { page, totalPages })}</p>
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </p>
           <div className="flex gap-2">
             <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              {t("common.previous")}
+              {t("common.previous", "Prev")}
             </Button>
             <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              {t("common.next")}
+              {t("common.next", "Next")}
             </Button>
           </div>
         </div>
 
-        {/* DIALOGS RESTAURADOS */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o) => !o && setSelectedJob(null)}
@@ -542,18 +542,17 @@ export default function Jobs() {
           planSettings={planSettings}
           onAddToQueue={addToQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-          onShare={handleShareJob}
         />
 
         <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" /> {t("jobs.upgrade.title")}
+                <Lock className="h-5 w-5" /> {t("jobs.upgrade.title", "Upgrade Required")}
               </DialogTitle>
             </DialogHeader>
             <Button className="w-full mt-4" onClick={() => navigate("/plans")}>
-              {t("jobs.upgrade.cta")}
+              {t("jobs.upgrade.cta", "View Plans")}
             </Button>
           </DialogContent>
         </Dialog>
