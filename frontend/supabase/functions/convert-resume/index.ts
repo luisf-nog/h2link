@@ -14,15 +14,13 @@ function json(status: number, payload: unknown) {
 }
 
 serve(async (req) => {
-  // 1. Handle CORS
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "POST") return json(405, { success: false, error: "Method not allowed" });
 
   try {
-    // 2. Validate Auth
+    // 1. Auth Check
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
-      return json(401, { success: false, error: "Unauthorized" });
+      return json(401, { success: false, error: "Missing Authorization Header" });
     }
 
     const supabaseClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -34,44 +32,34 @@ serve(async (req) => {
       error: authError,
     } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) {
-      return json(401, { success: false, error: "Unauthorized" });
+      console.error("Auth Error:", authError);
+      return json(401, { success: false, error: "Unauthorized User" });
     }
 
-    // 3. Get Request Body
+    // 2. Parse Body
     const { raw_text } = await req.json().catch(() => ({}));
-
-    if (!raw_text || typeof raw_text !== "string" || raw_text.length < 10) {
-      return json(400, { success: false, error: "Invalid or empty resume text provided." });
+    if (!raw_text || raw_text.length < 10) {
+      return json(400, { success: false, error: "Resume text is empty or too short." });
     }
 
-    // 4. Check API Key
+    // 3. API Key Check
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is missing in Edge Function secrets.");
-      return json(500, { success: false, error: "Server configuration error (AI Key missing)." });
+      console.error("CRITICAL: LOVABLE_API_KEY missing in Secrets.");
+      return json(500, { success: false, error: "Server AI Key not configured." });
     }
 
-    // 5. System Prompt (The "Expert Recruiter")
-    const systemPrompt = `You are an expert US Recruiter specializing in H-2A (Agricultural) and H-2B (Non-Agricultural) visas.
-    Your task is to analyze a raw resume text (which may be in Portuguese, Spanish, or English) and convert it into a structured US-Style Resume JSON.
+    // 4. System Prompt
+    const systemPrompt = `You are an expert US Recruiter. Analyze this resume text (any language) and convert it to US-Style JSON.
+    RULES:
+    - Translate to English.
+    - Remove: Age, Photo, Marital Status, IDs (CPF/RG).
+    - Use Action Verbs.
+    - Return strictly the JSON structure requested.`;
 
-    ### CRITICAL RULES:
-    1. **Translation:** Detect the source language and translate ALL content to professional US English.
-    2. **Sanitization:** REMOVE sensitive personal data prohibited in US resumes:
-       - Age, Date of Birth
-       - Marital Status, Religion, Gender
-       - Photos (do not mention them)
-       - ID Numbers (CPF, RG, Passport numbers)
-       - Full Street Address (Keep only City, State, Country)
-    3. **Optimization:**
-       - Use strong ACTION VERBS for experience (e.g., "Operated", "Harvested", "Managed").
-       - Highlight physical stamina, machinery skills, and reliability.
-    4. **Output Format:** Return ONLY valid JSON matching the schema below. No markdown, no code blocks.`;
+    const userPrompt = `Resume Content:\n"${raw_text.substring(0, 25000)}"\n\nConvert to JSON structure.`;
 
-    // 6. User Prompt with Data
-    const userPrompt = `Here is the raw resume text:\n\n"${raw_text.substring(0, 25000)}"\n\nConvert this to the required US JSON format.`;
-
-    // 7. Call Lovable AI Gateway (Gemini)
+    // 5. Call AI
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -79,19 +67,18 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash", // Fast, cheap, large context
-        temperature: 0.1, // Low temp for strict JSON adherence
+        model: "google/gemini-2.5-flash",
+        temperature: 0.1,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        // 8. Force Structured Output via Tool Calling (Best practice for JSON)
         tools: [
           {
             type: "function",
             function: {
               name: "format_resume",
-              description: "Format the resume into structured JSON",
+              description: "Format resume to JSON",
               parameters: {
                 type: "object",
                 properties: {
@@ -105,7 +92,7 @@ serve(async (req) => {
                     },
                     required: ["full_name"],
                   },
-                  summary: { type: "string", description: "2-3 sentences focusing on physical stamina and experience" },
+                  summary: { type: "string" },
                   skills: { type: "array", items: { type: "string" } },
                   experience: {
                     type: "array",
@@ -133,34 +120,53 @@ serve(async (req) => {
                   },
                   languages: { type: "array", items: { type: "string" } },
                 },
-                required: ["personal_info", "summary", "experience"],
+                required: ["personal_info", "experience"],
               },
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "format_resume" } },
       }),
     });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      console.error("AI API Error:", aiResp.status, errText);
-      return json(500, { success: false, error: "Failed to process resume with AI." });
+      console.error("AI Gateway Error:", aiResp.status, errText);
+      return json(500, { success: false, error: `AI Gateway failed: ${aiResp.status}` });
     }
 
     const aiData = await aiResp.json();
+
+    // 6. ROBUST PARSING (Tool Call OR Content Fallback)
+    let resumeJson;
     const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
 
-    if (!toolCall || toolCall.function.name !== "format_resume") {
-      throw new Error("AI did not return structured data.");
+    if (toolCall && toolCall.function.name === "format_resume") {
+      // Caso A: IA usou a ferramenta corretamente
+      try {
+        resumeJson = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.error("JSON Parse Error (Tool):", e);
+        return json(500, { success: false, error: "AI returned invalid JSON in tool." });
+      }
+    } else {
+      // Caso B: Fallback (IA mandou o JSON no texto)
+      console.warn("AI didn't use tool, falling back to content parsing.");
+      const content = aiData?.choices?.[0]?.message?.content || "";
+      const cleanContent = content
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      try {
+        resumeJson = JSON.parse(cleanContent);
+      } catch (e) {
+        console.error("JSON Parse Error (Content):", content);
+        return json(500, { success: false, error: "AI response could not be parsed as JSON." });
+      }
     }
-
-    // 9. Parse and Return
-    const resumeJson = JSON.parse(toolCall.function.arguments);
 
     return json(200, resumeJson);
   } catch (error: any) {
-    console.error("Function Error:", error);
-    return json(500, { success: false, error: error.message || "Internal Server Error" });
+    console.error("Unhandled Error:", error);
+    return json(500, { success: false, error: error.message || "Unknown Server Error" });
   }
 });
