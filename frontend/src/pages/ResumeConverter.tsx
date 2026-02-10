@@ -15,9 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-// Tipagem segura para garantir que o TS não reclame
-// Se você já tem esse tipo exportado em @/lib/resumePdf, pode remover essa definição local
-// mas mantê-la aqui garante que o arquivo funcione sozinho.
+// Interface segura para o Front-end
 interface SafeResumeData {
   personal_info: {
     full_name: string;
@@ -82,7 +80,7 @@ export default function ResumeConverter() {
       setStep("reading");
       let rawText = "";
 
-      // 1. Extração de Texto
+      // 1. Extração de Texto (Client-side para economizar banda)
       if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
         rawText = await extractTextFromPDF(file);
       } else if (
@@ -101,7 +99,6 @@ export default function ResumeConverter() {
       }
 
       // 2. Validação de PDF Scaneado (Imagem)
-      // Se tiver menos de 50 caracteres, provavelmente é uma imagem salva como PDF.
       if (!rawText || rawText.trim().length < 50) {
         toast({
           title: "Could not read text",
@@ -116,23 +113,33 @@ export default function ResumeConverter() {
       setStep("translating");
 
       // 3. Chamada à Edge Function (IA)
+      // O supabase.functions.invoke gerencia o Bearer Token automaticamente
       const { data, error } = await supabase.functions.invoke("convert-resume", {
         body: { raw_text: rawText },
       });
 
+      // 3a. Tratamento de Erros de Rede/Supabase
       if (error) {
         console.error("Supabase Function Error:", error);
-        throw new Error("Failed to connect to AI service. Please try again.");
+        // Tenta extrair a mensagem de erro se disponível, senão usa mensagem padrão
+        const msg = error.message || "Failed to connect to AI service.";
+        throw new Error(msg);
       }
 
-      if (!data) {
-        throw new Error("Received empty response from AI.");
+      // 3b. Tratamento de Erros Lógicos da IA (Caso o backend retorne 200 mas com success: false)
+      if (!data || data.error) {
+        throw new Error(data?.error || "AI could not process the resume.");
+      }
+
+      // 3c. Validação da Estrutura
+      if (!data.personal_info && !data.experience) {
+        throw new Error("AI returned an invalid resume format.");
       }
 
       setStep("formatting");
 
       // 4. Sanitização e Proteção de Dados (CRUCIAL)
-      // Garante que arrays sejam arrays e strings sejam strings, evitando crash no render.
+      // Garante que arrays sejam arrays e strings sejam strings
       const safeData: SafeResumeData = {
         personal_info: {
           full_name: data.personal_info?.full_name || "",
@@ -147,7 +154,7 @@ export default function ResumeConverter() {
         languages: Array.isArray(data.languages) ? data.languages : [],
       };
 
-      // Pequeno delay artificial para UX (usuário ver que algo aconteceu)
+      // Pequeno delay artificial para UX
       await new Promise((r) => setTimeout(r, 600));
 
       setResume(safeData);
@@ -186,10 +193,17 @@ export default function ResumeConverter() {
   });
 
   const handleDownload = () => {
-    // Casting para ResumeData (assumindo compatibilidade com a lib de PDF)
-    const doc = generateResumePDF(resume as unknown as ResumeData);
-    const name = resume.personal_info.full_name?.replace(/\s+/g, "_") || "resume";
-    doc.save(`${name}_US_Resume.pdf`);
+    try {
+      const doc = generateResumePDF(resume as unknown as ResumeData);
+      const name = resume.personal_info.full_name?.replace(/\s+/g, "_") || "resume";
+      doc.save(`${name}_US_Resume.pdf`);
+    } catch (e) {
+      toast({
+        title: "Download Error",
+        description: "Could not generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateField = (path: string, value: any) => {
@@ -200,7 +214,7 @@ export default function ResumeConverter() {
 
       // Navegação segura para update profundo
       for (let i = 0; i < keys.length - 1; i++) {
-        if (!obj[keys[i]]) obj[keys[i]] = {}; // Cria objeto se não existir
+        if (!obj[keys[i]]) obj[keys[i]] = {};
         obj = obj[keys[i]];
       }
       obj[keys[keys.length - 1]] = value;
