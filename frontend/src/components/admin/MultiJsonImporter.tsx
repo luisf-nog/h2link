@@ -12,6 +12,7 @@ export function MultiJsonImporter() {
   const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
   const { toast } = useToast();
 
+  // --- Helpers de Formatação ---
   const parseMoney = (val: any) => {
     if (!val) return null;
     const num = parseFloat(String(val).replace(/[$,]/g, ""));
@@ -59,17 +60,14 @@ export function MultiJsonImporter() {
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
     const nested = item.clearanceOrder || {};
-
     const decisionDate =
       getVal(root, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]) ||
       getVal(nested, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]);
     if (decisionDate) return formatToISODate(decisionDate);
-
     const submissionDate =
       getVal(root, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]) ||
       getVal(nested, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]);
     if (submissionDate) return formatToISODate(submissionDate);
-
     if (jobId && jobId.startsWith("JO-")) {
       const match = jobId.match(/-(\d{2})(\d{3})-/);
       if (match) {
@@ -99,7 +97,7 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setProgress({ current: 0, total: 100, status: "A ler ficheiros..." });
+    setProgress({ current: 0, total: 100, status: "Lendo arquivos..." });
 
     try {
       const rawJobsMap = new Map<string, any>();
@@ -125,32 +123,28 @@ export function MultiJsonImporter() {
           try {
             json = JSON.parse(content);
           } catch (e) {
-            console.warn("JSON inválido:", filename, e);
             continue;
           }
 
           const list = toList(json);
           if (!list.length) continue;
 
-          let fileVisaType = "H-2A";
-          if (filename.toLowerCase().includes("h2b")) fileVisaType = "H-2B";
-          else if (filename.toLowerCase().includes("jo")) fileVisaType = "H-2A (Early Access)";
+          let visaType = "H-2A";
+          if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
+          else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            let title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
-            let company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "empName", "company"]);
-
-            // Fallback de Emergência
-            if (!title) {
-              title = fileVisaType.includes("H-2A")
-                ? "Agricultural Worker (Emergency Filing)"
-                : "General Labor (Emergency Filing)";
-            }
-            if (!company) {
-              company = "Confidential Employer";
-            }
+            const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
+            const company = getVal(flat, [
+              "empBusinessName",
+              "employerBusinessName",
+              "legalName",
+              "empName",
+              "company",
+            ]);
+            if (!title || !company) continue;
 
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
@@ -163,7 +157,7 @@ export function MultiJsonImporter() {
             const posted_date = determinePostedDate(item, finalJobId);
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL"]);
 
-            // --- RESTAURAÇÃO DE DADOS ---
+            // --- RECUPERAÇÃO DE DETALHES PERDIDOS ---
             const phone = getVal(flat, ["empPhone", "employer_phone", "PHONE", "emppocPhone", "recApplyPhone"]);
             const zipCode = getVal(flat, [
               "empPostalCode",
@@ -172,65 +166,51 @@ export function MultiJsonImporter() {
               "ZIP",
               "worksite_postal_code",
             ]);
-
-            // Categoria Dinâmica (Recuperada em vez de "General Labor")
             const category = getVal(flat, ["socTitle", "soc_title", "SOC_TITLE", "occTitle"]) || "General Labor";
 
-            // Extração de Experiência e Tratamento de Booleanos e "Y/N"
+            // Lógica de Experiência
             const reqs = flat.jobRequirements || flat.qualification || flat;
             const expReqRaw = getVal(reqs, ["experienceRequired", "experience_required"]);
             const experience_required =
-              expReqRaw === true ||
-              String(expReqRaw).toLowerCase() === "y" ||
-              String(expReqRaw).toLowerCase() === "yes" ||
-              String(expReqRaw).toLowerCase() === "true";
-
+              expReqRaw === true || ["y", "yes", "true", "t", "1"].includes(String(expReqRaw).toLowerCase().trim());
             const experience_months =
               parseInt(String(getVal(reqs, ["experienceMonths", "experience_months"]) || "0"), 10) || 0;
-            // ---------------------------
-
-            const openings =
-              parseInt(
-                String(
-                  getVal(flat, ["jobWrksNeeded", "jobWrksNeededH2a", "tempneedWkrPos", "totalWorkersNeeded"]) || "",
-                ),
-                10,
-              ) || null;
 
             const extractedJob = {
-              id: crypto.randomUUID(),
               job_id: finalJobId,
-              visa_type: fileVisaType,
+              visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
               job_title: title,
               company: company,
               email: email,
-              phone: phone, // Restaurado
+              phone: phone, // RESTAURADO
               posted_date: posted_date,
               salary: calculateFinalWage(item, flat),
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "STATE"]),
-              zip_code: zipCode, // Restaurado
+              zip_code: zipCode, // RESTAURADO
               start_date: start,
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
-              openings: openings,
-              category: category, // Agora dinâmico!
-              experience_required: experience_required, // Restaurado
-              experience_months: experience_months, // Restaurado
+              openings:
+                parseInt(
+                  String(
+                    getVal(flat, ["jobWrksNeeded", "jobWrksNeededH2a", "totalWorkersNeeded", "tempneedWkrPos"]) || "",
+                  ),
+                  10,
+                ) || null,
+              category: category, // RESTAURADO DINÂMICO
+              experience_required: experience_required, // RESTAURADO
+              experience_months: experience_months, // RESTAURADO
             };
 
-            // Agrupa pela "Digital" da vaga para remover duplicados
-            rawJobsMap.set(fingerprint, extractedJob);
+            rawJobsMap.set(finalJobId, extractedJob);
           }
         }
       }
 
-      // Filtro para garantir vagas válidas
-      const finalJobs = Array.from(rawJobsMap.values()).filter((j) => {
-        return j.id && j.email && j.email.length > 2;
-      });
+      const finalJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && j.email.length > 2);
 
       const BATCH_SIZE = 1000;
       let processed = 0;
@@ -240,23 +220,18 @@ export function MultiJsonImporter() {
         setProgress({
           current: processed,
           total: finalJobs.length,
-          status: `A gravar lote de ${batch.length} vagas no banco de dados...`,
+          status: `Enviando lote de ${batch.length} vagas...`,
         });
 
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
         if (error) throw error;
-
         processed += batch.length;
       }
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
-      toast({
-        title: "Importação Concluída com Sucesso",
-        description: `Foram processadas ${finalJobs.length} vagas sem duplicados.`,
-      });
+      toast({ title: "Importação Restaurada", description: `Dados completos enviados com sucesso.` });
     } catch (err: any) {
-      toast({ title: "Erro Fatal na Importação", description: err.message, variant: "destructive" });
-      console.error(err);
+      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -266,37 +241,22 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V39 (Full Details)
         </CardTitle>
-        <CardDescription>
-          Envio otimizado com eliminação de duplicados via Fingerprint e extração profunda de dados do DOL.
-        </CardDescription>
+        <CardDescription>Mapeamento profundo: Telefone, Experiência, ZIP e Datas protegidas.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP do Departamento de Trabalho (DOL)</p>
         </div>
         <div className="mt-4">
-          {progress.total > 0 && (
-            <div className="mb-2 text-sm font-medium text-slate-600 flex justify-between">
-              <span>{progress.status}</span>
-              <span>{Math.round((progress.current / progress.total) * 100)}%</span>
-            </div>
-          )}
-          <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
-            <div
-              className="bg-green-700 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
-            />
-          </div>
           <Button
             onClick={processJobs}
             disabled={processing || files.length === 0}
             className="w-full h-12 text-lg font-bold bg-green-700 hover:bg-green-800 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Processar Ficheiros
+            Sincronizar Dados Completos
           </Button>
         </div>
       </CardContent>
