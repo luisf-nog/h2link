@@ -1,82 +1,32 @@
 import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { PLANS_CONFIG } from "@/config/plans.config";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { JobDetailsDialog as BaseJobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
-import { JobImportDialog } from "@/components/jobs/JobImportDialog";
-import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
-import { MobileJobCard } from "@/components/jobs/MobileJobCard";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import { getJobShareUrl } from "@/lib/shareUtils";
+import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
 import {
-  Info,
-  Search,
-  Plus,
-  Check,
-  Lock,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Zap,
-  Clock,
-  Loader2,
-  Database,
-  ChevronsUpDown,
-  X,
-  Bot,
-  Landmark,
-  ShieldAlert,
-  Briefcase,
-  Rocket,
   Home,
   Mail,
   MapPin,
   Share2,
   AlertTriangle,
+  Briefcase,
+  Clock,
   DollarSign,
   ArrowRight,
   Phone,
+  Plus,
   Trash2,
   Globe,
   Users,
   MessageSquare,
   ArrowLeft,
   GraduationCap,
+  Info, // ÍCONE ADICIONADO AQUI!
 } from "lucide-react";
-import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
-import type { ReportReason } from "@/components/queue/ReportJobButton";
-import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from "@/lib/pricing";
-import { formatNumber } from "@/lib/number";
-import {
-  getVisaBadgeConfig,
-  VISA_TYPE_OPTIONS,
-  type VisaTypeFilter,
-  isEarlyAccess,
-  getEarlyAccessDisclaimer,
-} from "@/lib/visaTypes";
-import { getJobShareUrl } from "@/lib/shareUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -84,8 +34,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Omitindo a declaração original e usando type diretamente
-export type JobDetailsType = {
+export type JobDetails = {
   id: string;
   job_id: string;
   visa_type: "H-2B" | "H-2A" | string | null;
@@ -163,13 +112,13 @@ export function JobDetailsDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  job: JobDetailsType | null;
+  job: JobDetails | null;
   planSettings: PlanSettings;
   formatSalary: (salary: number | null) => string;
-  onAddToQueue: (job: JobDetailsType) => void;
-  onRemoveFromQueue?: (job: JobDetailsType) => void;
+  onAddToQueue: (job: JobDetails) => void;
+  onRemoveFromQueue?: (job: JobDetails) => void;
   isInQueue?: boolean;
-  onShare?: (job: JobDetailsType) => void;
+  onShare?: (job: JobDetails) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -234,6 +183,7 @@ export function JobDetailsDialog({
   const messageText = getMessage();
   const encodedMessage = encodeURIComponent(messageText);
 
+  // --- CONFIGURAÇÃO DO BANNER DO GOVERNO ---
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
@@ -267,7 +217,7 @@ export function JobDetailsDialog({
     };
   };
 
-  const group = (job as any)?.randomization_group;
+  const group = job?.randomization_group;
   const groupConfig = group ? getGroupBadgeConfig(group) : null;
 
   const Timeline = () => (
@@ -368,23 +318,20 @@ export function JobDetailsDialog({
               </div>
             </div>
 
-            {/* BANNER DE INTELIGÊNCIA DO GOVERNO (Sorteio DOL) - INSERIDO AQUI */}
+            {/* BANNER DE INTELIGÊNCIA DO GOVERNO (Sorteio DOL) */}
             {group && groupConfig && (
-              <div className={cn("mt-3 p-3 rounded-lg border bg-opacity-40", groupConfig.className)}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge
-                    variant="outline"
-                    className="bg-white/80 border-current font-bold uppercase tracking-wider text-[10px]"
-                  >
-                    {t("jobs.groups.group_label")} {group}
+              <div className={cn("mt-4 mb-2 p-4 rounded-xl border bg-opacity-40", groupConfig.className)}>
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge variant="outline" className="bg-white/80 border-current font-bold uppercase tracking-wider">
+                    {t("jobs.groups.group_label", "Grupo")} {group}
                   </Badge>
-                  <span className="font-semibold text-xs flex items-center gap-1">
-                    <Info className="h-3 w-3" />
+                  <span className="font-semibold text-sm flex items-center gap-1">
+                    <Info className="h-4 w-4" />
                     {groupConfig.shortDesc}
                   </span>
                 </div>
-                <p className="text-xs opacity-90 leading-relaxed">
-                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig.tooltip}
+                <p className="text-sm opacity-90 leading-relaxed">
+                  <strong>{t("jobs.groups.dol_draw", "Sorteio Oficial (DOL)")}:</strong> {groupConfig.tooltip}
                 </p>
               </div>
             )}
