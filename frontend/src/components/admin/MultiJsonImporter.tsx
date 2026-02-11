@@ -58,15 +58,6 @@ export function MultiJsonImporter() {
     return null;
   };
 
-  const toList = (json: any) => {
-    if (!json) return [];
-    if (Array.isArray(json)) return json;
-    if (Array.isArray(json.data)) return json.data;
-    if (json.caseNumber || json.jobOrderNumber) return [json];
-    const arr = Object.values(json).find((v) => Array.isArray(v));
-    return Array.isArray(arr) ? (arr as any[]) : [];
-  };
-
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
@@ -91,45 +82,39 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
-          const list = toList(json);
+          const list = Array.isArray(json) ? json : json.data || [];
 
           let visaType = "H-2A";
           if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
-            const root = item || {};
             const nested = item.clearanceOrder || {};
-            const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
+            // Fusão agressiva: prioridade para o que está fora, mas mantém o que está dentro
+            const flat = { ...nested, ...item };
+            const reqs = nested.jobRequirements || item.jobRequirements || item.qualification || {};
 
-            // Sub-objetos onde o H-2A/B esconde os dados chaves
-            const reqs = nested.jobRequirements || root.jobRequirements || root.qualification || {};
-
-            const title = getVal(flat, ["jobTitle", "job_title", "JOB_TITLE", "TITLE"]);
-            const company = getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]);
+            const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
+            const company = getVal(flat, [
+              "empBusinessName",
+              "employerBusinessName",
+              "legalName",
+              "empName",
+              "company",
+            ]);
             if (!title || !company) continue;
 
-            // Extração de Contatos (POC + Raiz)
-            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "EMAIL"]);
-            const phone = getVal(flat, ["empPhone", "employer_phone", "emppocPhone", "PHONE"]);
-
-            // Extração de Schedule
-            const shiftStart = getVal(flat, ["jobShiftStart", "shiftStart", "WORK_START_TIME"]);
-            const shiftEnd = getVal(flat, ["jobShiftEnd", "shiftEnd", "WORK_END_TIME"]);
-
-            // Extração de Requisitos e Deduções (Chave do H-2A/B)
-            const specialReqs =
-              getVal(reqs, ["jobMinSpecialReq", "specialRequirements", "SPEC_REQ_DESC"]) ||
-              getVal(flat, ["jobMinSpecialReq", "specialRequirements"]);
-
-            const deductions = getVal(flat, ["recPayDeductions", "payDeductions", "PAY_DEDUCTION_DESC"]);
+            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "email"]);
+            const phone = getVal(flat, ["empPhone", "employer_phone", "emppocPhone", "PHONE", "recApplyPhone"]);
 
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
-            const start = formatToISODate(getVal(flat, ["jobBeginDate", "job_begin_date", "START_DATE"]));
-            const fingerprint = `${fein}|${title.toUpperCase()}|${start}`;
+            const start = formatToISODate(
+              getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE"]),
+            );
+            const fingerprint = `${fein}|${String(title).toUpperCase()}|${start}`;
 
             const extractedJob = {
-              job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || fingerprint,
+              job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]) || fingerprint,
               visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
@@ -137,18 +122,30 @@ export function MultiJsonImporter() {
               company: company,
               email: email,
               phone: phone,
-              city: getVal(flat, ["jobCity", "job_city", "CITY"]),
-              state: getVal(flat, ["jobState", "job_state", "STATE"]),
-              salary: parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "AEWR"])),
+              city: getVal(flat, ["jobCity", "job_city", "worksite_city", "CITY"]),
+              state: getVal(flat, ["jobState", "job_state", "worksite_state", "STATE"]),
+              salary: parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "BASIC_WAGE_RATE", "AEWR", "BASIC_RATE"])),
               start_date: start,
-              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "END_DATE"])),
-              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "JOB_DUTIES"]),
-              job_min_special_req: specialReqs,
-              rec_pay_deductions: deductions,
-              shift_start: shiftStart,
-              shift_end: shiftEnd,
-              category: getVal(flat, ["socTitle", "soc_title", "SOC_TITLE"]) || "General Labor",
-              openings: parseInt(String(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded"]) || "0")) || null,
+              posted_date: determinePostedDate(item, fingerprint),
+              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
+
+              // Informações Chaves (Mapeamento Universal)
+              job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "JOB_DUTIES", "description"]),
+              job_min_special_req:
+                getVal(reqs, ["jobMinSpecialReq", "specialRequirements", "SPEC_REQ_DESC"]) ||
+                getVal(flat, ["specialRequirements"]),
+              rec_pay_deductions: getVal(flat, [
+                "recPayDeductions",
+                "payDeductions",
+                "PAY_DEDUCTION_DESC",
+                "pay_deductions",
+              ]),
+              shift_start: getVal(flat, ["jobShiftStart", "shiftStart", "WORK_START_TIME", "shift_start"]),
+              shift_end: getVal(flat, ["jobShiftEnd", "shiftEnd", "WORK_END_TIME", "shift_end"]),
+
+              category: getVal(flat, ["socTitle", "soc_title", "SOC_TITLE", "category"]) || "General Labor",
+              openings:
+                parseInt(String(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "openings"]) || "0"), 10) || null,
             };
 
             rawJobsMap.set(fingerprint, extractedJob);
@@ -165,7 +162,7 @@ export function MultiJsonImporter() {
         if (error) throw error;
       }
 
-      toast({ title: "Sincronização Finalizada", description: "Vagas processadas com mapeamento profundo." });
+      toast({ title: "Sincronização V41", description: "Dados restaurados e ampliados com sucesso." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -177,7 +174,7 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V40 (Produção)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V41 (Safe Mode)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -190,7 +187,7 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full bg-green-700 hover:bg-green-800"
+          className="w-full h-12 bg-green-700 hover:bg-green-800"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
           Sincronizar Produção
