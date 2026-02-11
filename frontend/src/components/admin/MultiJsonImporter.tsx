@@ -19,8 +19,6 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
-  const parseBool = (val: any) => ["1", "true", "yes", "y", "t"].includes(String(val).toLowerCase().trim());
-
   const formatToISODate = (dateStr: any) => {
     if (!dateStr || dateStr === "N/A") return null;
     try {
@@ -60,7 +58,7 @@ export function MultiJsonImporter() {
     // Caso: o JSON é uma vaga única
     if (json.caseNumber || json.jobOrderNumber || json.CASE_NUMBER || json.JO_ORDER_NUMBER) return [json];
 
-    // Fallback: pega o primeiro array dentro do objeto (caso o governo mude wrapper)
+    // Fallback: pega o primeiro array dentro do objeto
     const arr = Object.values(json).find((v) => Array.isArray(v));
     return Array.isArray(arr) ? (arr as any[]) : [];
   };
@@ -151,7 +149,6 @@ export function MultiJsonImporter() {
           for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // --- CORREÇÃO: Campos Básicos com Fallback para Vagas de Emergência ---
             let title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
             let company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "empName", "company"]);
 
@@ -178,7 +175,6 @@ export function MultiJsonImporter() {
             const posted_date = determinePostedDate(item, finalJobId);
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL"]);
 
-            // Garantir extração de vagas abertas
             const openings =
               parseInt(
                 String(
@@ -187,9 +183,9 @@ export function MultiJsonImporter() {
                 10,
               ) || null;
 
-            // --- CORREÇÃO DO CONSULTOR: Adicionado a chave 'id' ---
+            // --- A MÁGICA ACONTECE AQUI ---
             const extractedJob = {
-              id: finalJobId, // <-- OBRIGATÓRIO PARA A TABELA TEMPORÁRIA (Staging)
+              id: crypto.randomUUID(), // <-- AGORA É UM UUID VERDADEIRO! O PostgreSQL vai aceitar o INSERT.
               job_id: finalJobId,
               visa_type: fileVisaType,
               fingerprint: fingerprint,
@@ -213,7 +209,7 @@ export function MultiJsonImporter() {
         }
       }
 
-      // --- CORREÇÃO DO CONSULTOR: Filtro garantindo que 'id' exista e não seja vazio ---
+      // Filtro garantindo que 'id' e 'email' existam
       const finalJobs = Array.from(rawJobsMap.values()).filter((j) => {
         return j.id && String(j.id).trim().length > 0 && j.email && j.email.length > 2;
       });
@@ -239,7 +235,7 @@ export function MultiJsonImporter() {
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
         title: "Importação Concluída",
-        description: `Sucesso! ${finalJobs.length} vagas importadas com a nova lógica à prova de falhas.`,
+        description: `Sucesso! ${finalJobs.length} vagas validadas e enviadas ao banco.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal na Importação", description: err.message, variant: "destructive" });
@@ -255,7 +251,7 @@ export function MultiJsonImporter() {
         <CardTitle className="flex items-center gap-2 text-slate-800">
           <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
         </CardTitle>
-        <CardDescription>Extração avançada H-2A/H-2B com fallback de emergência e correção de ID.</CardDescription>
+        <CardDescription>Extração avançada com correção de UUID para banco de dados.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
