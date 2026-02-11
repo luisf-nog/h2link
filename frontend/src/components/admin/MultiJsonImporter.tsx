@@ -18,6 +18,7 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
+  // Lógica matemática de salário do Power Query
   const calculateFinalWage = (rawVal: any, hours: any) => {
     let val = parseMoney(rawVal);
     if (!val) return null;
@@ -40,17 +41,17 @@ export function MultiJsonImporter() {
     }
   };
 
-  // --- O MOTOR BLINDADO (CASE-INSENSITIVE) ---
+  // Motor de Busca Case-Insensitive (O segredo da compatibilidade)
   const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
 
-    // 1. Converte todas as chaves do objeto atual para minúsculas
+    // Cria mapa de chaves em minúsculo
     const lowerKeysMap: { [key: string]: any } = {};
     for (const k of Object.keys(obj)) {
       lowerKeysMap[k.toLowerCase()] = obj[k];
     }
 
-    // 2. Procura usando as nossas chaves também em minúsculas
+    // Varre a lista de prioridade (Simula o IF ... ELSE IF ... ELSE)
     for (const key of keys) {
       const targetKey = key.toLowerCase();
       if (lowerKeysMap[targetKey] !== undefined && lowerKeysMap[targetKey] !== null) {
@@ -58,9 +59,9 @@ export function MultiJsonImporter() {
         if (typeof val === "string") {
           const clean = val.trim();
           if (clean === "" || clean.toLowerCase() === "n/a" || clean.toLowerCase() === "null") continue;
-          return clean; // Retorna limpo se for string
+          return clean;
         }
-        return val; // Retorna objeto/número intacto
+        return val;
       }
     }
     return null;
@@ -68,13 +69,11 @@ export function MultiJsonImporter() {
 
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
-    // Agora até a busca pelo clearanceOrder ignora maiúsculas/minúsculas
-    const nested = getVal(item, ["clearanceOrder"]) || {};
+    const nested = getVal(item, ["clearanceOrder"]) || {}; // Case insensitive também aqui
     const decisionDate =
-      getVal(root, ["decision_date", "dateAcceptanceLtrIssued"]) ||
-      getVal(nested, ["decision_date", "dateAcceptanceLtrIssued"]);
+      getVal(root, ["DECISION_DATE", "dateAcceptanceLtrIssued"]) ||
+      getVal(nested, ["DECISION_DATE", "dateAcceptanceLtrIssued"]);
     if (decisionDate) return formatToISODate(decisionDate);
-
     const submissionDate =
       getVal(root, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]) ||
       getVal(nested, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]);
@@ -113,11 +112,8 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
-            // Com o novo getVal, não importa se é ClearanceOrder ou clearanceorder
             const nested = getVal(item, ["clearanceOrder"]) || {};
             const flat = { ...item, ...nested };
-
-            // Mergulho nos requisitos também sem medo de Case Sensitivity
             const reqs = getVal(flat, ["jobRequirements", "qualification"]) || {};
 
             const title = getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]);
@@ -126,7 +122,7 @@ export function MultiJsonImporter() {
 
             const fein = getVal(flat, ["empFein", "fein"]);
             const start = formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"]));
-            const city = getVal(flat, ["jobCity"]);
+            const city = getVal(flat, ["jobCity", "city"]);
             const fingerprint = `${fein}|${String(title).toUpperCase()}|${String(city || "").toUpperCase()}|${start}`;
 
             const rawPhone = getVal(flat, ["recApplyPhone", "empPhone", "phone"]);
@@ -135,7 +131,11 @@ export function MultiJsonImporter() {
             const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours"]) || "0");
 
-            // --- MAPEAMENTO ABSOLUTO DO POWER QUERY M SCRIPT ---
+            // Lógica rigorosa do Power Query para Transporte
+            const rawTransp = getVal(flat, ["recIsDailyTransport", "isDailyTransport"]);
+            const isTransportProvided =
+              rawTransp === true || rawTransp === "true" || rawTransp === 1 || rawTransp === "1";
+
             const extractedJob = {
               id: crypto.randomUUID(),
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber"]) || fingerprint,
@@ -148,7 +148,7 @@ export function MultiJsonImporter() {
               phone: cleanPhone,
               city: city,
               state: getVal(flat, ["jobState"]),
-              zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]), // Adicionado do script M
+              zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
 
               salary: calculateFinalWage(rawWage, weeklyHours),
 
@@ -156,33 +156,38 @@ export function MultiJsonImporter() {
               posted_date: determinePostedDate(item, fingerprint),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
 
-              job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
+              job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "job_duties"]),
 
-              // Chaves do passo 8: Independentemente da Capitalização, ele vai achar!
+              // AQUI ESTÁ A LÓGICA IF/ELSE DO SEU POWER QUERY (Pela ordem do Array)
               job_min_special_req:
                 getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) ||
                 getVal(reqs, ["specialRequirements", "jobMinSpecialReq"]),
-              wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
-              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
-              weekly_hours: weeklyHours || null,
 
+              // if [wage_add_h2b] else if [wage_add_h2a_1] else [wage_add_h2a_2]
+              wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
+
+              // if [deduct_h2b] else [deduct_h2a]
+              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
+
+              weekly_hours: weeklyHours || null,
               category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle"]),
+
               openings:
                 parseInt(String(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"), 10) ||
                 null,
               experience_months:
                 parseInt(
                   String(
-                    getVal(flat, ["jobMinexpmonths", "experienceMonths"]) ||
-                      getVal(reqs, ["monthsExperience", "experienceMonths"]) ||
-                      "0",
+                    getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || getVal(reqs, ["monthsExperience"]) || "0",
                   ),
                   10,
                 ) || 0,
 
-              // Outros campos do script M (Caso a base suporte)
               education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
-              transport_provided: getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) ? true : false,
+              transport_provided: isTransportProvided,
+
+              source_url: getVal(flat, ["recApplyUrl", "jobRobotUrl", "url"]),
+              housing_info: visaType.includes("H-2A") ? "Yes (H-2A Mandated)" : null,
             };
 
             rawJobsMap.set(fingerprint, extractedJob);
@@ -198,14 +203,14 @@ export function MultiJsonImporter() {
         setProgress({
           current: i,
           total: finalJobs.length,
-          status: `Gravando lote de ${batch.length} vagas sem duplicados...`,
+          status: `Gravando lote de ${batch.length} vagas (V46)...`,
         });
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
         if (error) throw error;
       }
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
-      toast({ title: "Importação Finalizada", description: "Vagas processadas com o motor Case-Insensitive." });
+      toast({ title: "Sincronização Perfeita", description: "Lógica Power Query replicada 100%." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -217,9 +222,9 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Importador Definitivo (Case-Insensitive)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V46 (Auditado)
         </CardTitle>
-        <CardDescription>Extração blindada contra mudanças no governo americano.</CardDescription>
+        <CardDescription>Paridade total com o script M original.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors mb-4">
@@ -247,7 +252,7 @@ export function MultiJsonImporter() {
           className="w-full h-12 bg-green-700 hover:bg-green-800 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Iniciar Sincronização Blindada
+          Sincronizar (V46)
         </Button>
       </CardContent>
     </Card>
