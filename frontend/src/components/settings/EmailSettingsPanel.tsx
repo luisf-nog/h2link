@@ -8,11 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Save } from "lucide-react";
+import { Loader2, Mail, Save, AlertTriangle, ExternalLink, Wifi, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding";
-import { WarmupStatusWidget } from "@/components/dashboard/WarmupStatusWidget";
 import { getPlanLimit } from "@/config/plans.config";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
 
@@ -33,14 +32,15 @@ export function EmailSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   const [provider, setProvider] = useState<Provider>("gmail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
-  const [currentDailyLimit, setCurrentDailyLimit] = useState<number | null>(null);
-  const [emailsSentToday, setEmailsSentToday] = useState(0);
+
+  // Limpeza: Removidas variáveis de warmup que não vamos exibir
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -74,7 +74,7 @@ export function EmailSettingsPanel() {
       setLoading(true);
       const { data, error } = await supabase
         .from("smtp_credentials")
-        .select("provider,email,has_password,risk_profile,current_daily_limit,emails_sent_today")
+        .select("provider,email,has_password,risk_profile")
         .eq("user_id", user!.id)
         .maybeSingle();
 
@@ -87,8 +87,6 @@ export function EmailSettingsPanel() {
         setEmail(data.email ?? "");
         setHasPassword(Boolean(data.has_password));
         setRiskProfile((data as any).risk_profile ?? null);
-        setCurrentDailyLimit((data as any).current_daily_limit ?? null);
-        setEmailsSentToday((data as any).emails_sent_today ?? 0);
       }
       setLoading(false);
     };
@@ -101,33 +99,16 @@ export function EmailSettingsPanel() {
 
   useEffect(() => {
     if (!canLoad) return;
-
-    let cancelled = false;
     const run = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("email_templates")
         .select("id,name,subject,body")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
-
-      if (cancelled) return;
-
-      if (error) {
-        toast({
-          title: t("smtp.toasts.load_templates_error_title"),
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        setTemplates((data as EmailTemplate[]) ?? []);
-      }
+      if (data) setTemplates((data as EmailTemplate[]) ?? []);
     };
-
     run();
-    return () => {
-      cancelled = true;
-    };
-  }, [canLoad, toast, user]);
+  }, [canLoad, user]);
 
   useEffect(() => {
     if (selectedTemplateId === "none") return;
@@ -137,6 +118,29 @@ export function EmailSettingsPanel() {
     setBody(t.body);
   }, [selectedTemplateId, templates]);
 
+  // --- TRAVA DE SENHA DO GOOGLE ---
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+
+    // Se for Gmail, aplicamos a máscara
+    if (provider === "gmail") {
+      // Remove tudo que não for letra (App Passwords são só letras)
+      const clean = val.replace(/[^a-zA-Z]/g, "").toLowerCase();
+
+      // Formata em blocos de 4 para ficar igual ao que o Google mostra
+      // Ex: wxyz abcd efgh ijkl
+      let formatted = "";
+      for (let i = 0; i < clean.length && i < 16; i++) {
+        if (i > 0 && i % 4 === 0) formatted += " ";
+        formatted += clean[i];
+      }
+      setPassword(formatted);
+    } else {
+      // Outlook ou outros aceitam caracteres normais
+      setPassword(val);
+    }
+  };
+
   const handleSave = async () => {
     if (!user?.id) return;
     if (!email) {
@@ -144,17 +148,25 @@ export function EmailSettingsPanel() {
       return;
     }
 
+    // Validação extra antes de salvar
+    const cleanPass = password.replace(/\s/g, "");
+    if (provider === "gmail" && password && cleanPass.length !== 16) {
+      toast({
+        title: "Senha inválida",
+        description: "A Senha de App do Google deve ter exatamente 16 letras.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      // CORREÇÃO: Usar supabase.functions.invoke em vez de fetch manual
       const { data: payload, error: funcError } = await supabase.functions.invoke("save-smtp-credentials", {
-        body: { provider, email, password: password.trim() || undefined },
+        body: { provider, email, password: cleanPass || undefined },
       });
 
       if (funcError) throw funcError;
-      if (payload?.success === false) {
-        throw new Error(payload?.error || "Erro ao salvar credenciais");
-      }
+      if (payload?.success === false) throw new Error(payload?.error || "Erro ao salvar credenciais");
 
       if (password.trim().length > 0) {
         setHasPassword(true);
@@ -170,26 +182,66 @@ export function EmailSettingsPanel() {
     }
   };
 
+  // --- NOVA FUNÇÃO: TESTAR CONEXÃO ---
+  const handleTestConnection = async () => {
+    if (!email) {
+      toast({ title: "Preencha o email antes de testar", variant: "destructive" });
+      return;
+    }
+
+    // Se o usuário digitou uma senha nova, usamos ela. Se não, tentamos usar a salva (backend decide).
+    // Nota: Como não enviamos a senha salva para o front, se o campo estiver vazio,
+    // o backend precisa tentar usar a credencial salva.
+    const passToSend = password.replace(/\s/g, "");
+
+    setTestingConnection(true);
+    try {
+      const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
+        body: {
+          to: email, // Manda para o próprio usuário
+          subject: "✅ Teste de Conexão SMTP - JobFy",
+          body: "Se você recebeu este email, sua configuração SMTP está perfeita! O robô consegue enviar emails usando sua conta.",
+          provider,
+          // Passamos a senha explicitamente se o usuário digitou, para testar ANTES de salvar
+          overridePassword: passToSend || undefined,
+        },
+      });
+
+      if (funcError) throw funcError;
+      if (payload?.success === false) throw new Error(payload?.error || "Falha na conexão");
+
+      toast({
+        title: "Conexão Estabelecida!",
+        description: "Email de teste enviado para você com sucesso.",
+        className: "bg-green-600 text-white border-none",
+      });
+    } catch (e: any) {
+      const parsed = parseSmtpError(e.message || "Erro desconhecido");
+      toast({
+        title: "Falha na conexão",
+        description: parsed.descriptionKey ? t(parsed.descriptionKey) : e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const handleSaveRiskProfile = async (selectedProfile: RiskProfile) => {
     if (!user?.id) return;
     setSavingProfile(true);
     try {
-      // CORREÇÃO: Usar supabase.functions.invoke em vez de fetch manual
       const { data: payload, error: funcError } = await supabase.functions.invoke("save-smtp-credentials", {
         body: { provider, email, risk_profile: selectedProfile },
       });
 
       if (funcError) throw funcError;
-      if (payload?.success === false) throw new Error(payload?.error || "Erro ao salvar perfil de risco");
+      if (payload?.success === false) throw new Error(payload?.error || "Erro ao salvar perfil");
 
       setRiskProfile(selectedProfile);
-      const startLimits: Record<RiskProfile, number> = { conservative: 20, standard: 50, aggressive: 100 };
-      setCurrentDailyLimit(startLimits[selectedProfile]);
-      setEmailsSentToday(0);
       toast({ title: t("warmup.toasts.profile_saved") });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("common.errors.save_failed");
-      toast({ title: t("warmup.toasts.profile_error"), description: message, variant: "destructive" });
+      toast({ title: t("warmup.toasts.profile_error"), variant: "destructive" });
     } finally {
       setSavingProfile(false);
     }
@@ -202,22 +254,13 @@ export function EmailSettingsPanel() {
       return;
     }
 
-    if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
-      toast({
-        title: t("smtp.toasts.profile_incomplete_title"),
-        description: t("smtp.toasts.profile_incomplete_desc"),
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSending(true);
     try {
       const vars: Record<string, string> = {
-        name: profile.full_name ?? "",
-        age: String(profile.age ?? ""),
-        phone: profile.phone_e164 ?? "",
-        contact_email: profile.contact_email ?? "",
+        name: profile?.full_name ?? "",
+        age: String(profile?.age ?? ""),
+        phone: profile?.phone_e164 ?? "",
+        contact_email: profile?.contact_email ?? "",
         company: testCompany.trim(),
         position: testPosition.trim(),
         visa_type: testVisaType,
@@ -226,25 +269,22 @@ export function EmailSettingsPanel() {
       const finalSubject = applyTemplate(subject, vars);
       const finalBody = applyTemplate(body, vars);
 
-      // CORREÇÃO: Usar supabase.functions.invoke em vez de fetch manual
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
         body: { to, subject: finalSubject, body: finalBody, provider },
       });
 
       if (funcError) throw funcError;
-      if (payload?.success === false) {
-        throw new Error(payload?.error || "Erro ao enviar email de teste");
-      }
+      if (payload?.success === false) throw new Error(payload?.error || "Erro ao enviar");
 
       toast({ title: t("smtp.toasts.test_sent") });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("common.errors.send_failed");
       const parsed = parseSmtpError(message);
-      toast({ 
-        title: t(parsed.titleKey), 
-        description: t(parsed.descriptionKey) + (parsed.category === 'unknown' ? `\n\n${message}` : ''), 
+      toast({
+        title: t(parsed.titleKey),
+        description: t(parsed.descriptionKey),
         variant: "destructive",
-        duration: 12000,
+        duration: 8000,
       });
     } finally {
       setSending(false);
@@ -253,30 +293,74 @@ export function EmailSettingsPanel() {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t("common.loading")}
-        </div>
+      <div className="min-h-[20vh] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   const planTier = profile?.plan_tier || "free";
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const planMax = getPlanLimit(planTier, "daily_emails");
-  // No referral bonus for paid tiers (this panel is for paid users only)
-
-  // Show onboarding if SMTP is configured but no risk profile set (and not free tier)
   const needsWarmupOnboarding = hasPassword && !riskProfile && planTier !== "free";
 
   return (
     <div className="space-y-6">
-      {/* Warmup Status Widget - show if risk profile is set */}
-      {riskProfile && planTier !== "free" && <WarmupStatusWidget />}
+      {/* 1. Tutorial Card - O primeiro item visível */}
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-500 text-lg">
+            <AlertTriangle className="h-5 w-5" />
+            Atenção: Não use sua senha normal
+          </CardTitle>
+          <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
+            Para conectar seu Gmail, é obrigatório usar uma <strong>Senha de App (16 letras)</strong>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-1 max-w-[400px]">
+              <div className="rounded-lg overflow-hidden border shadow-sm aspect-video bg-black">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
+                  title="Tutorial Senha de App Google"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+            <div className="flex-1 space-y-3 text-sm flex flex-col justify-center">
+              <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>
+                  Acesse sua conta Google e ative a <strong>Verificação em duas etapas</strong>.
+                </li>
+                <li>
+                  Na busca da conta, digite <strong>"Senhas de App"</strong>.
+                </li>
+                <li>Crie uma nova senha com o nome "JobFy".</li>
+                <li>O Google vai gerar um código de 16 letras. Copie ele.</li>
+              </ol>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto mt-2 gap-2 border-amber-300 hover:bg-amber-100 dark:border-amber-800 text-amber-900 dark:text-amber-100"
+                asChild
+              >
+                <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
+                  Gerar Senha Agora <ExternalLink className="w-3 h-3" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Warmup Onboarding - show if SMTP configured but no profile */}
+      {/* 2. Onboarding Condicional (Se precisar configurar perfil de risco) */}
       {needsWarmupOnboarding && <EmailWarmupOnboarding onSelect={handleSaveRiskProfile} loading={savingProfile} />}
+
+      {/* 3. Card de Configuração SMTP */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -286,104 +370,124 @@ export function EmailSettingsPanel() {
           <CardDescription>{t("smtp.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t("smtp.fields.provider")}</Label>
-            <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("common.select")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gmail">Gmail</SelectItem>
-                <SelectItem value="outlook">Outlook</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{t("smtp.fields.provider")}</Label>
+              <Select
+                value={provider}
+                onValueChange={(v) => {
+                  setProvider(v as Provider);
+                  setPassword(""); // Limpa senha ao trocar provider para evitar confusão
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("common.select")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gmail">Gmail (Recomendado)</SelectItem>
+                  <SelectItem value="outlook">Outlook</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("smtp.fields.email")}</Label>
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("smtp.placeholders.email")}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>{t("smtp.fields.email")}</Label>
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("smtp.placeholders.email")}
-            />
-          </div>
+            <div className="flex justify-between items-center">
+              <Label>{t("smtp.fields.password")}</Label>
+              {provider === "gmail" && (
+                <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                  Use a Senha de App
+                </span>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label>{t("smtp.fields.password")}</Label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={hasPassword ? t("smtp.placeholders.password_saved") : t("smtp.placeholders.password")}
-            />
-            <p className="text-xs text-muted-foreground">
-              {hasPassword ? t("smtp.password_note.saved") : t("smtp.password_note.empty")}
+            <div className="relative">
+              <Input
+                type="text"
+                value={password}
+                onChange={handlePasswordChange}
+                placeholder={hasPassword ? "•••• •••• •••• •••• (Salvo)" : "xxxx xxxx xxxx xxxx"}
+                className={provider === "gmail" ? "font-mono tracking-wide" : ""}
+                maxLength={provider === "gmail" ? 19 : 100} // 16 chars + 3 spaces
+                autoComplete="off"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground flex justify-between">
+              <span>
+                {hasPassword
+                  ? t("smtp.password_note.saved")
+                  : provider === "gmail"
+                    ? "Digite apenas as 16 letras geradas pelo Google."
+                    : t("smtp.password_note.empty")}
+              </span>
+              {provider === "gmail" && (
+                <span
+                  className={`${password.replace(/\s/g, "").length === 16 ? "text-green-600 font-medium" : "text-muted-foreground"}`}
+                >
+                  {password.replace(/\s/g, "").length}/16
+                </span>
+              )}
             </p>
 
-            <Accordion type="single" collapsible className="pt-2">
-              <AccordionItem value="help">
-                <AccordionTrigger className="text-sm">{t("smtp.help.title")}</AccordionTrigger>
+            <Accordion type="single" collapsible className="pt-2 border-none">
+              <AccordionItem value="help" className="border-none">
+                <AccordionTrigger className="text-sm py-2 text-muted-foreground hover:no-underline hover:text-foreground">
+                  Precisa de ajuda com Outlook ou erros?
+                </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 text-sm text-muted-foreground">
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">{t("smtp.help.intro_title")}</p>
-                      <p>{t("smtp.help.intro_body")}</p>
-                      <p>{t("smtp.help.security_body")}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">{t("smtp.help.gmail_title")}</p>
-                      <p className="text-xs">{t("smtp.help.gmail_warning")}</p>
-                      <ol className="list-decimal pl-5 space-y-1">
-                        {String(t("smtp.help.gmail_steps"))
-                          .split("\n")
-                          .map((line, idx) => (
-                            <li key={idx}>{line}</li>
-                          ))}
-                      </ol>
-                      <p className="text-xs">{t("smtp.help.gmail_tip")}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">{t("smtp.help.outlook_title")}</p>
-                      <ol className="list-decimal pl-5 space-y-1">
-                        {String(t("smtp.help.outlook_steps"))
-                          .split("\n")
-                          .map((line, idx) => (
-                            <li key={idx}>{line}</li>
-                          ))}
-                      </ol>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">{t("smtp.help.faq_title")}</p>
-                      <p>
-                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_safe")}</span>{" "}
-                        {t("smtp.help.faq_a_safe")}
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">{t("smtp.help.faq_q_where")}</span>{" "}
-                        {t("smtp.help.faq_a_where")}
-                      </p>
-                    </div>
+                  <div className="space-y-4 text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
+                    <p>
+                      Para Outlook, use sua senha normal. Se falhar, verifique se o SMTP está ativado na sua conta
+                      Microsoft.
+                    </p>
+                    <p>
+                      Erros comuns: <strong>Invalid Credentials</strong> (Senha errada ou 2FA ativo sem senha de app),{" "}
+                      <strong>Username and Password not accepted</strong> (Conta bloqueada por segurança).
+                    </p>
                   </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           </div>
 
-          <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <Save className="mr-2 h-4 w-4" />
-            {t("common.save")}
-          </Button>
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving} className="flex-1">
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Save className="mr-2 h-4 w-4" />
+              {t("common.save")}
+            </Button>
+
+            <Button
+              onClick={handleTestConnection}
+              disabled={testingConnection || (!hasPassword && !password)}
+              variant="outline"
+              className="flex-1 border-blue-200 hover:bg-blue-50 text-blue-700"
+            >
+              {testingConnection ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Wifi className="mr-2 h-4 w-4" />
+              )}
+              Testar Conexão
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
+      {/* 4. Card de Envio de Teste (Completo) - Mantido para testes avançados */}
       <Card>
         <CardHeader>
           <CardTitle>{t("smtp.test.title")}</CardTitle>
-          <CardDescription>{t("smtp.test.subtitle")}</CardDescription>
+          <CardDescription>Envie um email simulando uma aplicação real para validar templates.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -401,7 +505,6 @@ export function EmailSettingsPanel() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{t("smtp.test.template_hint")}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
