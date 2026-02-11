@@ -20,10 +20,11 @@ export interface WarmupStatus {
   refetch: () => Promise<void>;
 }
 
+// AJUSTE: Novos limites iniciais mais agressivos
 const PROFILE_START_LIMITS: Record<RiskProfile, number> = {
-  conservative: 20,
-  standard: 50,
-  aggressive: 100,
+  conservative: 50, // Gold: Começa com 1/3 do plano
+  standard: 100, // Diamond: Começa com ~30% do plano
+  aggressive: 150, // Black: Começa com 1/3 do plano (ou o total do Gold)
 };
 
 export function useWarmupStatus(): WarmupStatus {
@@ -39,12 +40,11 @@ export function useWarmupStatus(): WarmupStatus {
   } | null>(null);
 
   const planTier = profile?.plan_tier || "free";
-  // Warmup is only for paid tiers, no referral bonus applies
   const planMax = getPlanLimit(planTier, "daily_emails");
 
   const fetchStatus = async () => {
     if (!user?.id) return;
-    
+
     setLoading(true);
     setError(null);
 
@@ -66,28 +66,33 @@ export function useWarmupStatus(): WarmupStatus {
 
   useEffect(() => {
     fetchStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Calculate effective values
   const riskProfile = smtpData?.risk_profile ?? null;
-  
-  // Current daily limit (from DB or start limit based on profile)
+
   let currentDailyLimit: number;
+
   if (planTier === "free") {
     currentDailyLimit = 5;
   } else if (smtpData?.current_daily_limit != null) {
+    // Se já existe no banco (processado pelo motor SQL), usamos o valor do banco
     currentDailyLimit = smtpData.current_daily_limit;
   } else if (riskProfile) {
+    // Se acabou de escolher o perfil mas o motor SQL ainda não rodou
     currentDailyLimit = PROFILE_START_LIMITS[riskProfile];
   } else {
-    currentDailyLimit = 20; // Default conservative start
+    // Fallback inicial para novos usuários Gold
+    currentDailyLimit = 50;
   }
 
-  // Cap at plan max (no referral bonus for paid tiers)
+  // A MÁGICA: O limite efetivo nunca ultrapassa o que ele pagou (planMax)
+  // Mas se ele for Gold (150) e escolher Agressivo (Início 150),
+  // o effectiveLimit já será 150 no primeiro dia!
   const effectiveLimit = Math.min(currentDailyLimit, planMax);
-  
+
   const emailsSentToday = smtpData?.emails_sent_today ?? 0;
+
+  // Consideramos "Velocidade Máxima" se o limite atual atingiu ou passou o plano
   const isMaxSpeed = currentDailyLimit >= planMax;
   const isWarmingUp = !isMaxSpeed && planTier !== "free";
 
