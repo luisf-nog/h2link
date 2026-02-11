@@ -18,20 +18,31 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
-  // Lógica matemática de salário do Power Query
+  // --- CÁLCULO DE SALÁRIO V48 (CORREÇÃO DE VALORES MENSAIS/TOTAL) ---
   const calculateFinalWage = (rawVal: any, hours: any) => {
     let val = parseMoney(rawVal);
     if (!val) return null;
+
+    // Se o valor for até 100, já é o valor por hora (AEWR padrão)
     if (val <= 100) return val;
-    if (hours && hours > 0) {
-      let calc = val / (hours * 4.333);
-      if (calc >= 7.25 && calc <= 80) return parseFloat(calc.toFixed(2));
+
+    // Se for acima de 100 (ex: 3711.36), é salário mensal ou por período.
+    // Usamos as horas do JSON ou o padrão de 40h/semana se vier zerado.
+    const h = hours && hours > 0 ? hours : 40;
+
+    // Lógica Power Query: Valor / (Horas Semanais * 4.333 semanas/mês)
+    let calc = val / (h * 4.333);
+
+    // Filtro de sanidade: o resultado deve estar entre o mínimo e um teto razoável
+    if (calc >= 7.25 && calc <= 95) {
+      return parseFloat(calc.toFixed(2));
     }
+
     return null;
   };
 
   const formatToISODate = (dateStr: any) => {
-    if (!dateStr || dateStr === "N/A" || !dateStr) return null;
+    if (!dateStr || dateStr === "N/A") return null;
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
@@ -41,17 +52,18 @@ export function MultiJsonImporter() {
     }
   };
 
-  // Motor de Busca Case-Insensitive (O segredo da compatibilidade)
+  // --- LIMPEZA DE GHOST IDs ---
+  const cleanJobId = (id: string | null) => {
+    if (!id) return id;
+    return id.split("-GHOST-")[0].trim();
+  };
+
   const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
-
-    // Cria mapa de chaves em minúsculo
     const lowerKeysMap: { [key: string]: any } = {};
     for (const k of Object.keys(obj)) {
       lowerKeysMap[k.toLowerCase()] = obj[k];
     }
-
-    // Varre a lista de prioridade (Simula o IF ... ELSE IF ... ELSE)
     for (const key of keys) {
       const targetKey = key.toLowerCase();
       if (lowerKeysMap[targetKey] !== undefined && lowerKeysMap[targetKey] !== null) {
@@ -69,7 +81,7 @@ export function MultiJsonImporter() {
 
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
-    const nested = getVal(item, ["clearanceOrder"]) || {}; // Case insensitive também aqui
+    const nested = getVal(item, ["clearanceOrder"]) || {};
     const decisionDate =
       getVal(root, ["DECISION_DATE", "dateAcceptanceLtrIssued"]) ||
       getVal(nested, ["DECISION_DATE", "dateAcceptanceLtrIssued"]);
@@ -125,20 +137,25 @@ export function MultiJsonImporter() {
             const city = getVal(flat, ["jobCity", "city"]);
             const fingerprint = `${fein}|${String(title).toUpperCase()}|${String(city || "").toUpperCase()}|${start}`;
 
+            // Lógica de Limpeza de ID e Transição V48
+            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || fingerprint;
+            const jobId = cleanJobId(rawJobId);
+            const transitioned = visaType === "H-2A" && (rawJobId.includes("GHOST") || rawJobId.includes("JO-A"));
+
             const rawPhone = getVal(flat, ["recApplyPhone", "empPhone", "phone"]);
             const cleanPhone = rawPhone ? String(rawPhone).replace(/[\t\s]/g, "") : null;
 
+            // Variáveis para o cálculo do salário
             const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
-            const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours"]) || "0");
+            const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
 
-            // Lógica rigorosa do Power Query para Transporte
             const rawTransp = getVal(flat, ["recIsDailyTransport", "isDailyTransport"]);
             const isTransportProvided =
               rawTransp === true || rawTransp === "true" || rawTransp === 1 || rawTransp === "1";
 
             const extractedJob = {
               id: crypto.randomUUID(),
-              job_id: getVal(flat, ["caseNumber", "jobOrderNumber"]) || fingerprint,
+              job_id: jobId,
               visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
@@ -150,28 +167,19 @@ export function MultiJsonImporter() {
               state: getVal(flat, ["jobState"]),
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
 
+              // SALÁRIO CORRIGIDO V48
               salary: calculateFinalWage(rawWage, weeklyHours),
 
               start_date: start,
               posted_date: determinePostedDate(item, fingerprint),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
-
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "job_duties"]),
-
-              // AQUI ESTÁ A LÓGICA IF/ELSE DO SEU POWER QUERY (Pela ordem do Array)
               job_min_special_req:
-                getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) ||
-                getVal(reqs, ["specialRequirements", "jobMinSpecialReq"]),
-
-              // if [wage_add_h2b] else if [wage_add_h2a_1] else [wage_add_h2a_2]
+                getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) || getVal(reqs, ["specialRequirements"]),
               wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
-
-              // if [deduct_h2b] else [deduct_h2a]
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
-
               weekly_hours: weeklyHours || null,
               category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle"]),
-
               openings:
                 parseInt(String(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"), 10) ||
                 null,
@@ -182,12 +190,11 @@ export function MultiJsonImporter() {
                   ),
                   10,
                 ) || 0,
-
               education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
               transport_provided: isTransportProvided,
-
               source_url: getVal(flat, ["recApplyUrl", "jobRobotUrl", "url"]),
               housing_info: visaType.includes("H-2A") ? "Yes (H-2A Mandated)" : null,
+              was_early_access: transitioned,
             };
 
             rawJobsMap.set(fingerprint, extractedJob);
@@ -200,17 +207,12 @@ export function MultiJsonImporter() {
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
-        setProgress({
-          current: i,
-          total: finalJobs.length,
-          status: `Gravando lote de ${batch.length} vagas (V46)...`,
-        });
+        setProgress({ current: i, total: finalJobs.length, status: `Sincronizando lote ${i / BATCH_SIZE + 1}...` });
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
         if (error) throw error;
       }
 
-      setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
-      toast({ title: "Sincronização Perfeita", description: "Lógica Power Query replicada 100%." });
+      toast({ title: "Sincronização V48", description: "IDs limpos e salários corrigidos com sucesso!" });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -221,28 +223,24 @@ export function MultiJsonImporter() {
   return (
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V46 (Auditado)
+        <CardTitle className="flex items-center gap-2 text-green-700">
+          <UploadCloud className="h-6 w-6" /> H2 Linker Sync V48
         </CardTitle>
-        <CardDescription>Paridade total com o script M original.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors mb-4">
-          <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
+        <div className="border-2 border-dashed rounded-lg p-6 mb-4 text-center bg-slate-50">
+          <input
+            type="file"
+            multiple
+            onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            className="w-full text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-2">Arraste seus arquivos JSON ou ZIP aqui</p>
         </div>
 
         {progress.total > 0 && (
-          <div className="mb-4">
-            <div className="mb-2 text-sm font-medium text-slate-600 flex justify-between">
-              <span>{progress.status}</span>
-              <span>{Math.round((progress.current / progress.total) * 100)}%</span>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-2.5">
-              <div
-                className="bg-green-700 h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
-              ></div>
-            </div>
+          <div className="mb-4 text-sm font-medium text-slate-600">
+            {progress.status} ({Math.round((progress.current / progress.total) * 100)}%)
           </div>
         )}
 
@@ -252,7 +250,7 @@ export function MultiJsonImporter() {
           className="w-full h-12 bg-green-700 hover:bg-green-800 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar (V46)
+          Sincronizar Produção
         </Button>
       </CardContent>
     </Card>
