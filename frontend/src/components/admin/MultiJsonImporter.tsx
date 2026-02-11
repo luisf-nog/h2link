@@ -107,8 +107,9 @@ export function MultiJsonImporter() {
             const rawPhone = getVal(flat, ["recApplyPhone", "empPhone"]);
             const cleanPhone = rawPhone ? String(rawPhone).replace(/[\t\s]/g, "") : null;
 
-            // Mapeamento 1:1 do seu Power Query
+            // Mapeamento 1:1 do seu Power Query (agora com o ID gerado para o Supabase)
             const extractedJob = {
+              id: crypto.randomUUID(), // <-- CORREÇÃO: ID único obrigatório no Supabase
               job_id: getVal(flat, ["caseNumber"]) || fingerprint,
               visa_type: visaType,
               fingerprint: fingerprint,
@@ -151,11 +152,17 @@ export function MultiJsonImporter() {
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         const batch = finalJobs.slice(i, i + BATCH_SIZE);
+        setProgress({
+          current: i,
+          total: finalJobs.length,
+          status: `Enviando lote de ${batch.length} vagas...`,
+        });
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
         if (error) throw error;
       }
 
-      toast({ title: "Sincronização V44 Concluída", description: "Lógica Power Query aplicada com sucesso." });
+      setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
+      toast({ title: "Sincronização Finalizada", description: "Vagas importadas com sucesso! 🚀" });
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
     } finally {
@@ -167,23 +174,38 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Importador V44 (M-Script Engine)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Importador Definitivo (Power Query Engine)
         </CardTitle>
+        <CardDescription>Engine baseada nas lógicas originais do seu script de dados.</CardDescription>
       </CardHeader>
       <CardContent>
-        <input
-          type="file"
-          multiple
-          onChange={(e) => setFiles(Array.from(e.target.files || []))}
-          className="mb-4 w-full"
-        />
+        <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors mb-4">
+          <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
+          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
+        </div>
+
+        {progress.total > 0 && (
+          <div className="mb-4">
+            <div className="mb-2 text-sm font-medium text-slate-600 flex justify-between">
+              <span>{progress.status}</span>
+              <span>{Math.round((progress.current / progress.total) * 100)}%</span>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-2.5">
+              <div
+                className="bg-green-700 h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-12 bg-green-700 hover:bg-green-800"
+          className="w-full h-12 bg-green-700 hover:bg-green-800 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção
+          Iniciar Sincronização
         </Button>
       </CardContent>
     </Card>
