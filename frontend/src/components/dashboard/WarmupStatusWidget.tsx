@@ -13,49 +13,38 @@ export function WarmupStatusWidget() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const planTier = profile?.plan_tier || "free";
-  // Widget only shows for paid tiers, no referral bonus applies
 
-  const {
-    riskProfile,
-    currentDailyLimit,
-    emailsSentToday,
-    planMax,
-    effectiveLimit,
-    isWarmingUp,
-    isMaxSpeed,
-    loading,
-  } = useWarmupStatus();
+  const { riskProfile, currentDailyLimit, emailsSentToday, planMax, effectiveLimit, isWarmingUp, isMaxSpeed, loading } =
+    useWarmupStatus();
 
   const usagePercent = effectiveLimit > 0 ? (emailsSentToday / effectiveLimit) * 100 : 0;
   const remaining = Math.max(0, effectiveLimit - emailsSentToday);
 
-  // Progress toward 80% threshold for next day increase
+  // Mantemos o threshold de 80% como uma "meta diária recomendada" para o usuário
   const progressThreshold = effectiveLimit * 0.8;
   const progressToNextLevel = Math.min(100, (emailsSentToday / progressThreshold) * 100);
 
-  // Calculate days to max (rough estimate)
+  /**
+   * AJUSTE: Cálculo Linear de dias para o máximo.
+   * Agora bate com a lógica do Motor SQL (+20, +50, +75).
+   */
   const daysToMax = useMemo(() => {
-    if (isMaxSpeed || planTier === "free") return 0;
+    if (isMaxSpeed || planTier === "free" || !riskProfile) return 0;
 
-    const multipliers: Record<RiskProfile, number> = {
-      conservative: 1.3,
-      standard: 1.5,
-      aggressive: 2.0,
+    const dailyIncrements: Record<RiskProfile, number> = {
+      conservative: 20,
+      standard: 50,
+      aggressive: 75,
     };
 
-    const mult = multipliers[riskProfile ?? "conservative"];
-    let limit = currentDailyLimit;
-    let days = 0;
+    const increment = dailyIncrements[riskProfile];
+    const diff = planMax - currentDailyLimit;
 
-    while (limit < planMax && days < 30) {
-      limit = Math.ceil(limit * mult);
-      days++;
-    }
+    if (diff <= 0) return 0;
 
-    return days;
+    return Math.ceil(diff / increment);
   }, [currentDailyLimit, planMax, riskProfile, isMaxSpeed, planTier]);
 
-  // Loading state
   if (loading) {
     return (
       <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
@@ -76,7 +65,6 @@ export function WarmupStatusWidget() {
     );
   }
 
-  // Free tier has no warm-up
   if (planTier === "free") {
     return (
       <Card className="bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
@@ -125,11 +113,9 @@ export function WarmupStatusWidget() {
             </Badge>
           )}
         </CardTitle>
-        <CardDescription>{t("warmup.widget.subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Main usage */}
           <div className="space-y-2">
             <div className="flex justify-between items-end">
               <div>
@@ -143,7 +129,6 @@ export function WarmupStatusWidget() {
             <Progress value={usagePercent} className="h-3" />
           </div>
 
-          {/* Progress to next level (only if warming up) */}
           {isWarmingUp && (
             <div className="space-y-2 pt-2 border-t border-border/50">
               <div className="flex items-center justify-between">
@@ -151,40 +136,32 @@ export function WarmupStatusWidget() {
                   <TrendingUp className="h-3 w-3" />
                   {t("warmup.widget.progress_to_increase")}
                 </span>
-                <span className="text-xs font-medium text-foreground">
-                  {Math.round(progressToNextLevel)}%
-                </span>
+                <span className="text-xs font-medium text-foreground">{Math.round(progressToNextLevel)}%</span>
               </div>
-              <Progress 
-                value={progressToNextLevel} 
-                className="h-1.5 [&>div]:bg-amber-500" 
-              />
+              <Progress value={progressToNextLevel} className="h-1.5 [&>div]:bg-amber-500" />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {t("warmup.widget.send_target", { target: Math.ceil(progressThreshold) })}
-                </span>
+                <span>Meta: {Math.ceil(progressThreshold)} envios hoje</span>
                 {daysToMax > 0 && (
                   <span className="flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    {t("warmup.widget.days_to_max", { days: daysToMax })}
+                    <AlertTriangle className="h-3 w-3 text-amber-500" />
+                    {daysToMax} {daysToMax === 1 ? "dia" : "dias"} para o máximo
                   </span>
                 )}
               </div>
             </div>
           )}
 
-          {/* Profile info */}
           {riskProfile && (
             <div className="pt-2 border-t border-border/50">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{t("warmup.widget.profile_label")}</span>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs capitalize">
                   {t(`warmup.profiles.${riskProfile}.title`)}
                 </Badge>
               </div>
               {!isMaxSpeed && (
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-muted-foreground">{t("warmup.widget.plan_max")}</span>
+                  <span className="text-muted-foreground">Limite Final do Plano</span>
                   <span className="font-medium text-foreground">{formatNumber(planMax)}/dia</span>
                 </div>
               )}
