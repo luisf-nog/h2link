@@ -478,38 +478,32 @@ export default function Jobs() {
 
   const formatSalary = (salary: number | null) => (salary ? `$${salary.toFixed(2)}/h` : "-");
 
-  // --- CONFIGURAÇÃO VISUAL DOS GRUPOS DE RANDOMIZAÇÃO ---
+  // --- CONFIGURAÇÃO VISUAL DOS GRUPOS (COM TRADUÇÃO CORRETA) ---
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
       return {
-        className: "bg-emerald-50 text-emerald-700 border-emerald-400 hover:bg-emerald-100",
-        shortDesc: "Maior Chance",
-        tooltip:
-          "Vagas do Grupo A são as primeiras da fila do governo. Têm a MAIOR chance de conseguir o visto antes que a cota acabe.",
+        className: "bg-emerald-50 text-emerald-700 border-emerald-400",
+        shortDesc: t("jobs.groups.a_short"),
       };
     if (g === "B")
       return {
-        className: "bg-blue-50 text-blue-700 border-blue-400 hover:bg-blue-100",
-        shortDesc: "Alta Prioridade",
-        tooltip: "Processadas logo após o Grupo A. Excelentes chances de aprovação do visto.",
+        className: "bg-blue-50 text-blue-700 border-blue-400",
+        shortDesc: t("jobs.groups.b_short"),
       };
     if (g === "C" || g === "D")
       return {
-        className: "bg-amber-50 text-amber-700 border-amber-400 hover:bg-amber-100",
-        shortDesc: "Risco Médio",
-        tooltip: "Processadas no meio da fila. Chance moderada, depende da velocidade de esgotamento da cota anual.",
+        className: "bg-amber-50 text-amber-700 border-amber-400",
+        shortDesc: t("jobs.groups.cd_short"),
       };
     if (["E", "F", "G", "H"].includes(g))
       return {
-        className: "bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100",
-        shortDesc: "Cota em Risco",
-        tooltip: "Últimas da fila. Alto risco de a cota anual de vistos acabar antes de serem analisadas.",
+        className: "bg-slate-50 text-slate-600 border-slate-300",
+        shortDesc: t("jobs.groups.risk_short"),
       };
     return {
-      className: "bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100",
-      shortDesc: "Linear",
-      tooltip: "Processamento padrão.",
+      className: "bg-gray-50 text-gray-700 border-gray-300",
+      shortDesc: t("jobs.groups.linear_short"),
     };
   };
 
@@ -950,30 +944,17 @@ export default function Jobs() {
                             const config = getGroupBadgeConfig(group);
 
                             return (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex flex-col items-start gap-1 cursor-help transition-transform hover:scale-105">
-                                    <Badge
-                                      variant="outline"
-                                      className={cn("font-bold text-[11px] uppercase tracking-wider", config.className)}
-                                    >
-                                      Grupo {group}
-                                    </Badge>
-                                    <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                                      <Info className="h-3 w-3 opacity-50" />
-                                      {config.shortDesc}
-                                    </span>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-[260px] p-3 border-slate-100 shadow-xl bg-white z-50">
-                                  <div className="space-y-1.5">
-                                    <p className="font-semibold text-sm flex items-center gap-2 text-slate-800">
-                                      Sorteio Oficial (DOL)
-                                    </p>
-                                    <p className="text-xs text-slate-600 leading-relaxed">{config.tooltip}</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
+                              <div className="flex flex-col items-start gap-1">
+                                <Badge
+                                  variant="outline"
+                                  className={cn("font-bold text-[11px] uppercase tracking-wider", config.className)}
+                                >
+                                  {t("jobs.groups.group_label")} {group}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground font-medium">
+                                  {config.shortDesc}
+                                </span>
+                              </div>
                             );
                           })()}
                         </TableCell>
