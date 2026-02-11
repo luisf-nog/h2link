@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Shield, User, Wrench } from "lucide-react";
+import { Loader2, Mail, Shield, User, Wrench, AlertTriangle, ExternalLink, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -96,7 +96,6 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
     } else {
       await refreshProfile();
 
-      // Onboarding trigger: create first AI template after profile is complete.
       try {
         const hasAllFields =
           parsed.data.fullName.trim().length > 0 &&
@@ -111,8 +110,6 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
             .eq("user_id", profile.id);
 
           if ((count ?? 0) === 0) {
-            // CORREÇÃO AQUI: Substituído fetch manual por supabase.functions.invoke
-            // Isso resolve o erro de URL undefined
             const { data: payload, error: funcError } = await supabase.functions.invoke("generate-template", {
               body: {},
             });
@@ -130,7 +127,6 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
         }
       } catch (err) {
         console.error("Erro ao gerar template automático:", err);
-        // Best-effort: do not block profile save flow.
       }
 
       toast({
@@ -153,19 +149,19 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
         <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
-            {t("settings.tabs.profile")}
+            <span className="hidden sm:inline">{t("settings.tabs.profile")}</span>
           </TabsTrigger>
           <TabsTrigger value="account" className="gap-2">
             <Shield className="h-4 w-4" />
-            {t("settings.tabs.account")}
+            <span className="hidden sm:inline">{t("settings.tabs.account")}</span>
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
-            {t("settings.tabs.smtp")}
+            <span className="hidden sm:inline">{t("settings.tabs.smtp")}</span>
           </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <Mail className="h-4 w-4" />
-            {t("settings.tabs.templates")}
+            <span className="hidden sm:inline">{t("settings.tabs.templates")}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -349,7 +345,61 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           ) : null}
         </TabsContent>
 
-        <TabsContent value="email" className="space-y-6 max-w-2xl">
+        <TabsContent value="email" className="space-y-6 max-w-3xl">
+          {/* Tutorial Section - Added for better UX regarding App Passwords */}
+          <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-500">
+                <AlertTriangle className="h-5 w-5" />
+                Atenção: Não use sua senha normal
+              </CardTitle>
+              <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
+                Para conectar seu Gmail/Google, você deve usar uma <strong>Senha de App (App Password)</strong>. Sua
+                senha de login pessoal não funcionará.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="rounded-md overflow-hidden border shadow-sm aspect-video bg-black">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
+                      title="Tutorial Senha de App Google"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-3 text-sm">
+                  <div className="flex gap-2 items-start">
+                    <Info className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
+                    <p>O Google exige uma senha de 16 caracteres gerada especificamente para aplicativos externos.</p>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 ml-1 text-muted-foreground">
+                    <li>Ative a "Verificação em duas etapas" no Google.</li>
+                    <li>Pesquise por "Senhas de App" na sua conta.</li>
+                    <li>Gere uma nova senha para "Email".</li>
+                    <li>Copie e cole a senha gerada abaixo.</li>
+                  </ol>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 gap-2 border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
+                    asChild
+                  >
+                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
+                      Gerar Senha agora <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <EmailSettingsPanel />
         </TabsContent>
 
