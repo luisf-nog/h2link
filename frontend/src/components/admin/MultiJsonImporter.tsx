@@ -18,6 +18,17 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
+  const calculateFinalWage = (rawVal: any, hours: any) => {
+    let val = parseMoney(rawVal);
+    if (!val) return null;
+    if (val <= 100) return val;
+    if (hours && hours > 0) {
+      let calc = val / (hours * 4.333);
+      if (calc >= 7.25 && calc <= 80) return parseFloat(calc.toFixed(2));
+    }
+    return null;
+  };
+
   const formatToISODate = (dateStr: any) => {
     if (!dateStr || dateStr === "N/A" || !dateStr) return null;
     try {
@@ -29,16 +40,27 @@ export function MultiJsonImporter() {
     }
   };
 
+  // --- O MOTOR BLINDADO (CASE-INSENSITIVE) ---
   const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
+
+    // 1. Converte todas as chaves do objeto atual para minúsculas
+    const lowerKeysMap: { [key: string]: any } = {};
+    for (const k of Object.keys(obj)) {
+      lowerKeysMap[k.toLowerCase()] = obj[k];
+    }
+
+    // 2. Procura usando as nossas chaves também em minúsculas
     for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null) {
-        const val = obj[key];
+      const targetKey = key.toLowerCase();
+      if (lowerKeysMap[targetKey] !== undefined && lowerKeysMap[targetKey] !== null) {
+        const val = lowerKeysMap[targetKey];
         if (typeof val === "string") {
           const clean = val.trim();
           if (clean === "" || clean.toLowerCase() === "n/a" || clean.toLowerCase() === "null") continue;
+          return clean; // Retorna limpo se for string
         }
-        return val;
+        return val; // Retorna objeto/número intacto
       }
     }
     return null;
@@ -46,11 +68,13 @@ export function MultiJsonImporter() {
 
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
-    const nested = item.clearanceOrder || {};
+    // Agora até a busca pelo clearanceOrder ignora maiúsculas/minúsculas
+    const nested = getVal(item, ["clearanceOrder"]) || {};
     const decisionDate =
-      getVal(root, ["DECISION_DATE", "dateAcceptanceLtrIssued"]) ||
-      getVal(nested, ["DECISION_DATE", "dateAcceptanceLtrIssued"]);
+      getVal(root, ["decision_date", "dateAcceptanceLtrIssued"]) ||
+      getVal(nested, ["decision_date", "dateAcceptanceLtrIssued"]);
     if (decisionDate) return formatToISODate(decisionDate);
+
     const submissionDate =
       getVal(root, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]) ||
       getVal(nested, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]);
@@ -89,57 +113,76 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
-            // A mesma lógica FlattenH2A do seu Power Query:
-            const nested = item.clearanceOrder || {};
+            // Com o novo getVal, não importa se é ClearanceOrder ou clearanceorder
+            const nested = getVal(item, ["clearanceOrder"]) || {};
             const flat = { ...item, ...nested };
 
-            const title = getVal(flat, ["tempneedJobtitle", "jobTitle", "job_title"]);
-            const company = getVal(flat, ["empBusinessName", "employerBusinessName"]);
+            // Mergulho nos requisitos também sem medo de Case Sensitivity
+            const reqs = getVal(flat, ["jobRequirements", "qualification"]) || {};
+
+            const title = getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]);
+            const company = getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]);
             if (!title || !company) continue;
 
-            const fein = getVal(flat, ["empFein"]);
-            const start = formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "job_begin_date"]));
-            const city = getVal(flat, ["jobCity", "job_city"]);
-
-            // O Fingerprint exato do seu Power Query: fein|title|city|start
+            const fein = getVal(flat, ["empFein", "fein"]);
+            const start = formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"]));
+            const city = getVal(flat, ["jobCity"]);
             const fingerprint = `${fein}|${String(title).toUpperCase()}|${String(city || "").toUpperCase()}|${start}`;
 
-            const rawPhone = getVal(flat, ["recApplyPhone", "empPhone"]);
+            const rawPhone = getVal(flat, ["recApplyPhone", "empPhone", "phone"]);
             const cleanPhone = rawPhone ? String(rawPhone).replace(/[\t\s]/g, "") : null;
 
-            // Mapeamento 1:1 do seu Power Query (agora com o ID gerado para o Supabase)
+            const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
+            const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours"]) || "0");
+
+            // --- MAPEAMENTO ABSOLUTO DO POWER QUERY M SCRIPT ---
             const extractedJob = {
-              id: crypto.randomUUID(), // <-- CORREÇÃO: ID único obrigatório no Supabase
-              job_id: getVal(flat, ["caseNumber"]) || fingerprint,
+              id: crypto.randomUUID(),
+              job_id: getVal(flat, ["caseNumber", "jobOrderNumber"]) || fingerprint,
               visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
               job_title: title,
               company: company,
-              email: getVal(flat, ["recApplyEmail"]),
+              email: getVal(flat, ["recApplyEmail", "email"]),
               phone: cleanPhone,
               city: city,
-              state: getVal(flat, ["jobState", "job_state"]),
+              state: getVal(flat, ["jobState"]),
+              zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]), // Adicionado do script M
 
-              // O seu "Col Salary"
-              salary: parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"])),
+              salary: calculateFinalWage(rawWage, weeklyHours),
 
               start_date: start,
               posted_date: determinePostedDate(item, fingerprint),
-              end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate", "job_end_date"])),
+              end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
 
-              // Exatamente as chaves do passo 8 do seu script
-              job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "job_duties"]),
-              job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]),
+              job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
+
+              // Chaves do passo 8: Independentemente da Capitalização, ele vai achar!
+              job_min_special_req:
+                getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) ||
+                getVal(reqs, ["specialRequirements", "jobMinSpecialReq"]),
               wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
-              weekly_hours: getVal(flat, ["jobHoursTotal"]),
+              weekly_hours: weeklyHours || null,
 
               category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle"]),
               openings:
                 parseInt(String(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"), 10) ||
                 null,
-              experience_months: parseInt(String(getVal(flat, ["jobMinexpmonths"]) || "0"), 10) || 0,
+              experience_months:
+                parseInt(
+                  String(
+                    getVal(flat, ["jobMinexpmonths", "experienceMonths"]) ||
+                      getVal(reqs, ["monthsExperience", "experienceMonths"]) ||
+                      "0",
+                  ),
+                  10,
+                ) || 0,
+
+              // Outros campos do script M (Caso a base suporte)
+              education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
+              transport_provided: getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) ? true : false,
             };
 
             rawJobsMap.set(fingerprint, extractedJob);
@@ -155,16 +198,16 @@ export function MultiJsonImporter() {
         setProgress({
           current: i,
           total: finalJobs.length,
-          status: `Enviando lote de ${batch.length} vagas...`,
+          status: `Gravando lote de ${batch.length} vagas sem duplicados...`,
         });
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
         if (error) throw error;
       }
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
-      toast({ title: "Sincronização Finalizada", description: "Vagas importadas com sucesso! 🚀" });
+      toast({ title: "Importação Finalizada", description: "Vagas processadas com o motor Case-Insensitive." });
     } catch (err: any) {
-      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -174,14 +217,13 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Importador Definitivo (Power Query Engine)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Importador Definitivo (Case-Insensitive)
         </CardTitle>
-        <CardDescription>Engine baseada nas lógicas originais do seu script de dados.</CardDescription>
+        <CardDescription>Extração blindada contra mudanças no governo americano.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors mb-4">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
         </div>
 
         {progress.total > 0 && (
@@ -205,7 +247,7 @@ export function MultiJsonImporter() {
           className="w-full h-12 bg-green-700 hover:bg-green-800 text-lg font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Iniciar Sincronização
+          Iniciar Sincronização Blindada
         </Button>
       </CardContent>
     </Card>
