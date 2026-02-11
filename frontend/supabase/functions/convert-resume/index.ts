@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 function json(status: number, payload: unknown) {
@@ -17,7 +17,6 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // 1. Auth Check
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       return json(401, { success: false, error: "Missing Authorization Header" });
@@ -36,20 +35,17 @@ serve(async (req) => {
       return json(401, { success: false, error: "Unauthorized User" });
     }
 
-    // 2. Parse Body
     const { raw_text } = await req.json().catch(() => ({}));
     if (!raw_text || raw_text.length < 10) {
       return json(400, { success: false, error: "Resume text is empty or too short." });
     }
 
-    // 3. API Key Check
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       console.error("CRITICAL: LOVABLE_API_KEY missing in Secrets.");
       return json(500, { success: false, error: "Server AI Key not configured." });
     }
 
-    // 4. System Prompt
     const systemPrompt = `You are an expert US Recruiter. Analyze this resume text (any language) and convert it to US-Style JSON.
     RULES:
     - Translate to English.
@@ -59,7 +55,6 @@ serve(async (req) => {
 
     const userPrompt = `Resume Content:\n"${raw_text.substring(0, 25000)}"\n\nConvert to JSON structure.`;
 
-    // 5. Call AI
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -136,12 +131,10 @@ serve(async (req) => {
 
     const aiData = await aiResp.json();
 
-    // 6. ROBUST PARSING (Tool Call OR Content Fallback)
     let resumeJson;
     const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
 
     if (toolCall && toolCall.function.name === "format_resume") {
-      // Caso A: IA usou a ferramenta corretamente
       try {
         resumeJson = JSON.parse(toolCall.function.arguments);
       } catch (e) {
@@ -149,7 +142,6 @@ serve(async (req) => {
         return json(500, { success: false, error: "AI returned invalid JSON in tool." });
       }
     } else {
-      // Caso B: Fallback (IA mandou o JSON no texto)
       console.warn("AI didn't use tool, falling back to content parsing.");
       const content = aiData?.choices?.[0]?.message?.content || "";
       const cleanContent = content
