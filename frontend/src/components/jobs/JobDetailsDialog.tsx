@@ -1,22 +1,61 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
-import { getJobShareUrl } from "@/lib/shareUtils";
-import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { PLANS_CONFIG } from "@/config/plans.config";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { JobDetailsDialog as BaseJobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
+import { JobImportDialog } from "@/components/jobs/JobImportDialog";
+import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
+import { MobileJobCard } from "@/components/jobs/MobileJobCard";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Info,
+  Search,
+  Plus,
+  Check,
+  Lock,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Zap,
+  Clock,
+  Loader2,
+  Database,
+  ChevronsUpDown,
+  X,
+  Bot,
+  Landmark,
+  ShieldAlert,
+  Briefcase,
+  Rocket,
   Home,
   Mail,
   MapPin,
   Share2,
   AlertTriangle,
-  Briefcase,
-  Clock,
   DollarSign,
   ArrowRight,
   Phone,
-  Plus,
   Trash2,
   Globe,
   Users,
@@ -24,8 +63,20 @@ import {
   ArrowLeft,
   GraduationCap,
 } from "lucide-react";
+import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
+import type { ReportReason } from "@/components/queue/ReportJobButton";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { useToast } from "@/hooks/use-toast";
+import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from "@/lib/pricing";
+import { formatNumber } from "@/lib/number";
+import {
+  getVisaBadgeConfig,
+  VISA_TYPE_OPTIONS,
+  type VisaTypeFilter,
+  isEarlyAccess,
+  getEarlyAccessDisclaimer,
+} from "@/lib/visaTypes";
+import { getJobShareUrl } from "@/lib/shareUtils";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -33,7 +84,8 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export type JobDetails = {
+// Omitindo a declaração original e usando type diretamente
+export type JobDetailsType = {
   id: string;
   job_id: string;
   visa_type: "H-2B" | "H-2A" | string | null;
@@ -111,13 +163,13 @@ export function JobDetailsDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  job: JobDetails | null;
+  job: JobDetailsType | null;
   planSettings: PlanSettings;
   formatSalary: (salary: number | null) => string;
-  onAddToQueue: (job: JobDetails) => void;
-  onRemoveFromQueue?: (job: JobDetails) => void;
+  onAddToQueue: (job: JobDetailsType) => void;
+  onRemoveFromQueue?: (job: JobDetailsType) => void;
   isInQueue?: boolean;
-  onShare?: (job: JobDetails) => void;
+  onShare?: (job: JobDetailsType) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -157,7 +209,6 @@ export function JobDetailsDialog({
     return <span className="text-muted-foreground italic">{t("jobs.details.view_details", "View Details")}</span>;
   };
 
-  // --- CORREÇÃO: Padrões em Inglês ---
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return t("jobs.details.no_experience", "None");
     if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} months` });
@@ -183,7 +234,42 @@ export function JobDetailsDialog({
   const messageText = getMessage();
   const encodedMessage = encodeURIComponent(messageText);
 
-  // --- CORREÇÃO: Padrões em Inglês na Timeline ---
+  const getGroupBadgeConfig = (group: string) => {
+    const g = group.toUpperCase();
+    if (g === "A")
+      return {
+        className: "bg-emerald-50 text-emerald-800 border-emerald-300",
+        shortDesc: t("jobs.groups.a_short"),
+        tooltip: t("jobs.groups.a_tooltip"),
+      };
+    if (g === "B")
+      return {
+        className: "bg-blue-50 text-blue-800 border-blue-300",
+        shortDesc: t("jobs.groups.b_short"),
+        tooltip: t("jobs.groups.b_tooltip"),
+      };
+    if (g === "C" || g === "D")
+      return {
+        className: "bg-amber-50 text-amber-800 border-amber-300",
+        shortDesc: t("jobs.groups.cd_short"),
+        tooltip: t("jobs.groups.cd_tooltip"),
+      };
+    if (["E", "F", "G", "H"].includes(g))
+      return {
+        className: "bg-slate-50 text-slate-700 border-slate-300",
+        shortDesc: t("jobs.groups.risk_short"),
+        tooltip: t("jobs.groups.risk_tooltip"),
+      };
+    return {
+      className: "bg-gray-50 text-gray-700 border-gray-300",
+      shortDesc: t("jobs.groups.linear_short"),
+      tooltip: t("jobs.groups.linear_tooltip"),
+    };
+  };
+
+  const group = (job as any)?.randomization_group;
+  const groupConfig = group ? getGroupBadgeConfig(group) : null;
+
   const Timeline = () => (
     <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
       <div className="flex flex-col items-center">
@@ -244,11 +330,6 @@ export function JobDetailsDialog({
                       {badgeConfig.label}
                     </Badge>
                   )}
-                  {job?.randomization_group && (
-                    <Badge variant="outline" className="font-mono text-xs bg-amber-50 text-amber-800 border-amber-300">
-                      Group {job.randomization_group}
-                    </Badge>
-                  )}
                   {job?.job_id && (
                     <span className="font-mono text-xs text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {job.job_id}
@@ -286,6 +367,27 @@ export function JobDetailsDialog({
                 )}
               </div>
             </div>
+
+            {/* BANNER DE INTELIGÊNCIA DO GOVERNO (Sorteio DOL) - INSERIDO AQUI */}
+            {group && groupConfig && (
+              <div className={cn("mt-3 p-3 rounded-lg border bg-opacity-40", groupConfig.className)}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge
+                    variant="outline"
+                    className="bg-white/80 border-current font-bold uppercase tracking-wider text-[10px]"
+                  >
+                    {t("jobs.groups.group_label")} {group}
+                  </Badge>
+                  <span className="font-semibold text-xs flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    {groupConfig.shortDesc}
+                  </span>
+                </div>
+                <p className="text-xs opacity-90 leading-relaxed">
+                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig.tooltip}
+                </p>
+              </div>
+            )}
           </div>
         </DialogHeader>
 
@@ -307,7 +409,7 @@ export function JobDetailsDialog({
               {/* 1. LINHA DO TEMPO */}
               <Timeline />
 
-              {/* 2. EXPERIÊNCIA NECESSÁRIA (Corrigido para Inglês) */}
+              {/* 2. EXPERIÊNCIA NECESSÁRIA */}
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                 <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                   <GraduationCap className="h-6 w-6" />
@@ -320,7 +422,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* 3. SALÁRIO (Corrigido para Inglês) */}
+              {/* 3. SALÁRIO */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-2 text-slate-600">
@@ -368,7 +470,7 @@ export function JobDetailsDialog({
                 )}
               </div>
 
-              {/* 4. JORNADA DE TRABALHO (Corrigido para Inglês) */}
+              {/* 4. JORNADA DE TRABALHO */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
                   <Clock className="h-6 w-6 text-slate-500" />{" "}
@@ -384,7 +486,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* 5. CONTATOS (Corrigido para Inglês) */}
+              {/* 5. CONTATOS */}
               <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                   {t("jobs.details.company_contacts", "Company Contacts")}
