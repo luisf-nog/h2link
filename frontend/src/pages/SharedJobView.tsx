@@ -18,6 +18,7 @@ import {
   GraduationCap,
   BookOpen,
   Search, // Ícone para "Buscar Vagas"
+  Info, // Ícone importado para o banner de prioridade
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -31,6 +32,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
 import { formatNumber } from "@/lib/number";
+import { cn } from "@/lib/utils";
 
 interface Job {
   id: string;
@@ -68,6 +70,7 @@ interface Job {
   wage_additional?: string | null;
   rec_pay_deductions?: string | null;
   website?: string | null;
+  randomization_group?: string | null;
 }
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -191,6 +194,43 @@ export default function SharedJobView() {
   const badgeConfig = getVisaBadgeConfig(job.visa_type);
   const encodedMessage = encodeURIComponent(getMessage());
 
+  // --- FUNÇÃO DO BANNER DO GOVERNO PARA A TELA PUBLICA ---
+  const getGroupBadgeConfig = (group: string) => {
+    const g = group.toUpperCase();
+    if (g === "A")
+      return {
+        className: "bg-emerald-50 text-emerald-800 border-emerald-300",
+        shortDesc: t("jobs.groups.a_short"),
+        tooltip: t("jobs.groups.a_tooltip"),
+      };
+    if (g === "B")
+      return {
+        className: "bg-blue-50 text-blue-800 border-blue-300",
+        shortDesc: t("jobs.groups.b_short"),
+        tooltip: t("jobs.groups.b_tooltip"),
+      };
+    if (g === "C" || g === "D")
+      return {
+        className: "bg-amber-50 text-amber-800 border-amber-300",
+        shortDesc: t("jobs.groups.cd_short"),
+        tooltip: t("jobs.groups.cd_tooltip"),
+      };
+    if (["E", "F", "G", "H"].includes(g))
+      return {
+        className: "bg-slate-50 text-slate-700 border-slate-300",
+        shortDesc: t("jobs.groups.risk_short"),
+        tooltip: t("jobs.groups.risk_tooltip"),
+      };
+    return {
+      className: "bg-gray-50 text-gray-700 border-gray-300",
+      shortDesc: t("jobs.groups.linear_short"),
+      tooltip: t("jobs.groups.linear_tooltip"),
+    };
+  };
+
+  const group = job?.randomization_group;
+  const groupConfig = group ? getGroupBadgeConfig(group) : null;
+
   const Timeline = () => (
     <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
       <div className="flex flex-col items-center">
@@ -285,6 +325,27 @@ export default function SharedJobView() {
                     </div>
                   </div>
                 </div>
+
+                {/* BANNER DE INTELIGÊNCIA DO GOVERNO (Sorteio DOL) */}
+                {group && groupConfig && (
+                  <div className={cn("mt-4 mb-2 p-4 rounded-xl border bg-opacity-40", groupConfig.className)}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge
+                        variant="outline"
+                        className="bg-white/80 border-current font-bold uppercase tracking-wider"
+                      >
+                        {t("jobs.groups.group_label", "Grupo")} {group}
+                      </Badge>
+                      <span className="font-semibold text-sm flex items-center gap-1">
+                        <Info className="h-4 w-4" />
+                        {groupConfig.shortDesc}
+                      </span>
+                    </div>
+                    <p className="text-sm opacity-90 leading-relaxed">
+                      <strong>{t("jobs.groups.dol_draw", "Sorteio Oficial (DOL)")}:</strong> {groupConfig.tooltip}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -381,7 +442,7 @@ export default function SharedJobView() {
                     </div>
                   </div>
 
-                  {/* NOVO: CARD DE CONVITE PARA O HUB (Substituindo o antigo "Create Account") */}
+                  {/* NOVO: CARD DE CONVITE PARA O HUB */}
                   <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 text-center space-y-4">
                     <div className="flex justify-center">
                       <div className="bg-blue-100 p-3 rounded-full text-blue-600">
@@ -522,7 +583,6 @@ export default function SharedJobView() {
                       {t("jobs.details.company_contacts", "Company Contacts")}
                     </div>
 
-                    {/* Nota: Removido "Click to copy" pois o botão principal é "Apply" */}
                     <div className="flex flex-col gap-4">
                       {/* Email */}
                       <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
