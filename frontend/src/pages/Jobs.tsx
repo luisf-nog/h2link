@@ -77,29 +77,41 @@ function OnboardingModal() {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-2xl bg-white rounded-xl">
+      {/* AJUSTE CRÍTICO AQUI: max-h-[90vh] e overflow-y-auto adicionados para não travar o mobile */}
+      <DialogContent className="sm:max-w-2xl p-0 border-0 shadow-2xl bg-white rounded-xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         {/* CABEÇALHO SÓBRIO */}
-        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
+        <div className="bg-slate-900 px-6 sm:px-8 py-5 sm:py-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 text-white">
+            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 text-white shrink-0">
               <Briefcase className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">H2 Linker Platform</h2>
-              <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Official Automation Tool</p>
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight">
+                H2 Linker Platform
+              </h2>
+              <p className="text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider font-semibold">
+                Official Automation Tool
+              </p>
             </div>
           </div>
+          {/* Botão X para garantir que sempre dê pra fechar no topo */}
+          <button
+            onClick={handleClose}
+            className="text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* ÁREA DE DESTAQUE: RESPONSABILIDADE & TRANSPARÊNCIA (PRIMEIRA VISÃO) */}
-        <div className="bg-slate-50 border-b border-slate-100 px-8 py-6">
-          <div className="flex gap-4">
+        <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6">
+          <div className="flex gap-3 sm:gap-4">
             <div className="flex-shrink-0 mt-1 text-slate-700">
-              <ShieldAlert className="h-6 w-6" />
+              <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h3 className="text-slate-900 font-bold text-base">Service Transparency & Role</h3>
-              <p className="text-slate-600 text-sm mt-1 leading-relaxed">
+              <h3 className="text-slate-900 font-bold text-sm sm:text-base">Service Transparency & Role</h3>
+              <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
                 H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency. We
                 provide the high-performance tools to automate your outreach, but the final hiring decision and
                 interview process rest solely between you and the employer. We do not guarantee employment, but we{" "}
@@ -110,18 +122,18 @@ function OnboardingModal() {
         </div>
 
         {/* FEATURES - FORMATO "SYSTEM SPECS" */}
-        <div className="p-8 space-y-6">
-          <div className="grid gap-6">
+        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
+          <div className="grid gap-5 sm:gap-6">
             {/* Feature 1: Early Access */}
-            <div className="flex gap-4 items-start group">
+            <div className="flex gap-3 sm:gap-4 items-start group">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
-                  <Clock className="h-5 w-5 text-blue-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">Exclusive Early Access Data</h4>
-                <p className="text-slate-600 text-sm mt-0.5">
+                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
                   Apply before the crowd. We extract official job orders directly from the{" "}
                   <strong>US Department of Labor (DOL)</strong> the moment they are filed, giving you a massive head
                   start.
@@ -130,15 +142,15 @@ function OnboardingModal() {
             </div>
 
             {/* Feature 2: Smart Templates */}
-            <div className="flex gap-4 items-start group">
+            <div className="flex gap-3 sm:gap-4 items-start group">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-md bg-purple-50 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
-                  <Bot className="h-5 w-5 text-purple-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-purple-50 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
+                  <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">Adaptive AI Email Engine</h4>
-                <p className="text-slate-600 text-sm mt-0.5">
+                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
                   Our AI generates <strong>dynamic templates</strong> that automatically adapt to each specific job
                   title and company name, ensuring a perfect, personalized first impression for every employer.
                 </p>
@@ -146,15 +158,15 @@ function OnboardingModal() {
             </div>
 
             {/* Feature 3: Automation */}
-            <div className="flex gap-4 items-start group">
+            <div className="flex gap-3 sm:gap-4 items-start group">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-md bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
-                  <Zap className="h-5 w-5 text-emerald-600" />
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
                 </div>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">High-Speed Bulk Automation</h4>
-                <p className="text-slate-600 text-sm mt-0.5">
+                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
                   We handle the communication for you. Select your target jobs and{" "}
                   <strong>automate the entire sending process</strong>, reaching up to 450 recruiters daily while you
                   stay productive.
@@ -163,14 +175,14 @@ function OnboardingModal() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100">
+          <div className="pt-5 border-t border-slate-100 mt-2">
             <Button
               onClick={handleClose}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all active:scale-[0.98]"
             >
               I Understand - Let's Start
             </Button>
-            <p className="text-center text-[10px] text-slate-400 mt-4 uppercase tracking-widest font-bold">
+            <p className="text-center text-[9px] sm:text-[10px] text-slate-400 mt-4 uppercase tracking-widest font-bold">
               Secure Official Data • AI Automation • Pro Technology
             </p>
           </div>
