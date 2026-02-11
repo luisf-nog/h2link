@@ -184,13 +184,14 @@ export function MultiJsonImporter() {
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "STATE"]),
               start_date: start,
-              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "END_DATE"])),
+              // CORREÇÃO APLICADA AQUI PARA RECUPERAR A DATA FINAL (tempneedEnd)
+              end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
               openings: openings,
               category: "General Labor",
             };
 
-            // A MUDANÇA ESTÁ AQUI: Agrupa pela "Digital" da vaga (fingerprint) em vez do job_id
+            // Agrupa pela "Digital" da vaga para remover duplicados antes de enviar para o banco
             rawJobsMap.set(fingerprint, extractedJob);
           }
         }
@@ -237,7 +238,9 @@ export function MultiJsonImporter() {
         <CardTitle className="flex items-center gap-2 text-slate-800">
           <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
         </CardTitle>
-        <CardDescription>Envio otimizado com eliminação de duplicados via Fingerprint.</CardDescription>
+        <CardDescription>
+          Envio otimizado com eliminação de duplicados via Fingerprint e proteção de datas.
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
