@@ -89,6 +89,7 @@ export type JobDetails = {
   shift_end?: string | null;
   job_duties?: string | null;
   website?: string | null;
+  randomization_group?: string | null;
 };
 
 type PlanSettings = {
@@ -241,6 +242,11 @@ export function JobDetailsDialog({
                   {badgeConfig && (
                     <Badge variant={badgeConfig.variant} className={badgeConfig.className}>
                       {badgeConfig.label}
+                    </Badge>
+                  )}
+                  {job?.randomization_group && (
+                    <Badge variant="outline" className="font-mono text-xs bg-amber-50 text-amber-800 border-amber-300">
+                      Group {job.randomization_group}
                     </Badge>
                   )}
                   {job?.job_id && (
