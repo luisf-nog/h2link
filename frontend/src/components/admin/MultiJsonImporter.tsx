@@ -82,7 +82,7 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const json = JSON.parse(content);
-          const list = Array.isArray(json) ? json : json.data || [];
+          const list = Array.isArray(json) ? json : json.data || json.results || [];
 
           let visaType = "H-2A";
           if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
@@ -92,12 +92,9 @@ export function MultiJsonImporter() {
             const root = item || {};
             const nested = item.clearanceOrder || {};
 
-            // PRIORIDADE PARA O NESTED (H-2A/B Real Data)
+            // Fusão Prioritária para Dados Profundos
             const flat = { ...root, ...nested };
-
-            // Sub-objetos específicos para dados profundos
-            const reqs = nested.jobRequirements || root.jobRequirements || root.qualification || {};
-            const schedule = nested.workSchedule || root.workSchedule || {};
+            const reqs = nested.jobRequirements || root.jobRequirements || {};
 
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
             const company = getVal(flat, [
@@ -115,41 +112,25 @@ export function MultiJsonImporter() {
             );
             const fingerprint = `${fein}|${String(title).toUpperCase()}|${start}`;
 
-            // --- EXTRAÇÃO BLINDADA ---
-            // 1. Telefone com limpeza de tabs (\t)
-            const rawPhone = getVal(flat, [
-              "empPhone",
-              "employer_phone",
-              "emppocPhone",
-              "PHONE",
-              "recApplyPhone",
-              "emppocAddPhone",
-            ]);
+            // --- MAPEAMENTO V43 (RESTAURAÇÃO TOTAL) ---
+
+            // 1. Contatos Limpos
+            const rawPhone = getVal(flat, ["empPhone", "employer_phone", "emppocPhone", "PHONE", "recApplyPhone"]);
             const cleanPhone = rawPhone ? String(rawPhone).replace(/[\t\s]/g, "") : null;
 
-            // 2. Openings (Quantidade de Vagas)
-            const openings =
-              parseInt(
-                String(
-                  getVal(flat, [
-                    "jobWrksNeeded",
-                    "totalWorkersNeeded",
-                    "tempneedWkrPos",
-                    "jobWrksNeededH2a",
-                    "totalWorkers",
-                  ]) || "0",
-                ),
-                10,
-              ) || null;
+            // 2. Openings (Ajustado para H-2B novo via tempneedWkrPos)
+            const openingsVal = getVal(flat, [
+              "tempneedWkrPos",
+              "jobWrksNeeded",
+              "totalWorkersNeeded",
+              "jobWrksNeededH2a",
+            ]);
+            const openings = parseInt(String(openingsVal || "0"), 10) || null;
 
-            // 3. Schedule (Mergulhando no objeto workSchedule se necessário)
-            const shiftStart =
-              getVal(flat, ["shiftStart", "jobShiftStart", "WORK_START_TIME"]) ||
-              getVal(schedule, ["shiftStart", "shift_start"]);
-            const shiftEnd =
-              getVal(flat, ["shiftEnd", "jobShiftEnd", "WORK_END_TIME"]) || getVal(schedule, ["shiftEnd", "shift_end"]);
+            // 3. Work Schedule (Apenas Horas Semanais conforme pedido)
+            const weeklyHours = getVal(flat, ["jobHoursTotal", "basicHours", "weekly_hours", "totalHours"]);
 
-            // 4. Special Reqs & Deductions
+            // 4. Detalhes Financeiros e Requisitos
             const specialReqs =
               getVal(reqs, ["jobMinSpecialReq", "specialRequirements", "SPEC_REQ_DESC"]) ||
               getVal(flat, ["jobMinSpecialReq", "specialRequirements"]);
@@ -159,6 +140,7 @@ export function MultiJsonImporter() {
               "PAY_DEDUCTION_DESC",
               "pay_deductions",
             ]);
+            const bonus = getVal(flat, ["wageAdditional", "WAGE_ADDITIONAL_DESC", "additional_wage_info"]);
 
             const extractedJob = {
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]) || fingerprint,
@@ -171,15 +153,18 @@ export function MultiJsonImporter() {
               phone: cleanPhone,
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "STATE"]),
-              salary: parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "BASIC_WAGE_RATE", "AEWR", "BASIC_RATE"])),
+              salary: parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "BASIC_WAGE_RATE", "AEWR"])),
               start_date: start,
               posted_date: determinePostedDate(item, fingerprint),
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
+
+              // Novos campos preenchidos corretamente
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "JOB_DUTIES", "description"]),
               job_min_special_req: specialReqs,
               rec_pay_deductions: deductions,
-              shift_start: shiftStart,
-              shift_end: shiftEnd,
+              wage_additional: bonus,
+              weekly_hours: weeklyHours, // Aqui entram as 40h
+
               category: getVal(flat, ["socTitle", "soc_title", "SOC_TITLE", "category"]) || "General Labor",
               openings: openings,
             };
@@ -198,9 +183,12 @@ export function MultiJsonImporter() {
         if (error) throw error;
       }
 
-      toast({ title: "V42 Sincronizada", description: "Mapeamento profundo restaurado com sucesso." });
+      toast({
+        title: "Sincronização V43 Concluída",
+        description: "Vagas H-2B restauradas com horas semanais e número de vagas correto.",
+      });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -210,7 +198,7 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V42 (The Master Key)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V43 (Hours & Openings Fixed)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -226,7 +214,7 @@ export function MultiJsonImporter() {
           className="w-full h-12 bg-green-700 hover:bg-green-800"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção
+          Sincronizar Agora
         </Button>
       </CardContent>
     </Card>
