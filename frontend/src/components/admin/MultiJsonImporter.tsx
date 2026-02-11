@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database, ShieldAlert } from "lucide-react";
+import { Loader2, RefreshCw, Database, Fingerprint } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -39,6 +39,17 @@ export function MultiJsonImporter() {
     } catch {
       return null;
     }
+  };
+
+  // --- EXTRAÇÃO DO DNA DO CASE NUMBER (O SEGREDO DA V55) ---
+  const getCaseBody = (id: string) => {
+    if (!id) return id;
+    const parts = id.split("-");
+    // Se JO-A-300... -> pega 300...
+    if (parts[0] === "JO" && parts[1] === "A") return parts.slice(2).join("-");
+    // Se H-300... -> pega 300...
+    if (parts[0] === "H") return parts.slice(1).join("-");
+    return id;
   };
 
   const getVal = (obj: any, keys: string[]) => {
@@ -86,7 +97,6 @@ export function MultiJsonImporter() {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || json.results || [];
 
-          // Define o tipo pelo nome do arquivo
           let visaType = "H-2A";
           if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
@@ -95,26 +105,29 @@ export function MultiJsonImporter() {
             const nested = getVal(item, ["clearanceOrder"]) || {};
             const flat = { ...item, ...nested };
 
-            // NORMALIZAÇÃO DE DNA (FINGERPRINT)
-            const title = (getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]) || "").trim().toUpperCase();
-            const company = (getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]) || "")
-              .trim()
-              .toUpperCase();
-            const city = (getVal(flat, ["jobCity", "city"]) || "").trim().toUpperCase();
-            const fein = (getVal(flat, ["empFein", "fein"]) || "").trim();
-            const startDateFormatted = formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"]));
+            const title = (getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]) || "").trim();
+            const company = (getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]) || "").trim();
+            if (!title || !company) continue;
 
-            if (!title || !company || !startDateFormatted) continue;
-
-            // DIGITAL ÚNICA: fein|TITULO|CIDADE|DATA
-            const fingerprint = `${fein}|${title}|${city}|${startDateFormatted}`.replace(/\s+/g, " ");
-
-            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || fingerprint;
-            // Limpa o ID para exibição no site (remove rastro de etiquetas anteriores)
-            const cleanJobId = rawJobId.split("-GHOST-")[0].split(" (Early Access)")[0].trim();
+            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
+            // DNA ÚNICO: O corpo do Case Number (H-2A e JO compartilham isso)
+            const fingerprint = getCaseBody(rawJobId);
+            const cleanJobId = rawJobId.split("-GHOST-")[0].trim();
 
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
+
+            // Lógica de Detecção de Transição no Lote Atual
+            const existing = rawJobsMap.get(fingerprint);
+            let isTransition = false;
+            if (existing) {
+              if (
+                (existing.visa_type.includes("Early Access") && visaType === "H-2A") ||
+                (visaType.includes("Early Access") && existing.visa_type === "H-2A")
+              ) {
+                isTransition = true;
+              }
+            }
 
             const extractedJob = {
               id: crypto.randomUUID(),
@@ -126,19 +139,24 @@ export function MultiJsonImporter() {
               company: company,
               email: getVal(flat, ["recApplyEmail", "email"]),
               phone: getVal(flat, ["recApplyPhone", "empPhone", "phone"]),
-              city: city,
+              city: getVal(flat, ["jobCity", "city"]),
               state: getVal(flat, ["jobState"]),
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
               salary: calculateFinalWage(rawWage, weeklyHours),
-              start_date: startDateFormatted,
+              start_date: formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"])),
               posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
               weekly_hours: weeklyHours || null,
-              was_early_access: false, // O SQL decidirá via histórico de fingerprint
+              was_early_access: isTransition || (existing?.was_early_access ?? false),
             };
 
-            rawJobsMap.set(fingerprint, extractedJob);
+            // Se o novo for H-2A, ele é o oficial, deve prevalecer no Mapa
+            if (existing && existing.visa_type === "H-2A" && visaType.includes("Early Access")) {
+              existing.was_early_access = true;
+            } else {
+              rawJobsMap.set(fingerprint, extractedJob);
+            }
           }
         }
       }
@@ -153,10 +171,7 @@ export function MultiJsonImporter() {
         if (error) throw error;
       }
 
-      toast({
-        title: "Sincronização V54 Finalizada",
-        description: "IDs duplicados resolvidos e transições processadas.",
-      });
+      toast({ title: "V55 - Sucesso Total!", description: "DNA de Case mapeado e salários corrigidos." });
     } catch (err: any) {
       toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
     } finally {
@@ -165,43 +180,26 @@ export function MultiJsonImporter() {
   };
 
   return (
-    <Card className="border-2 border-green-600 shadow-2xl">
+    <Card className="border-2 border-indigo-600 shadow-2xl">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-green-700">
-          <Database className="h-6 w-6" /> H2 Linker Sync V54
+        <CardTitle className="flex items-center gap-2 text-indigo-700">
+          <Fingerprint className="h-6 w-6" /> H2 Linker Sync V55 (DNA Mode)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-xs">
-          <ShieldAlert className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <p>
-            <strong>Aviso de Constraint:</strong> Esta versão remove duplicatas de ID automaticamente para evitar erros
-            de banco de dados.
-          </p>
-        </div>
-
         <input
           type="file"
           multiple
           onChange={(e) => setFiles(Array.from(e.target.files || []))}
           className="w-full text-sm"
         />
-
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-12 bg-green-700 hover:bg-green-800 font-bold text-white transition-all"
+          className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 font-bold text-white"
         >
-          {processing ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="animate-spin h-5 w-5" />
-              Sincronizando ({Math.round((progress.current / progress.total) * 100)}%)
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" /> Iniciar Sincronização Final
-            </span>
-          )}
+          {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
+          Sincronizar com DNA de Case
         </Button>
       </CardContent>
     </Card>
