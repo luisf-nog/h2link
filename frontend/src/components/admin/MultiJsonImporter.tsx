@@ -162,6 +162,33 @@ export function MultiJsonImporter() {
 
             const posted_date = determinePostedDate(item, finalJobId);
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL"]);
+
+            // --- RESTAURAÇÃO DE DADOS ---
+            const phone = getVal(flat, ["empPhone", "employer_phone", "PHONE", "emppocPhone", "recApplyPhone"]);
+            const zipCode = getVal(flat, [
+              "empPostalCode",
+              "employer_postal_code",
+              "jobPostalCode",
+              "ZIP",
+              "worksite_postal_code",
+            ]);
+
+            // Categoria Dinâmica (Recuperada em vez de "General Labor")
+            const category = getVal(flat, ["socTitle", "soc_title", "SOC_TITLE", "occTitle"]) || "General Labor";
+
+            // Extração de Experiência e Tratamento de Booleanos e "Y/N"
+            const reqs = flat.jobRequirements || flat.qualification || flat;
+            const expReqRaw = getVal(reqs, ["experienceRequired", "experience_required"]);
+            const experience_required =
+              expReqRaw === true ||
+              String(expReqRaw).toLowerCase() === "y" ||
+              String(expReqRaw).toLowerCase() === "yes" ||
+              String(expReqRaw).toLowerCase() === "true";
+
+            const experience_months =
+              parseInt(String(getVal(reqs, ["experienceMonths", "experience_months"]) || "0"), 10) || 0;
+            // ---------------------------
+
             const openings =
               parseInt(
                 String(
@@ -179,19 +206,22 @@ export function MultiJsonImporter() {
               job_title: title,
               company: company,
               email: email,
+              phone: phone, // Restaurado
               posted_date: posted_date,
               salary: calculateFinalWage(item, flat),
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "STATE"]),
+              zip_code: zipCode, // Restaurado
               start_date: start,
-              // CORREÇÃO APLICADA AQUI PARA RECUPERAR A DATA FINAL (tempneedEnd)
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
               openings: openings,
-              category: "General Labor",
+              category: category, // Agora dinâmico!
+              experience_required: experience_required, // Restaurado
+              experience_months: experience_months, // Restaurado
             };
 
-            // Agrupa pela "Digital" da vaga para remover duplicados antes de enviar para o banco
+            // Agrupa pela "Digital" da vaga para remover duplicados
             rawJobsMap.set(fingerprint, extractedJob);
           }
         }
@@ -239,7 +269,7 @@ export function MultiJsonImporter() {
           <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
         </CardTitle>
         <CardDescription>
-          Envio otimizado com eliminação de duplicados via Fingerprint e proteção de datas.
+          Envio otimizado com eliminação de duplicados via Fingerprint e extração profunda de dados do DOL.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
