@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, UploadCloud, Database } from "lucide-react";
+import { Loader2, RefreshCw, Database, CheckCircle2 } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -18,14 +18,12 @@ export function MultiJsonImporter() {
     return isNaN(num) || num <= 0 ? null : num;
   };
 
-  // --- CORREÇÃO DE SALÁRIO (MENSAL PARA HORA) ---
+  // --- CORREÇÃO DE SALÁRIO V52 ---
   const calculateFinalWage = (rawVal: any, hours: any) => {
     let val = parseMoney(rawVal);
     if (!val) return null;
-
-    // Se o valor for maior que 100, tratamos como mensal/total
     if (val > 100) {
-      const h = hours && hours > 0 ? hours : 40; // Fallback para 40h
+      const h = hours && hours > 0 ? hours : 40;
       let calc = val / (h * 4.333);
       if (calc >= 7.25 && calc <= 95) return parseFloat(calc.toFixed(2));
       return null;
@@ -33,17 +31,13 @@ export function MultiJsonImporter() {
     return val;
   };
 
-  // --- LIMPEZA DE QUALQUER RASTRO DE GHOST NO ID ---
-  const cleanJobId = (id: string | null) => {
-    if (!id) return id;
-    return id.split("-GHOST-")[0].split(" (Early Access)")[0].trim();
-  };
-
+  // --- NORMALIZAÇÃO DE DATA (CRUCIAL PARA O FINGERPRINT) ---
   const formatToISODate = (dateStr: any) => {
     if (!dateStr || dateStr === "N/A") return null;
     try {
       const d = new Date(dateStr);
-      return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString().split("T")[0]; // Retorna sempre YYYY-MM-DD
     } catch {
       return null;
     }
@@ -94,7 +88,6 @@ export function MultiJsonImporter() {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || json.results || [];
 
-          // Define o tipo de visto baseado no nome do arquivo
           let visaType = "H-2A";
           if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
@@ -108,21 +101,25 @@ export function MultiJsonImporter() {
             if (!title || !company) continue;
 
             const fein = getVal(flat, ["empFein", "fein"]);
-            const start = formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"]));
             const city = getVal(flat, ["jobCity", "city"]);
 
-            // O Fingerprint é a chave mestre para o SQL identificar a transição
-            const fingerprint = `${fein}|${String(title).toUpperCase()}|${String(city || "").toUpperCase()}|${start}`;
+            // --- NORMALIZAÇÃO PARA O FINGERPRINT ---
+            const startDateRaw = getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"]);
+            const startDateFormatted = formatToISODate(startDateRaw);
+
+            // O Fingerprint DEVE ser idêntico em ambos os arquivos para o SQL funcionar
+            const fingerprint = `${fein}|${String(title).toUpperCase()}|${String(city || "").toUpperCase()}|${startDateFormatted}`;
 
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || fingerprint;
-            const jobId = cleanJobId(rawJobId);
+            // Limpa o job_id de qualquer rastro visual de Early Access ou GHOST para o site
+            const cleanJobId = rawJobId.split("-GHOST-")[0].split(" (Early Access)")[0].trim();
 
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
 
             const extractedJob = {
               id: crypto.randomUUID(),
-              job_id: jobId,
+              job_id: cleanJobId,
               visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
@@ -134,12 +131,12 @@ export function MultiJsonImporter() {
               state: getVal(flat, ["jobState"]),
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
               salary: calculateFinalWage(rawWage, weeklyHours),
-              start_date: start,
+              start_date: startDateFormatted,
               posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
               weekly_hours: weeklyHours || null,
-              was_early_access: false, // O SQL mudará para TRUE se o fingerprint já existir como Early Access
+              was_early_access: false, // O SQL mudará para TRUE via ON CONFLICT
             };
 
             rawJobsMap.set(fingerprint, extractedJob);
@@ -158,8 +155,8 @@ export function MultiJsonImporter() {
       }
 
       toast({
-        title: "Sucesso!",
-        description: "Dados sincronizados. Transições Early -> H-2A processadas pelo banco.",
+        title: "H2 Linker V52 Sincronizado",
+        description: "Fingerprints normalizados. As transições aparecerão após a reimportação.",
       });
     } catch (err: any) {
       toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
@@ -169,13 +166,20 @@ export function MultiJsonImporter() {
   };
 
   return (
-    <Card className="border-2 border-primary/20 shadow-lg">
+    <Card className="border-2 border-blue-500 shadow-xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Database className="h-6 w-6 text-blue-600" /> H2 Linker Sync V51
+          <Database className="h-6 w-6 text-blue-600" /> H2 Linker Sync V52
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="bg-blue-50 p-3 rounded-md border border-blue-100 flex items-start gap-2">
+          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5" />
+          <p className="text-xs text-blue-800">
+            <strong>Dica:</strong> Importe primeiro o arquivo <em>Early Access</em> (JO) e depois o <em>Certificado</em>{" "}
+            (H-2A) para ativar as tags de transição.
+          </p>
+        </div>
         <input
           type="file"
           multiple
@@ -188,7 +192,7 @@ export function MultiJsonImporter() {
           className="w-full h-12 bg-blue-700 hover:bg-blue-800 font-bold"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção (V51)
+          Sincronizar Produção (V52)
         </Button>
       </CardContent>
     </Card>
