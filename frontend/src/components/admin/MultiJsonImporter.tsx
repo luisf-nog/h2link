@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, UploadCloud } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, UploadCloud } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -48,11 +48,6 @@ export function MultiJsonImporter() {
   };
 
   // --- Normaliza qualquer JSON para uma lista de registros ---
-  // Mantém compatibilidade com:
-  // - Array root: [ {...}, {...} ]
-  // - Wrapper: { data: [...] } / { results: [...] } / { records: [...] } / { items: [...] }
-  // - Objeto único representando uma vaga: { caseNumber: "...", ... }
-  // - Fallback: primeiro array encontrado dentro do objeto
   const toList = (json: any) => {
     if (!json) return [];
     if (Array.isArray(json)) return json;
@@ -70,24 +65,21 @@ export function MultiJsonImporter() {
     return Array.isArray(arr) ? (arr as any[]) : [];
   };
 
-  // --- A LÓGICA DE DATA DO INSPETOR (Que funcionou!) ---
+  // --- A LÓGICA DE DATA DO INSPETOR ---
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
     const nested = item.clearanceOrder || {};
 
-    // 1. Decisão (Prioridade para H-2B)
     const decisionDate =
       getVal(root, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]) ||
       getVal(nested, ["DECISION_DATE", "decision_date", "dateAcceptanceLtrIssued"]);
     if (decisionDate) return formatToISODate(decisionDate);
 
-    // 2. Submissão (Prioridade para JO)
     const submissionDate =
       getVal(root, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]) ||
       getVal(nested, ["dateSubmitted", "CASE_SUBMITTED", "form790AsOfDate"]);
     if (submissionDate) return formatToISODate(submissionDate);
 
-    // 3. Cálculo ID (Fallback Matemático Infalível)
     if (jobId && jobId.startsWith("JO-")) {
       const match = jobId.match(/-(\d{2})(\d{3})-/);
       if (match) {
@@ -149,28 +141,31 @@ export function MultiJsonImporter() {
             continue;
           }
 
-          // ✅ Ajuste principal: sempre normaliza para lista
           const list = toList(json);
           if (!list.length) continue;
 
-          // ✅ MANTER LÓGICA LEGADO de visaType (por filename)
-          let visaType = "H-2A";
-          if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
-          else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
+          let fileVisaType = "H-2A";
+          if (filename.toLowerCase().includes("h2b")) fileVisaType = "H-2B";
+          else if (filename.toLowerCase().includes("jo")) fileVisaType = "H-2A (Early Access)";
 
           for (const item of list) {
             const flat = item.clearanceOrder ? { ...item, ...item.clearanceOrder } : item;
 
-            // Campos Básicos
-            const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
-            const company = getVal(flat, [
-              "empBusinessName",
-              "employerBusinessName",
-              "legalName",
-              "empName",
-              "company",
-            ]);
-            if (!title || !company) continue;
+            // --- CORREÇÃO: Campos Básicos com Fallback para Vagas de Emergência ---
+            let title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
+            let company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "empName", "company"]);
+
+            // Salva-vidas para vagas de Emergência (sem título)
+            if (!title) {
+              title = fileVisaType.includes("H-2A")
+                ? "Agricultural Worker (Emergency Filing)"
+                : "General Labor (Emergency Filing)";
+            }
+
+            // Salva-vidas para empresas sem nome
+            if (!company) {
+              company = "Confidential Employer";
+            }
 
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
@@ -180,31 +175,37 @@ export function MultiJsonImporter() {
             const fingerprint = `${fein}|${String(title).toUpperCase()}|${start}`;
             const finalJobId = rawJobId || fingerprint;
 
-            // Usa a mesma lógica do Inspetor
             const posted_date = determinePostedDate(item, finalJobId);
-
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL"]);
 
-            // Montagem do Objeto Final
+            // Garantir extração de vagas abertas
+            const openings =
+              parseInt(
+                String(
+                  getVal(flat, ["jobWrksNeeded", "jobWrksNeededH2a", "tempneedWkrPos", "totalWorkersNeeded"]) || "",
+                ),
+                10,
+              ) || null;
+
+            // --- CORREÇÃO DO CONSULTOR: Adicionado a chave 'id' ---
             const extractedJob = {
+              id: finalJobId, // <-- OBRIGATÓRIO PARA A TABELA TEMPORÁRIA (Staging)
               job_id: finalJobId,
-              visa_type: visaType,
+              visa_type: fileVisaType,
               fingerprint: fingerprint,
               is_active: true,
               job_title: title,
               company: company,
               email: email,
               posted_date: posted_date,
-
-              // Outros campos essenciais
               salary: calculateFinalWage(item, flat),
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "empCity", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "empState", "STATE"]),
               start_date: start,
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "END_DATE"])),
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription"]),
-              openings: parseInt(String(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded"]) || ""), 10) || null,
-              category: "General Labor", // Fallback simples para não travar
+              openings: openings,
+              category: "General Labor",
             };
 
             rawJobsMap.set(finalJobId, extractedJob);
@@ -212,7 +213,10 @@ export function MultiJsonImporter() {
         }
       }
 
-      const finalJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && j.email.length > 2);
+      // --- CORREÇÃO DO CONSULTOR: Filtro garantindo que 'id' exista e não seja vazio ---
+      const finalJobs = Array.from(rawJobsMap.values()).filter((j) => {
+        return j.id && String(j.id).trim().length > 0 && j.email && j.email.length > 2;
+      });
 
       // Envio em Lote
       const BATCH_SIZE = 1000;
@@ -223,7 +227,7 @@ export function MultiJsonImporter() {
         setProgress({
           current: processed,
           total: finalJobs.length,
-          status: `Enviando ${batch.length} vagas (Força Bruta)...`,
+          status: `Enviando lote de ${batch.length} vagas ao banco de dados...`,
         });
 
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
@@ -234,11 +238,11 @@ export function MultiJsonImporter() {
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação V38 (Definitiva)",
-        description: `Dados enviados com sucesso usando a lógica do Inspetor.`,
+        title: "Importação Concluída",
+        description: `Sucesso! ${finalJobs.length} vagas importadas com a nova lógica à prova de falhas.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
+      toast({ title: "Erro Fatal na Importação", description: err.message, variant: "destructive" });
       console.error(err);
     } finally {
       setProcessing(false);
@@ -249,14 +253,14 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader className="bg-slate-50">
         <CardTitle className="flex items-center gap-2 text-slate-800">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V38 (Final)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
         </CardTitle>
-        <CardDescription>Combinação da detecção do Inspetor com gravação forçada no banco.</CardDescription>
+        <CardDescription>Extração avançada H-2A/H-2B com fallback de emergência e correção de ID.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
           <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="w-full" />
-          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP</p>
+          <p className="mt-2 text-sm text-slate-500">JSON ou ZIP do Departamento de Trabalho (DOL)</p>
         </div>
         <div className="mt-4">
           {progress.total > 0 && (
