@@ -24,6 +24,7 @@ interface JobData {
   start_date?: string | null;
   end_date?: string | null;
   experience_months?: number | null;
+  randomization_group?: string | null;
 }
 
 interface MobileJobCardProps {
@@ -98,6 +99,11 @@ export function MobileJobCard({
                 </Badge>
               );
             })()}
+            {job.randomization_group && (
+              <Badge variant="outline" className="text-xs font-mono bg-amber-50 text-amber-800 border-amber-300">
+                {job.randomization_group}
+              </Badge>
+            )}
             <Button
               size="icon"
               variant={!isBlurred && isQueued ? "default" : "outline"}

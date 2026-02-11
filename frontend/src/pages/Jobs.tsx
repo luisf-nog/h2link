@@ -247,6 +247,7 @@ export default function Jobs() {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => {
     const v = searchParams.get("visa") as VisaTypeFilter | null;
@@ -317,7 +318,7 @@ export default function Jobs() {
   const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
   const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
-  const tableColSpan = 12;
+  const tableColSpan = 13;
 
   const buildOrSearch = (term: string) =>
     `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
@@ -337,6 +338,7 @@ export default function Jobs() {
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
+    if (groupFilter) query = query.eq("randomization_group", groupFilter);
     if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
     if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
 
@@ -395,7 +397,7 @@ export default function Jobs() {
 
   useEffect(() => {
     fetchJobs();
-  }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, groupFilter, minSalary, maxSalary, sortKey, sortDir, page]);
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -408,6 +410,7 @@ export default function Jobs() {
       if (stateFilter.trim()) next.set("state", stateFilter.trim());
       if (cityFilter.trim()) next.set("city", cityFilter.trim());
       if (selectedCategories.length > 0) next.set("categories", selectedCategories.join(","));
+      if (groupFilter) next.set("group", groupFilter);
       if (minSalary) next.set("min_salary", minSalary);
       if (maxSalary) next.set("max_salary", maxSalary);
       if (!(sortKey === "posted_date" && sortDir === "desc")) {
@@ -418,7 +421,7 @@ export default function Jobs() {
       setSearchParams(next, { replace: true });
     }, 250);
     return () => window.clearTimeout(t);
-  }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, minSalary, maxSalary, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, selectedCategories, groupFilter, minSalary, maxSalary, sortKey, sortDir, page]);
 
   const toggleCategory = (category: string) => {
     setPage(1);
@@ -617,7 +620,7 @@ export default function Jobs() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <Input
                 placeholder={t("jobs.filters.state")}
                 value={stateFilter}
@@ -676,6 +679,23 @@ export default function Jobs() {
                   </Command>
                 </PopoverContent>
               </Popover>
+              <Select
+                value={groupFilter}
+                onValueChange={(v) => {
+                  setGroupFilter(v === "all" ? "" : v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
+                    <SelectItem key={g} value={g}>Group {g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex gap-2 col-span-1 sm:col-span-2 lg:col-span-2">
                 <div className="relative w-full">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
@@ -782,6 +802,7 @@ export default function Jobs() {
                         {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
                       </button>
                     </TableHead>
+                    <TableHead>Group</TableHead>
                     <TableHead>
                       <button onClick={() => toggleSort("posted_date")}>
                         {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
@@ -851,6 +872,13 @@ export default function Jobs() {
                               </Badge>
                             );
                           })()}
+                        </TableCell>
+                        <TableCell>
+                          {(j as any).randomization_group ? (
+                            <Badge variant="outline" className="font-mono text-xs bg-amber-50 text-amber-800 border-amber-300">
+                              {(j as any).randomization_group}
+                            </Badge>
+                          ) : "-"}
                         </TableCell>
                         <TableCell>{formatDate(j.posted_date)}</TableCell>
                         <TableCell>{formatDate(j.start_date)}</TableCell>

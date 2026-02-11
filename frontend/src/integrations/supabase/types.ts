@@ -466,6 +466,7 @@ export type Database = {
           pay_frequency: string | null
           phone: string | null
           posted_date: string | null
+          randomization_group: string | null
           rec_pay_deductions: string | null
           requirements: string | null
           salary: number | null
@@ -533,6 +534,7 @@ export type Database = {
           pay_frequency?: string | null
           phone?: string | null
           posted_date?: string | null
+          randomization_group?: string | null
           rec_pay_deductions?: string | null
           requirements?: string | null
           salary?: number | null
@@ -600,6 +602,7 @@ export type Database = {
           pay_frequency?: string | null
           phone?: string | null
           posted_date?: string | null
+          randomization_group?: string | null
           rec_pay_deductions?: string | null
           requirements?: string | null
           salary?: number | null

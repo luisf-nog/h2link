@@ -1,9 +1,84 @@
+import { useState } from 'react';
 import { MultiJsonImporter } from '@/components/admin/MultiJsonImporter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, FileJson, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function AdminImport() {
+  const [xlsxFile, setXlsxFile] = useState<File | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<{ updated: number; notFound: number } | null>(null);
+  const { toast } = useToast();
+
+  const processGroupXlsx = async () => {
+    if (!xlsxFile) return;
+    setProcessing(true);
+    setResult(null);
+
+    try {
+      const data = await xlsxFile.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+
+      // Build map: case_number -> group
+      const groupMap = new Map<string, string>();
+      for (const row of rows) {
+        const caseNumber = row['Case Number'] || row['case_number'] || row['CASE_NUMBER'];
+        const group = row['Randomization Group'] || row['randomization_group'] || row['GROUP'];
+        if (caseNumber && group) {
+          groupMap.set(String(caseNumber).trim(), String(group).trim().toUpperCase());
+        }
+      }
+
+      let updated = 0;
+      let notFound = 0;
+
+      // Process in batches of 50 case numbers
+      const entries = Array.from(groupMap.entries());
+      const BATCH = 50;
+
+      for (let i = 0; i < entries.length; i += BATCH) {
+        const batch = entries.slice(i, i + BATCH);
+        const caseNumbers = batch.map(([cn]) => cn);
+
+        // Find matching jobs
+        const { data: jobs } = await supabase
+          .from('public_jobs')
+          .select('id, job_id')
+          .in('job_id', caseNumbers);
+
+        if (jobs && jobs.length > 0) {
+          for (const job of jobs) {
+            const group = groupMap.get(job.job_id);
+            if (group) {
+              const { error } = await supabase
+                .from('public_jobs')
+                .update({ randomization_group: group } as any)
+                .eq('id', job.id);
+              if (!error) updated++;
+            }
+          }
+        }
+        notFound += batch.length - (jobs?.length || 0);
+      }
+
+      setResult({ updated, notFound });
+      toast({
+        title: 'Grupos Atualizados!',
+        description: `${updated} vagas atualizadas, ${notFound} não encontradas no banco.`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div>
@@ -14,10 +89,14 @@ export default function AdminImport() {
       </div>
 
       <Tabs defaultValue="import" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="import">
             <FileJson className="h-4 w-4 mr-2" />
             Importar
+          </TabsTrigger>
+          <TabsTrigger value="groups">
+            <UploadCloud className="h-4 w-4 mr-2" />
+            Grupos
           </TabsTrigger>
           <TabsTrigger value="stats">
             <Database className="h-4 w-4 mr-2" />
@@ -25,7 +104,7 @@ export default function AdminImport() {
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="h-4 w-4 mr-2" />
-            Configurações
+            Config
           </TabsTrigger>
         </TabsList>
 
@@ -33,18 +112,60 @@ export default function AdminImport() {
           <MultiJsonImporter />
         </TabsContent>
 
+        <TabsContent value="groups" className="space-y-4">
+          <Card className="shadow-xl border-2 border-amber-500/20">
+            <CardHeader className="bg-amber-50">
+              <CardTitle className="flex items-center gap-2 text-amber-900">
+                <UploadCloud className="h-6 w-6" /> Importar Randomization Groups
+              </CardTitle>
+              <CardDescription>
+                Faça upload do relatório XLSX do DOL (Public Facing Report) para associar o grupo de randomização (A-H) às vagas pelo Case Number.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="border-dashed border-2 rounded-xl p-8 text-center bg-amber-50/30 hover:bg-white transition-colors">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => {
+                    setXlsxFile(e.target.files?.[0] || null);
+                    setResult(null);
+                  }}
+                  className="w-full"
+                />
+                <p className="mt-2 text-sm text-muted-foreground">Arquivo XLSX do DOL com colunas "Case Number" e "Randomization Group"</p>
+              </div>
+
+              {result && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-800">{result.updated} vagas atualizadas com grupo</p>
+                    <p className="text-sm text-green-600">{result.notFound} case numbers não encontrados no banco</p>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={processGroupXlsx}
+                disabled={processing || !xlsxFile}
+                className="w-full h-12 text-lg font-bold bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {processing ? <Loader2 className="animate-spin mr-2" /> : <UploadCloud className="mr-2" />}
+                Processar Grupos
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="stats" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Estatísticas de Importação</CardTitle>
-              <CardDescription>
-                Resumo das vagas no banco de dados
-              </CardDescription>
+              <CardDescription>Resumo das vagas no banco de dados</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Estatísticas em desenvolvimento...
-              </p>
+              <p className="text-sm text-muted-foreground">Estatísticas em desenvolvimento...</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -53,14 +174,10 @@ export default function AdminImport() {
           <Card>
             <CardHeader>
               <CardTitle>Configurações de Importação</CardTitle>
-              <CardDescription>
-                Ajuste as configurações do processo de importação
-              </CardDescription>
+              <CardDescription>Ajuste as configurações do processo de importação</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Configurações em desenvolvimento...
-              </p>
+              <p className="text-sm text-muted-foreground">Configurações em desenvolvimento...</p>
             </CardContent>
           </Card>
         </TabsContent>
