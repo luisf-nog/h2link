@@ -12,130 +12,6 @@
   },
   "auth": {
     "browse_jobs": "Explorar Empleos Disponibles",
-    "browse_jobs_hint": "Navega sin cuenta • Acceso gratuito"
-  },
-  "footer": {
-    "tagline": "Conexiones inteligentes. Oportunidades reales.",
-    "terms": "Términos de Uso",
-    "privacy": "Política de Privacidad"
-  },
-  "reports": {
-    "button": "Reportar problema",
-    "reasons": {
-      "invalid_email": "Email inválido",
-      "inactive_job": "Empleo inactivo",
-      "wrong_info": "Información incorrecta",
-      "spam": "Spam/Estafa",
-      "other": "Otro problema"
-    },
-    "warning_tooltip": "⚠️ Cuidado: {{count}} usuario(s) reportaron: {{reasons}}",
-    "toasts": {
-      "success_title": "¡Gracias por tu feedback!",
-      "success_desc": "Tu reporte fue enviado y nos ayuda a mantener la calidad de los empleos.",
-      "already_reported_title": "Ya reportado",
-      "already_reported_desc": "Ya señalaste un problema con este empleo."
-    }
-  },
-  "onboarding": {
-    "step": "Paso {{current}} de {{total}}",
-    "welcome": {
-      "title": "¡Bienvenido a H2 Linker!",
-      "description": "Configuremos tu cuenta para empezar a enviar solicitudes de forma segura.",
-      "step1_title": "Conecta tu email",
-      "step1_desc": "Configura SMTP con tu cuenta de Gmail u Outlook.",
-      "step2_title": "Elige tu velocidad de envío",
-      "step2_desc": "Configura el calentamiento de email para proteger tu reputación.",
-      "step3_title": "Empieza a aplicar",
-      "step3_desc": "Explora empleos y envía solicitudes a escala.",
-      "start": "Empecemos"
-    },
-    "smtp": {
-      "title": "Conecta Tu Email",
-      "description": "Usaremos tu email para enviar solicitudes en tu nombre.",
-      "why_app_password_title": "¿Por qué usar Contraseña de Aplicación?",
-      "why_app_password_desc": "Por seguridad, Google y Microsoft no permiten que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails y puedes revocarla cuando quieras.",
-      "gmail_guide_title": "Cómo crear en Gmail",
-      "gmail_step1": "Activa la verificación en dos pasos (2FA) en tu cuenta Google",
-      "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2 Linker\"",
-      "gmail_step3": "Copia la contraseña de 16 caracteres generada",
-      "gmail_link": "Abrir Contraseñas de App de Google →",
-      "outlook_guide_title": "Cómo crear en Outlook",
-      "outlook_step1": "Activa la verificación en dos pasos en tu cuenta Microsoft",
-      "outlook_step2": "Ve a Opciones de seguridad avanzadas",
-      "outlook_step3": "Crea una nueva contraseña de aplicación y cópiala",
-      "outlook_link": "Abrir Seguridad de Microsoft →",
-      "password_hint": "Pega aquí la contraseña de 16 caracteres (puedes pegarla sin espacios)",
-      "continue": "Guardar & Continuar"
-    },
-    "warmup": {
-      "title": "Protege Tu Reputación",
-      "subtitle": "Configura el calentamiento inteligente de tu email",
-      "why_title": "¿Por qué es esencial el calentamiento?",
-      "why_desc": "Proveedores como Gmail y Outlook monitorean patrones de envío. Si envías muchos emails de golpe con una cuenta nueva, corres el riesgo de:",
-      "why_point1": "Que tus emails vayan directo a Spam",
-      "why_point2": "Bloqueo temporal o permanente de tu cuenta",
-      "why_point3": "Dañar tu reputación de remitente a largo plazo",
-      "recommendation_title": "💡 Nuestra recomendación",
-      "recommendation_desc": "Para usuarios nuevos, recomendamos el perfil \"Equilibrado\". Ofrece el mejor balance entre velocidad y seguridad. Usuarios experimentados con cuentas ya calentadas pueden considerar \"Agresivo\".",
-      "recommended_badge": "Recomendado",
-      "how_it_works": "Tu límite aumenta automáticamente cada día que uses al menos 80% de tu cuota. Cuanto más consistente seas, más rápido alcanzas la velocidad máxima de tu plan.",
-      "continue": "Guardar & Continuar"
-    },
-    "complete": {
-      "title": "¡Todo listo!",
-      "description": "Tu cuenta está lista para enviar solicitudes.",
-      "smtp_ready": "Email configurado exitosamente",
-      "warmup_ready": "Calentamiento inteligente activado",
-      "next_steps": "Siguiente: Explora el Hub de Empleos para encontrar oportunidades, agrégalas a tu cola y empieza a enviar solicitudes.",
-      "go_dashboard": "Ir al Panel"
-    }
-  },
-  "common": {
-    "loading": "Cargando...",
-    "menu": "Menú",
-    "ok": "OK",
-    "cancel": "Cancelar",
-    "save": "Guardar",
-    "select": "Seleccionar...",
-    "logout": "Cerrar sesión",
-    "language": "Idioma",
-    "share": "Compartir",
-    "previous": "Anterior",
-    "next": "Siguiente",
-    "more_pages": "Más páginas",
-    "pagination": {
-      "previous_aria": "Ir a la página anterior",
-      "next_aria": "Ir a la página siguiente"
-    },
-    "languages": {
-      "en": "English",
-      "pt": "Português",
-      "es": "Español"
-    },
-    "yes": "Sí",
-    "no": "No",
-    "user": "Usuario",
-    "expand": "Expandir",
-    "collapse": "Contraer",
-    "helpExpanded": "¿Dudas o sugerencias? Contáctanos",
-    "errors": {
-      "no_session": "No hay sesión autenticada.",
-      "invalid_data": "Datos inválidos.",
-      "save_failed": "Error al guardar.",
-      "send_failed": "Error al enviar.",
-      "delete_failed": "Error al eliminar."
-    }
-  },
-  "nav": {
-    "dashboard": "Panel",
-    "jobs": "Hub de Empleos",
-    "queue": "Mi cola",
-    "referrals": "Referencias",
-    "plans": "Planes",
-    "settings": "Configuración"
-  },
-  "auth": {
-    "browse_jobs": "Explorar Empleos Disponibles",
     "browse_jobs_hint": "Navega sin cuenta • Acceso gratuito",
     "hero_tagline": "Ahorra tiempo y encuentra oportunidades H-2A y H-2B reales",
     "tabs": { "signin": "Iniciar sesión", "signup": "Crear cuenta" },
@@ -269,6 +145,126 @@
       "brand_title": "Acceso habilitado",
       "brand_desc": "Estás a un paso de volver a H2 Linker — estamos sincronizando tu sesión."
     }
+  },
+  "footer": {
+    "tagline": "Conexiones inteligentes. Oportunidades reales.",
+    "terms": "Términos de Uso",
+    "privacy": "Política de Privacidad"
+  },
+  "reports": {
+    "button": "Reportar problema",
+    "reasons": {
+      "invalid_email": "Email inválido",
+      "inactive_job": "Empleo inactivo",
+      "wrong_info": "Información incorrecta",
+      "spam": "Spam/Estafa",
+      "other": "Otro problema"
+    },
+    "warning_tooltip": "⚠️ Cuidado: {{count}} usuario(s) reportaron: {{reasons}}",
+    "toasts": {
+      "success_title": "¡Gracias por tu feedback!",
+      "success_desc": "Tu reporte fue enviado y nos ayuda a mantener la calidad de los empleos.",
+      "already_reported_title": "Ya reportado",
+      "already_reported_desc": "Ya señalaste un problema con este empleo."
+    }
+  },
+  "onboarding": {
+    "step": "Paso {{current}} de {{total}}",
+    "welcome": {
+      "title": "¡Bienvenido a H2 Linker!",
+      "description": "Configuremos tu cuenta para empezar a enviar solicitudes de forma segura.",
+      "step1_title": "Conecta tu email",
+      "step1_desc": "Configura SMTP con tu cuenta de Gmail u Outlook.",
+      "step2_title": "Elige tu velocidad de envío",
+      "step2_desc": "Configura el calentamiento de email para proteger tu reputación.",
+      "step3_title": "Empieza a aplicar",
+      "step3_desc": "Explora empleos y envía solicitudes a escala.",
+      "start": "Empecemos"
+    },
+    "smtp": {
+      "title": "Conecta Tu Email",
+      "description": "Usaremos tu email para enviar solicitudes en tu nombre.",
+      "why_app_password_title": "¿Por qué usar Contraseña de Aplicación?",
+      "why_app_password_desc": "Por seguridad, Google y Microsoft no permiten que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails y puedes revocarla cuando quieras.",
+      "gmail_guide_title": "Cómo crear en Gmail",
+      "gmail_step1": "Activa la verificación en dos pasos (2FA) en tu cuenta Google",
+      "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2 Linker\"",
+      "gmail_step3": "Copia la contraseña de 16 caracteres generada",
+      "gmail_link": "Abrir Contraseñas de App de Google →",
+      "outlook_guide_title": "Cómo crear en Outlook",
+      "outlook_step1": "Activa la verificación en dos pasos en tu cuenta Microsoft",
+      "outlook_step2": "Ve a Opciones de seguridad avanzadas",
+      "outlook_step3": "Crea una nueva contraseña de aplicación y cópiala",
+      "outlook_link": "Abrir Seguridad de Microsoft →",
+      "password_hint": "Pega aquí la contraseña de 16 caracteres (puedes pegarla sin espacios)",
+      "continue": "Guardar & Continuar"
+    },
+    "warmup": {
+      "title": "Protege Tu Reputación",
+      "subtitle": "Configura el calentamiento inteligente de tu email",
+      "why_title": "¿Por qué es esencial el calentamiento?",
+      "why_desc": "Proveedores como Gmail y Outlook monitorean patrones de envío. Si envías muchos emails de golpe con una cuenta nueva, corres el riesgo de:",
+      "why_point1": "Que tus emails vayan directo a Spam",
+      "why_point2": "Bloqueo temporal o permanente de tu cuenta",
+      "why_point3": "Dañar tu reputación de remitente a largo plazo",
+      "recommendation_title": "💡 Nuestra recomendación",
+      "recommendation_desc": "Para usuarios nuevos, recomendamos el perfil \"Equilibrado\". Ofrece el mejor balance entre velocidad y seguridad. Usuarios experimentados con cuentas ya calentadas pueden considerar \"Agresivo\".",
+      "recommended_badge": "Recomendado",
+      "how_it_works": "Tu límite aumenta automáticamente cada día que uses al menos 80% de tu cuota. Cuanto más consistente seas, más rápido alcanzas la velocidad máxima de tu plan.",
+      "continue": "Guardar & Continuar"
+    },
+    "complete": {
+      "title": "¡Todo listo!",
+      "description": "Tu cuenta está lista para enviar solicitudes.",
+      "smtp_ready": "Email configurado exitosamente",
+      "warmup_ready": "Calentamiento inteligente activado",
+      "next_steps": "Siguiente: Explora el Hub de Empleos para encontrar oportunidades, agrégalas a tu cola y empieza a enviar solicitudes.",
+      "go_dashboard": "Ir al Panel"
+    }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "menu": "Menú",
+    "ok": "OK",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "select": "Seleccionar...",
+    "logout": "Cerrar sesión",
+    "language": "Idioma",
+    "share": "Compartir",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "more_pages": "Más páginas",
+    "pagination": {
+      "previous_aria": "Ir a la página anterior",
+      "next_aria": "Ir a la página siguiente"
+    },
+    "languages": {
+      "en": "English",
+      "pt": "Português",
+      "es": "Español"
+    },
+    "yes": "Sí",
+    "no": "No",
+    "user": "Usuario",
+    "expand": "Expandir",
+    "collapse": "Contraer",
+    "helpExpanded": "¿Dudas o sugerencias? Contáctanos",
+    "errors": {
+      "no_session": "No hay sesión autenticada.",
+      "invalid_data": "Datos inválidos.",
+      "save_failed": "Error al guardar.",
+      "send_failed": "Error al enviar.",
+      "delete_failed": "Error al eliminar."
+    }
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "jobs": "Hub de Empleos",
+    "queue": "Mi cola",
+    "referrals": "Referencias",
+    "plans": "Planes",
+    "settings": "Configuración"
   },
   "dashboard": {
     "greeting": "Hola, {{name}}!",
@@ -521,7 +517,6 @@
       "limit_reached_desc": "Tu plan permite hasta {{max}} plantilla(s). Actualiza para crear más."
     }
   },
-
   "resume": {
     "title": "Currículum (IA)",
     "subtitle": "Sube tu PDF, revisa los datos extraídos y guárdalos. El currículum será adjuntado a todos los emails.",
@@ -544,7 +539,7 @@
       "previous_jobs_hint": "Ej: Farm worker, Construction",
       "bio": "Bio corta"
     },
-    "actions": { 
+    "actions": {
       "save": "Guardar currículum",
       "uploading": "Subiendo PDF..."
     },
@@ -648,7 +643,14 @@
       "opened_at": "Visto en: {{date}}",
       "disclaimer": "La confirmación de lectura depende de la configuración de privacidad del destinatario."
     },
-    "status": { "sent": "Enviado", "pending": "Pendiente", "processing": "Procesando", "failed": "Falló", "paused": "Pausado", "skipped_invalid_domain": "Dominio inválido" },
+    "status": {
+      "sent": "Enviado",
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "failed": "Falló",
+      "paused": "Pausado",
+      "skipped_invalid_domain": "Dominio inválido"
+    },
     "toasts": {
       "no_template_title": "No se encontraron plantillas",
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
@@ -657,7 +659,6 @@
       "bulk_premium_title": "Recurso Premium",
       "bulk_premium_desc": "El envío masivo (Enviar todos) es exclusivo para planes Premium. Actualiza para enviar todo de una vez.",
       "bulk_premium_cta": "Ver planes",
-      "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
@@ -916,6 +917,20 @@
     }
   },
   "jobs": {
+    "groups": {
+      "dol_draw": "Sorteo Oficial (DOL)",
+      "group_label": "Grupo",
+      "a_short": "Mayor Probabilidad",
+      "a_tooltip": "Las vacantes del Grupo A son las primeras en la fila del gobierno. Tienen la MAYOR probabilidad de obtener la visa antes de que se agote el cupo anual.",
+      "b_short": "Alta Prioridad",
+      "b_tooltip": "Procesadas justo después del Grupo A. Excelentes probabilidades de aprobación de visa.",
+      "cd_short": "Riesgo Medio",
+      "cd_tooltip": "Procesadas en el medio de la fila. Probabilidad moderada, dependiendo de qué tan rápido se agote el cupo anual.",
+      "risk_short": "Cupo en Riesgo",
+      "risk_tooltip": "Últimas en la fila. Alto riesgo de que el cupo anual de visas se agote antes de ser analizadas.",
+      "linear_short": "Estándar",
+      "linear_tooltip": "Procesamiento estándar sin sorteo."
+    },
     "subtitle": "{{totalCount}} empleos {{visaLabel}} disponibles",
     "filters": {
       "visa": {
@@ -964,6 +979,39 @@
     "benefits": {
       "housing_h2a": "H-2A: la vivienda es obligatoria por reglas de la visa.",
       "housing_available": "Vivienda disponible."
+    },
+    "details": {
+      "title": "Detalles del Empleo",
+      "posted": "Publicado",
+      "start": "Inicio",
+      "end": "Fin",
+      "available_positions": "Vacantes Disponibles",
+      "remuneration": "Compensación",
+      "pay_frequency": "Pago: {{frequency}}",
+      "bonus": "Bono / Adicional",
+      "deductions": "Deducciones Previstas:",
+      "schedule": "Horario de Trabajo",
+      "weekly_hours": "Horas Semanales:",
+      "company_contacts": "Contactos de la Empresa",
+      "email_label": "EMAIL",
+      "phone_label": "TELÉFONO",
+      "website_label": "SITIO WEB",
+      "visit_site": "Visitar sitio oficial",
+      "call_action": "Llamar",
+      "sms_action": "SMS",
+      "whatsapp_action": "WhatsApp",
+      "special_reqs": "Requisitos y Condiciones Especiales",
+      "job_description": "Descripción del Empleo",
+      "housing_info": "Información de Vivienda",
+      "housing_type": "Tipo de Vivienda:",
+      "not_specified": "No especificado",
+      "additional_details": "Detalles Adicionales",
+      "view_details": "Ver detalles",
+      "save_job": "Guardar Empleo",
+      "share": "Compartir",
+      "remove": "Eliminar",
+      "copied": "¡Copiado!",
+      "copy_success": "Texto copiado al portapapeles."
     },
     "upgrade": {
       "title": "Contenido exclusivo",
