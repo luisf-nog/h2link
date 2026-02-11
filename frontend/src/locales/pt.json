@@ -918,6 +918,20 @@
     }
   },
   "jobs": {
+    "groups": {
+      "dol_draw": "Sorteio Oficial (DOL)",
+      "group_label": "Grupo",
+      "a_short": "Maior Chance",
+      "a_tooltip": "Vagas do Grupo A são as primeiras da fila do governo. Têm a MAIOR chance de conseguir o visto antes que a cota acabe.",
+      "b_short": "Alta Prioridade",
+      "b_tooltip": "Processadas logo após o Grupo A. Excelentes chances de aprovação do visto.",
+      "cd_short": "Risco Médio",
+      "cd_tooltip": "Processadas no meio da fila. Chance moderada, depende da velocidade de esgotamento da cota anual.",
+      "risk_short": "Cota em Risco",
+      "risk_tooltip": "Últimas da fila. Alto risco de a cota anual de vistos acabar antes de serem analisadas.",
+      "linear_short": "Linear",
+      "linear_tooltip": "Processamento padrão."
+    },
     "subtitle": "{{totalCount}} vagas {{visaLabel}} disponíveis",
     "filters": {
       "visa": {
@@ -1245,7 +1259,7 @@
     "emphasize_strength": "Destacar força física",
     "emphasize_strength_hint": "Resistência, capacidade de carregar 25kg+",
     "emphasize_languages": "Mencionar idiomas",
-    "emphasize_languages_hint": "Português nativo, Inglês intermediário",
+    "emphasize_languages_hint": "Portugués nativo, Inglês intermediário",
     "custom_instructions": "Instruções Personalizadas",
     "custom_instructions_placeholder": "Ex: Sempre mencione minha experiência em construção civil. Evite falar de idade.",
     "custom_instructions_hint": "A IA seguirá estas instruções ao gerar cada email.",
