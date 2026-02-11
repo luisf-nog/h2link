@@ -89,10 +89,15 @@ export function MultiJsonImporter() {
           else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
 
           for (const item of list) {
+            const root = item || {};
             const nested = item.clearanceOrder || {};
-            // Fusão agressiva: prioridade para o que está fora, mas mantém o que está dentro
-            const flat = { ...nested, ...item };
-            const reqs = nested.jobRequirements || item.jobRequirements || item.qualification || {};
+
+            // PRIORIDADE PARA O NESTED (H-2A/B Real Data)
+            const flat = { ...root, ...nested };
+
+            // Sub-objetos específicos para dados profundos
+            const reqs = nested.jobRequirements || root.jobRequirements || root.qualification || {};
+            const schedule = nested.workSchedule || root.workSchedule || {};
 
             const title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
             const company = getVal(flat, [
@@ -104,14 +109,56 @@ export function MultiJsonImporter() {
             ]);
             if (!title || !company) continue;
 
-            const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "email"]);
-            const phone = getVal(flat, ["empPhone", "employer_phone", "emppocPhone", "PHONE", "recApplyPhone"]);
-
             const fein = getVal(flat, ["empFein", "employer_fein", "fein"]);
             const start = formatToISODate(
               getVal(flat, ["jobBeginDate", "job_begin_date", "tempneedStart", "START_DATE"]),
             );
             const fingerprint = `${fein}|${String(title).toUpperCase()}|${start}`;
+
+            // --- EXTRAÇÃO BLINDADA ---
+            // 1. Telefone com limpeza de tabs (\t)
+            const rawPhone = getVal(flat, [
+              "empPhone",
+              "employer_phone",
+              "emppocPhone",
+              "PHONE",
+              "recApplyPhone",
+              "emppocAddPhone",
+            ]);
+            const cleanPhone = rawPhone ? String(rawPhone).replace(/[\t\s]/g, "") : null;
+
+            // 2. Openings (Quantidade de Vagas)
+            const openings =
+              parseInt(
+                String(
+                  getVal(flat, [
+                    "jobWrksNeeded",
+                    "totalWorkersNeeded",
+                    "tempneedWkrPos",
+                    "jobWrksNeededH2a",
+                    "totalWorkers",
+                  ]) || "0",
+                ),
+                10,
+              ) || null;
+
+            // 3. Schedule (Mergulhando no objeto workSchedule se necessário)
+            const shiftStart =
+              getVal(flat, ["shiftStart", "jobShiftStart", "WORK_START_TIME"]) ||
+              getVal(schedule, ["shiftStart", "shift_start"]);
+            const shiftEnd =
+              getVal(flat, ["shiftEnd", "jobShiftEnd", "WORK_END_TIME"]) || getVal(schedule, ["shiftEnd", "shift_end"]);
+
+            // 4. Special Reqs & Deductions
+            const specialReqs =
+              getVal(reqs, ["jobMinSpecialReq", "specialRequirements", "SPEC_REQ_DESC"]) ||
+              getVal(flat, ["jobMinSpecialReq", "specialRequirements"]);
+            const deductions = getVal(flat, [
+              "recPayDeductions",
+              "payDeductions",
+              "PAY_DEDUCTION_DESC",
+              "pay_deductions",
+            ]);
 
             const extractedJob = {
               job_id: getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER", "JO_ORDER_NUMBER"]) || fingerprint,
@@ -120,32 +167,21 @@ export function MultiJsonImporter() {
               is_active: true,
               job_title: title,
               company: company,
-              email: email,
-              phone: phone,
+              email: getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL", "email"]),
+              phone: cleanPhone,
               city: getVal(flat, ["jobCity", "job_city", "worksite_city", "CITY"]),
               state: getVal(flat, ["jobState", "job_state", "worksite_state", "STATE"]),
               salary: parseMoney(getVal(flat, ["wageFrom", "jobWageOffer", "BASIC_WAGE_RATE", "AEWR", "BASIC_RATE"])),
               start_date: start,
               posted_date: determinePostedDate(item, fingerprint),
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "job_end_date", "tempneedEnd", "END_DATE"])),
-
-              // Informações Chaves (Mapeamento Universal)
               job_duties: getVal(flat, ["jobDuties", "job_duties", "tempneedDescription", "JOB_DUTIES", "description"]),
-              job_min_special_req:
-                getVal(reqs, ["jobMinSpecialReq", "specialRequirements", "SPEC_REQ_DESC"]) ||
-                getVal(flat, ["specialRequirements"]),
-              rec_pay_deductions: getVal(flat, [
-                "recPayDeductions",
-                "payDeductions",
-                "PAY_DEDUCTION_DESC",
-                "pay_deductions",
-              ]),
-              shift_start: getVal(flat, ["jobShiftStart", "shiftStart", "WORK_START_TIME", "shift_start"]),
-              shift_end: getVal(flat, ["jobShiftEnd", "shiftEnd", "WORK_END_TIME", "shift_end"]),
-
+              job_min_special_req: specialReqs,
+              rec_pay_deductions: deductions,
+              shift_start: shiftStart,
+              shift_end: shiftEnd,
               category: getVal(flat, ["socTitle", "soc_title", "SOC_TITLE", "category"]) || "General Labor",
-              openings:
-                parseInt(String(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "openings"]) || "0"), 10) || null,
+              openings: openings,
             };
 
             rawJobsMap.set(fingerprint, extractedJob);
@@ -162,7 +198,7 @@ export function MultiJsonImporter() {
         if (error) throw error;
       }
 
-      toast({ title: "Sincronização V41", description: "Dados restaurados e ampliados com sucesso." });
+      toast({ title: "V42 Sincronizada", description: "Mapeamento profundo restaurado com sucesso." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -174,7 +210,7 @@ export function MultiJsonImporter() {
     <Card className="shadow-xl border-2 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V41 (Safe Mode)
+          <UploadCloud className="h-6 w-6 text-green-700" /> Sincronizador V42 (The Master Key)
         </CardTitle>
       </CardHeader>
       <CardContent>
