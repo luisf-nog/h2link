@@ -6,29 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Shield, User, Wrench, AlertTriangle, ExternalLink, Info } from "lucide-react";
+import { Loader2, Mail, User, AlertTriangle, ExternalLink, Info } from "lucide-react"; // Removidos Shield e Wrench
 import { useTranslation } from "react-i18next";
-import { formatNumber } from "@/lib/number";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailSettingsPanel } from "@/components/settings/EmailSettingsPanel";
 import { z } from "zod";
 import { TemplatesSettingsPanel } from "@/components/settings/TemplatesSettingsPanel";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ResumeSettingsSection } from "@/components/settings/ResumeSettingsSection";
 
-type SettingsTab = "profile" | "account" | "email" | "templates";
+type SettingsTab = "profile" | "email" | "templates"; // Removido 'account'
 
 export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { t, i18n } = useTranslation();
-  const { isAdmin } = useIsAdmin();
-
-  const [adminTargetEmail, setAdminTargetEmail] = useState("");
-  const [adminLoading, setAdminLoading] = useState(false);
+  const { t } = useTranslation();
 
   const initialTab = useMemo<SettingsTab>(() => defaultTab ?? "profile", [defaultTab]);
 
@@ -145,15 +139,12 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
         <p className="text-muted-foreground mt-1">{t("settings.subtitle")}</p>
       </div>
 
+      {/* Grid alterado para 3 colunas pois removemos a aba Account */}
       <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">{t("settings.tabs.profile")}</span>
-          </TabsTrigger>
-          <TabsTrigger value="account" className="gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("settings.tabs.account")}</span>
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
@@ -241,112 +232,12 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
           <ResumeSettingsSection />
         </TabsContent>
 
-        <TabsContent value="account" className="space-y-6 max-w-2xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                {t("settings.account.title")}
-              </CardTitle>
-              <CardDescription>{t("settings.account.description")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">{t("settings.account.current_plan")}</span>
-                <span className="font-medium">{t(`plans.tiers.${profile?.plan_tier || "free"}.label`)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">{t("settings.account.credits_used_today")}</span>
-                <span className="font-medium">{formatNumber(profile?.credits_used_today || 0)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-muted-foreground">{t("settings.account.member_since")}</span>
-                <span className="font-medium">
-                  {profile?.created_at
-                    ? new Date(profile.created_at as unknown as string).toLocaleDateString(i18n.language)
-                    : "-"}
-                </span>
-              </div>
-
-              <Button variant="outline" onClick={() => (window.location.href = "/plans")}>
-                {t("settings.account.actions.manage_plan")}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {isAdmin ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="h-5 w-5" />
-                  Admin: Suporte de Pagamento
-                </CardTitle>
-                <CardDescription>
-                  Reprocessa o upgrade do usuário buscando o último Checkout pago e ajustando o plano no banco.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="adminTargetEmail">Email do usuário</Label>
-                  <Input
-                    id="adminTargetEmail"
-                    value={adminTargetEmail}
-                    onChange={(e) => setAdminTargetEmail(e.target.value)}
-                    placeholder="email@exemplo.com"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                  />
-                </div>
-
-                <Button
-                  onClick={async () => {
-                    const email = adminTargetEmail.trim().toLowerCase();
-                    if (!email) {
-                      toast({
-                        title: "Informe um email",
-                        description: "Digite o email do usuário para reprocessar o upgrade.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    setAdminLoading(true);
-                    try {
-                      const { data, error } = await supabase.functions.invoke("reprocess-upgrade", {
-                        body: { email },
-                      });
-
-                      if (error) throw error;
-
-                      toast({
-                        title: "Upgrade reprocessado",
-                        description: `Plano atualizado para ${data?.plan_tier ?? "—"} (session ${data?.checkout_session_id ?? "—"}).`,
-                      });
-
-                      await refreshProfile();
-                    } catch (e: any) {
-                      toast({
-                        title: "Falha ao reprocessar",
-                        description: e?.message ?? "Erro desconhecido",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setAdminLoading(false);
-                    }
-                  }}
-                  disabled={adminLoading}
-                >
-                  {adminLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Reprocessar upgrade
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
-        </TabsContent>
+        {/* ABA 'ACCOUNT' REMOVIDA
+          O card de "Credits used" e "Plan tier" foi removido conforme solicitado.
+        */}
 
         <TabsContent value="email" className="space-y-6 max-w-3xl">
-          {/* Tutorial Section - Added for better UX regarding App Passwords */}
+          {/* Card de Aviso de Segurança e Tutorial */}
           <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-500">
