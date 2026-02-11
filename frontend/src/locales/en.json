@@ -1185,4 +1185,18 @@
     "preview_description": "See how your email will look with current settings",
     "preview_note": "This is an illustrative preview. Actual content will be dynamically generated for each job."
   }
+"groups": {
+  "dol_draw": "Official Draw (DOL)",
+  "group_label": "Group",
+  "a_short": "Highest Chance",
+  "a_tooltip": "Group A jobs are first in the government's queue. They have the HIGHEST chance of getting approved before the annual visa cap is reached.",
+  "b_short": "High Priority",
+  "b_tooltip": "Processed right after Group A. Excellent chances of visa approval.",
+  "cd_short": "Medium Risk",
+  "cd_tooltip": "Processed in the middle of the queue. Moderate chances, depending on how fast the annual cap is reached.",
+  "risk_short": "Cap at Risk",
+  "risk_tooltip": "Last in the queue. High risk of the annual visa cap being reached before these are reviewed.",
+  "linear_short": "Standard",
+  "linear_tooltip": "Standard processing without lottery."
+}
 }
