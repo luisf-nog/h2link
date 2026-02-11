@@ -99,7 +99,7 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    setProgress({ current: 0, total: 100, status: "Lendo arquivos..." });
+    setProgress({ current: 0, total: 100, status: "A ler ficheiros..." });
 
     try {
       const rawJobsMap = new Map<string, any>();
@@ -171,7 +171,7 @@ export function MultiJsonImporter() {
               ) || null;
 
             const extractedJob = {
-              id: crypto.randomUUID(), // Cria o UUID que a staging table precisa
+              id: crypto.randomUUID(),
               job_id: finalJobId,
               visa_type: fileVisaType,
               fingerprint: fingerprint,
@@ -190,12 +190,13 @@ export function MultiJsonImporter() {
               category: "General Labor",
             };
 
-            rawJobsMap.set(finalJobId, extractedJob);
+            // A MUDANÇA ESTÁ AQUI: Agrupa pela "Digital" da vaga (fingerprint) em vez do job_id
+            rawJobsMap.set(fingerprint, extractedJob);
           }
         }
       }
 
-      // Filtro para garantir vagas válidas e não processar "lixo"
+      // Filtro para garantir vagas válidas
       const finalJobs = Array.from(rawJobsMap.values()).filter((j) => {
         return j.id && j.email && j.email.length > 2;
       });
@@ -208,7 +209,7 @@ export function MultiJsonImporter() {
         setProgress({
           current: processed,
           total: finalJobs.length,
-          status: `Gravando lote de ${batch.length} vagas no banco de dados...`,
+          status: `A gravar lote de ${batch.length} vagas no banco de dados...`,
         });
 
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
@@ -220,7 +221,7 @@ export function MultiJsonImporter() {
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
         title: "Importação Concluída com Sucesso",
-        description: `Foram processadas ${finalJobs.length} vagas. Vagas novas inseridas e existentes atualizadas.`,
+        description: `Foram processadas ${finalJobs.length} vagas sem duplicados.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal na Importação", description: err.message, variant: "destructive" });
@@ -236,7 +237,7 @@ export function MultiJsonImporter() {
         <CardTitle className="flex items-center gap-2 text-slate-800">
           <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
         </CardTitle>
-        <CardDescription>Envio otimizado (O banco de dados gerencia a atualização nativamente).</CardDescription>
+        <CardDescription>Envio otimizado com eliminação de duplicados via Fingerprint.</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
@@ -262,7 +263,7 @@ export function MultiJsonImporter() {
             className="w-full h-12 text-lg font-bold bg-green-700 hover:bg-green-800 text-white"
           >
             {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-            Processar Arquivos
+            Processar Ficheiros
           </Button>
         </div>
       </CardContent>
