@@ -21,13 +21,12 @@ export function EmailSettingsPanel() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const [provider, setProvider] = useState<Provider>("gmail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
-
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -54,13 +53,13 @@ export function EmailSettingsPanel() {
       }
       setLoading(false);
     };
-
     run();
     return () => {
       cancelled = true;
     };
   }, [canLoad, user]);
 
+  // --- TRAVA DE SEGURANÇA GMAIL (16 LETRAS) ---
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (provider === "gmail") {
@@ -86,7 +85,7 @@ export function EmailSettingsPanel() {
     const cleanPass = password.replace(/\s/g, "");
     if (provider === "gmail" && password && cleanPass.length !== 16) {
       toast({
-        title: "Senha incompleta",
+        title: "Senha inválida",
         description: "A Senha de App do Google deve ter exatamente 16 letras.",
         variant: "destructive",
       });
@@ -115,43 +114,37 @@ export function EmailSettingsPanel() {
     }
   };
 
+  // --- BOTÃO DE TESTE RÁPIDO ---
   const handleTestConnection = async () => {
     if (!email) {
-      toast({ title: "Preencha o email antes de testar", variant: "destructive" });
+      toast({ title: "Informe o e-mail primeiro", variant: "destructive" });
       return;
     }
-
-    const passToSend = password.replace(/\s/g, "");
-    setTestingConnection(true);
-
+    setTesting(true);
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
         body: {
           to: email,
           subject: "✅ Teste de Conexão SMTP - H2 Linker",
-          body: "Parabéns! Se você recebeu este email, seu SMTP está configurado corretamente no H2 Linker e pronto para enviar aplicações.",
+          body: "Parabéns! Sua conexão SMTP está funcionando perfeitamente no H2 Linker.",
           provider,
-          overridePassword: passToSend || undefined,
+          overridePassword: password.replace(/\s/g, "") || undefined,
         },
       });
 
       if (funcError) throw funcError;
-      if (payload?.success === false) throw new Error(payload?.error || "Falha na conexão");
+      if (payload?.success === false) throw new Error(payload?.error);
 
       toast({
-        title: "Conexão Estabelecida! 🚀",
-        description: "Email de teste do H2 Linker enviado com sucesso.",
+        title: "Conexão OK! 🚀",
+        description: "Enviamos um e-mail de teste para você.",
         className: "bg-green-600 text-white border-none",
       });
     } catch (e: any) {
-      const parsed = parseSmtpError(e.message || "Erro desconhecido");
-      toast({
-        title: "Falha na conexão",
-        description: parsed.descriptionKey ? t(parsed.descriptionKey) : e.message,
-        variant: "destructive",
-      });
+      const parsed = parseSmtpError(e.message);
+      toast({ title: "Erro na conexão", description: t(parsed.descriptionKey), variant: "destructive" });
     } finally {
-      setTestingConnection(false);
+      setTesting(false);
     }
   };
 
@@ -171,27 +164,26 @@ export function EmailSettingsPanel() {
     }
   };
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="min-h-[20vh] flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin" />
       </div>
     );
-  }
 
   const planTier = profile?.plan_tier || "free";
   const needsWarmupOnboarding = hasPassword && !riskProfile && planTier !== "free";
 
   return (
     <div className="space-y-6">
-      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-500 text-lg">
-            <AlertTriangle className="h-5 w-5" />
-            Atenção: Não use sua senha normal
+      {/* 1. TUTORIAL OBRIGATÓRIO */}
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
+        <CardHeader className="pb-3 text-amber-800 dark:text-amber-500">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" /> Atenção: Não use sua senha normal
           </CardTitle>
           <CardDescription className="text-amber-700/80 dark:text-amber-400/80 font-medium">
-            Sua senha de login pessoal NÃO funcionará. Você precisa gerar uma <strong>Senha de App</strong>.
+            Sua senha de login pessoal NÃO funcionará. Siga o passo a passo abaixo:
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -208,9 +200,8 @@ export function EmailSettingsPanel() {
                 ></iframe>
               </div>
             </div>
-            <div className="flex-1 space-y-4 text-sm flex flex-col justify-center">
-              <p className="text-muted-foreground">Siga os 4 passos obrigatórios:</p>
-              <ol className="list-decimal list-inside space-y-2 font-medium text-slate-700 dark:text-slate-300">
+            <div className="flex-1 space-y-3 text-sm flex flex-col justify-center">
+              <ol className="list-decimal list-inside space-y-2 text-muted-foreground font-medium">
                 <li>
                   Ative a <strong>Verificação em duas etapas</strong> no Google.
                 </li>
@@ -218,16 +209,11 @@ export function EmailSettingsPanel() {
                   Pesquise por <strong>"Senhas de App"</strong> na sua conta.
                 </li>
                 <li>
-                  Crie uma nova senha com o nome <strong>"H2 Linker"</strong>.
+                  Crie uma senha com o nome <strong>"H2 Linker"</strong>.
                 </li>
-                <li>Copie o código de 16 letras gerado.</li>
+                <li>Copie o código de 16 letras e cole abaixo.</li>
               </ol>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto mt-2 gap-2 border-amber-300 hover:bg-amber-100 dark:border-amber-800 text-amber-900 dark:text-amber-100"
-                asChild
-              >
+              <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-amber-300" asChild>
                 <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
                   Gerar Senha Agora <ExternalLink className="w-3 h-3" />
                 </a>
@@ -239,16 +225,16 @@ export function EmailSettingsPanel() {
 
       {needsWarmupOnboarding && <EmailWarmupOnboarding onSelect={handleSaveRiskProfile} loading={savingProfile} />}
 
+      {/* 2. FORMULÁRIO DE CONFIGURAÇÃO */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            {t("smtp.title")}
+            <Mail className="h-5 w-5" /> {t("smtp.title")}
           </CardTitle>
-          <CardDescription>Insira seus dados para conectar seu e-mail ao H2 Linker.</CardDescription>
+          <CardDescription>{t("smtp.subtitle")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("smtp.fields.provider")}</Label>
               <Select
@@ -259,7 +245,7 @@ export function EmailSettingsPanel() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t("common.select")} />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gmail">Gmail (Recomendado)</SelectItem>
@@ -273,51 +259,42 @@ export function EmailSettingsPanel() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex justify-between items-end">
-              <Label className="flex flex-col gap-1">
-                <span>Senha de App (16 Letras)</span>
-                <span className="text-[11px] font-normal text-red-500">
-                  * Não coloque sua senha de login aqui. Veja o vídeo acima.
-                </span>
-              </Label>
-              {provider === "gmail" && password.replace(/\s/g, "").length === 16 && (
-                <span className="text-xs font-bold text-green-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Pronto para conectar
-                </span>
+          <div className="space-y-2">
+            <Label className="flex justify-between">
+              <span>Senha de App (16 letras)</span>
+              {provider === "gmail" && (
+                <span className="text-[10px] text-red-500 font-bold uppercase">Senha normal não funciona</span>
               )}
-            </div>
-            <div className="relative">
-              <Input
-                type="text"
-                value={password}
-                onChange={handlePasswordChange}
-                placeholder={hasPassword ? "•••• •••• •••• •••• (Salvo)" : "abcd efgh ijkl mnop"}
-                className={provider === "gmail" ? "font-mono text-lg tracking-wider uppercase" : ""}
-                maxLength={provider === "gmail" ? 19 : 100}
-                autoComplete="off"
-              />
-            </div>
+            </Label>
+            <Input
+              type="text"
+              value={password}
+              onChange={handlePasswordChange}
+              placeholder={hasPassword ? "•••• •••• •••• •••• (Salva)" : "abcd efgh ijkl mnop"}
+              className={provider === "gmail" ? "font-mono text-lg tracking-wider" : ""}
+              maxLength={provider === "gmail" ? 19 : 100}
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">
+              {provider === "gmail"
+                ? `Letras digitadas: ${password.replace(/\s/g, "").length}/16`
+                : t("smtp.password_note.empty")}
+            </p>
           </div>
 
-          <div className="flex items-center gap-4 pt-4 border-t mt-4">
-            <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto min-w-[140px]">
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Save className="mr-2 h-4 w-4" />
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving} className="flex-1">
+              {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}{" "}
               {t("common.save")}
             </Button>
             <Button
               onClick={handleTestConnection}
-              disabled={testingConnection || (!hasPassword && !password)}
+              disabled={testing || (!hasPassword && !password)}
               variant="outline"
-              className="w-full md:w-auto min-w-[180px] border-blue-200 hover:bg-blue-50 text-blue-700"
+              className="flex-1 border-blue-200 text-blue-700"
             >
-              {testingConnection ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Wifi className="mr-2 h-4 w-4" />
-              )}
-              Testar Conexão H2 Linker
+              {testing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Wifi className="mr-2 h-4 w-4" />} Testar
+              Conexão
             </Button>
           </div>
         </CardContent>
