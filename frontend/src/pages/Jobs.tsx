@@ -318,7 +318,7 @@ export default function Jobs() {
   const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
   const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
-  const tableColSpan = 13;
+  const tableColSpan = 12; // Eram 13, tiramos o e-mail
 
   const buildOrSearch = (term: string) =>
     `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
@@ -829,10 +829,10 @@ export default function Jobs() {
           </div>
         ) : (
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="whitespace-nowrap">
                     <TableHead>
                       <button onClick={() => toggleSort("job_title")}>
                         {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
@@ -880,8 +880,10 @@ export default function Jobs() {
                       </button>
                     </TableHead>
                     <TableHead>{t("jobs.table.headers.experience")}</TableHead>
-                    <TableHead>{t("jobs.table.headers.email")}</TableHead>
-                    <TableHead className="text-right">{t("jobs.table.headers.action")}</TableHead>
+                    {/* COLUNA DE E-MAIL REMOVIDA DAQUI */}
+                    <TableHead className="text-right sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                      {t("jobs.table.headers.action")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -899,8 +901,12 @@ export default function Jobs() {
                     </TableRow>
                   ) : (
                     jobs.map((j) => (
-                      <TableRow key={j.id} className="cursor-pointer" onClick={() => handleRowClick(j)}>
-                        <TableCell className="font-medium">
+                      <TableRow
+                        key={j.id}
+                        className="cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => handleRowClick(j)}
+                      >
+                        <TableCell className="font-medium min-w-[200px]">
                           <div className="flex items-center gap-2">
                             {jobReports[j.id] && (
                               <JobWarningBadge
@@ -908,23 +914,25 @@ export default function Jobs() {
                                 reasons={jobReports[j.id].reasons}
                               />
                             )}
-                            {j.job_title}
+                            <span className="line-clamp-2">{j.job_title}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className={cn(planSettings.job_db_blur && "blur-sm select-none")}>{j.company}</span>
+                        <TableCell className="min-w-[150px]">
+                          <span className={cn("line-clamp-2", planSettings.job_db_blur && "blur-sm select-none")}>
+                            {j.company}
+                          </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
                           {j.city}, {j.state}
                         </TableCell>
-                        <TableCell>{j.openings ?? "-"}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap text-center">{j.openings ?? "-"}</TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <div className="flex flex-col">
-                            <span className="font-medium">{renderPrice(j)}</span>
+                            <span className="font-medium text-slate-700">{renderPrice(j)}</span>
                             <span className="text-[10px] uppercase text-muted-foreground">/{j.wage_unit || "h"}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {(() => {
                             const b = getVisaBadgeConfig(j.visa_type);
                             return (
@@ -934,7 +942,7 @@ export default function Jobs() {
                             );
                           })()}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {(() => {
                             const group = (j as any).randomization_group;
                             if (!group) return <span className="text-muted-foreground">-</span>;
@@ -957,7 +965,7 @@ export default function Jobs() {
                                     </span>
                                   </div>
                                 </TooltipTrigger>
-                                <TooltipContent className="max-w-[260px] p-3 border-slate-100 shadow-xl bg-white">
+                                <TooltipContent className="max-w-[260px] p-3 border-slate-100 shadow-xl bg-white z-50">
                                   <div className="space-y-1.5">
                                     <p className="font-semibold text-sm flex items-center gap-2 text-slate-800">
                                       Sorteio Oficial (DOL)
@@ -969,16 +977,22 @@ export default function Jobs() {
                             );
                           })()}
                         </TableCell>
-                        <TableCell>{formatDate(j.posted_date)}</TableCell>
-                        <TableCell>{formatDate(j.start_date)}</TableCell>
-                        <TableCell>{formatDate(j.end_date)}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
+                        <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                          {formatDate(j.posted_date)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                          {formatDate(j.start_date)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                          {formatDate(j.end_date)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
                           {formatExperience(j.experience_months)}
                         </TableCell>
-                        <TableCell>
-                          <span className={cn(planSettings.job_db_blur && "blur-sm select-none")}>{j.email}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
+                        {/* COLUNA DE E-MAIL REMOVIDA DAQUI */}
+
+                        {/* AÇÃO FIXADA NA DIREITA */}
+                        <TableCell className="text-right whitespace-nowrap sticky right-0 bg-white shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                           <Button
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
