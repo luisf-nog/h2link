@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Save, AlertTriangle, ExternalLink, Wifi, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Mail, Save, AlertTriangle, ExternalLink, Wifi, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
@@ -28,13 +28,11 @@ export function EmailSettingsPanel() {
   const [password, setPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
 
-  // Warmup states (mantido se precisar da lógica de risco no futuro, mas oculto na UI principal)
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
   const canLoad = useMemo(() => Boolean(user?.id), [user?.id]);
 
-  // Carregar dados salvos
   useEffect(() => {
     if (!canLoad) return;
     let cancelled = false;
@@ -48,10 +46,7 @@ export function EmailSettingsPanel() {
 
       if (cancelled) return;
 
-      if (error) {
-        // Silently fail or log, user might not have credentials yet
-        console.log("No credentials found or error:", error);
-      } else if (data) {
+      if (data) {
         setProvider((data.provider as Provider) ?? "gmail");
         setEmail(data.email ?? "");
         setHasPassword(Boolean(data.has_password));
@@ -66,11 +61,9 @@ export function EmailSettingsPanel() {
     };
   }, [canLoad, user]);
 
-  // Formatação automática da senha de app (blocos de 4 letras)
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (provider === "gmail") {
-      // Remove tudo que não for letra
       const clean = val.replace(/[^a-zA-Z]/g, "").toLowerCase();
       let formatted = "";
       for (let i = 0; i < clean.length && i < 16; i++) {
@@ -91,8 +84,6 @@ export function EmailSettingsPanel() {
     }
 
     const cleanPass = password.replace(/\s/g, "");
-
-    // Validação rígida para Gmail
     if (provider === "gmail" && password && cleanPass.length !== 16) {
       toast({
         title: "Senha incompleta",
@@ -116,10 +107,9 @@ export function EmailSettingsPanel() {
         setPassword("");
       }
 
-      toast({ title: t("smtp.toasts.saved"), description: "Credenciais atualizadas com sucesso." });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Erro ao salvar";
-      toast({ title: t("smtp.toasts.save_error_title"), description: message, variant: "destructive" });
+      toast({ title: t("smtp.toasts.saved") });
+    } catch (e: any) {
+      toast({ title: t("smtp.toasts.save_error_title"), description: e.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -131,16 +121,15 @@ export function EmailSettingsPanel() {
       return;
     }
 
-    // Se usuário digitou senha nova, usa ela. Senão, tenta usar a salva no backend.
     const passToSend = password.replace(/\s/g, "");
-
     setTestingConnection(true);
+
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
         body: {
-          to: email, // Envia para o próprio usuário
-          subject: "✅ Teste de Conexão SMTP - JobFy",
-          body: "Parabéns! Se você recebeu este email, seu SMTP está configurado corretamente e pronto para enviar aplicações.",
+          to: email,
+          subject: "✅ Teste de Conexão SMTP - H2 Linker",
+          body: "Parabéns! Se você recebeu este email, seu SMTP está configurado corretamente no H2 Linker e pronto para enviar aplicações.",
           provider,
           overridePassword: passToSend || undefined,
         },
@@ -151,7 +140,7 @@ export function EmailSettingsPanel() {
 
       toast({
         title: "Conexão Estabelecida! 🚀",
-        description: "Email de teste enviado. Verifique sua caixa de entrada.",
+        description: "Email de teste do H2 Linker enviado com sucesso.",
         className: "bg-green-600 text-white border-none",
       });
     } catch (e: any) {
@@ -160,14 +149,12 @@ export function EmailSettingsPanel() {
         title: "Falha na conexão",
         description: parsed.descriptionKey ? t(parsed.descriptionKey) : e.message,
         variant: "destructive",
-        duration: 6000,
       });
     } finally {
       setTestingConnection(false);
     }
   };
 
-  // Handler para perfil de risco (se necessário no futuro)
   const handleSaveRiskProfile = async (selectedProfile: RiskProfile) => {
     if (!user?.id) return;
     setSavingProfile(true);
@@ -197,7 +184,6 @@ export function EmailSettingsPanel() {
 
   return (
     <div className="space-y-6">
-      {/* 1. TUTORIAL DE SEGURANÇA (Obrigatório ver) */}
       <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-500 text-lg">
@@ -231,7 +217,9 @@ export function EmailSettingsPanel() {
                 <li>
                   Pesquise por <strong>"Senhas de App"</strong> na sua conta.
                 </li>
-                <li>Crie uma nova senha com o nome "JobFy".</li>
+                <li>
+                  Crie uma nova senha com o nome <strong>"H2 Linker"</strong>.
+                </li>
                 <li>Copie o código de 16 letras gerado.</li>
               </ol>
               <Button
@@ -249,17 +237,15 @@ export function EmailSettingsPanel() {
         </CardContent>
       </Card>
 
-      {/* 2. Onboarding de Aquecimento (Opcional) */}
       {needsWarmupOnboarding && <EmailWarmupOnboarding onSelect={handleSaveRiskProfile} loading={savingProfile} />}
 
-      {/* 3. Formulário Limpo */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             {t("smtp.title")}
           </CardTitle>
-          <CardDescription>Insira seus dados para conectar.</CardDescription>
+          <CardDescription>Insira seus dados para conectar seu e-mail ao H2 Linker.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -281,7 +267,6 @@ export function EmailSettingsPanel() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>{t("smtp.fields.email")}</Label>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu.email@gmail.com" />
@@ -298,18 +283,17 @@ export function EmailSettingsPanel() {
               </Label>
               {provider === "gmail" && password.replace(/\s/g, "").length === 16 && (
                 <span className="text-xs font-bold text-green-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Tamanho correto
+                  <CheckCircle2 className="w-3 h-3" /> Pronto para conectar
                 </span>
               )}
             </div>
-
             <div className="relative">
               <Input
                 type="text"
                 value={password}
                 onChange={handlePasswordChange}
                 placeholder={hasPassword ? "•••• •••• •••• •••• (Salvo)" : "abcd efgh ijkl mnop"}
-                className={provider === "gmail" ? "font-mono text-lg tracking-wider" : ""}
+                className={provider === "gmail" ? "font-mono text-lg tracking-wider uppercase" : ""}
                 maxLength={provider === "gmail" ? 19 : 100}
                 autoComplete="off"
               />
@@ -322,19 +306,18 @@ export function EmailSettingsPanel() {
               <Save className="mr-2 h-4 w-4" />
               {t("common.save")}
             </Button>
-
             <Button
               onClick={handleTestConnection}
               disabled={testingConnection || (!hasPassword && !password)}
               variant="outline"
-              className="w-full md:w-auto min-w-[160px] border-blue-200 hover:bg-blue-50 text-blue-700"
+              className="w-full md:w-auto min-w-[180px] border-blue-200 hover:bg-blue-50 text-blue-700"
             >
               {testingConnection ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Wifi className="mr-2 h-4 w-4" />
               )}
-              Testar Conexão
+              Testar Conexão H2 Linker
             </Button>
           </div>
         </CardContent>
