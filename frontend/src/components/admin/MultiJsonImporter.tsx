@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, RefreshCw, UploadCloud } from "lucide-react";
+import { Loader2, RefreshCw, UploadCloud } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -12,7 +12,6 @@ export function MultiJsonImporter() {
   const [progress, setProgress] = useState({ current: 0, total: 0, status: "" });
   const { toast } = useToast();
 
-  // --- Helpers de Formatação ---
   const parseMoney = (val: any) => {
     if (!val) return null;
     const num = parseFloat(String(val).replace(/[$,]/g, ""));
@@ -45,25 +44,18 @@ export function MultiJsonImporter() {
     return null;
   };
 
-  // --- Normaliza qualquer JSON para uma lista de registros ---
   const toList = (json: any) => {
     if (!json) return [];
     if (Array.isArray(json)) return json;
-
     if (Array.isArray(json.data)) return json.data;
     if (Array.isArray(json.results)) return json.results;
     if (Array.isArray(json.records)) return json.records;
     if (Array.isArray(json.items)) return json.items;
-
-    // Caso: o JSON é uma vaga única
     if (json.caseNumber || json.jobOrderNumber || json.CASE_NUMBER || json.JO_ORDER_NUMBER) return [json];
-
-    // Fallback: pega o primeiro array dentro do objeto
     const arr = Object.values(json).find((v) => Array.isArray(v));
     return Array.isArray(arr) ? (arr as any[]) : [];
   };
 
-  // --- A LÓGICA DE DATA DO INSPETOR ---
   const determinePostedDate = (item: any, jobId: string) => {
     const root = item || {};
     const nested = item.clearanceOrder || {};
@@ -89,7 +81,6 @@ export function MultiJsonImporter() {
     return null;
   };
 
-  // --- Cálculo de Salário ---
   const calculateFinalWage = (item: any, flat: any) => {
     let val = parseMoney(
       item.wageFrom || item.jobWageOffer || item.wageOfferFrom || item.BASIC_WAGE_RATE || item.AEWR || item.BASIC_RATE,
@@ -105,7 +96,6 @@ export function MultiJsonImporter() {
     return val;
   };
 
-  // --- Processamento Principal ---
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
@@ -152,14 +142,12 @@ export function MultiJsonImporter() {
             let title = getVal(flat, ["jobTitle", "job_title", "tempneedJobtitle", "JOB_TITLE", "TITLE"]);
             let company = getVal(flat, ["empBusinessName", "employerBusinessName", "legalName", "empName", "company"]);
 
-            // Salva-vidas para vagas de Emergência (sem título)
+            // Fallback de Emergência
             if (!title) {
               title = fileVisaType.includes("H-2A")
                 ? "Agricultural Worker (Emergency Filing)"
                 : "General Labor (Emergency Filing)";
             }
-
-            // Salva-vidas para empresas sem nome
             if (!company) {
               company = "Confidential Employer";
             }
@@ -174,7 +162,6 @@ export function MultiJsonImporter() {
 
             const posted_date = determinePostedDate(item, finalJobId);
             const email = getVal(flat, ["recApplyEmail", "emppocEmail", "emppocAddEmail", "EMAIL"]);
-
             const openings =
               parseInt(
                 String(
@@ -183,9 +170,8 @@ export function MultiJsonImporter() {
                 10,
               ) || null;
 
-            // --- A MÁGICA ACONTECE AQUI ---
             const extractedJob = {
-              id: crypto.randomUUID(), // <-- AGORA É UM UUID VERDADEIRO! O PostgreSQL vai aceitar o INSERT.
+              id: crypto.randomUUID(), // Cria o UUID que a staging table precisa
               job_id: finalJobId,
               visa_type: fileVisaType,
               fingerprint: fingerprint,
@@ -209,12 +195,11 @@ export function MultiJsonImporter() {
         }
       }
 
-      // Filtro garantindo que 'id' e 'email' existam
+      // Filtro para garantir vagas válidas e não processar "lixo"
       const finalJobs = Array.from(rawJobsMap.values()).filter((j) => {
-        return j.id && String(j.id).trim().length > 0 && j.email && j.email.length > 2;
+        return j.id && j.email && j.email.length > 2;
       });
 
-      // Envio em Lote
       const BATCH_SIZE = 1000;
       let processed = 0;
 
@@ -223,7 +208,7 @@ export function MultiJsonImporter() {
         setProgress({
           current: processed,
           total: finalJobs.length,
-          status: `Enviando lote de ${batch.length} vagas ao banco de dados...`,
+          status: `Gravando lote de ${batch.length} vagas no banco de dados...`,
         });
 
         const { error } = await supabase.rpc("process_jobs_bulk" as any, { jobs_data: batch });
@@ -234,8 +219,8 @@ export function MultiJsonImporter() {
 
       setProgress({ current: finalJobs.length, total: finalJobs.length, status: "Concluído!" });
       toast({
-        title: "Importação Concluída",
-        description: `Sucesso! ${finalJobs.length} vagas validadas e enviadas ao banco.`,
+        title: "Importação Concluída com Sucesso",
+        description: `Foram processadas ${finalJobs.length} vagas. Vagas novas inseridas e existentes atualizadas.`,
       });
     } catch (err: any) {
       toast({ title: "Erro Fatal na Importação", description: err.message, variant: "destructive" });
@@ -251,7 +236,7 @@ export function MultiJsonImporter() {
         <CardTitle className="flex items-center gap-2 text-slate-800">
           <UploadCloud className="h-6 w-6 text-green-700" /> Importador de Vagas (Final)
         </CardTitle>
-        <CardDescription>Extração avançada com correção de UUID para banco de dados.</CardDescription>
+        <CardDescription>Envio otimizado (O banco de dados gerencia a atualização nativamente).</CardDescription>
       </CardHeader>
       <CardContent className="p-6">
         <div className="border-dashed border-2 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
