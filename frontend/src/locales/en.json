@@ -64,21 +64,6 @@
         "error_desc": "Something went wrong while preparing your reset. Please try again.",
         "finalizing": "Finalizing…",
         "redirecting": "Opening reset…"
-      },
-      "errors": {
-        "invalid_email_title": "Invalid email",
-        "invalid_email_desc": "Please enter a valid email address.",
-        "request_error_title": "Reset error",
-        "reset_error_title": "Password update error",
-        "no_session_title": "Session required",
-        "email_rate_limit_title": "Too many reset emails",
-        "email_rate_limit_desc": "Please wait a few minutes and try again.",
-        "cooldown_title": "Please wait",
-        "cooldown_desc": "You recently requested a reset link. Try again in a minute.",
-        "link_expired_title": "Reset link expired",
-        "link_expired_desc": "This link is no longer valid. Please request a new reset link.",
-        "link_invalid_title": "Invalid reset link",
-        "link_invalid_desc": "We could not validate this link. Please request a new reset link."
       }
     },
     "fields": {
@@ -127,26 +112,6 @@
       "signup_error_title": "Sign-up error",
       "signup_success_title": "Account created!",
       "signup_success_desc": "You can now sign in."
-    },
-    "signup_notice": {
-      "title": "Account created — confirm your email",
-      "desc": "We sent a confirmation link{{email, select,  { } other { to }}} {{email}}. Open the email and confirm to unlock access.",
-      "toast_title": "Confirm your email",
-      "toast_desc": "Before signing in, confirm the link we sent to your email."
-    },
-    "confirmation": {
-      "processing_title": "Confirming your email…",
-      "processing_desc": "We’re validating your confirmation and preparing your session.",
-      "success_title": "Email confirmed!",
-      "success_desc": "All set. We’ll take you to the dashboard.",
-      "error_title": "Could not confirm",
-      "error_desc": "Something went wrong while validating your confirmation. Please try again.",
-      "finalizing": "Finalizing authentication…",
-      "redirecting": "Redirecting…",
-      "session_timeout": "Your confirmation was received, but the session took too long to start. Please go back and sign in again.",
-      "brand_tagline": "Secure confirmation",
-      "brand_title": "Access granted",
-      "brand_desc": "You’re one step away from H2Link — we’re syncing your session."
     }
   },
   "footer": {
@@ -187,41 +152,12 @@
     "smtp": {
       "title": "Connect Your Email",
       "description": "We'll use your email to send job applications on your behalf.",
-      "why_app_password_title": "Why use an App Password?",
-      "why_app_password_desc": "For security, Google and Microsoft don't allow external apps to use your main password. You need to create a special \"App Password\" — it only works for sending emails and can be revoked anytime.",
-      "gmail_guide_title": "How to create on Gmail",
-      "gmail_step1": "Enable 2-Step Verification (2FA) on your Google account",
-      "gmail_step2": "Go to App Passwords and create one named \"H2 Linker\"",
-      "gmail_step3": "Copy the 16-character password generated",
-      "gmail_link": "Open Google App Passwords →",
-      "outlook_guide_title": "How to create on Outlook",
-      "outlook_step1": "Enable 2-Step Verification on your Microsoft account",
-      "outlook_step2": "Go to Advanced security options",
-      "outlook_step3": "Create a new app password and copy it",
-      "outlook_link": "Open Microsoft Security →",
-      "password_hint": "Paste the 16-character password here (you can paste without spaces)",
-      "continue": "Save & Continue"
-    },
-    "warmup": {
-      "title": "Protect Your Reputation",
-      "subtitle": "Configure smart email warm-up",
-      "why_title": "Why is warm-up essential?",
-      "why_desc": "Providers like Gmail and Outlook monitor sending patterns. If you send too many emails at once with a new account, you risk:",
-      "why_point1": "Your emails going straight to Spam",
-      "why_point2": "Temporary or permanent account blocks",
-      "why_point3": "Damaging your sender reputation long-term",
-      "recommendation_title": "💡 Our recommendation",
-      "recommendation_desc": "For new users, we recommend the \"Standard\" profile. It offers the best balance between speed and safety. Experienced users with already warmed accounts may consider \"Aggressive\".",
-      "recommended_badge": "Recommended",
-      "how_it_works": "Your limit increases automatically each day you use at least 80% of your quota. The more consistent you are, the faster you reach your plan's maximum speed.",
+      "password_hint": "Paste the 16-character password here",
       "continue": "Save & Continue"
     },
     "complete": {
       "title": "You're all set!",
       "description": "Your account is ready to start sending applications.",
-      "smtp_ready": "Email configured successfully",
-      "warmup_ready": "Smart warm-up activated",
-      "next_steps": "Next: Browse the Jobs Hub to find opportunities, add them to your queue, and start sending applications!",
       "go_dashboard": "Go to Dashboard"
     }
   },
@@ -238,29 +174,7 @@
     "previous": "Previous",
     "next": "Next",
     "back": "Back",
-    "more_pages": "More pages",
-    "pagination": {
-      "previous_aria": "Go to previous page",
-      "next_aria": "Go to next page"
-    },
-    "languages": {
-      "en": "English",
-      "pt": "Português",
-      "es": "Español"
-    },
-    "yes": "Yes",
-    "no": "No",
-    "user": "User",
-    "expand": "Expand",
-    "collapse": "Collapse",
-    "helpExpanded": "Questions or suggestions? Get in touch",
-    "errors": {
-      "no_session": "No authenticated session.",
-      "invalid_data": "Invalid data.",
-      "save_failed": "Failed to save.",
-      "send_failed": "Failed to send.",
-      "delete_failed": "Failed to delete."
-    }
+    "more_pages": "More pages"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -273,36 +187,11 @@
   "dashboard": {
     "greeting": "Hi, {{name}}!",
     "subtitle": "Here is your {{plan}} account summary",
-    "promo": {
-      "title": "🔥 Launch Promotion!",
-      "subtitle": "Plans with up to 67% off. Get yours before it ends!",
-      "cta": "View Plans"
-    },
-    "credits": {
-      "title": "Sending Credits",
-      "description": "Your daily email limit resets at midnight",
-      "remaining": "remaining",
-      "used": "{{used}} / {{dailyLimit}} used"
-    },
     "stats": {
       "sent_today": "Sent Today",
-      "sent_today_subtitle": "out of {{dailyLimit}} available",
       "in_queue": "In Queue",
-      "in_queue_subtitle": "jobs waiting",
       "success_rate": "Success Rate",
-      "success_rate_subtitle": "emails delivered",
-      "this_month": "This Month",
-      "this_month_subtitle": "applications sent"
-    },
-    "next_steps": {
-      "title": "Next Steps",
-      "description": "Start applying to H-2B jobs now",
-      "step1_title": "1. Find jobs",
-      "step1_desc": "Browse available H-2B listings",
-      "step2_title": "2. Build your queue",
-      "step2_desc": "Add jobs to your sending queue",
-      "step3_title": "3. Send emails",
-      "step3_desc": "Send your applications in bulk"
+      "this_month": "This Month"
     }
   },
   "settings": {
@@ -313,177 +202,25 @@
       "account": "Account",
       "smtp": "SMTP",
       "templates": "Templates"
-    },
-    "profile": {
-      "title": "Profile",
-      "description": "Your personal information",
-      "fields": {
-        "email": "Email",
-        "full_name": "Full name",
-        "age": "Age",
-        "phone": "Phone",
-        "contact_email": "Contact email"
-      },
-      "placeholders": {
-        "full_name": "Your name",
-        "age": "Your age",
-        "phone": "+15551234567",
-        "contact_email": "you@email.com"
-      },
-      "email_note": "Email cannot be changed",
-      "contact_email_note": "This email will be used in your template signature.",
-      "actions": {
-        "save": "Save changes"
-      },
-      "validation": {
-        "invalid_age": "Age must be between 14 and 90.",
-        "invalid_phone": "Phone must be in international format (E.164), e.g. +15551234567."
-      }
-    },
-    "account": {
-      "title": "Account",
-      "description": "Subscription information",
-      "current_plan": "Current plan",
-      "credits_used_today": "Credits used today",
-      "member_since": "Member since",
-      "actions": {
-        "manage_plan": "Manage plan"
-      }
-    },
-    "toasts": {
-      "update_error_title": "Update error",
-      "update_success_title": "Profile updated!",
-      "update_success_desc": "Your information has been saved."
-    }
-  },
-  "smtp": {
-    "configureRequired": "SMTP configuration required",
-    "title": "SMTP",
-    "subtitle": "Configure your email provider to send applications.",
-    "fields": {
-      "provider": "Provider",
-      "email": "Email",
-      "password": "App password"
-    },
-    "placeholders": {
-      "email": "you@email.com",
-      "password": "Enter your app password",
-      "password_saved": "Password already saved (leave blank to keep)"
-    },
-    "password_note": {
-      "saved": "A password is already saved for your account.",
-      "empty": "Tip: Use an app password (recommended) instead of your main account password."
-    },
-    "help": {
-      "title": "How to generate an App Password",
-      "intro_title": "Why do I need this?",
-      "intro_body": "To connect your email safely, you should not use your normal login password.",
-      "security_body": "Google and Microsoft require an App Password: a special code that allows sending emails without exposing your main password.",
-      "gmail_title": "Gmail (Google)",
-      "gmail_warning": "Note: to see this option, you must have 2-Step Verification (2FA) enabled.",
-      "gmail_steps": "Open your Google Account (myaccount.google.com) and go to Security.\nMake sure 2-Step Verification is ON (turn it on if needed).\nUse the search bar and type: App passwords.\nOpen App passwords (Google may ask for your password again).\nIn Select app, choose Other (Custom name).\nType: H2 Linker.\nClick Generate and copy the 16-character password.",
-      "gmail_tip": "Tip: you can paste it without spaces.",
-      "outlook_title": "Outlook / Hotmail (Microsoft)",
-      "outlook_steps": "Open your Microsoft account (account.microsoft.com) and go to Security.\nOpen Advanced security options.\nEnable 2-step verification (2FA) if it’s off.\nFind App passwords.\nClick Create a new app password.\nCopy the generated password and paste it into the app.",
-      "faq_title": "FAQ",
-      "faq_q_safe": "Is this safe?",
-      "faq_a_safe": "Yes. This password is only for sending email. You can revoke access by deleting the app password without changing your main password.",
-      "faq_q_where": "Where do I paste it?",
-      "faq_a_where": "Here in Settings → SMTP, in the “App password” field."
-    },
-    "toasts": {
-      "load_error_title": "Could not load SMTP settings",
-      "load_templates_error_title": "Could not load templates",
-      "email_required": "Email is required.",
-      "saved": "SMTP settings saved.",
-      "save_error_title": "Save error",
-      "send_error_title": "Send error",
-      "test_sent": "Test email sent.",
-      "test_required_fields": "Please fill To, Subject, and Body.",
-      "profile_incomplete_title": "Complete your profile",
-      "profile_incomplete_desc": "Please fill name, age, phone, and contact email before sending."
-    },
-    "test": {
-      "title": "Send a test email",
-      "subtitle": "Preview the selected template by sending it to a recipient.",
-      "fields": {
-        "template": "Template",
-        "visa_type": "Visa type",
-        "company": "Company",
-        "position": "Position",
-        "to": "To",
-        "subject": "Subject",
-        "body": "Body"
-      }
-    }
-  },
-  "templates": {
-    "title": "Email templates",
-    "subtitle": "Create and manage templates to speed up your applications.",
-    "actions": {
-      "new": "New template",
-      "new_fallback": "Create fallback template",
-      "generate_ai": "Generate with AI",
-      "rewrite_ai": "✨ Rewrite with AI"
-    }
-  },
-  "resume": {
-    "title": "Resume (AI)",
-    "subtitle": "Upload your PDF, review extracted data, and save. The resume will be attached to all emails sent.",
-    "upload": {
-      "label": "PDF upload",
-      "note": "AI can be wrong — review before saving.",
-      "actions": {
-        "parse": "Extract with AI"
-      }
     }
   },
   "queue": {
     "title": "My Queue",
     "subtitle": "{{pendingCount}} pending • {{sentCount}} sent",
     "actions": {
-      "add_manual": "Add Company",
       "send": "Send all ({{pendingCount}})",
-      "send_selected": "Send selected ({{count}})",
-      "retry": "Retry",
-      "retry_all_failed": "Retry failed ({{count}})",
-      "resend": "Resend",
-      "view_history": "View history",
       "remove": "Remove"
-    },
-    "history": {
-      "title": "Send History",
-      "empty": "No sends recorded.",
-      "status_success": "Success",
-      "status_failed": "Failed",
-      "status_skipped": "Skipped",
-      "sent_at": "Sent",
-      "opened_at": "Opened",
-      "not_opened": "Not opened"
-    },
-    "status": {
-      "sent": "Sent",
-      "pending": "Pending",
-      "processing": "Processing",
-      "failed": "Failed",
-      "paused": "Paused",
-      "skipped_invalid_domain": "Invalid domain"
     },
     "toasts": {
       "remove_success_title": "Removed from queue",
-      "remove_success_desc": "The job was removed from your queue.",
-      "remove_error_title": "Remove error"
+      "remove_success_desc": "The job was removed from your queue."
     }
-  },
-  "plans": {
-    "title": "Choose your plan",
-    "subtitle": "Unlock H2 Linker and accelerate your applications"
   },
   "jobs": {
     "queue_banner": {
-      "title": "Build your queue now!",
-      "subtitle": "You have {{count}} job(s) waiting to be sent.",
-      "cta": "Go to My Queue"
+      "title": "Ready to get hired? 🚀",
+      "subtitle": "You have {{count}} applications ready to go. Don't let these opportunities expire—send your emails now!",
+      "cta": "Send Applications Now"
     },
     "groups": {
       "dol_draw": "Official Draw (DOL)",
@@ -495,9 +232,7 @@
       "cd_short": "Medium Risk",
       "cd_tooltip": "Processed in the middle of the queue. Moderate chances, depending on how fast the annual cap is reached.",
       "risk_short": "Cap at Risk",
-      "risk_tooltip": "Last in the queue. High risk of the annual visa cap being reached before these are reviewed.",
-      "linear_short": "Standard",
-      "linear_tooltip": "Standard processing without lottery."
+      "risk_tooltip": "Last in the queue. High risk of the annual visa cap being reached before these are reviewed."
     },
     "subtitle": "{{totalCount}} {{visaLabel}} jobs available",
     "filters": {
@@ -505,13 +240,11 @@
         "placeholder": "Filter visa",
         "all": "All (H-2A + H-2B)",
         "only_h2b": "H-2B only",
-        "only_h2a": "H-2A only",
-        "h2a_info": "H-2A is agriculture: no annual cap and housing is mandatory."
+        "only_h2a": "H-2A only"
       },
-      "state": "State (e.g., FL)",
+      "state": "State",
       "city": "City",
-      "category": "Category",
-      "category_all": "All categories"
+      "category": "Category"
     },
     "search": {
       "placeholder": "Search by role, company, city..."
@@ -528,16 +261,12 @@
         "start": "Start",
         "end": "End",
         "experience": "Exp.",
-        "email": "Email",
         "action": "Action"
       },
       "experience_months": "{{count}} month",
       "experience_months_plural": "{{count}} months",
       "experience_years": "{{count}} year",
-      "experience_years_plural": "{{count}} years",
-      "experience_years_months": "{{years}}yr {{months}}mo",
-      "loading": "Loading jobs...",
-      "empty": "No jobs found"
+      "experience_years_plural": "{{count}} years"
     },
     "details": {
       "title": "Job Details",
@@ -548,8 +277,6 @@
       "remuneration": "Compensation",
       "experience": "Experience Required",
       "no_experience": "No experience required",
-      "deductions": "Planned Deductions:",
-      "weekly_hours": "Weekly Hours:",
       "company_contacts": "Company Contacts",
       "email_label": "EMAIL",
       "phone_label": "PHONE",
