@@ -36,6 +36,7 @@ import {
   ArrowRight,
   X,
   ShieldAlert,
+  Lock,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -188,7 +189,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("jobs-realtime-v3")
+      .channel("jobs-realtime-final")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -206,8 +207,9 @@ export default function Jobs() {
     const to = from + pageSize - 1;
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
     if (visaType !== "all") query = query.eq("visa_type", visaType);
-    if (searchTerm)
-      query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
+    const term = searchTerm.replace(/[()\[\]{}|\\^$*+?.<>]/g, "").trim();
+    if (term)
+      query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
     if (stateFilter) query = query.ilike("state", `%${stateFilter}%`);
     if (cityFilter) query = query.ilike("city", `%${cityFilter}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
@@ -242,10 +244,7 @@ export default function Jobs() {
 
   const addToQueue = async (job: Job) => {
     if (!profile) return;
-    if (planSettings.job_db_blur) {
-      toast({ title: t("jobs.upgrade.title"), description: t("jobs.upgrade.description"), variant: "destructive" });
-      return;
-    }
+    if (planSettings.job_db_blur) return;
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
     const { error } = await supabase
       .from("my_queue")
@@ -306,7 +305,7 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* CENTRAL DE COMANDO MODERNA - SINCRONIZADA EM TEMPO REAL */}
+        {/* CENTRAL DE COMANDO MODERNA */}
         {queuedJobIds.size > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all hover:shadow-[0_8px_30px_rgba(37,99,235,0.08)]">
@@ -315,13 +314,13 @@ export default function Jobs() {
                   <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
                     <Zap className="h-6 w-6 text-white fill-white/20" />
                   </div>
-                  <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[11px] font-black h-6 w-6 rounded-full flex items-center justify-center border-[3px] border-white shadow-md animate-in zoom-in duration-300">
+                  <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[11px] font-black h-6 w-6 rounded-full flex items-center justify-center border-[3px] border-white shadow-md">
                     {queuedJobIds.size}
                   </div>
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-slate-900 font-bold text-base leading-tight">{t("jobs.queue_banner.title")}</h3>
-                  <p className="text-slate-500 text-sm truncate font-medium">
+                  <p className="text-slate-500 text-sm truncate">
                     {t("jobs.queue_banner.subtitle", { count: queuedJobIds.size })}
                   </p>
                 </div>
@@ -337,7 +336,7 @@ export default function Jobs() {
           </div>
         )}
 
-        {/* FILTROS - 6 COLUNAS (INTEGRAL) */}
+        {/* GRID DE FILTROS - 6 COLUNAS (RESTAURADO) */}
         <Card className="border-slate-200 shadow-sm overflow-hidden">
           <CardHeader className="pb-3 px-4 pt-4 border-b bg-slate-50/50">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -349,7 +348,7 @@ export default function Jobs() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-[180px] bg-white">
+                  <SelectTrigger className="w-[180px] bg-white text-xs sm:text-sm">
                     <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -378,7 +377,7 @@ export default function Jobs() {
           <CardContent className="p-4 bg-white">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <Input
-                placeholder="State"
+                placeholder={t("jobs.filters.state")}
                 value={stateFilter}
                 onChange={(e) => {
                   setStateFilter(e.target.value);
@@ -387,7 +386,7 @@ export default function Jobs() {
                 className="text-xs"
               />
               <Input
-                placeholder="City"
+                placeholder={t("jobs.filters.city")}
                 value={cityFilter}
                 onChange={(e) => {
                   setCityFilter(e.target.value);
@@ -406,10 +405,10 @@ export default function Jobs() {
                   <SelectValue placeholder="Group" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Groups</SelectItem>
+                  <SelectItem value="all">{t("common.all_groups")}</SelectItem>
                   {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
                     <SelectItem key={g} value={g}>
-                      Group {g}
+                      {t("jobs.groups.group_label")} {g}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -450,15 +449,18 @@ export default function Jobs() {
                   setStateFilter("");
                   setCityFilter("");
                   setGroupFilter("all");
+                  setMinSalary("");
+                  setMaxSalary("");
+                  setPage(1);
                 }}
               >
-                Limpar
+                {t("common.clear") || "Limpar"}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* LISTAGEM DE VAGAS - 11 COLUNAS (INTEGRAL) */}
+        {/* TABELA - 11 COLUNAS (RESTAURADO) */}
         {loading ? (
           <div className="py-24 text-center">
             <Loader2 className="animate-spin inline h-10 w-10 text-blue-600 opacity-20" />
@@ -478,22 +480,22 @@ export default function Jobs() {
             ))}
           </div>
         ) : (
-          <Card className="border-slate-200 shadow-sm overflow-hidden">
+          <Card className="border-slate-200 shadow-sm overflow-hidden text-left">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/80 uppercase text-[10px] font-black tracking-widest text-slate-500">
-                  <TableHead className="py-4 pl-6">Job Title</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-center">Openings</TableHead>
-                  <TableHead>Wage</TableHead>
-                  <TableHead>Visa</TableHead>
+                  <TableHead className="py-4 pl-6">{t("jobs.table.headers.job_title")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.company")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.location")}</TableHead>
+                  <TableHead className="text-center">{t("jobs.table.headers.openings")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.salary")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.visa")}</TableHead>
                   <TableHead>Group</TableHead>
-                  <TableHead>Posted</TableHead>
-                  <TableHead>Start</TableHead>
-                  <TableHead>Exp.</TableHead>
+                  <TableHead>{t("jobs.table.headers.posted")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.start")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.experience")}</TableHead>
                   <TableHead className="text-right pr-6 sticky right-0 bg-slate-50/80 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.03)]">
-                    Action
+                    {t("jobs.table.headers.action")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -504,7 +506,7 @@ export default function Jobs() {
                     onClick={() => setSelectedJob(j)}
                     className="cursor-pointer hover:bg-slate-50/50 transition-colors border-slate-100"
                   >
-                    <TableCell className="font-bold text-slate-900 text-sm uppercase pl-6" translate="no">
+                    <TableCell className="font-semibold text-slate-900 text-sm uppercase pl-6" translate="no">
                       {j.job_title}
                     </TableCell>
                     <TableCell
@@ -516,14 +518,19 @@ export default function Jobs() {
                     <TableCell className="text-slate-500 text-sm uppercase" translate="no">
                       {j.city}, {j.state}
                     </TableCell>
-                    <TableCell className="text-center text-slate-600 text-sm font-bold" translate="no">
+                    <TableCell className="text-center text-slate-600 text-sm" translate="no">
                       {j.openings ?? "-"}
                     </TableCell>
                     <TableCell className="font-bold text-green-700 text-sm">{renderPrice(j)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-[9px] font-bold">
-                        {j.visa_type}
-                      </Badge>
+                      {(() => {
+                        const b = getVisaBadgeConfig(j.visa_type);
+                        return (
+                          <Badge variant={b.variant} className={cn(b.className, "text-[9px]")}>
+                            {b.label}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       {j.randomization_group && (
@@ -541,17 +548,17 @@ export default function Jobs() {
                     <TableCell className="text-slate-400 text-[11px] font-medium">
                       {formatDate(j.posted_date)}
                     </TableCell>
-                    <TableCell className="text-slate-600 text-[11px] font-black">{formatDate(j.start_date)}</TableCell>
-                    <TableCell className="text-slate-500 text-xs font-bold">
-                      {formatExperience(j.experience_months)}
-                    </TableCell>
+                    <TableCell className="text-slate-600 text-[11px] font-bold">{formatDate(j.start_date)}</TableCell>
+                    <TableCell className="text-slate-500 text-xs">{formatExperience(j.experience_months)}</TableCell>
                     <TableCell className="text-right sticky right-0 bg-white/90 backdrop-blur-sm shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.03)] pr-6">
                       <Button
                         size="sm"
-                        variant={queuedJobIds.has(j.id) ? "default" : "outline"}
+                        variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
                         className={cn(
                           "h-8 w-8 p-0 rounded-full",
-                          queuedJobIds.has(j.id) && "bg-emerald-500 border-emerald-500 hover:bg-emerald-600",
+                          !planSettings.job_db_blur &&
+                            queuedJobIds.has(j.id) &&
+                            "bg-emerald-500 border-emerald-500 hover:bg-emerald-600",
                         )}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -559,7 +566,9 @@ export default function Jobs() {
                         }}
                         disabled={processingJobIds.has(j.id)}
                       >
-                        {processingJobIds.has(j.id) ? (
+                        {planSettings.job_db_blur ? (
+                          <Lock className="h-4 w-4" />
+                        ) : processingJobIds.has(j.id) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : queuedJobIds.has(j.id) ? (
                           <Check className="h-4 w-4 text-white" />
@@ -576,27 +585,15 @@ export default function Jobs() {
         )}
 
         <div className="flex items-center justify-between py-6">
-          <p className="text-xs text-slate-500 font-black uppercase tracking-widest">
-            Page {page} of {totalPages}
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+            {t("jobs.pagination.page_of", { page, totalPages })}
           </p>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="font-bold"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Prev
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              {t("common.previous")}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="font-bold"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              {t("common.next")}
             </Button>
           </div>
         </div>
