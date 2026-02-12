@@ -45,7 +45,7 @@
       },
       "actions": {
         "send_link": "Enviar enlace",
-        "back_to_login": "Voltar al login",
+        "back_to_login": "Volver al login",
         "save_new_password": "Guardar nueva contraseña",
         "cancel": "Cancelar"
       },
@@ -111,7 +111,7 @@
     "accept_terms": "Acepto los términos y entiendo que el sistema no garantiza ninguna oferta de empleo.",
     "marketing": {
       "q1": "¿Cuántas horas dedicas buscando empleos H-2A/H-2B?",
-      "q2": "Deja de perder tiempo enviando emails uno por uno. Automatiza y multiplica tus oportunidades.",
+      "q2": "Deja de perder tiempo enviando emails uno por uno. Automatize y multiplique tus oportunidades.",
       "solution_prefix": "Automatiza todo en",
       "solution_emphasis": "3 clics",
       "solution_suffix": "y multiplica tus oportunidades.",
@@ -175,7 +175,7 @@
     "step": "Paso {{current}} de {{total}}",
     "welcome": {
       "title": "¡Bienvenido a H2 Linker!",
-      "description": "Configuremos tu cuenta para empezar a enviar solicitudes de forma segura.",
+      "description": "Let's set up your account to start sending job applications safely.",
       "step1_title": "Conecta tu email",
       "step1_desc": "Configura SMTP con tu cuenta de Gmail u Outlook.",
       "step2_title": "Elige tu velocidad de envío",
@@ -401,7 +401,7 @@
       "gmail_steps": "Abre tu cuenta de Google (myaccount.google.com) y ve a Seguridad.\nVerifica que la verificación en dos pasos esté ACTIVADA (actívala si es necesario).\nUsa la búsqueda y escribe: Contraseñas de aplicaciones.\nAbre Contraseñas de aplicaciones (Google puede pedir tu contraseña nuevamente).\nEn Seleccionar app, elige Otra (Nombre personalizado).\nEscribe: H2 Linker.\nHaz clic en Generar y copia la contraseña de 16 caracteres.",
       "gmail_tip": "Consejo: puedes pegarla sin espacios.",
       "outlook_title": "Outlook / Hotmail (Microsoft)",
-      "outlook_steps": "Opciones de seguridad avanzadas.\nActiva la verificación en dos pasos (2FA) si está desactivada.\nBusca Contraseñas de aplicaciones.\nHaz clic en Crear una nueva contraseña de aplicación.\nCopia la contraseña generada y pégala en el sistema.",
+      "outlook_steps": "Acesse sua conta Microsoft (account.microsoft.com) e vá em Segurança.\nAbra Opções de segurança avançadas.\nAtive a Verificación em duas etapas (2FA), se estiver desligada.\nProcure por Senhas de aplicativos.\nClique em Criar uma nova senha de aplicativo.\nCopie a senha gerada e cole no sistema.",
       "faq_title": "Preguntas frecuentes",
       "faq_q_safe": "¿Esto es seguro?",
       "faq_a_safe": "Sí. Esta contraseña solo sirve para enviar emails. Si quieres revocar el acceso, elimina la contraseña de app sin cambiar tu contraseña principal.",
@@ -416,7 +416,7 @@
       "save_error_title": "Error al guardar",
       "send_error_title": "Error al enviar",
       "test_sent": "Email de prueba enviado.",
-      "test_required_fields": "Completa Para, Asunto y Cuerpo.",
+      "test_required_fields": "Completa Para, Assunto y Cuerpo.",
       "profile_incomplete_title": "Completa tu perfil",
       "profile_incomplete_desc": "Completa nombre, edad, teléfono y email de contacto antes de enviar."
     },
@@ -454,8 +454,8 @@
     "actions": {
       "new": "Nueva plantilla",
       "new_fallback": "Crear plantilla de respaldo",
-      "generate_ai": "Generar con IA",
-      "rewrite_ai": "✨ Reescribir con IA"
+      "generate_ai": "Generate with AI",
+      "rewrite_ai": "✨ Rewrite with AI"
     },
     "ai_writer": {
       "title": "IA Dinámica Activa",
@@ -622,7 +622,7 @@
       "title": "¡Límite diario alcanzado!",
       "description": "Alcanzaste tu límite de {{limit}} envíos por día. Actualiza tu plan para enviar más.",
       "actions": {
-        "cancel": "Volver",
+        "cancel": "Voltar",
         "view_plans": "Ver planes premium"
       }
     },
@@ -650,6 +650,7 @@
         "email": "Email",
         "status": "Estado",
         "open_tracking": "Lectura",
+        "cv": "CV",
         "action": "Acción"
       },
       "loading": "Cargando cola...",
@@ -676,6 +677,7 @@
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
       "resume_required_title": "Currículum requerido",
       "resume_required_desc": "En el plan Black, sube tu currículum en Configuración → Currículum para generar um email personalizado por empleo.",
+      "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
       "bg_started_selected_title": "Envío iniciado",
@@ -694,7 +696,10 @@
       "partial_success_desc": "{{sent}} emails enviados, {{failed}} fallaron. Revisa los elementos fallidos e intenta de nuevo.",
       "all_failed_desc": "Los {{count}} emails fallaron. Verifica tu configuración SMTP.",
       "all_failed_detail": "Los {{count}} emails fallaron: {{reason}}",
-      "error_detail": "Error: {{message}}"
+      "error_detail": "Error: {{message}}",
+      "bulk_premium_title": "Recurso Premium",
+      "bulk_premium_desc": "El envío masivo (Enviar todos) es exclusivo para planes Premium. Actualiza tu plan para enviar todo de una vez.",
+      "bulk_premium_cta": "Ver planes"
     }
   },
   "smtp_errors": {
@@ -885,7 +890,7 @@
         "open_queue": "Abrir cola",
         "open_jobs": "Abrir Hub de Empleos",
         "open_templates": "Abrir plantillas",
-        "go_settings": "Abrir configuración",
+        "go_settings": "Configuración",
         "back_plans": "Ver planes"
       },
       "sections": {
@@ -945,15 +950,20 @@
     }
   },
   "jobs": {
+    "queue_banner": {
+      "title": "¿Listo para ser contratado? 🚀",
+      "subtitle": "Tienes {{count}} solicitudes listas para enviar. No dejes que estas oportunidades expiren. ¡Envía tus correos ahora!",
+      "cta": "Enviar Solicitudes Ahora"
+    },
     "groups": {
       "dol_draw": "Sorteo Oficial (DOL)",
       "group_label": "Grupo",
-      "a_short": "Mayor Probabilidad",
+      "a_short": "Máxima Probabilidad",
       "a_tooltip": "Las vacantes del Grupo A son as primeras en a fila del gobierno. Têm a MAYOR probabilidad de obtener a visa antes de que se agote el cupo anual.",
       "b_short": "Alta Prioridad",
       "b_tooltip": "Procesadas justo después del Grupo A. Excelentes probabilidades de aprobación de visa.",
-      "cd_short": "Riesgo Medio",
-      "cd_tooltip": "Procesadas en el medio de a fila. Probabilidad moderada, dependiendo de qué tan rápido se agote el cupo anual.",
+      "cd_short": "Medium Risk",
+      "cd_tooltip": "Processed in the middle of the queue. Moderate chances, depending on how fast the annual cap is reached.",
       "risk_short": "Cupo en Riesgo",
       "risk_tooltip": "Últimas en a fila. Alto riesgo de que el cupo anual de visas se agote antes de ser analizadas.",
       "linear_short": "Estándar",
@@ -1039,8 +1049,8 @@
       "housing_info": "Información de Vivienda",
       "housing_type": "Tipo de Vivienda:",
       "not_specified": "No especificado",
-      "additional_details": "Detalles Adicionales",
-      "view_details": "Ver detalles",
+      "additional_details": "Detalles Adicionais",
+      "view_details": "Ver detalhes",
       "save_job": "Guardar Empleo",
       "save_job_mobile": "Guardar Empleo",
       "share": "Compartir",
@@ -1048,8 +1058,13 @@
       "copied": "¡Copiado!",
       "copy_success": "Texto copiado al portapapeles.",
       "send_email": "Enviar Correo",
-      "early_access_evolution_title": "Oportunidad Evolucionada",
-      "early_access_evolution_text": "Este puesto fue identificado anteriormente por nuestro Early Access e agora es una orden de trabajo oficial confirmada.",
+      "active_early_title": "Prioridad: Early Access Activo ⚡",
+      "active_early_desc": "Esta vacante fue detectada en el momento en que fue enviada para aprobación gubernamental. Importante: por ser un acceso anticipado, aún aguarda certificación final (puede o no ser aprobada). ¿La ventaja? ¡Llegas primero! Si se aprueba, tu currículum ya estará en el tope de la lista antes de la competencia masiva.",
+      "group_title": "Prioridad: GRUPO - {{group}} ℹ️",
+      "group_a_desc": "Vacantes de máxima prioridad. Estas empresas están en fase activa de contratación y suelen procesar envíos automáticos más rápido.",
+      "group_general_desc": "Vacante verificada y disponible para procesamiento. Sigue el flujo estándar de postulación y respuesta de la plataforma.",
+      "early_access_evolution_title": "Oportunidad Certificada 🚀",
+      "early_access_evolution_text": "Este puesto fue identificado originalmente vía Early Access y ahora es una orden de trabajo oficial confirmada.",
       "early_match": {
         "badge": "Oportunidad Certificada",
         "title": "Inteligencia H2 Linker: Listos para Aplicar",
@@ -1160,7 +1175,7 @@
         "details": "Empieza com 20 emails/día, crece 30% diario"
       },
       "standard": {
-        "title": "Cuenta Antigua (Poco Uso)",
+        "title": "Cuenta Antigua (Pouco Uso)",
         "description": "Tengo esta cuenta hace tiempo, pero a uso poco.",
         "details": "Empieza com 50 emails/día, crece 50% diario"
       },
@@ -1202,7 +1217,7 @@
     "paragraph_style": "Estilo de Párrafos",
     "paragraphs_multiple": "Múltiples párrafos",
     "paragraphs_single": "Párrafo único",
-    "formality": "Nivel de Formalidade",
+    "formality": "Nível de Formalidade",
     "formality_casual": "Casual e amigável",
     "formality_professional": "Professional",
     "formality_formal": "Formal e tradicional",
@@ -1219,7 +1234,7 @@
     "opening_style": "Estilo de Apertura",
     "opening_varied": "Variar automáticamente (recomendado)",
     "opening_question": "Empezar com pregunta",
-    "opening_direct": "Afirmación directa",
+    "opening_direct": "Afirmacción directa",
     "opening_company": "Mencionar a empresa",
     "emphasis_title": "Énfasis en el Contenido",
     "emphasize_availability": "Destacar disponibilidad",
