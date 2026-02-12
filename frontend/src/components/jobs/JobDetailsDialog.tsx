@@ -41,6 +41,7 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // LÓGICA DE IDENTIFICAÇÃO PREMIUM
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
@@ -108,7 +109,7 @@ export function JobDetailsDialog({
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
         {/* HEADER */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
-          <div className="flex justify-between items-start text-left">
+          <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {job?.visa_type && (
@@ -125,7 +126,7 @@ export function JobDetailsDialog({
                   </span>
                 )}
               </div>
-              <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case text-left">
+              <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
                 <span translate="no">{job?.job_title}</span>
               </DialogTitle>
               <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
@@ -154,29 +155,31 @@ export function JobDetailsDialog({
 
         {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
-          <div className="p-4 sm:p-6 space-y-4 pb-32 sm:pb-6 text-left">
-            {/* GRID DE AVISOS PADRONIZADOS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 1. AVISO EARLY ACCESS ATIVO (ROXO PARA PADRONIZAR COM A LISTA) */}
+          <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
+            {/* CARDS DE LARGURA TOTAL (EXTENDIDOS) */}
+            <div className="space-y-4">
+              {/* 1. AVISO EARLY ACCESS ATIVO (OCUPANDO TUDO) */}
               {isCurrentlyEarlyAccess && (
-                <div className="p-4 rounded-xl border border-violet-200 bg-violet-50/50 flex gap-3 items-start shadow-sm">
-                  <Zap className="h-6 w-6 text-violet-600 shrink-0 mt-0.5 fill-violet-600/10" />
+                <div className="w-full p-5 rounded-2xl border border-violet-200 bg-violet-50/60 flex flex-col sm:flex-row gap-4 items-start sm:items-center shadow-sm">
+                  <div className="bg-violet-600 p-3 rounded-xl text-white shadow-lg shrink-0">
+                    <Zap className="h-7 w-7 fill-white animate-pulse" />
+                  </div>
                   <div>
-                    <p className="text-sm font-bold text-violet-900 uppercase">
+                    <p className="text-base font-black text-violet-900 uppercase tracking-tight">
                       {t("jobs.details.active_early_title")}
                     </p>
-                    <p className="text-xs text-violet-700 leading-relaxed mt-1 font-medium">
+                    <p className="text-sm text-violet-700 leading-relaxed font-medium mt-0.5">
                       {t("jobs.details.active_early_desc")}
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* 2. EXPLICAÇÃO DO GRUPO */}
+              {/* 2. EXPLICAÇÃO DO GRUPO (OCUPANDO TUDO) */}
               {job?.randomization_group && (
                 <div
                   className={cn(
-                    "p-4 rounded-xl border flex gap-3 items-start shadow-sm",
+                    "w-full p-5 rounded-2xl border flex gap-4 items-start sm:items-center shadow-sm transition-all",
                     job.randomization_group === "A"
                       ? "bg-emerald-50 border-emerald-100"
                       : job.randomization_group === "B"
@@ -184,21 +187,32 @@ export function JobDetailsDialog({
                         : "bg-amber-50 border-amber-100",
                   )}
                 >
-                  <Info
+                  <div
                     className={cn(
-                      "h-6 w-6 shrink-0 mt-0.5",
+                      "p-3 rounded-xl shrink-0",
                       job.randomization_group === "A"
-                        ? "text-emerald-600"
+                        ? "bg-emerald-600 text-white"
                         : job.randomization_group === "B"
-                          ? "text-blue-600"
-                          : "text-amber-600",
+                          ? "bg-blue-600 text-white"
+                          : "bg-amber-600 text-white",
                     )}
-                  />
+                  >
+                    <Info className="h-7 w-7" />
+                  </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900 uppercase">
+                    <p
+                      className={cn(
+                        "text-base font-black uppercase tracking-tight",
+                        job.randomization_group === "A"
+                          ? "text-emerald-900"
+                          : job.randomization_group === "B"
+                            ? "text-blue-900"
+                            : "text-amber-900",
+                      )}
+                    >
                       {t("jobs.details.group_title", { group: job.randomization_group })}
                     </p>
-                    <p className="text-xs text-slate-600 leading-relaxed mt-1 font-medium">
+                    <p className="text-sm text-slate-700 leading-relaxed font-medium mt-0.5">
                       {job.randomization_group === "A"
                         ? t("jobs.details.group_a_desc")
                         : t("jobs.details.group_general_desc")}
@@ -208,25 +222,27 @@ export function JobDetailsDialog({
               )}
             </div>
 
-            {/* 3. CARD HISTÓRICO (Dourado - Vaga que JÁ FOI early access) */}
+            {/* CARD HISTÓRICO (QUANDO A VAGA FOI EARLY ACCESS) */}
             {job?.was_early_access && (
-              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
+              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
+                <div className="bg-amber-500 p-2.5 rounded-xl text-white shadow-lg">
                   <Rocket className="h-6 w-6 animate-bounce" />
                 </div>
-                <div>
-                  <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
-                  <p className="text-amber-800 text-xs">{t("jobs.details.early_access_evolution_text")}</p>
+                <div className="text-left">
+                  <h4 className="font-bold text-amber-900 text-sm tracking-tight">
+                    {t("jobs.details.early_access_evolution_title")}
+                  </h4>
+                  <p className="text-amber-800 text-xs font-medium">{t("jobs.details.early_access_evolution_text")}</p>
                 </div>
-                <div className="ml-auto hidden sm:block">
-                  <CheckCircle2 className="h-8 w-8 text-amber-500/30" />
+                <div className="ml-auto hidden sm:block opacity-30">
+                  <CheckCircle2 className="h-8 w-8 text-amber-600" />
                 </div>
               </div>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* SIDEBAR COLUNA 4 */}
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
@@ -285,24 +301,6 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
-                  {job?.wage_additional && (
-                    <div
-                      className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium"
-                      translate="no"
-                    >
-                      {job.wage_additional}
-                    </div>
-                  )}
-                  {job?.rec_pay_deductions && (
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
-                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
-                      </span>
-                      <p className="text-xs text-red-800 font-medium" translate="no">
-                        {job.rec_pay_deductions}
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
@@ -346,55 +344,22 @@ export function JobDetailsDialog({
                         {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
                       </div>
                     </div>
-                    {job?.phone && (
-                      <div className="space-y-2 text-left" translate="no">
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                          {t("jobs.details.phone_label")}
-                        </span>
-                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
-                          {canSeeContacts ? job.phone : "+1 (XXX) XXX-XXXX"}
-                        </div>
-                      </div>
-                    )}
                   </div>
-
                   {canSeeContacts && (
                     <div className="space-y-2 pt-2">
-                      <div className="flex gap-2">
-                        {job?.phone && (
-                          <>
-                            <Button
-                              variant="outline"
-                              className="flex-1 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 font-bold text-xs"
-                              onClick={() => window.open(`https://wa.me/${job.phone.replace(/\D/g, "")}`, "_blank")}
-                            >
-                              <MessageCircle className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 font-bold text-xs"
-                              onClick={() => (window.location.href = `sms:${job.phone}`)}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5 mr-1.5" /> iMessage
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      {job?.email && (
-                        <Button
-                          variant="outline"
-                          className="w-full bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs"
-                          onClick={() => (window.location.href = `mailto:${job.email}`)}
-                        >
-                          <Mail className="h-3.5 w-3.5 mr-1.5" /> {t("jobs.details.send_email")}
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        className="w-full bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs"
+                        onClick={() => (window.location.href = `mailto:${job.email}`)}
+                      >
+                        <Mail className="h-3.5 w-3.5 mr-1.5" /> {t("jobs.details.send_email")}
+                      </Button>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* DESCRIÇÃO E REQUISITOS */}
+              {/* COLUNA PRINCIPAL 8 */}
               <div className="lg:col-span-8 space-y-6 text-left">
                 {job?.job_min_special_req && (
                   <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
