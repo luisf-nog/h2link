@@ -1,502 +1,271 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { PLANS_CONFIG } from "@/config/plans.config";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
-import { JobImportDialog } from "@/components/jobs/JobImportDialog";
-import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
-import { MobileJobCard } from "@/components/jobs/MobileJobCard";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Info,
-  Search,
-  Plus,
-  Check,
-  Lock,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Zap,
-  Clock,
-  Loader2,
-  Database,
-  ChevronsUpDown,
-  X,
-  Bot,
-  ShieldAlert,
-  Briefcase,
-  Rocket,
-} from "lucide-react";
-import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
-import type { ReportReason } from "@/components/queue/ReportJobButton";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
-import { formatNumber } from "@/lib/number";
-import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
+import { getVisaBadgeConfig } from "@/lib/visaTypes";
+import {
+  Mail,
+  MapPin,
+  Share2,
+  AlertTriangle,
+  Briefcase,
+  DollarSign,
+  Phone,
+  Plus,
+  Trash2,
+  Users,
+  ArrowLeft,
+  GraduationCap,
+  Rocket,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Clock,
+  Lock,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 
-// --- COMPONENTE DE ONBOARDING ---
-function OnboardingModal() {
-  const [open, setOpen] = useState(false);
-  const { t } = useTranslation();
+// Tipo exportado para evitar erro de build no Jobs.tsx
+export type JobDetails = {
+  id: string;
+  job_id: string;
+  visa_type?: string | null;
+  company?: string;
+  email?: string;
+  phone?: string | null;
+  job_title?: string;
+  city?: string;
+  state?: string;
+  openings?: number | null;
+  salary?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  posted_date?: string;
+  experience_months?: number | null;
+  wage_from?: number | null;
+  wage_to?: number | null;
+  wage_unit?: string | null;
+  pay_frequency?: string | null;
+  wage_additional?: string | null;
+  rec_pay_deductions?: string | null;
+  weekly_hours?: number | null;
+  job_min_special_req?: string | null;
+  job_duties?: string | null;
+  randomization_group?: string | null;
+  was_early_access?: boolean | null;
+  [key: string]: any;
+};
+
+export function JobDetailsDialog({
+  open,
+  onOpenChange,
+  job,
+  planSettings,
+  formatSalary,
+  onAddToQueue,
+  onRemoveFromQueue,
+  isInQueue,
+  onShare,
+}: any) {
+  const { t, i18n } = useTranslation();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
+
+  const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
+  const planTier = planSettings?.plan_tier?.toLowerCase() || planSettings?.tier || "visitor";
+  const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
+  const canSaveJob = isRegistered;
 
   useEffect(() => {
-    const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v6");
-    if (!hasSeen) {
-      const timer = setTimeout(() => setOpen(true), 600);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+    if (open) setIsBannerExpanded(true);
+  }, [open, job?.id]);
 
-  const handleClose = () => {
-    localStorage.setItem("hasSeenJobOnboarding_v6", "true");
-    setOpen(false);
+  const handleGoToPlans = () => {
+    onOpenChange(false);
+    navigate("/plans");
+  };
+
+  const handleShare = () => {
+    if (!job) return;
+    const shareUrl = getJobShareUrl(job.id);
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
+  };
+
+  const maskJobId = (id: string) => {
+    const base = id?.split("-GHOST")[0] || "";
+    if (base.length <= 6) return <span translate="no">••••••</span>;
+    return (
+      <span className="flex items-center" translate="no">
+        {base.slice(0, -6)}
+        <span className="blur-[2px] select-none opacity-40 ml-0.5">XXXXXX</span>
+      </span>
+    );
+  };
+
+  const formatDate = (v: string | null | undefined) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const renderMainWage = () => {
+    if (!job) return "-";
+    if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
+      return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)} / ${job.wage_unit || "hr"}`;
+    if (job.wage_from) return `$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`;
+    if (job.salary) return formatSalary(job.salary);
+    return t("jobs.details.view_details");
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 shadow-2xl bg-white rounded-xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full text-left">
-        <div className="bg-slate-900 px-6 sm:px-8 py-5 sm:py-6 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 text-white shrink-0">
-              <Briefcase className="h-5 w-5" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
+        <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-1 w-full min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                {job?.visa_type && (
+                  <Badge className="text-[10px] uppercase font-bold" translate="no">
+                    {job.visa_type}
+                  </Badge>
+                )}
+                {job?.job_id && (
+                  <span
+                    className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
+                    translate="no"
+                  >
+                    {canSeeContacts ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
+                  </span>
+                )}
+              </div>
+              <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
+                <span translate="no">{job?.job_title}</span>
+              </DialogTitle>
+              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
+                <span className="flex items-center gap-1 text-slate-900" translate="no">
+                  <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
+                </span>
+              </DialogDescription>
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight">
-                H2 Linker Platform
-              </h2>
-              <p className="text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider font-semibold">
-                Official Automation Tool
-              </p>
+            <div className="hidden sm:flex gap-2 shrink-0">
+              <Button variant="outline" onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
+              </Button>
+              <Button
+                onClick={() => job && onAddToQueue(job)}
+                className="px-6 font-bold shadow-sm"
+                disabled={!canSaveJob}
+              >
+                {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+              </Button>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
-        <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6">
-          <div className="flex gap-3 sm:gap-4">
-            <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6 text-slate-700 mt-1 shrink-0" />
-            <div>
-              <h3 className="text-slate-900 font-bold text-sm sm:text-base">{t("jobs.onboarding.title")}</h3>
-              <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
-                {t("jobs.onboarding.description")}
-              </p>
+        <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
+          <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-4 space-y-6">
+                <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
+                      {t("jobs.details.posted")}
+                    </span>
+                    <span className="text-[11px] font-semibold" translate="no">
+                      {formatDate(job?.posted_date)}
+                    </span>
+                  </div>
+                  <div className="border-x border-slate-100">
+                    <span className="block text-[9px] font-bold uppercase text-green-600 mb-1">
+                      {t("jobs.details.start")}
+                    </span>
+                    <span className="text-[11px] font-bold text-green-700" translate="no">
+                      {formatDate(job?.start_date)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase text-red-600 mb-1">
+                      {t("jobs.details.end")}
+                    </span>
+                    <span className="text-[11px] font-semibold text-red-700" translate="no">
+                      {formatDate(job?.end_date)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <span className="font-semibold text-sm text-slate-600">
+                      {t("jobs.details.available_positions")}
+                    </span>
+                    <Badge className="bg-blue-600 font-bold px-3" translate="no">
+                      {job?.openings || "N/A"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
+                      <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
+                    </div>
+                    <p className="text-3xl font-extrabold text-green-700 tracking-tight" translate="no">
+                      {renderMainWage()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
+                  {!canSeeContacts && (
+                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                      <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
+                        <Lock className="h-7 w-7 text-amber-500" />
+                      </div>
+                      <Button
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
+                        onClick={handleGoToPlans}
+                      >
+                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
+                      </Button>
+                    </div>
+                  )}
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest text-left">
+                    <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
+                  </h4>
+                  <div className="space-y-4 mt-4 text-left">
+                    <div translate="no">
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
+                        {t("jobs.details.email_label")}
+                      </span>
+                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
+                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8 space-y-6">
+                <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
+                  <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
+                    <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
+                  </h4>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    <span translate="yes">{job?.job_duties}</span>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
-          <Button
-            onClick={handleClose}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all active:scale-[0.98]"
-          >
-            {t("jobs.onboarding.cta")}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-const renderPrice = (job: JobDetails) => {
-  if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
-    return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
-  if (job.wage_from) return `$${job.wage_from.toFixed(2)}`;
-  if (job.salary) return `$${job.salary.toFixed(2)}`;
-  return "-";
-};
-
-export default function Jobs() {
-  const { profile } = useAuth();
-  const { toast } = useToast();
-  const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
-  const { isAdmin } = useIsAdmin();
-  const isMobile = useIsMobile();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const [jobs, setJobs] = useState<JobDetails[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
-  const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
-  const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [showImporter, setShowImporter] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
-
-  const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
-  const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
-  const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
-  const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
-  );
-  const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
-  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
-  const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
-
-  const [selectedJob, setSelectedJob] = useState<JobDetails | null>(null);
-  const [sortKey, setSortKey] = useState<any>(searchParams.get("sort") || "posted_date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as any) || "desc");
-
-  const planTier = profile?.plan_tier || "free";
-  const planSettings = PLANS_CONFIG[planTier].settings;
-  const pageSize = 50;
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
-
-  const fetchJobs = async () => {
-    setLoading(true);
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
-
-    query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
-    if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false });
-
-    if (visaType !== "all") query = query.eq("visa_type", visaType);
-    if (searchTerm.trim())
-      query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
-    if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
-    if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
-    if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
-    if (groupFilter) query = query.eq("randomization_group", groupFilter);
-    if (minSalary) query = query.gte("salary", Number(minSalary));
-
-    query = query.range(from, to);
-    const { data, error, count } = await query;
-    if (!error && data) {
-      setJobs(data as JobDetails[]);
-      setTotalCount(count ?? 0);
-      if (profile?.id) {
-        const { data: queueRows } = await supabase
-          .from("my_queue")
-          .select("job_id")
-          .eq("user_id", profile.id)
-          .in(
-            "job_id",
-            data.map((j) => j.id),
-          );
-        setQueuedJobIds(new Set((queueRows ?? []).map((r) => r.job_id)));
-      }
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchJobs();
-  }, [
-    visaType,
-    searchTerm,
-    stateFilter,
-    cityFilter,
-    selectedCategories,
-    groupFilter,
-    minSalary,
-    sortKey,
-    sortDir,
-    page,
-  ]);
-
-  const toggleSort = (key: string) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-    setPage(1);
-  };
-
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleDateString(i18n.language, { timeZone: "UTC" });
-  };
-
-  const addToQueue = async (job: JobDetails) => {
-    if (!profile) {
-      setShowLoginDialog(true);
-      return;
-    }
-    setProcessingJobIds((p) => new Set(p).add(job.id));
-    const { error } = await supabase
-      .from("my_queue")
-      .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
-    if (!error) {
-      setQueuedJobIds((q) => new Set(q).add(job.id));
-      toast({ title: t("jobs.toasts.added") });
-    }
-    setProcessingJobIds((p) => {
-      const n = new Set(p);
-      n.delete(job.id);
-      return n;
-    });
-  };
-
-  return (
-    <TooltipProvider>
-      <div className="space-y-6">
-        <OnboardingModal />
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
-            </p>
-          </div>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowImporter(true)}>
-                <Database className="mr-2 h-4 w-4" /> {t("jobs.import.admin")}
-              </Button>
-              <JobImportDialog />
-            </div>
-          )}
-        </div>
-
-        {/* FILTROS */}
-        <Card className="border-slate-200">
-          <CardHeader className="pb-3 px-4 pt-4">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <Select
-                value={visaType}
-                onValueChange={(v: any) => {
-                  setVisaType(v);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-full lg:w-[200px] h-10">
-                  <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {VISA_TYPE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder={t("jobs.search.placeholder")}
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-10 h-10"
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-0 px-4 pb-4">
-            <Input
-              placeholder={t("jobs.filters.state")}
-              value={stateFilter}
-              onChange={(e) => {
-                setStateFilter(e.target.value);
-                setPage(1);
-              }}
-              className="h-10"
-            />
-            <Input
-              placeholder={t("jobs.filters.city")}
-              value={cityFilter}
-              onChange={(e) => {
-                setCityFilter(e.target.value);
-                setPage(1);
-              }}
-              className="h-10"
-            />
-            <Input
-              type="number"
-              placeholder={t("jobs.filters.min_salary")}
-              value={minSalary}
-              onChange={(e) => {
-                setMinSalary(e.target.value);
-                setPage(1);
-              }}
-              className="h-10"
-            />
-            <Select
-              value={groupFilter}
-              onValueChange={(v) => {
-                setGroupFilter(v === "all" ? "" : v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder={t("jobs.filters.group")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.all_groups")}</SelectItem>
-                {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {t("jobs.groups.group_label")} {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* TABELA */}
-        {isMobile ? (
-          <div className="space-y-3">
-            {jobs.map((j) => (
-              <MobileJobCard
-                key={j.id}
-                job={j as any}
-                isBlurred={planSettings.job_db_blur}
-                isQueued={queuedJobIds.has(j.id)}
-                onAddToQueue={() => addToQueue(j)}
-                onClick={() => setSelectedJob(j)}
-                formatDate={formatDate}
-                reportData={jobReports[j.id]}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card className="border-slate-200 overflow-hidden shadow-sm">
-            <Table>
-              <TableHeader className="bg-slate-50/80">
-                <TableRow>
-                  <TableHead
-                    className="text-xs font-bold uppercase text-slate-500 py-4 cursor-pointer"
-                    onClick={() => toggleSort("job_title")}
-                  >
-                    {t("jobs.table.headers.job_title")} <ArrowUpDown className="ml-1 h-3 w-3 inline" />
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase text-slate-500">
-                    {t("jobs.table.headers.company")}
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase text-slate-500 text-center">
-                    {t("jobs.table.headers.openings")}
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase text-slate-500">
-                    {t("jobs.table.headers.salary")}
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase text-slate-500">
-                    {t("jobs.table.headers.posted")}
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase text-slate-500">Group</TableHead>
-                  <TableHead className="text-xs font-bold uppercase text-slate-500 text-right pr-6">
-                    {t("jobs.table.headers.action")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-20">
-                      <Loader2 className="animate-spin inline mr-2 h-4 w-4" /> {t("common.loading")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  jobs.map((j) => (
-                    <TableRow
-                      key={j.id}
-                      onClick={() => setSelectedJob(j)}
-                      className="cursor-pointer hover:bg-slate-50/80 transition-all border-slate-100"
-                    >
-                      <TableCell className="text-sm font-semibold text-slate-900 py-4">
-                        <span translate="no">{j.job_title}</span>
-                      </TableCell>
-                      <TableCell className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm")}>
-                        <span translate="no">{j.company}</span>
-                      </TableCell>
-                      <TableCell className="text-sm text-center text-slate-600" translate="no">
-                        {j.openings}
-                      </TableCell>
-                      <TableCell className="text-sm font-bold text-green-700" translate="no">
-                        {j.salary ? `$${j.salary.toFixed(2)}/h` : "-"}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500 font-medium" translate="no">
-                        {formatDate(j.posted_date)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-[10px] font-bold py-0 h-5" translate="no">
-                          G-{j.randomization_group || "?"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <Button
-                          size="sm"
-                          variant={queuedJobIds.has(j.id) ? "secondary" : "outline"}
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToQueue(j);
-                          }}
-                        >
-                          {queuedJobIds.has(j.id) ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Plus className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
-
-        <div className="flex items-center justify-between py-2">
-          <p className="text-xs text-slate-500 font-medium">{t("jobs.pagination.page_of", { page, totalPages })}</p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-bold"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              {t("common.previous")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-bold"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              {t("common.next")}
-            </Button>
-          </div>
-        </div>
-
-        <JobDetailsDialog
-          open={!!selectedJob}
-          onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
-          job={selectedJob}
-          planSettings={profile}
-          formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
-          onAddToQueue={addToQueue}
-          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-        />
-      </div>
-    </TooltipProvider>
   );
 }
