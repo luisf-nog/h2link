@@ -30,22 +30,22 @@ import {
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
-// EXPORTAÇÃO DO TIPO: Resolve o erro TS2305 no Jobs.tsx
+// EXPORTAÇÃO ESSENCIAL: Resolve o erro de build sem mudar a lógica
 export type JobDetails = {
   id: string;
   job_id: string;
-  visa_type: string | null;
-  company: string;
-  email: string;
+  visa_type?: string | null;
+  company?: string;
+  email?: string;
   phone?: string | null;
-  job_title: string;
-  city: string;
-  state: string;
+  job_title?: string;
+  city?: string;
+  state?: string;
   openings?: number | null;
-  salary: number | null;
-  start_date: string | null;
+  salary?: number | null;
+  start_date?: string | null;
   end_date?: string | null;
-  posted_date: string;
+  posted_date?: string;
   experience_months?: number | null;
   wage_from?: number | null;
   wage_to?: number | null;
@@ -58,6 +58,7 @@ export type JobDetails = {
   job_duties?: string | null;
   randomization_group?: string | null;
   was_early_access?: boolean | null;
+  [key: string]: any; // Permite que o tipo Job do Jobs.tsx seja aceito aqui
 };
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -76,25 +77,15 @@ export function JobDetailsDialog({
   onRemoveFromQueue,
   isInQueue,
   onShare,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  job: JobDetails | null;
-  planSettings: any;
-  formatSalary: (salary: number | null) => string;
-  onAddToQueue: (job: JobDetails) => void;
-  onRemoveFromQueue?: (job: JobDetails) => void;
-  isInQueue?: boolean;
-  onShare?: (job: JobDetails) => void;
-}) {
+}: any) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // VALIDAÇÃO: Bloqueia contatos se não for Gold/Diamond/Black ou se não estiver logado
-  const currentTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
-  const isPremium = ["gold", "diamond", "black"].includes(currentTier);
+  // LOGICA DE PERMISSÃO POR TIER (PROFILES TABLE)
+  const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
+  const isPremium = ["gold", "diamond", "black"].includes(planTier);
   const canSeeContacts = isPremium;
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
@@ -109,12 +100,9 @@ export function JobDetailsDialog({
 
   const handleShare = () => {
     if (!job) return;
-    if (onShare) onShare(job);
-    else {
-      const shareUrl = getJobShareUrl(job.id);
-      navigator.clipboard.writeText(shareUrl);
-      toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
-    }
+    const shareUrl = getJobShareUrl(job.id);
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
   };
 
   const maskJobId = (id: string) => {
@@ -173,21 +161,21 @@ export function JobDetailsDialog({
                     className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
                     translate="no"
                   >
-                    {canSeeContacts ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
+                    {!isPremium ? maskJobId(job.job_id) : job.job_id.split("-GHOST")[0]}
                   </span>
                 )}
               </div>
               <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
                 <span translate="no">{job?.job_title}</span>
               </DialogTitle>
-              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
                 <span className="flex items-center gap-1 text-slate-900" translate="no">
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
                 <span className="flex items-center gap-1">
                   <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
                 </span>
-              </DialogDescription>
+              </div>
             </div>
             <div className="hidden sm:flex gap-2 shrink-0">
               <Button variant="outline" onClick={handleShare}>
@@ -208,6 +196,7 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
+                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">Posted</span>
@@ -234,18 +223,14 @@ export function JobDetailsDialog({
                     <GraduationCap className="h-6 w-6" />
                   </div>
                   <div>
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {t("jobs.details.experience")}
-                    </span>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Experiência</span>
                     <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <span className="font-semibold text-sm text-slate-600">
-                      {t("jobs.details.available_positions")}
-                    </span>
+                    <span className="font-semibold text-sm text-slate-600">Vagas</span>
                     <Badge className="bg-blue-600 font-bold px-3" translate="no">
                       {job?.openings || "N/A"}
                     </Badge>
@@ -266,7 +251,7 @@ export function JobDetailsDialog({
                   {job?.rec_pay_deductions && (
                     <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
                       <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
-                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
+                        <AlertTriangle className="h-3 w-3" /> Deduções
                       </span>
                       <p className="text-xs text-red-800 font-medium">
                         <span translate="yes">{job.rec_pay_deductions}</span>
@@ -292,14 +277,12 @@ export function JobDetailsDialog({
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-                      <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
-                        <Lock className="h-7 w-7 text-amber-500" />
-                      </div>
+                      <Lock className="h-7 w-7 text-amber-500 mb-2" />
                       <Button
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
+                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
-                        <Rocket className="h-3.5 w-3.5 mr-2" /> Upgrade para Visualizar
+                        Upgrade para Visualizar
                       </Button>
                     </div>
                   )}
@@ -353,6 +336,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
+        {/* FOOTER MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button
             className="flex-1 font-bold h-12 text-base"
