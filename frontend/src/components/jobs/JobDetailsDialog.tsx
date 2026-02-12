@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getJobShareUrl } from "@/lib/shareUtils";
-import { getVisaBadgeConfig } from "@/lib/visaTypes";
 import {
   Mail,
   MapPin,
@@ -14,22 +13,15 @@ import {
   Briefcase,
   DollarSign,
   Phone,
-  Plus,
-  Trash2,
-  Users,
-  ArrowLeft,
-  GraduationCap,
   Rocket,
-  Zap,
-  ChevronDown,
-  ChevronUp,
-  Copy,
   Clock,
   Lock,
   MessageCircle,
   MessageSquare,
   CheckCircle2,
+  GraduationCap,
   Info,
+  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -48,17 +40,12 @@ export function JobDetailsDialog({
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
   // LÓGICA DE IDENTIFICAÇÃO PREMIUM
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
   const canSaveJob = isRegistered;
-
-  useEffect(() => {
-    if (open) setIsBannerExpanded(true);
-  }, [open, job?.id]);
 
   const handleGoToPlans = () => {
     onOpenChange(false);
@@ -86,7 +73,12 @@ export function JobDetailsDialog({
   const formatDate = (v: string | null | undefined) => {
     if (!v) return "-";
     const d = new Date(v);
-    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(i18n.language === "pt" ? "pt-BR" : "en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const renderMainWage = () => {
@@ -109,6 +101,9 @@ export function JobDetailsDialog({
       ? t("jobs.table.experience_years", { count: years })
       : t("jobs.table.experience_years_months", { years, months: rem });
   };
+
+  // LÓGICA DE DETECÇÃO DE EARLY ACCESS (CORRIGIDA)
+  const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,8 +157,8 @@ export function JobDetailsDialog({
         {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
-            {/* 🚨 ALERTA DE OPORTUNIDADE: VAGA ATIVA EM EARLY ACCESS 🚨 */}
-            {job?.visa_type === "Early Access" && (
+            {/* 🚨 ALERTA DE OPORTUNIDADE ATUAL: VAGA É EARLY ACCESS 🚨 */}
+            {isCurrentlyEarlyAccess && (
               <div className="bg-blue-600 border border-blue-400 rounded-2xl p-5 flex items-center gap-5 shadow-xl shadow-blue-100 animate-in fade-in slide-in-from-top-4 duration-700">
                 <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm border border-white/30 text-white shrink-0 shadow-inner">
                   <Zap className="h-8 w-8 fill-white animate-pulse" />
@@ -183,7 +178,7 @@ export function JobDetailsDialog({
             {job?.randomization_group && (
               <div
                 className={cn(
-                  "p-4 rounded-xl border flex gap-3 items-start shadow-sm",
+                  "p-4 rounded-xl border flex gap-3 items-start shadow-sm transition-all",
                   job.randomization_group === "A"
                     ? "bg-emerald-50 border-emerald-100"
                     : job.randomization_group === "B"
@@ -214,7 +209,7 @@ export function JobDetailsDialog({
               </div>
             )}
 
-            {/* CARD EVOLUÇÃO EARLY ACCESS (MANTIDO CONFORME SOLICITADO) */}
+            {/* CARD EVOLUÇÃO EARLY ACCESS (PROVA SOCIAL - QUANDO ELA FOI) */}
             {job?.was_early_access && (
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
                 <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
@@ -230,6 +225,7 @@ export function JobDetailsDialog({
               </div>
             )}
 
+            {/* RESTANTE DO GRID DE INFORMAÇÕES */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
                 {/* TIMELINE */}
@@ -293,97 +289,11 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
-                  {job?.wage_additional && (
-                    <div
-                      className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium"
-                      translate="no"
-                    >
-                      {job.wage_additional}
-                    </div>
-                  )}
-                  {job?.rec_pay_deductions && (
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
-                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
-                      </span>
-                      <p className="text-xs text-red-800 font-medium" translate="no">
-                        {job.rec_pay_deductions}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* CARGA HORÁRIA */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
-                  <div className="bg-amber-50 p-3 rounded-full text-amber-600">
-                    <Clock className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {t("jobs.details.weekly_hours")}
-                    </span>
-                    <span className="text-xl font-bold text-slate-800" translate="no">
-                      {job?.weekly_hours ? `${job.weekly_hours}h` : "N/A"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* CONTATOS */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
-                  {!canSeeContacts && (
-                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-                      <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
-                        <Lock className="h-7 w-7 text-amber-500" />
-                      </div>
-                      <Button
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
-                        onClick={handleGoToPlans}
-                      >
-                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
-                      </Button>
-                    </div>
-                  )}
-                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest">
-                    <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
-                  </h4>
-                  <div className="space-y-4 mt-4">
-                    <div translate="no">
-                      <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                        {t("jobs.details.email_label")}
-                      </span>
-                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
-                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
-                      </div>
-                    </div>
-                    {job?.phone && (
-                      <div className="space-y-2" translate="no">
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                          {t("jobs.details.phone_label")}
-                        </span>
-                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
-                          {canSeeContacts ? job.phone : "+1 (XXX) XXX-XXXX"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* DESCRIÇÕES */}
+              {/* DESCRIÇÃO DA VAGA */}
               <div className="lg:col-span-8 space-y-6">
-                {job?.job_min_special_req && (
-                  <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
-                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
-                      <AlertTriangle className="h-6 w-6 text-amber-500" /> {t("jobs.details.special_reqs")}
-                    </h4>
-                    <div className="bg-amber-50 rounded-xl p-5 border border-amber-100">
-                      <p className="text-sm text-amber-900 leading-relaxed">
-                        <span translate="yes">{job.job_min_special_req}</span>
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
                     <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
