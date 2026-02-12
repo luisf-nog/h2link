@@ -486,6 +486,7 @@ export type Database = {
           wage_from: number | null
           wage_to: number | null
           wage_unit: string | null
+          was_early_access: boolean | null
           website: string | null
           weekly_hours: number | null
           worksite_address: string | null
@@ -554,6 +555,7 @@ export type Database = {
           wage_from?: number | null
           wage_to?: number | null
           wage_unit?: string | null
+          was_early_access?: boolean | null
           website?: string | null
           weekly_hours?: number | null
           worksite_address?: string | null
@@ -622,6 +624,7 @@ export type Database = {
           wage_from?: number | null
           wage_to?: number | null
           wage_unit?: string | null
+          was_early_access?: boolean | null
           website?: string | null
           weekly_hours?: number | null
           worksite_address?: string | null
@@ -863,7 +866,8 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
-      process_jobs_bulk: { Args: { jobs_data: Json }; Returns: Json }
+      process_daily_smtp_warmup: { Args: never; Returns: undefined }
+      process_jobs_bulk: { Args: { jobs_data: Json }; Returns: undefined }
       track_profile_view: {
         Args: { p_queue_id?: string; p_token: string }
         Returns: {
