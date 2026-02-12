@@ -36,7 +36,7 @@
       "request_title": "Redefinir senha",
       "request_desc": "Informe seu e-mail e enviaremos um link seguro para redefinir sua senha.",
       "sent_title": "Link enviado",
-      "sent_desc": "Se {{email}} existir no sistema, você receberá um link de redefinição em alguns minutos.",
+      "sent_desc": "Si {{email}} existir no sistema, você receberá um link de redefinição em alguns minutos.",
       "reset_title": "Criar nova senha",
       "reset_desc": "Defina uma nova senha para sua conta.",
       "fields": {
@@ -151,7 +151,7 @@
   },
   "footer": {
     "tagline": "Conexões inteligentes. Oportunidades reais.",
-    "terms": "Terms of Use",
+    "terms": "Termos de Uso",
     "privacy": "Política de Privacidade"
   },
   "reports": {
@@ -458,7 +458,7 @@
       "rewrite_ai": "✨ Reescrever com IA"
     },
     "ai_writer": {
-      "title": "IA Dinâmica Ativa",
+      "title": "IA Dinâmica Activa",
       "description": "Seus emails são gerados automaticamente por IA para cada vaga.",
       "active_title": "Geração automática ativada",
       "active_desc": "Cada email que você enviar será único, gerado pela IA com base no seu currículo e na descrição da vaga. Não é necessário criar templates.",
@@ -534,7 +534,7 @@
       "label": "Upload do PDF",
       "note": "A IA pode errar — revise antes de salvar.",
       "actions": {
-        "parse": "Extrair com IA"
+        "parse": "Extraer com IA"
       }
     },
     "status": {
@@ -592,7 +592,7 @@
       "view_history": "Ver histórico"
     },
     "history": {
-      "title": "Historial de Envios",
+      "title": "Histórico de Envios",
       "empty": "Nenhum envio registrado.",
       "status_success": "Sucesso",
       "status_failed": "Falhou",
@@ -755,7 +755,7 @@
     },
     "server_error": {
       "title": "Erro interno do servidor",
-      "description": "Ocorreu um erro no servidor de email. Tente novamente em alguns minutos. Se persistir, reconfigure sua senha SMTP."
+      "description": "Ocorreu um erro no servidor de email. Tente novamente em alguns minutos. Si persiste, reconfigure sua senha SMTP."
     },
     "session_expired": {
       "title": "Sessão expirada",
@@ -767,11 +767,11 @@
     },
     "invalid_domain": {
       "title": "Domínio inválido",
-      "description": "O domínio do email do destinatário não existe ou não aceita emails."
+      "description": "O domínio do e-mail do destinatário não existe ou não aceita e-mails."
     },
     "profile_incomplete": {
       "title": "Perfil incompleto",
-      "description": "Complete seu perfil (nome, idade, telefone, email de contato) antes de enviar."
+      "description": "Complete seu perfil (nome, idade, telefone, e-mail de contato) antes de enviar."
     },
     "no_template": {
       "title": "Template não encontrado",
@@ -842,7 +842,7 @@
       "mask_user_agent": "Proteção anti-spam",
       "mask_user_agent_tooltip": "Mascara informações técnicas do seu envio para reduzir chances de bloqueio por filtros anti-spam.",
       "antispam_armored": "Proteção anti-spam Blindada",
-      "antispam_armored_tooltip": "Camada avançada de proteção com múltiplas técnicas de ofuscación para máxima entregabilidade.",
+      "antispam_armored_tooltip": "Camada avançada de proteção com múltiplas técnicas de ofuscação para máxima entregabilidade.",
       "dns_bounce_check": "Verificação DNS",
       "dns_bounce_check_tooltip": "Valida o MX do domínio antes de enviar. Evita bounces e protege sua reputação de remetente.",
       "delay_gold": "Delay fixo de 15s",
@@ -881,7 +881,7 @@
         "templates": "Templates"
       },
       "whats_unlocked": "O que foi desbloqueado",
-      "whats_unlocked_desc": "Clique para ver detalhes e atajos para usar cada recurso.",
+      "whats_unlocked_desc": "Clique para ver detalhes e atalhos para usar cada recurso.",
       "ctas": {
         "start_now": "Começar agora",
         "setup_templates": "Configurar templates",
@@ -903,11 +903,11 @@
           "title": "Envio premium",
           "summary": "Envie com recursos premium e maior segurança operacional.",
           "detail_1": "Envio em lote e recursos premium para acelerar sua operação.",
-          "detail_2": "Use templates para padronizar e manter consistência."
+          "detail_2": "Use templates para padronizar e manter consistencia."
         },
         "dns": {
           "title": "Verificação DNS (anti-bounce)",
-          "summary": "Bloqueia envios para domínios sem MX válido para proteger sua reputação.",
+          "summary": "Bloqueia envios para dominios sem MX válido para proteger sua reputação.",
           "detail_1": "Antes de enviar, validamos o MX do domínio do destinatário.",
           "detail_2": "Isso reduz bounce e ajuda a manter entregabilidade."
         },
@@ -1003,8 +1003,10 @@
         "email": "Email",
         "action": "Ação"
       },
-      "experience_months": "{{count}}m",
-      "experience_years": "{{count}}a",
+      "experience_months": "{{count}} mês",
+      "experience_months_plural": "{{count}} meses",
+      "experience_years": "{{count}} ano",
+      "experience_years_plural": "{{count}} anos",
       "experience_years_months": "{{years}}a {{months}}m",
       "loading": "Carregando vagas...",
       "empty": "Nenhuma vaga encontrada"
@@ -1020,6 +1022,8 @@
       "end": "Fim",
       "available_positions": "Vagas Disponíveis",
       "remuneration": "Remuneração",
+      "experience": "Experiência Necessária",
+      "no_experience": "Nenhuma experiência necessária",
       "pay_frequency": "Pagamento: {{frequency}}",
       "bonus": "Bônus / Adicional",
       "deductions": "Deduções Previstas:",
@@ -1127,7 +1131,7 @@
     "unknown": "Usuário",
     "status_pending": "Pendente",
     "status_active": "Ativo",
-    "signup_hint": "Se você tem um código de indicação, cole aqui (opcional).",
+    "signup_hint": "Si você tem um código de indicação, cole aqui (opcional).",
     "stats": {
       "active": "Indicações ativas",
       "bonus": "Bônus de envios",
@@ -1193,7 +1197,7 @@
     "reset_defaults": "Restaurar Padrões",
     "email_length": "Tamanho do Email",
     "paragraphs_count_one": "{{count}} parágrafo",
-    "paragraphs_count_other": "{{count}} parágrafos",
+    "paragraphs_count_other": "{{count}} párrafos",
     "paragraph_style": "Estilo de Parágrafos",
     "paragraphs_multiple": "Múltiplos parágrafos",
     "paragraphs_single": "Parágrafo único",
