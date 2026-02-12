@@ -11,6 +11,7 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
+  // --- DATA LOCAL REAL ---
   const getTodayDate = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -44,8 +45,8 @@ export function MultiJsonImporter() {
 
   const getCaseBody = (id: string) => {
     if (!id) return id;
-    // Remove sufixos GHOST antes de processar o fingerprint
-    const cleanId = id.split("-GHOST")[0];
+    // Remove qualquer rastro de GHOST antes de gerar o fingerprint único
+    const cleanId = id.split("-GHOST")[0].trim();
     const parts = cleanId.split("-");
     if (parts[0] === "JO" && parts[1] === "A") return parts.slice(2).join("-");
     if (parts[0] === "H") return parts.slice(1).join("-");
@@ -58,8 +59,8 @@ export function MultiJsonImporter() {
       const val = obj[key] || obj[key.toLowerCase()];
       if (val !== undefined && val !== null) {
         const trimmed = String(val).trim();
-        // TRAVA: Se o valor for "N/A", retorna null para ser filtrado depois
-        if (trimmed.toUpperCase() === "N/A") return null;
+        // Bloqueio de strings inúteis
+        if (trimmed.toUpperCase() === "N/A" || trimmed === "-") return null;
         return trimmed;
       }
     }
@@ -70,6 +71,8 @@ export function MultiJsonImporter() {
     if (files.length === 0) return;
     setProcessing(true);
     const today = getTodayDate();
+
+    // Contadores para o relatório final
     let skippedByEmail = 0;
     let skippedByGhost = 0;
 
@@ -101,20 +104,16 @@ export function MultiJsonImporter() {
           list.forEach((item: any) => {
             const flat = { ...item, ...(item.clearanceOrder || {}), ...(item.jobRequirements?.qualification || {}) };
 
-            // 1. CAPTURA E LIMPEZA INICIAL DO ID
+            // 1. EXTRAÇÃO E TRAVA DE ID (ANTI-GHOST)
             let rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
-
-            // TRAVA: IGNORAR SE TIVER "GHOST" NO ID ORIGINAL OU SE ESTIVER VAZIO
             if (!rawJobId || rawJobId.toUpperCase().includes("GHOST")) {
               skippedByGhost++;
               return;
             }
 
-            // 2. CAPTURA E VALIDAÇÃO DE EMAIL
+            // 2. EXTRAÇÃO E TRAVA DE EMAIL (INADMISSÍVEL N/A)
             const email = getVal(flat, ["recApplyEmail", "email"]);
-
-            // TRAVA: SE NÃO TIVER EMAIL VÁLIDO, DESCARTA
-            if (!email || email === "" || email.toUpperCase() === "N/A") {
+            if (!email || email === "" || email.toUpperCase() === "N/A" || !email.includes("@")) {
               skippedByEmail++;
               return;
             }
@@ -125,7 +124,7 @@ export function MultiJsonImporter() {
 
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
-              job_id: rawJobId.split("-GHOST")[0].trim(), // Garante que nenhum lixo de ghost passe
+              job_id: rawJobId.split("-GHOST")[0].trim(), // Limpeza extra por garantia
               visa_type: visaType,
               fingerprint: fingerprint,
               job_title: getVal(flat, ["jobTitle", "tempneedJobtitle", "title"]),
@@ -153,8 +152,16 @@ export function MultiJsonImporter() {
         }
       }
 
-      // FILTRO FINAL DE SEGURANÇA
-      const allJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && !j.job_id.includes("GHOST"));
+      const allJobs = Array.from(rawJobsMap.values());
+
+      if (allJobs.length === 0) {
+        toast({
+          title: "Nenhuma vaga válida",
+          description: "O arquivo processado não continha vagas com e-mails válidos.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const BATCH_SIZE = 1500;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
@@ -163,11 +170,11 @@ export function MultiJsonImporter() {
       }
 
       toast({
-        title: "Sincronização V62 Concluída!",
-        description: `${allJobs.length} vagas inseridas. Bloqueios: ${skippedByEmail} sem e-mail e ${skippedByGhost} IDs ghost.`,
+        title: "Sincronização Protegida Concluída!",
+        description: `${allJobs.length} vagas inseridas. Bloqueios de segurança: ${skippedByEmail} sem e-mail e ${skippedByGhost} registros GHOST.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro de Processamento", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -177,10 +184,10 @@ export function MultiJsonImporter() {
     <Card className="border-4 border-indigo-700 shadow-2xl">
       <CardHeader className="bg-indigo-50">
         <CardTitle className="flex items-center gap-2 text-indigo-900">
-          <ShieldCheck className="h-6 w-6 text-emerald-600" /> H2 Linker Sync V62 (Armored Mode)
+          <ShieldCheck className="h-6 w-6 text-emerald-600" /> H2 Linker Armored Sync V62
         </CardTitle>
         <CardDescription className="text-indigo-700 font-bold">
-          Trava de integridade ativada: bloqueio automático de vagas sem e-mail ou com chaves corrompidas.
+          Segurança Ativa: Vagas sem e-mail ou com chaves "Ghost" são descartadas automaticamente.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6 space-y-4">
@@ -188,15 +195,15 @@ export function MultiJsonImporter() {
           type="file"
           multiple
           onChange={(e) => setFiles(Array.from(e.target.files || []))}
-          className="w-full text-sm"
+          className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
         />
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-14 bg-indigo-700 hover:bg-indigo-900 text-white font-black text-lg shadow-lg"
+          className="w-full h-14 bg-indigo-700 hover:bg-indigo-900 text-white font-black text-lg shadow-lg transition-all active:scale-[0.98]"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção Protegida
+          Sincronizar Produção Armored
         </Button>
       </CardContent>
     </Card>
