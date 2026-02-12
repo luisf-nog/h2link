@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MobileJobCard } from "@/components/jobs/MobileJobCard";
@@ -200,7 +200,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-realtime")
+      .channel("sync-queue-realtime-final")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -287,7 +287,6 @@ export default function Jobs() {
     });
   };
 
-  // --- NOVA FUNÇÃO: REMOVER DA FILA ---
   const removeFromQueue = async (job: Job) => {
     if (!profile) return;
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
@@ -297,13 +296,9 @@ export default function Jobs() {
       .eq("user_id", profile.id)
       .eq("job_id", job.id)
       .eq("status", "pending");
-
     if (!error) {
       syncQueue();
-      toast({
-        title: t("queue.toasts.remove_success_title"),
-        description: t("queue.toasts.remove_success_desc"),
-      });
+      toast({ title: t("queue.toasts.remove_success_title"), description: t("queue.toasts.remove_success_desc") });
     }
     setProcessingJobIds((prev) => {
       const n = new Set(prev);
@@ -359,7 +354,7 @@ export default function Jobs() {
         {queuedJobIds.size > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all hover:shadow-[0_8px_30px_rgba(37,99,235,0.08)]">
-              <div className="flex items-center gap-4 overflow-visible">
+              <div className="flex items-center gap-4 overflow-visible text-left">
                 <div className="relative shrink-0 p-1">
                   <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
                     <Zap className="h-6 w-6 text-white fill-white/20" />
@@ -368,7 +363,7 @@ export default function Jobs() {
                     {queuedJobIds.size}
                   </div>
                 </div>
-                <div className="text-left">
+                <div>
                   <h3 className="text-slate-900 font-bold text-base leading-tight">{t("jobs.queue_banner.title")}</h3>
                   <p className="text-slate-500 text-sm truncate">
                     {t("jobs.queue_banner.subtitle", { count: queuedJobIds.size })}
@@ -408,14 +403,16 @@ export default function Jobs() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("jobs.filters.visa.h2a_info")}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t("jobs.filters.visa.h2a_info")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -465,7 +462,15 @@ export default function Jobs() {
                       <CommandEmpty>{t("common.empty")}</CommandEmpty>
                       <CommandGroup>
                         {categories.map((c) => (
-                          <CommandItem key={c} onSelect={() => toggleCategory(c)}>
+                          <CommandItem
+                            key={c}
+                            onSelect={() => {
+                              setSelectedCategories((prev) =>
+                                prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+                              );
+                              setPage(1);
+                            }}
+                          >
                             <div
                               className={cn(
                                 "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
@@ -543,7 +548,7 @@ export default function Jobs() {
                 job={j}
                 isBlurred={planSettings.job_db_blur}
                 isQueued={queuedJobIds.has(j.id)}
-                onAddToQueue={() => addToQueue(j)}
+                onAddToQueue={() => (queuedJobIds.has(j.id) ? removeFromQueue(j) : addToQueue(j))}
                 onClick={() => setSelectedJob(j)}
                 formatDate={formatDate}
                 reportData={jobReports[j.id]}
@@ -705,7 +710,6 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
-                          {/* BOTAÃO DE AÇÃO ADAPTÁVEL (RESTAURADO E ATUALIZADO) */}
                           <Button
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "ghost" : "outline"}
@@ -720,14 +724,13 @@ export default function Jobs() {
                               queuedJobIds.has(j.id) ? removeFromQueue(j) : addToQueue(j);
                             }}
                             disabled={planSettings.job_db_blur || processingJobIds.has(j.id)}
-                            title={queuedJobIds.has(j.id) ? t("queue.actions.remove") : undefined}
                           >
                             {planSettings.job_db_blur ? (
                               <Lock className="h-4 w-4" />
                             ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : queuedJobIds.has(j.id) ? (
-                              <Trash2 className="h-4 w-4" /> // MOSTRA LIXEIRA SE JÁ ESTIVER NA FILA
+                              <Trash2 className="h-4 w-4 text-red-500" /> // O ÍCONE DA LIXEIRA FINALMENTE AQUI
                             ) : (
                               <Plus className="h-4 w-4" />
                             )}
