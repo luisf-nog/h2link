@@ -71,16 +71,20 @@ export function JobDetailsDialog({
   onRemoveFromQueue,
   isInQueue,
   onShare,
-  setShowLoginDialog, // Propriedade para abrir o login
+  setShowLoginDialog,
 }: any) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = planSettings?.plan_tier?.toLowerCase() || planSettings?.tier || "visitor";
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
-  const canSaveJob = isRegistered;
+
+  useEffect(() => {
+    if (open) setIsBannerExpanded(true);
+  }, [open, job?.id]);
 
   const handleGoToPlans = () => {
     onOpenChange(false);
@@ -152,10 +156,9 @@ export function JobDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
-        {/* HEADER */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-1 w-full min-w-0">
+            <div className="flex flex-col gap-1 w-full min-w-0 text-left">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {job?.visa_type && (
                   <Badge className="text-[10px] uppercase font-bold" translate="no">
@@ -188,31 +191,31 @@ export function JobDetailsDialog({
                 <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
               </Button>
               <Button onClick={handleSaveAction} className="px-6 font-bold shadow-sm">
-                {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+                {!isRegistered && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
-            {/* Banner de Evolução Early Access */}
             {job?.was_early_access && (
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-                <div className="bg-amber-500 p-2 rounded-lg text-white">
+                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
                   <Rocket className="h-6 w-6 animate-bounce" />
                 </div>
                 <div>
                   <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
                   <p className="text-amber-800 text-xs">{t("jobs.details.early_access_evolution_text")}</p>
                 </div>
+                <div className="ml-auto hidden sm:block">
+                  <CheckCircle2 className="h-8 w-8 text-amber-500/30" />
+                </div>
               </div>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
@@ -240,7 +243,6 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
@@ -255,9 +257,8 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALARIO */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">
                       {t("jobs.details.available_positions")}
                     </span>
@@ -271,9 +272,26 @@ export function JobDetailsDialog({
                     </div>
                     <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
                   </div>
+                  {job?.wage_additional && (
+                    <div
+                      className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium"
+                      translate="no"
+                    >
+                      {job.wage_additional}
+                    </div>
+                  )}
+                  {job?.rec_pay_deductions && (
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
+                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
+                      </span>
+                      <p className="text-xs text-red-800 font-medium" translate="no">
+                        {job.rec_pay_deductions}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* CARGA HORÁRIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
@@ -288,16 +306,17 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-                      <Lock className="h-7 w-7 text-amber-500 mb-3" />
+                      <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
+                        <Lock className="h-7 w-7 text-amber-500" />
+                      </div>
                       <Button
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg"
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
-                        {t("jobs.upgrade.cta")}
+                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
                       </Button>
                     </div>
                   )}
@@ -317,7 +336,6 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* DESCRIÇÃO */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
@@ -326,16 +344,25 @@ export function JobDetailsDialog({
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                     <span translate="yes">{job?.job_duties}</span>
                   </p>
+                  {job?.job_min_special_req && (
+                    <div className="mt-8 bg-amber-50 rounded-xl p-5 border border-amber-100">
+                      <h5 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2 uppercase tracking-wider">
+                        <AlertTriangle className="h-4 w-4" /> {t("jobs.details.special_reqs")}
+                      </h5>
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        <span translate="yes">{job.job_min_special_req}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* FOOTER MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button className="flex-1 font-bold h-12 text-base shadow-lg" onClick={handleSaveAction}>
-            {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+            {!isRegistered && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job_mobile")}
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShareInternal}>
             <Share2 className="h-5 w-5 text-slate-600" />
