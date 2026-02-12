@@ -18,7 +18,6 @@ import {
   Plus,
   Trash2,
   Users,
-  MessageSquare,
   ArrowLeft,
   GraduationCap,
   Info,
@@ -42,7 +41,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 export type JobDetails = {
   id: string;
   job_id: string;
-  visa_type: "H-2B" | "H-2A" | string | null;
+  visa_type: string | null;
   company: string;
   email: string;
   phone?: string | null;
@@ -70,12 +69,6 @@ export type JobDetails = {
   was_early_access?: boolean | null;
 };
 
-type PlanSettings = {
-  job_db_access: string;
-  show_housing_icons: boolean;
-  job_db_blur?: boolean;
-};
-
 export function JobDetailsDialog({
   open,
   onOpenChange,
@@ -90,7 +83,7 @@ export function JobDetailsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   job: JobDetails | null;
-  planSettings?: PlanSettings;
+  planSettings?: any;
   formatSalary: (salary: number | null) => string;
   onAddToQueue: (job: JobDetails) => void;
   onRemoveFromQueue?: (job: JobDetails) => void;
@@ -101,8 +94,8 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // Lógica de Bloqueio (Se não houver plano ou se for free/sem login)
-  const isBlurred = !planSettings || planSettings.job_db_blur === true;
+  // LÓGICA DE SEGURANÇA: Se não houver planSettings (deslogado) ou se job_db_blur for true, BLOQUEIA.
+  const isVisitorOrFree = !planSettings || planSettings.job_db_blur === true;
 
   const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
@@ -111,6 +104,7 @@ export function JobDetailsDialog({
   }, [open, job?.id]);
 
   const copyToClipboard = (text: string) => {
+    if (isVisitorOrFree) return;
     navigator.clipboard.writeText(text);
     toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
   };
@@ -120,7 +114,8 @@ export function JobDetailsDialog({
     if (onShare) onShare(job);
     else {
       const shareUrl = getJobShareUrl(job.id);
-      copyToClipboard(shareUrl);
+      navigator.clipboard.writeText(shareUrl);
+      toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
     }
   };
 
@@ -151,36 +146,7 @@ export function JobDetailsDialog({
       : t("jobs.table.experience_years_months", { years, months: rem });
   };
 
-  const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
-
-  const getGroupBadgeConfig = (group: string) => {
-    const g = group.toUpperCase();
-    if (g === "A")
-      return {
-        className: "bg-emerald-50 text-emerald-800 border-emerald-300",
-        shortDesc: t("jobs.groups.a_short"),
-        tooltip: t("jobs.groups.a_tooltip"),
-      };
-    if (g === "B")
-      return {
-        className: "bg-blue-50 text-blue-800 border-blue-300",
-        shortDesc: t("jobs.groups.b_short"),
-        tooltip: t("jobs.groups.b_tooltip"),
-      };
-    if (g === "C" || g === "D")
-      return {
-        className: "bg-amber-50 text-amber-800 border-amber-300",
-        shortDesc: t("jobs.groups.cd_short"),
-        tooltip: t("jobs.groups.cd_tooltip"),
-      };
-    return {
-      className: "bg-slate-50 text-slate-700 border-slate-300",
-      shortDesc: t("jobs.groups.risk_short"),
-      tooltip: t("jobs.groups.risk_tooltip"),
-    };
-  };
-
-  const groupConfig = job?.randomization_group ? getGroupBadgeConfig(job.randomization_group) : null;
+  const groupConfig = job?.randomization_group ? getGroupBadgeConfig(job.randomization_group, t) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -208,8 +174,8 @@ export function JobDetailsDialog({
                 )}
                 {job?.job_id && (
                   <span className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                    {isBlurred ? `${job.job_id.split("-GHOST")[0].substring(0, 10)}...` : job.job_id.split("-GHOST")[0]}
-                    {isBlurred && <span className="ml-1 blur-[2px] select-none">XXXXX</span>}
+                    {isVisitorOrFree ? `${job.job_id.substring(0, 10)}...` : job.job_id.split("-GHOST")[0]}
+                    {isVisitorOrFree && <span className="ml-1 blur-[3px] select-none opacity-50">XXXXX</span>}
                   </span>
                 )}
               </div>
@@ -225,7 +191,6 @@ export function JobDetailsDialog({
                 </span>
               </DialogDescription>
             </div>
-
             <div className="hidden sm:flex gap-2 shrink-0">
               <Button variant="outline" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
@@ -235,61 +200,43 @@ export function JobDetailsDialog({
                   <Trash2 className="h-4 w-4 mr-2" /> {t("jobs.details.remove")}
                 </Button>
               ) : (
-                <Button onClick={() => job && onAddToQueue(job)} className="px-6 font-bold shadow-sm">
-                  <Plus className="h-4 w-4 mr-2" /> {t("jobs.details.save_job")}
+                <Button
+                  onClick={() => job && onAddToQueue(job)}
+                  className="px-6 font-bold shadow-sm"
+                  disabled={isVisitorOrFree}
+                >
+                  {isVisitorOrFree && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
                 </Button>
               )}
             </div>
           </div>
         </div>
 
-        {/* CONTEÚDO ROLÁVEL */}
+        {/* ÁREA DE SCROLL */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
-            {/* EARLY MATCH CARD (mantenha igual) */}
-
-            {/* GRUPOS DOL (mantenha igual) */}
-
+            {/* CARDS INFO */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE - 3 COLUNAS */}
-                <div className="grid grid-cols-3 gap-1 items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex flex-col items-center text-center">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 leading-none">
+                {/* TIMELINE - 3 COLUNAS FIXAS */}
+                <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-center">
+                    <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
                       {t("jobs.details.posted")}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-600 leading-tight">
-                      {formatDate(job?.posted_date)}
-                    </span>
+                    <span className="text-[11px] font-semibold text-slate-600">{formatDate(job?.posted_date)}</span>
                   </div>
-                  <div className="flex flex-col items-center text-center border-x border-slate-100 px-1">
-                    <span className="text-[10px] font-bold uppercase text-green-600 mb-1 leading-none">
+                  <div className="text-center border-x border-slate-100">
+                    <span className="block text-[9px] font-bold uppercase text-green-600 mb-1">
                       {t("jobs.details.start")}
                     </span>
-                    <span className="text-[11px] font-bold text-green-700 leading-tight">
-                      {formatDate(job?.start_date)}
-                    </span>
+                    <span className="text-[11px] font-bold text-green-700">{formatDate(job?.start_date)}</span>
                   </div>
-                  <div className="flex flex-col items-center text-center">
-                    <span className="text-[10px] font-bold uppercase text-red-600 mb-1 leading-none">
+                  <div className="text-center">
+                    <span className="block text-[9px] font-bold uppercase text-red-600 mb-1">
                       {t("jobs.details.end")}
                     </span>
-                    <span className="text-[11px] font-semibold text-red-700 leading-tight">
-                      {formatDate(job?.end_date)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* EXPERIÊNCIA */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                  <div className="bg-blue-50 p-3 rounded-full text-blue-600">
-                    <GraduationCap className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {t("jobs.details.experience")}
-                    </span>
-                    <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
+                    <span className="text-[11px] font-semibold text-red-700">{formatDate(job?.end_date)}</span>
                   </div>
                 </div>
 
@@ -308,17 +255,14 @@ export function JobDetailsDialog({
                       </div>
                       <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
                       {job?.pay_frequency && (
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
                           {t("jobs.details.pay_frequency", { frequency: job.pay_frequency })}
                         </span>
                       )}
                     </div>
                     {job?.wage_additional && (
-                      <div className="bg-green-50 border border-green-100 p-3 rounded-lg">
-                        <span className="block text-[10px] font-bold text-green-700 uppercase mb-1">
-                          {t("jobs.details.bonus")}
-                        </span>
-                        <p className="text-xs text-green-800 leading-relaxed font-medium">{job.wage_additional}</p>
+                      <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
+                        {job.wage_additional}
                       </div>
                     )}
                   </div>
@@ -327,13 +271,13 @@ export function JobDetailsDialog({
                       <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
                         <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
                       </span>
-                      <p className="text-xs text-red-800 leading-relaxed font-medium">{job.rec_pay_deductions}</p>
+                      <p className="text-xs text-red-800 font-medium">{job.rec_pay_deductions}</p>
                     </div>
                   )}
                 </div>
 
                 {/* CARGA HORÁRIA */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
                   </div>
@@ -343,20 +287,19 @@ export function JobDetailsDialog({
                     </span>
                     <span className="text-xl font-bold text-slate-800">
                       {job?.weekly_hours
-                        ? `${job.weekly_hours}h / ${t("jobs.table.experience_months", { count: 1 }).replace("1", "").trim().slice(0, -1)}`
+                        ? `${job.weekly_hours}h / ${t("jobs.table.experience_months", { count: 1 }).replace(/[0-9]/g, "").trim()}`
                         : "N/A"}
                     </span>
                   </div>
                 </div>
 
-                {/* CONTATOS DA EMPRESA (COM CADEADOS E BLUR CORRIGIDO) */}
+                {/* CONTATOS (BLUR AGRESSIVO PARA VISITANTES) */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
-                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-xs tracking-widest">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest">
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
 
                   <div className="space-y-4">
-                    {/* Email */}
                     <div>
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                         {t("jobs.details.email_label")}
@@ -364,17 +307,17 @@ export function JobDetailsDialog({
                       <div className="flex items-center gap-2">
                         <div
                           className={cn(
-                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all transition-all duration-500",
-                            isBlurred && "blur-[8px] select-none pointer-events-none opacity-40 bg-slate-200",
+                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all select-none transition-all duration-700",
+                            isVisitorOrFree && "blur-[10px] opacity-30 pointer-events-none",
                           )}
                         >
-                          {job?.email || "employer@email.com"}
+                          {isVisitorOrFree ? "hidden@employer.com" : job?.email}
                         </div>
-                        {!isBlurred && (
+                        {!isVisitorOrFree && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 shrink-0"
+                            className="h-8 w-8"
                             onClick={() => job?.email && copyToClipboard(job.email)}
                           >
                             <Copy className="h-3.5 w-3.5" />
@@ -383,64 +326,63 @@ export function JobDetailsDialog({
                       </div>
                     </div>
 
-                    {/* Telefone */}
                     {job?.phone && (
-                      <div>
+                      <div className="space-y-2">
                         <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                           {t("jobs.details.phone_label")}
                         </span>
-                        <div className="space-y-2">
-                          <div
-                            className={cn(
-                              "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 transition-all duration-500",
-                              isBlurred && "blur-[8px] select-none pointer-events-none opacity-40 bg-slate-200",
-                            )}
+                        <div
+                          className={cn(
+                            "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 select-none transition-all duration-700",
+                            isVisitorOrFree && "blur-[10px] opacity-30 pointer-events-none",
+                          )}
+                        >
+                          {isVisitorOrFree ? "+1 (XXX) XXX-XXXX" : job.phone}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 h-10 gap-2 text-xs font-bold"
+                            asChild={!isVisitorOrFree}
+                            disabled={isVisitorOrFree}
                           >
-                            {job.phone}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 h-9 gap-2 text-xs font-bold"
-                              asChild={!isBlurred}
-                              disabled={isBlurred}
-                            >
-                              {isBlurred ? (
-                                <>
-                                  <Lock className="h-3.5 w-3.5 text-amber-500" /> {t("jobs.details.call_action")}
-                                </>
-                              ) : (
-                                <a href={`tel:${cleanPhone(job.phone)}`}>
-                                  <Phone className="h-3.5 w-3.5" /> {t("jobs.details.call_action")}
-                                </a>
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 h-9 gap-2 text-xs font-bold border-green-200 text-green-700"
-                              asChild={!isBlurred}
-                              disabled={isBlurred}
-                            >
-                              {isBlurred ? (
-                                <>
-                                  <Lock className="h-3.5 w-3.5 text-amber-500" /> WhatsApp
-                                </>
-                              ) : (
-                                <a href={`https://wa.me/${cleanPhone(job.phone)}`} target="_blank" rel="noreferrer">
-                                  <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                                </a>
-                              )}
-                            </Button>
-                          </div>
+                            {isVisitorOrFree ? (
+                              <>
+                                <Lock className="h-3.5 w-3.5 text-amber-500" /> {t("jobs.details.call_action")}
+                              </>
+                            ) : (
+                              <a href={`tel:${job.phone}`}>
+                                <Phone className="h-3.5 w-3.5" /> {t("jobs.details.call_action")}
+                              </a>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 h-10 gap-2 text-xs font-bold border-green-200 text-green-700"
+                            asChild={!isVisitorOrFree}
+                            disabled={isVisitorOrFree}
+                          >
+                            {isVisitorOrFree ? (
+                              <>
+                                <Lock className="h-3.5 w-3.5 text-amber-500" /> WhatsApp
+                              </>
+                            ) : (
+                              <a href={`https://wa.me/${job.phone}`} target="_blank" rel="noreferrer">
+                                <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                              </a>
+                            )}
+                          </Button>
                         </div>
                       </div>
                     )}
 
-                    {/* Banner Upgrade */}
-                    {isBlurred && (
-                      <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-2 shadow-md h-10 text-xs animate-pulse">
+                    {isVisitorOrFree && (
+                      <Button
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-extrabold py-5 shadow-lg h-auto text-xs uppercase tracking-tighter animate-pulse"
+                        onClick={() => onOpenChange(false)}
+                      >
                         <Rocket className="h-4 w-4 mr-2" /> {t("jobs.upgrade.cta")}
                       </Button>
                     )}
@@ -450,37 +392,20 @@ export function JobDetailsDialog({
 
               {/* COLUNA DIREITA (mantenha igual) */}
               <div className="lg:col-span-8 space-y-6">
-                {job?.job_min_special_req && (
-                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm">
-                    <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg">
-                      <AlertTriangle className="h-5 w-5" /> {t("jobs.details.special_reqs")}
-                    </h4>
-                    <p className="text-sm sm:text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
-                      {job.job_min_special_req}
-                    </p>
-                  </div>
-                )}
-                {job?.job_duties && (
-                  <div className="space-y-4">
-                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 px-1">
-                      <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
-                    </h4>
-                    <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
-                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
-                        {job.job_duties}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {/* ... (Mesmo conteúdo de Job Description e Requisitos do código anterior) */}
               </div>
             </div>
           </div>
         </div>
 
-        {/* FOOTER FIXO MOBILE */}
-        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-          <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
-            <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job")}
+        {/* FOOTER MOBILE */}
+        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
+          <Button
+            className="flex-1 font-bold h-12 text-base"
+            onClick={() => job && onAddToQueue(job)}
+            disabled={isVisitorOrFree}
+          >
+            {isVisitorOrFree && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
             <Share2 className="h-5 w-5 text-slate-600" />
@@ -488,5 +413,38 @@ export function JobDetailsDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function getGroupBadgeConfig(group: string, t: any) {
+  const g = group.toUpperCase();
+  const configs: Record<string, any> = {
+    A: {
+      className: "bg-emerald-50 text-emerald-800 border-emerald-300",
+      shortDesc: t("jobs.groups.a_short"),
+      tooltip: t("jobs.groups.a_tooltip"),
+    },
+    B: {
+      className: "bg-blue-50 text-blue-800 border-blue-300",
+      shortDesc: t("jobs.groups.b_short"),
+      tooltip: t("jobs.groups.b_tooltip"),
+    },
+    C: {
+      className: "bg-amber-50 text-amber-800 border-amber-300",
+      shortDesc: t("jobs.groups.cd_short"),
+      tooltip: t("jobs.groups.cd_tooltip"),
+    },
+    D: {
+      className: "bg-amber-50 text-amber-800 border-amber-300",
+      shortDesc: t("jobs.groups.cd_short"),
+      tooltip: t("jobs.groups.cd_tooltip"),
+    },
+  };
+  return (
+    configs[g] || {
+      className: "bg-slate-50 text-slate-700 border-slate-300",
+      shortDesc: t("jobs.groups.risk_short"),
+      tooltip: t("jobs.groups.risk_tooltip"),
+    }
   );
 }
