@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getJobShareUrl } from "@/lib/shareUtils";
@@ -81,9 +81,9 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // DEFINIÇÃO DAS VARIÁVEIS DE CONTROLE (Onde estava o erro)
   const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
-  const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
+  const isPremium = ["gold", "diamond", "black"].includes(planTier);
+  const canSeeContacts = isPremium;
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
   const handleGoToPlans = () => {
@@ -188,52 +188,59 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
-                    <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">Posted</span>
+                    <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
+                      {t("jobs.details.posted")}
+                    </span>
                     <span className="text-[11px] font-semibold" translate="no">
                       {formatDate(job?.posted_date)}
                     </span>
                   </div>
                   <div className="border-x border-slate-100">
-                    <span className="block text-[9px] font-bold uppercase text-green-600 mb-1">Start</span>
+                    <span className="block text-[9px] font-bold uppercase text-green-600 mb-1">
+                      {t("jobs.details.start")}
+                    </span>
                     <span className="text-[11px] font-bold text-green-700" translate="no">
                       {formatDate(job?.start_date)}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[9px] font-bold uppercase text-red-600 mb-1">End</span>
+                    <span className="block text-[9px] font-bold uppercase text-red-600 mb-1">
+                      {t("jobs.details.end")}
+                    </span>
                     <span className="text-[11px] font-semibold text-red-700" translate="no">
                       {formatDate(job?.end_date)}
                     </span>
                   </div>
                 </div>
 
-                {/* EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
                   </div>
                   <div>
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Experiência</span>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {t("jobs.details.experience")}
+                    </span>
                     <span className="text-xl font-bold text-slate-800" translate="no">
                       {formatExperience(job?.experience_months)}
                     </span>
                   </div>
                 </div>
 
-                {/* SALARIO */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <span className="font-semibold text-sm text-slate-600">Vagas</span>
+                    <span className="font-semibold text-sm text-slate-600">
+                      {t("jobs.details.available_positions")}
+                    </span>
                     <Badge className="bg-blue-600 font-bold px-3" translate="no">
                       {job?.openings || "N/A"}
                     </Badge>
                   </div>
                   <div>
                     <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
-                      <DollarSign className="h-5 w-5" /> <span>Remuneração</span>
+                      <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
                     </div>
                     <p className="text-3xl font-extrabold text-green-700 tracking-tight" translate="no">
                       {renderMainWage()}
@@ -252,7 +259,7 @@ export function JobDetailsDialog({
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      Carga Horária
+                      {t("jobs.details.weekly_hours")}
                     </span>
                     <span className="text-xl font-bold text-slate-800" translate="no">
                       {job?.weekly_hours ? `${job.weekly_hours}h / semana` : "N/A"}
@@ -260,7 +267,6 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -269,17 +275,17 @@ export function JobDetailsDialog({
                         className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
-                        Upgrade para Visualizar
+                        {t("jobs.upgrade.cta")}
                       </Button>
                     </div>
                   )}
                   <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest text-left">
-                    <Mail className="h-4 w-4 text-blue-500" /> Contatos
+                    <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
                   <div className="space-y-4 mt-4 text-left">
                     <div translate="no">
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                        Email
+                        {t("jobs.details.email_label")}
                       </span>
                       <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
                         {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
@@ -292,7 +298,7 @@ export function JobDetailsDialog({
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
-                    <Briefcase className="h-6 w-6 text-blue-600" /> Descrição da Vaga
+                    <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
                   </h4>
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                     <span translate="yes">{job?.job_duties}</span>
@@ -300,7 +306,7 @@ export function JobDetailsDialog({
                   {job?.job_min_special_req && (
                     <div className="mt-8 bg-amber-50 rounded-xl p-5 border border-amber-100">
                       <h5 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        <AlertTriangle className="h-4 w-4" /> Requisitos Especiais
+                        <AlertTriangle className="h-4 w-4" /> {t("jobs.details.special_reqs")}
                       </h5>
                       <p className="text-xs text-amber-800 leading-relaxed">
                         <span translate="yes">{job.job_min_special_req}</span>
@@ -313,14 +319,13 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER MOBILE - CORRIGIDO canSeeContacts */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button
             className="flex-1 font-bold h-12 text-base"
             disabled={isLoggedOut}
             onClick={() => job && onAddToQueue(job)}
           >
-            {isLoggedOut && <Lock className="h-4 w-4 mr-2" />} Salvar Vaga
+            {isLoggedOut && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
             <Share2 className="h-5 w-5 text-slate-600" />
