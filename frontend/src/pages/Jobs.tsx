@@ -101,7 +101,7 @@ function OnboardingModal() {
           </button>
         </div>
 
-        <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6">
+        <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6 text-left">
           <div className="flex gap-3 sm:gap-4">
             <div className="flex-shrink-0 mt-1 text-slate-700">
               <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -130,28 +130,6 @@ function OnboardingModal() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 sm:gap-4 items-start group">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-purple-50 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
-                <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">{t("jobs.onboarding.ai_title")}</h4>
-                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                  {t("jobs.onboarding.ai_text")}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 sm:gap-4 items-start group">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
-                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">{t("jobs.onboarding.automation_title")}</h4>
-                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                  {t("jobs.onboarding.automation_text")}
-                </p>
-              </div>
-            </div>
           </div>
 
           <div className="pt-5 border-t border-slate-100 mt-2">
@@ -161,9 +139,6 @@ function OnboardingModal() {
             >
               {t("jobs.onboarding.cta")}
             </Button>
-            <p className="text-center text-[9px] sm:text-[10px] text-slate-400 mt-4 uppercase tracking-widest font-bold">
-              Secure Official Data • AI Automation • Pro Technology
-            </p>
           </div>
         </div>
       </DialogContent>
@@ -193,27 +168,6 @@ export default function Jobs() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-
-  const handleShareJob = (job: Job) => {
-    const shareUrl = getJobShareUrl(job.id);
-    if (navigator.share) {
-      navigator
-        .share({
-          title: `${job.job_title} - ${job.company}`,
-          text: `${t("jobs.shareText", "Job opportunity")}: ${job.job_title} ${t("jobs.in", "in")} ${job.city}, ${job.state}`,
-          url: shareUrl,
-        })
-        .catch(() => copyToClipboard(shareUrl));
-    } else {
-      copyToClipboard(shareUrl);
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Link copiado!", description: "Link de compartilhamento copiado para área de transferência" });
-  };
-
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
@@ -222,8 +176,8 @@ export default function Jobs() {
     const amount = getPlanAmountForCurrency(PLANS_CONFIG[tier], currency);
     return formatCurrency(amount, currency, locale);
   };
-  const [searchParams, setSearchParams] = useSearchParams();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -233,7 +187,6 @@ export default function Jobs() {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
 
@@ -242,10 +195,12 @@ export default function Jobs() {
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    () => searchParams.get("categories")?.split(",") || [],
+    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
   );
   const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
   const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
+  const [minHours, setMinHours] = useState(() => searchParams.get("min_hours") ?? "");
+  const [maxHours, setMaxHours] = useState(() => searchParams.get("max_hours") ?? "");
 
   type SortKey =
     | "job_title"
@@ -259,9 +214,8 @@ export default function Jobs() {
     | "start_date"
     | "end_date";
   type SortDir = "asc" | "desc";
-
   const [sortKey, setSortKey] = useState<SortKey>(() => (searchParams.get("sort") as SortKey) || "posted_date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as SortDir) || "desc");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as any) || "desc");
   const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
@@ -275,27 +229,39 @@ export default function Jobs() {
   const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
   const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
-  const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
   const tableColSpan = 12;
 
-  const buildOrSearch = (term: string) =>
-    `job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%`;
+  // FUNÇÃO DE SANITIZAÇÃO (Vacina contra erros de pontuação no Master Filter)
+  const sanitizeSearchTerm = (term: string) => {
+    return term.replace(/[()\[\]{}|\\^$*+?.<>]/g, "").trim();
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
+
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
     if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false });
+
     if (visaType !== "all") query = query.eq("visa_type", visaType);
-    if (searchTerm.trim()) query = query.or(buildOrSearch(searchTerm.trim()));
+
+    // FILTRO MASTER AJUSTADO: Sanitizado e incluindo Job ID
+    const term = sanitizeSearchTerm(searchTerm);
+    if (term) {
+      query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
+    }
+
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
+    if (minHours) query = query.gte("weekly_hours", Number(minHours));
+    if (maxHours) query = query.lte("weekly_hours", Number(maxHours));
+
     query = query.range(from, to);
     const { data, error, count } = await query;
     if (!error && data) {
@@ -324,7 +290,6 @@ export default function Jobs() {
   };
 
   const fetchCategories = async () => {
-    setCategoriesLoading(true);
     const { data } = await supabase
       .from("public_jobs")
       .select("category")
@@ -333,7 +298,6 @@ export default function Jobs() {
       .limit(2000);
     if (data)
       setCategories(Array.from(new Set(data.map((r) => r.category?.trim()).filter(Boolean) as string[])).sort());
-    setCategoriesLoading(false);
   };
 
   useEffect(() => {
@@ -347,6 +311,8 @@ export default function Jobs() {
     groupFilter,
     minSalary,
     maxSalary,
+    minHours,
+    maxHours,
     sortKey,
     sortDir,
     page,
@@ -370,17 +336,12 @@ export default function Jobs() {
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
-    return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+    return new Date(date).toLocaleDateString(i18n.language, { timeZone: "UTC" });
   };
 
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return "-";
-    if (months < 12) return t("jobs.table.experience_months", { count: months });
-    const years = Math.floor(months / 12);
-    const rem = months % 12;
-    return rem === 0
-      ? t("jobs.table.experience_years", { count: years })
-      : t("jobs.table.experience_years_months", { years, months: rem });
+    return months < 12 ? `${months}m` : `${Math.floor(months / 12)}y`;
   };
 
   const formatSalaryProp = (salary: number | null) => (salary ? `$${salary.toFixed(2)}/h` : "-");
@@ -423,19 +384,6 @@ export default function Jobs() {
     });
   };
 
-  const removeFromQueue = async (job: Job) => {
-    if (!profile?.id) return;
-    const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
-    if (!error) {
-      setQueuedJobIds((prev) => {
-        const n = new Set(prev);
-        n.delete(job.id);
-        return n;
-      });
-      setSelectedJob(null);
-    }
-  };
-
   const handleRowClick = (job: Job) => (planSettings.job_db_blur ? setShowUpgradeDialog(true) : setSelectedJob(job));
 
   const toggleSort = (key: SortKey) => {
@@ -452,83 +400,66 @@ export default function Jobs() {
     return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
+  const handleShareJob = (job: Job) => {
+    const shareUrl = getJobShareUrl(job.id);
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `${job.job_title} - ${job.company}`,
+          text: `${t("jobs.shareText", "Job opportunity")}: ${job.job_title} ${t("jobs.in", "in")} ${job.city}, ${job.state}`,
+          url: shareUrl,
+        })
+        .catch(() => copyToClipboard(shareUrl));
+    } else {
+      copyToClipboard(shareUrl);
+    }
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
         <OnboardingModal />
 
-        {isFreeLimitReached && (
-          <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
-            <div className="flex items-center gap-3">
-              <Zap className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">{t("jobs.upgrade_banner.title")}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t("jobs.upgrade_banner.description", { limit: dailyLimitTotal })}
-                </p>
-              </div>
-            </div>
-            <Button onClick={() => navigate("/plans")} size="sm">
-              {t("jobs.upgrade_banner.cta")}
-            </Button>
-          </div>
-        )}
-
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
             <p className="text-muted-foreground mt-1">
               {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
             </p>
           </div>
           {isAdmin && (
             <div className="flex gap-2">
-              <Dialog open={showImporter} onOpenChange={setShowImporter}>
-                <Button variant="outline" onClick={() => setShowImporter(true)}>
-                  <Database className="mr-2 h-4 w-4" /> {t("jobs.import.json")}
-                </Button>
-                <DialogContent className="max-w-4xl p-0">
-                  <MultiJsonImporter />
-                </DialogContent>
-              </Dialog>
+              <Button variant="outline" size="sm" onClick={() => setShowImporter(true)}>
+                <Database className="mr-2 h-4 w-4" /> Admin
+              </Button>
               <JobImportDialog />
             </div>
           )}
         </div>
 
-        <Card>
+        <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Select
-                  value={visaType}
-                  onValueChange={(v: any) => {
-                    setVisaType(v);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VISA_TYPE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("jobs.filters.visa.h2a_info")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="relative w-full lg:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col lg:flex-row gap-4">
+              <Select
+                value={visaType}
+                onValueChange={(v: any) => {
+                  setVisaType(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full lg:w-[200px] h-10">
+                  <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISA_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   placeholder={t("jobs.search.placeholder")}
                   value={searchTerm}
@@ -536,120 +467,154 @@ export default function Jobs() {
                     setSearchTerm(e.target.value);
                     setPage(1);
                   }}
-                  className="pl-10"
+                  className="pl-10 h-10"
                 />
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 px-4 pb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-0 text-left">
-              <Input
-                placeholder={t("jobs.filters.state")}
-                value={stateFilter}
-                onChange={(e) => {
-                  setStateFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
-              <Input
-                placeholder={t("jobs.filters.city")}
-                value={cityFilter}
-                onChange={(e) => {
-                  setCityFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-0 px-4 pb-4">
+            <Input
+              placeholder={t("jobs.filters.state")}
+              value={stateFilter}
+              onChange={(e) => {
+                setStateFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-10"
+            />
+            <Input
+              placeholder={t("jobs.filters.city")}
+              value={cityFilter}
+              onChange={(e) => {
+                setCityFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-10"
+            />
 
-              <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-between text-muted-foreground font-normal h-10 text-sm">
-                    {selectedCategories.length > 0
-                      ? t("jobs.filters.selected", { count: selectedCategories.length })
-                      : t("jobs.filters.category")}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 w-[250px]" align="start">
-                  <Command>
-                    <CommandInput placeholder={t("jobs.filters.search_cat")} />
-                    <CommandList>
-                      <CommandEmpty>{t("common.empty")}</CommandEmpty>
-                      <CommandGroup>
-                        {categories.map((c) => (
-                          <CommandItem key={c} onSelect={() => toggleCategory(c)}>
-                            <div
-                              className={cn(
-                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                selectedCategories.includes(c)
-                                  ? "bg-primary text-primary-foreground"
-                                  : "opacity-50 [&_svg]:invisible",
-                              )}
-                            >
-                              <Check className="h-4 w-4" />
-                            </div>
-                            {c}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+            <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-between text-muted-foreground font-normal h-10 text-sm">
+                  {selectedCategories.length > 0
+                    ? t("jobs.filters.selected", { count: selectedCategories.length })
+                    : t("jobs.filters.category")}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[250px]" align="start">
+                <Command>
+                  <CommandInput placeholder={t("jobs.filters.search_cat")} />
+                  <CommandList>
+                    <CommandEmpty>{t("common.empty")}</CommandEmpty>
+                    <CommandGroup>
+                      {categories.map((c) => (
+                        <CommandItem key={c} onSelect={() => toggleCategory(c)}>
+                          <Check
+                            className={cn("mr-2 h-4 w-4", selectedCategories.includes(c) ? "opacity-100" : "opacity-0")}
+                          />
+                          {c}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
-              <Input
-                type="number"
-                placeholder={t("jobs.filters.min_salary")}
-                value={minSalary}
-                onChange={(e) => {
-                  setMinSalary(e.target.value);
-                  setPage(1);
-                }}
-              />
-              <Select
-                value={groupFilter}
-                onValueChange={(v) => {
-                  setGroupFilter(v === "all" ? "" : v);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.all_groups")}</SelectItem>
-                  {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {t("jobs.groups.group_label")} {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select
+              value={groupFilter}
+              onValueChange={(v) => {
+                setGroupFilter(v === "all" ? "" : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Group" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all_groups")}</SelectItem>
+                {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
+                  <SelectItem key={g} value={g}>
+                    Group {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2">
+              <div className="relative w-full">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">$</span>
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  className="pl-5 h-10 text-xs"
+                  value={minSalary}
+                  onChange={(e) => {
+                    setMinSalary(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div className="relative w-full">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">H</span>
+                <Input
+                  type="number"
+                  placeholder="H-Min"
+                  className="pl-5 h-10 text-xs"
+                  value={minHours}
+                  onChange={(e) => {
+                    setMinHours(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="relative w-full">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">$</span>
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  className="pl-5 h-10 text-xs"
+                  value={maxSalary}
+                  onChange={(e) => {
+                    setMaxSalary(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div className="relative w-full">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">H</span>
+                <Input
+                  type="number"
+                  placeholder="H-Max"
+                  className="pl-5 h-10 text-xs"
+                  value={maxHours}
+                  onChange={(e) => {
+                    setMaxHours(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {isMobile ? (
           <div className="space-y-3">
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={tableColSpan} className="text-center py-20">
-                  <Loader2 className="animate-spin inline mr-2 h-4 w-4" /> {t("common.loading")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              jobs.map((j) => (
-                <MobileJobCard
-                  key={j.id}
-                  job={j}
-                  isBlurred={planSettings.job_db_blur}
-                  isQueued={queuedJobIds.has(j.id)}
-                  onAddToQueue={() => addToQueue(j)}
-                  onClick={() => handleRowClick(j)}
-                  formatDate={formatDate}
-                  reportData={jobReports[j.id]}
-                />
-              ))
-            )}
+            {jobs.map((j) => (
+              <MobileJobCard
+                key={j.id}
+                job={j}
+                isBlurred={planSettings.job_db_blur}
+                isQueued={queuedJobIds.has(j.id)}
+                onAddToQueue={() => addToQueue(j)}
+                onClick={() => handleRowClick(j)}
+                formatDate={formatDate}
+                reportData={jobReports[j.id]}
+              />
+            ))}
           </div>
         ) : (
           <Card className="border-slate-200 overflow-hidden shadow-sm">
@@ -723,7 +688,7 @@ export default function Jobs() {
                         onClick={() => handleRowClick(j)}
                         className="cursor-pointer hover:bg-slate-50/80 transition-all border-slate-100"
                       >
-                        <TableCell className="font-semibold text-slate-900 py-4">
+                        <TableCell className="font-semibold text-slate-900 py-4 text-sm">
                           <div className="flex items-center gap-2">
                             {jobReports[j.id] && (
                               <JobWarningBadge
@@ -859,7 +824,7 @@ export default function Jobs() {
               variant="outline"
               size="sm"
               className="h-8 text-xs font-bold"
-              disabled={page >= totalPages || loading}
+              disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
               {t("common.next")}
@@ -879,31 +844,18 @@ export default function Jobs() {
           onShare={(j) => handleShareJob(j as Job)}
           setShowLoginDialog={setShowLoginDialog}
         />
-
-        <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" /> {t("jobs.upgrade.title")}
-              </DialogTitle>
-              <DialogDescription>{t("jobs.upgrade.description")}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 text-left">
-              <div className="p-4 rounded-lg bg-plan-gold/10 border border-plan-gold/30">
-                <h4 className="font-semibold text-plan-gold">{t("plans.tiers.gold.label")}</h4>
-                <p className="text-sm mt-1">{t("jobs.upgrade.gold_desc", { price: formatPlanPrice("gold") })}</p>
-              </div>
-              <Button className="w-full" onClick={() => navigate("/plans")}>
-                {t("jobs.upgrade.cta")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {showImporter && (
+          <Dialog open={showImporter} onOpenChange={setShowImporter}>
+            <DialogContent className="max-w-4xl p-0">
+              <MultiJsonImporter />
+            </DialogContent>
+          </Dialog>
+        )}
 
         <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 font-bold">
                 <Lock className="h-5 w-5 text-primary" /> {t("loginDialog.title")}
               </DialogTitle>
               <DialogDescription>{t("loginDialog.descriptionQueue")}</DialogDescription>
