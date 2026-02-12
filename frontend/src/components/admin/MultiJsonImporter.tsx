@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database, Fingerprint } from "lucide-react";
+import { Loader2, RefreshCw, Fingerprint, Lock } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -34,20 +34,16 @@ export function MultiJsonImporter() {
     if (!dateStr || dateStr === "N/A") return null;
     try {
       const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return null;
-      return d.toISOString().split("T")[0];
+      return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
     } catch {
       return null;
     }
   };
 
-  // --- EXTRAÇÃO DO DNA DO CASE NUMBER (O SEGREDO DA V55) ---
   const getCaseBody = (id: string) => {
     if (!id) return id;
     const parts = id.split("-");
-    // Se JO-A-300... -> pega 300...
     if (parts[0] === "JO" && parts[1] === "A") return parts.slice(2).join("-");
-    // Se H-300... -> pega 300...
     if (parts[0] === "H") return parts.slice(1).join("-");
     return id;
   };
@@ -104,34 +100,33 @@ export function MultiJsonImporter() {
           for (const item of list) {
             const nested = getVal(item, ["clearanceOrder"]) || {};
             const flat = { ...item, ...nested };
+            const reqs = getVal(flat, ["jobRequirements", "qualification"]) || {};
 
             const title = (getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]) || "").trim();
             const company = (getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]) || "").trim();
             if (!title || !company) continue;
 
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
-            // DNA ÚNICO: O corpo do Case Number (H-2A e JO compartilham isso)
             const fingerprint = getCaseBody(rawJobId);
-            const cleanJobId = rawJobId.split("-GHOST-")[0].trim();
 
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
 
-            // Lógica de Detecção de Transição no Lote Atual
+            // Lógica de Transição (Match de DNA no Mapa)
             const existing = rawJobsMap.get(fingerprint);
             let isTransition = false;
-            if (existing) {
-              if (
-                (existing.visa_type.includes("Early Access") && visaType === "H-2A") ||
-                (visaType.includes("Early Access") && existing.visa_type === "H-2A")
-              ) {
-                isTransition = true;
-              }
+            if (
+              existing &&
+              ((existing.visa_type.includes("Early Access") && visaType === "H-2A") ||
+                (visaType.includes("Early Access") && existing.visa_type === "H-2A"))
+            ) {
+              isTransition = true;
             }
 
+            // --- CAMPOS TRAVADOS (V56) - NÃO REMOVER ---
             const extractedJob = {
               id: crypto.randomUUID(),
-              job_id: cleanJobId,
+              job_id: rawJobId.split("-GHOST-")[0].trim(),
               visa_type: visaType,
               fingerprint: fingerprint,
               is_active: true,
@@ -146,12 +141,39 @@ export function MultiJsonImporter() {
               start_date: formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"])),
               posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
-              job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
+
+              // Dados Detalhados
+              job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "job_duties"]),
+              job_min_special_req:
+                getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) ||
+                getVal(reqs, ["specialRequirements", "jobMinSpecialReq"]),
+              wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
+              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
+
+              // Quantitativos
               weekly_hours: weeklyHours || null,
+              category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle"]),
+              openings:
+                parseInt(String(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"), 10) ||
+                null,
+              experience_months:
+                parseInt(
+                  String(
+                    getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || getVal(reqs, ["monthsExperience"]) || "0",
+                  ),
+                  10,
+                ) || 0,
+              education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
+
+              // Outros
+              transport_provided:
+                getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === "true" ||
+                getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === true,
+              source_url: getVal(flat, ["recApplyUrl", "jobRobotUrl", "url"]),
+              housing_info: visaType.includes("H-2A") ? "Yes (H-2A Mandated)" : null,
               was_early_access: isTransition || (existing?.was_early_access ?? false),
             };
 
-            // Se o novo for H-2A, ele é o oficial, deve prevalecer no Mapa
             if (existing && existing.visa_type === "H-2A" && visaType.includes("Early Access")) {
               existing.was_early_access = true;
             } else {
@@ -166,14 +188,13 @@ export function MultiJsonImporter() {
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         setProgress({ current: i, total: finalJobs.length });
-        const batch = finalJobs.slice(i, i + BATCH_SIZE);
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
+        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: finalJobs.slice(i, i + BATCH_SIZE) });
         if (error) throw error;
       }
 
-      toast({ title: "V55 - Sucesso Total!", description: "DNA de Case mapeado e salários corrigidos." });
+      toast({ title: "H2 Linker V56 Sincronizado", description: "Colunas travadas e transições mapeadas." });
     } catch (err: any) {
-      toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -183,7 +204,7 @@ export function MultiJsonImporter() {
     <Card className="border-2 border-indigo-600 shadow-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-indigo-700">
-          <Fingerprint className="h-6 w-6" /> H2 Linker Sync V55 (DNA Mode)
+          <Lock className="h-6 w-6" /> H2 Linker Sync V56 (Columns Locked)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -196,10 +217,10 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 font-bold text-white"
+          className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 font-bold text-white transition-all"
         >
-          {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar com DNA de Case
+          {processing ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <RefreshCw className="h-5 w-5 mr-2" />}
+          Sincronizar com DNA e Colunas Travadas
         </Button>
       </CardContent>
     </Card>
