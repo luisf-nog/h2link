@@ -14,7 +14,10 @@
     "browse_jobs": "Explorar Empleos Disponibles",
     "browse_jobs_hint": "Navega sin cuenta • Acceso gratuito",
     "hero_tagline": "Ahorra tiempo y encuentra oportunidades H-2A y H-2B reales",
-    "tabs": { "signin": "Iniciar sesión", "signup": "Crear cuenta" },
+    "tabs": {
+      "signin": "Iniciar sesión",
+      "signup": "Crear cuenta"
+    },
     "signin": {
       "title": "Bienvenido de nuevo",
       "description": "Inicia sesión para continuar"
@@ -345,7 +348,9 @@
       },
       "email_note": "El email no se puede cambiar",
       "contact_email_note": "Este email se usará en la firma de tu plantilla.",
-      "actions": { "save": "Guardar cambios" },
+      "actions": {
+        "save": "Guardar cambios"
+      },
       "validation": {
         "invalid_age": "La edad debe estar entre 14 y 90.",
         "invalid_phone": "El teléfono debe estar en formato internacional (E.164), por ejemplo +15551234567."
@@ -357,7 +362,9 @@
       "current_plan": "Plan actual",
       "credits_used_today": "Créditos usados hoy",
       "member_since": "Miembro desde",
-      "actions": { "manage_plan": "Administrar plan" }
+      "actions": {
+        "manage_plan": "Administrar plan"
+      }
     },
     "toasts": {
       "update_error_title": "Error al actualizar",
@@ -387,13 +394,13 @@
       "title": "Cómo generar tu contraseña de aplicación (App Password)",
       "intro_title": "¿Por qué la necesito?",
       "intro_body": "Para conectar tu email de forma segura, no debes usar tu contraseña normal de inicio de sesión.",
-      "security_body": "Google y Microsoft requieren una contraseña de aplicación: un código especial para permitir envíos sin revelar tu contraseña principal.",
+      "security_body": "Google y Microsoft requieren un código especial que permite enviar correos electrónicos sin exponer su contraseña principal.",
       "gmail_title": "Gmail (Google)",
       "gmail_warning": "Atención: para que aparezca esta opción, debes tener activada la verificación en dos pasos (2FA).",
       "gmail_steps": "Abre tu cuenta de Google (myaccount.google.com) y ve a Seguridad.\nVerifica que la verificación en dos pasos esté ACTIVADA (actívala si es necesario).\nUsa la búsqueda y escribe: Contraseñas de aplicaciones.\nAbre Contraseñas de aplicaciones (Google puede pedir tu contraseña nuevamente).\nEn Seleccionar app, elige Otra (Nombre personalizado).\nEscribe: H2 Linker.\nHaz clic en Generar y copia la contraseña de 16 caracteres.",
       "gmail_tip": "Consejo: puedes pegarla sin espacios.",
       "outlook_title": "Outlook / Hotmail (Microsoft)",
-      "outlook_steps": "Abre tu cuenta Microsoft (account.microsoft.com) y ve a Seguridad.\nEntra en Opciones de seguridad avanzadas.\nActiva la verificación en dos pasos (2FA) si está desactivada.\nBusca Contraseñas de aplicaciones.\nHaz clic en Crear una nueva contraseña de aplicación.\nCopia la contraseña generada y pégala en el sistema.",
+      "outlook_steps": "Opciones de seguridad avanzadas.\nActiva la verificación en dos pasos (2FA) si está desactivada.\nBusca Contraseñas de aplicaciones.\nHaz clic en Crear una nueva contraseña de aplicación.\nCopia la contraseña generada y pégala en el sistema.",
       "faq_title": "Preguntas frecuentes",
       "faq_q_safe": "¿Esto es seguro?",
       "faq_a_safe": "Sí. Esta contraseña solo sirve para enviar emails. Si quieres revocar el acceso, elimina la contraseña de app sin cambiar tu contraseña principal.",
@@ -431,7 +438,9 @@
       },
       "template_none": "Sin plantilla",
       "template_hint": "Si seleccionas una plantilla, el Asunto y el Cuerpo se completarán automáticamente.",
-      "actions": { "send": "Enviar prueba" },
+      "actions": {
+        "send": "Enviar prueba"
+      },
       "defaults": {
         "subject": "Solicitud H-2B - {{position}} ({{visa_type}})",
         "body": "Hola {{company}},\n\nMi nombre es {{name}} y me gustaría postularme para el puesto de {{position}} bajo la visa {{visa_type}}.\n\nSaludos cordiales,\n{{name}}\n{{phone}}\n{{contact_email}}"
@@ -523,7 +532,9 @@
     "upload": {
       "label": "Subida de PDF",
       "note": "La IA puede equivocarse — revisa antes de guardar.",
-      "actions": { "parse": "Extraer con IA" }
+      "actions": {
+        "parse": "Extraer con IA"
+      }
     },
     "status": {
       "attached": "Currículum adjuntado",
@@ -589,7 +600,9 @@
         "eta_number": "Ej: H-300-12345",
         "phone": "Ej: +1 (555) 123-4567"
       },
-      "actions": { "add": "Agregar" },
+      "actions": {
+        "add": "Agregar"
+      },
       "toasts": {
         "add_success_title": "¡Agregado a la cola!",
         "add_success_desc": "La empresa fue agregada a tu cola.",
@@ -599,12 +612,18 @@
     "smtp_required": {
       "title": "Configura SMTP primero",
       "description": "Para enviar emails, necesitas configurar tu cuenta SMTP en Configuración → SMTP.",
-      "actions": { "cancel": "Ahora no", "go_settings": "Abrir configuración SMTP" }
+      "actions": {
+        "cancel": "Ahora no",
+        "go_settings": "Abrir configuración SMTP"
+      }
     },
     "upgrade_required": {
       "title": "¡Límite diario alcanzado!",
       "description": "Alcanzaste tu límite de {{limit}} envíos por día. Actualiza tu plan para enviar más.",
-      "actions": { "cancel": "Volver", "view_plans": "Ver planes premium" }
+      "actions": {
+        "cancel": "Volver",
+        "view_plans": "Ver planes premium"
+      }
     },
     "sending_status": {
       "title": "Enviando...",
@@ -656,9 +675,6 @@
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
       "resume_required_title": "Currículum requerido",
       "resume_required_desc": "En el plan Black, sube tu currículum en Configuración → Currículum para generar un email personalizado por empleo.",
-      "bulk_premium_title": "Recurso Premium",
-      "bulk_premium_desc": "El envío masivo (Enviar todos) es exclusivo para planes Premium. Actualiza para enviar todo de una vez.",
-      "bulk_premium_cta": "Ver planes",
       "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
@@ -736,7 +752,7 @@
     },
     "server_error": {
       "title": "Error interno del servidor",
-      "description": "Ocurrió un error en el servidor de email. Intenta de nuevo en unos minutos. Si persiste, reconfigura tu contraseña SMTP."
+      "description": "Ocurrió un error en el servidor de email. Intenta de nuevo en unos minutos. Si persiste, reconfigure su contraseña SMTP."
     },
     "session_expired": {
       "title": "Sesión expirada",
@@ -747,20 +763,20 @@
       "description": "El email del destinatario está vacío. Verifica los datos del empleo."
     },
     "invalid_domain": {
-      "title": "Dominio inválido",
-      "description": "El dominio del email del destinatario no existe o no acepta emails."
+      "title": "Invalid domain",
+      "description": "The recipient's email domain does not exist or does not accept emails."
     },
     "profile_incomplete": {
       "title": "Perfil incompleto",
-      "description": "Completa tu perfil (nombre, edad, teléfono, email de contacto) antes de enviar."
+      "description": "Complete su perfil (nombre, edad, teléfono, correo electrónico de contacto) antes de enviarlo."
     },
     "no_template": {
-      "title": "Sin template encontrado",
-      "description": "No hay template de email configurado. Crea un template en Configuración > Templates."
+      "title": "No template found",
+      "description": "No hay ninguna plantilla de correo electrónico configurada. Crea una plantilla en Configuración > Plantillas."
     },
     "unknown": {
-      "title": "Error desconocido",
-      "description": "Ocurrió un error inesperado al enviar. Intenta de nuevo o verifica tu configuración SMTP."
+      "title": "Unknown error",
+      "description": "Se ha producido un error inesperado al enviar. Vuelve a intentarlo o comprueba tu configuración de SMTP."
     },
     "show_raw_error": "Detalles técnicos",
     "click_for_details": "Clic para ver detalles del error"
@@ -781,10 +797,22 @@
     "free": "Gratis",
     "lifetime": "(de por vida)",
     "tiers": {
-      "free": { "label": "Starter", "description": "Para probar y conocer" },
-      "gold": { "label": "Gold", "description": "Volumen con plantillas guardadas" },
-      "diamond": { "label": "Diamond", "description": "Más volumen y visibilidad" },
-      "black": { "label": "Black", "description": "IA dinámica por empleo" }
+      "free": {
+        "label": "Starter",
+        "description": "Para probar y conocer"
+      },
+      "gold": {
+        "label": "Gold",
+        "description": "Volumen con plantillas guardadas"
+      },
+      "diamond": {
+        "label": "Diamond",
+        "description": "Más volumen y visibilidad"
+      },
+      "black": {
+        "label": "Black",
+        "description": "IA dinámica por empleo"
+      }
     },
     "method": {
       "static": "Plantillas",
@@ -875,43 +903,43 @@
           "detail_2": "Usa plantillas para estandarizar y mantener consistencia."
         },
         "dns": {
-          "title": "Verificación DNS (anti-bounce)",
+          "title": "DNS check (anti-bounce)",
           "summary": "Bloquea envíos a dominios sin MX válido para proteger tu reputación.",
           "detail_1": "Antes de enviar, validamos el MX del dominio.",
           "detail_2": "Esto reduce bounces y ayuda a la entregabilidad."
         },
         "privacy": {
-          "title": "Protección anti-spam",
+          "title": "Anti-spam protection",
           "summary": "Capas extra para reducir señales sospechosas y proteger tu cuenta.",
           "detail_1": "Funciones de protección pueden reducir bloqueos temporales y caídas de entregabilidad."
         },
         "magic_paste": {
           "title": "Magic Paste (IA)",
-          "summary": "Pega datos y deja que el sistema complete lo demás rápidamente.",
-          "detail_1": "Acelera flujos repetitivos.",
-          "detail_2": "Ideal para rutinas de alto volumen."
+          "summary": "Paste data and let the system fill the rest quickly.",
+          "detail_1": "Speeds up repetitive workflows.",
+          "detail_2": "Great for high-volume routines."
         },
         "ai": {
-          "title": "Redactor de Email con IA",
-          "summary": "Genera plantillas profesionales en pocos clics (cuando esté disponible en tu plan).",
-          "detail_1": "Generación orientada a H-2A/H-2B con tono profesional.",
-          "detail_2": "Úsalo como base y personaliza según tu estrategia."
+          "title": "AI Email Writer",
+          "summary": "Generate professional templates in a few clicks (when available on your plan).",
+          "detail_1": "H-2A/H-2B-oriented generation with professional tone.",
+          "detail_2": "Use as a base and customize for your strategy."
         },
         "support": {
-          "title": "Soporte prioritario",
-          "summary": "Atención preferente para destrabar tu operación más rápido.",
-          "detail_1": "Tus solicitudes se priorizan en el soporte."
+          "title": "Priority support",
+          "summary": "Preferred support routing to unblock you faster.",
+          "detail_1": "Your requests are prioritized in support triage."
         },
         "visual": {
-          "title": "Detalles premium del Hub",
-          "summary": "Más contexto visual y beneficios para decidir más rápido.",
-          "detail_1": "Acceso a información premium y visual en el Hub de Empleos."
+          "title": "Jobs Hub premium details",
+          "summary": "More visual context and benefits to decide faster.",
+          "detail_1": "Access premium and visual information in the Jobs Hub."
         },
         "delay": {
-          "title": "Delay humano (anti-spam)",
-          "summary": "Patrones de envío más naturales para proteger reputación.",
-          "detail_1": "Intercala envíos con pausas para parecer más humano.",
-          "detail_2": "Ayuda a reducir bloqueos temporales de proveedores."
+          "title": "Human-like delay (anti-spam)",
+          "summary": "More natural sending patterns to protect reputation.",
+          "detail_1": "Interleaves sends with pauses to look more human.",
+          "detail_2": "Helps reduce temporary blocks from providers."
         }
       }
     }
@@ -945,7 +973,9 @@
       "category": "Categoría",
       "category_all": "Todas las categorías"
     },
-    "search": { "placeholder": "Buscar por puesto, empresa, ciudad..." },
+    "search": {
+      "placeholder": "Buscar por puesto, empresa, ciudad..."
+    },
     "salary": {
       "placeholder": "Rango salarial",
       "any": "Salario (cualquiera)",
@@ -1011,7 +1041,12 @@
       "share": "Compartir",
       "remove": "Eliminar",
       "copied": "¡Copiado!",
-      "copy_success": "Texto copiado al portapapeles."
+      "copy_success": "Texto copiado al portapapeles.",
+      "early_match": {
+        "badge": "Oportunidad Certificada",
+        "title": "Inteligencia H2 Linker: Listos para Aplicar",
+        "desc": "Este puesto ha sido aprobado oficialmente. Nuestro sistema lo identificó durante la fase de registro, dándote la oportunidad de aplicar antes que el resto. Estás viendo una oportunidad verificada y activa con una ventaja competitiva."
+      }
     },
     "upgrade": {
       "title": "Contenido exclusivo",
@@ -1039,80 +1074,6 @@
       "remove_success_desc": "{{jobTitle}} fue eliminado de tu cola."
     },
     "shareText": "Mira esta oportunidad de empleo"
-  },
-  "not_found": {
-    "subtitle": "Ups! Página no encontrada",
-    "cta": "Volver al inicio"
-  },
-  "job_details": {
-    "sections": {
-      "contact": "Contacto",
-      "worksite": "Lugar de trabajo",
-      "details": "Detalles",
-      "benefits": "Beneficios",
-      "compensation": "Compensación",
-      "job_info": "Información",
-      "schedule": "Horarios",
-      "wages": "Salario",
-      "overtime": "Horas Extra",
-      "housing": "Alojamiento",
-      "transport_tools": "Transporte y Herramientas",
-      "physical_requirements": "Requisitos Físicos"
-    },
-    "fields": {
-      "openings": "Vacantes",
-      "salary": "Salario",
-      "overtime": "Horas extra",
-      "overtime_available": "Horas extra disponibles",
-      "overtime_range": "Rango horas extra",
-      "weekly_hours": "Horas semanales",
-      "posted_date": "Fecha de publicación",
-      "start_date": "Inicio",
-      "end_date": "Fin",
-      "experience": "Experiencia",
-      "training": "Entrenamiento",
-      "crop_activities": "Cultivos/Actividades",
-      "shift": "Turno",
-      "wage_range": "Rango salarial",
-      "pay_frequency": "Frecuencia de pago",
-      "job_id": "Job ID",
-      "education": "Educación",
-      "requirements": "Requisitos",
-      "special_requirements": "Requisitos Especiales",
-      "job_duties": "Tareas del Trabajo",
-      "description": "Descripción",
-      "housing": "Alojamiento",
-      "housing_type": "Tipo de alojamiento",
-      "housing_capacity": "Capacidad",
-      "housing_location": "Ubicación del alojamiento",
-      "meals": "Comidas",
-      "transport": "Transporte",
-      "transport_reimburse": "Reembolso transporte",
-      "tools": "Herramientas",
-      "wage_additional": "Información Adicional de Salario",
-      "pay_deductions": "Deducciones de Pago",
-      "lifting": "Levantar peso",
-      "drug_screen": "Prueba de drogas",
-      "background_check": "Verificación antecedentes",
-      "driver_required": "Licencia requerida",
-      "website": "Visitar Sitio"
-    },
-    "values": {
-      "months": "{{count}} meses",
-      "housing_required_h2a": "Obligatoria (detalles no informados).",
-      "not_provided": "No informado."
-    },
-    "contact": {
-      "message": "Enviar Mensaje",
-      "call": "Llamar",
-      "whatsapp": "Abrir WhatsApp",
-      "landline": "Fijo",
-      "landline_tooltip": "Este es un número fijo (no WhatsApp)"
-    },
-    "actions": {
-      "add_to_queue": "Agregar a la cola",
-      "remove_from_queue": "Eliminar de la cola"
-    }
   },
   "job_import": {
     "trigger": "Importar",
