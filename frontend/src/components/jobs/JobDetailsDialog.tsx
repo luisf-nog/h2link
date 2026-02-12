@@ -71,21 +71,16 @@ export function JobDetailsDialog({
   onRemoveFromQueue,
   isInQueue,
   onShare,
-  setShowLoginDialog, // Nova prop para abrir o login
+  setShowLoginDialog,
 }: any) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = planSettings?.plan_tier?.toLowerCase() || planSettings?.tier || "visitor";
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
   const canSaveJob = isRegistered;
-
-  useEffect(() => {
-    if (open) setIsBannerExpanded(true);
-  }, [open, job?.id]);
 
   const handleGoToPlans = () => {
     onOpenChange(false);
@@ -99,6 +94,18 @@ export function JobDetailsDialog({
       return;
     }
     onAddToQueue(job);
+  };
+
+  // FUNÇÃO DE COMPARTILHAR DECLARADA EXPLICITAMENTE
+  const handleShareInternal = () => {
+    if (!job) return;
+    if (onShare) {
+      onShare(job);
+    } else {
+      const shareUrl = getJobShareUrl(job.id);
+      navigator.clipboard.writeText(shareUrl);
+      toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
+    }
   };
 
   const maskJobId = (id: string) => {
@@ -157,7 +164,7 @@ export function JobDetailsDialog({
               <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase">
                 <span translate="no">{job?.job_title}</span>
               </DialogTitle>
-              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium">
+              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
                 <span className="flex items-center gap-1 text-slate-900" translate="no">
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
@@ -167,6 +174,9 @@ export function JobDetailsDialog({
               </DialogDescription>
             </div>
             <div className="hidden sm:flex gap-2 shrink-0">
+              <Button variant="outline" onClick={handleShareInternal}>
+                <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
+              </Button>
               <Button onClick={handleSaveAction} className="px-6 font-bold shadow-sm">
                 {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
               </Button>
@@ -176,10 +186,9 @@ export function JobDetailsDialog({
 
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
-            {/* CARD DE EVOLUÇÃO EARLY ACCESS RESTAURADO */}
             {job?.was_early_access && (
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg shadow-amber-200">
+                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
                   <Rocket className="h-6 w-6 animate-bounce" />
                 </div>
                 <div>
@@ -300,7 +309,7 @@ export function JobDetailsDialog({
           <Button className="flex-1 font-bold h-12 text-base" onClick={handleSaveAction}>
             {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
           </Button>
-          <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
+          <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShareInternal}>
             <Share2 className="h-5 w-5 text-slate-600" />
           </Button>
         </div>
