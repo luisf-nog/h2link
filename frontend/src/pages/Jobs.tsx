@@ -39,7 +39,6 @@ import {
   ShieldAlert,
   Briefcase,
   Rocket,
-  CheckCircle2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -88,21 +87,15 @@ function OnboardingModal() {
           </button>
         </div>
         <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6 text-left">
-          <div className="flex gap-3 sm:gap-4 text-left">
-            <ShieldAlert className="h-6 w-6 text-slate-700 shrink-0" />
-            <div>
-              <h3 className="text-slate-900 font-bold text-sm sm:text-base">Service Transparency & Role</h3>
-              <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
-                H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency. We
-                provide the tools, but the final decision rests solely between you and the employer.
-              </p>
-            </div>
-          </div>
+          <ShieldAlert className="h-6 w-6 text-slate-700 inline mr-2" />
+          <span className="text-xs sm:text-sm">
+            H2 Linker is a technology provider. The final decision is between you and the employer.
+          </span>
         </div>
-        <div className="p-6 sm:p-8 space-y-6 text-left">
+        <div className="p-6 sm:p-8">
           <Button
             onClick={handleClose}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg"
           >
             I Understand - Let's Start
           </Button>
@@ -129,7 +122,6 @@ export default function Jobs() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ESTADOS RESTAURADOS COMPLETOS
   const [jobs, setJobs] = useState<JobDetails[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -183,11 +175,11 @@ export default function Jobs() {
 
     query = query.range(from, to);
     const { data, error, count } = await query;
-    if (!error) {
+    if (!error && data) {
       setJobs(data as JobDetails[]);
       setTotalCount(count ?? 0);
-      if (profile?.id && data) {
-        const { data: queue } = await supabase
+      if (profile?.id) {
+        const { data: qData } = await supabase
           .from("my_queue")
           .select("job_id")
           .eq("user_id", profile.id)
@@ -195,7 +187,7 @@ export default function Jobs() {
             "job_id",
             data.map((j) => j.id),
           );
-        setQueuedJobIds(new Set((queue ?? []).map((q) => q.job_id)));
+        setQueuedJobIds(new Set((qData ?? []).map((q) => q.job_id)));
       }
     }
     setLoading(false);
@@ -203,10 +195,7 @@ export default function Jobs() {
 
   const fetchCategories = async () => {
     const { data } = await supabase.from("public_jobs").select("category").not("category", "is", null).limit(1000);
-    if (data) {
-      const uniq = Array.from(new Set(data.map((r) => r.category))).sort() as string[];
-      setCategories(uniq);
-    }
+    if (data) setCategories(Array.from(new Set(data.map((r) => r.category))).sort() as string[]);
   };
 
   useEffect(() => {
@@ -263,6 +252,13 @@ export default function Jobs() {
     return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
   };
 
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return "-";
+    if (months < 12) return `${months}m`;
+    const years = Math.floor(months / 12);
+    return `${years}y`;
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -270,7 +266,7 @@ export default function Jobs() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
             </p>
           </div>
@@ -295,7 +291,7 @@ export default function Jobs() {
                 }}
               >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Visa Type" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {VISA_TYPE_OPTIONS.map((o) => (
@@ -319,7 +315,7 @@ export default function Jobs() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-0">
             <Input
               placeholder="Estado"
               value={stateFilter}
@@ -336,8 +332,6 @@ export default function Jobs() {
                 setPage(1);
               }}
             />
-
-            {/* POPOVER DE CATEGORIAS RESTAURADO */}
             <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="justify-between text-muted-foreground font-normal">
@@ -349,9 +343,9 @@ export default function Jobs() {
               </PopoverTrigger>
               <PopoverContent className="p-0 w-[250px]" align="start">
                 <Command>
-                  <CommandInput placeholder="Buscar categoria..." />
+                  <CommandInput placeholder="Buscar..." />
                   <CommandList>
-                    <CommandEmpty>Nenhuma encontrada.</CommandEmpty>
+                    <CommandEmpty>Nenhuma.</CommandEmpty>
                     <CommandGroup>
                       {categories.map((c) => (
                         <CommandItem
@@ -374,7 +368,6 @@ export default function Jobs() {
                 </Command>
               </PopoverContent>
             </Popover>
-
             <Input
               type="number"
               placeholder="Mín $"
@@ -436,13 +429,16 @@ export default function Jobs() {
                   <TableHead className="text-center">Vagas</TableHead>
                   <TableHead>Salário</TableHead>
                   <TableHead>Visto</TableHead>
+                  <TableHead>Group</TableHead>
+                  <TableHead>Postada</TableHead>
+                  <TableHead>Experience</TableHead>
                   <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10">
+                    <TableCell colSpan={10} className="text-center py-10">
                       <Loader2 className="animate-spin inline mr-2" /> Carregando...
                     </TableCell>
                   </TableRow>
@@ -453,27 +449,45 @@ export default function Jobs() {
                       onClick={() => setSelectedJob(j)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors"
                     >
-                      <TableCell className="font-medium">{j.job_title}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {jobReports[j.id] && (
+                            <JobWarningBadge reportCount={jobReports[j.id].count} reasons={jobReports[j.id].reasons} />
+                          )}
+                          <span className="line-clamp-1">{j.job_title}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className={cn(planSettings.job_db_blur && "blur-sm")}>{j.company}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         {j.city}, {j.state}
                       </TableCell>
                       <TableCell className="text-center">{j.openings}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         {renderPrice(j)}
-                        <span className="text-[10px] text-muted-foreground block">/{j.wage_unit || "h"}</span>
+                        <span className="text-[9px] block opacity-60">/{j.wage_unit || "h"}</span>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={getVisaBadgeConfig(j.visa_type).variant}
                           className={cn(
+                            "text-[10px]",
                             getVisaBadgeConfig(j.visa_type).className,
                             j.was_early_access && "border-amber-400 border-2",
                           )}
                         >
-                          {j.was_early_access && <Rocket className="h-3 w-3 mr-1 fill-amber-500" />} {j.visa_type}
+                          {j.was_early_access && <Rocket className="h-3 w-3 mr-1 fill-amber-500 text-amber-500" />}{" "}
+                          {j.visa_type}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {j.randomization_group && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Group {j.randomization_group}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[10px] opacity-70">{formatDate(j.posted_date)}</TableCell>
+                      <TableCell className="text-[10px]">{formatExperience(j.experience_months)}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="sm"
@@ -514,12 +528,13 @@ export default function Jobs() {
 
         <JobDetailsDialog
           open={!!selectedJob}
-          onOpenChange={(o) => !o && setSelectedJob(null)}
+          onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
           job={selectedJob}
           planSettings={profile}
           formatSalary={(s: any) => (s ? `$${s.toFixed(2)}/h` : "-")}
           onAddToQueue={addToQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+          onShare={(j: any) => navigate(`/job/${j.id}`)}
         />
 
         {showImporter && (
@@ -534,23 +549,14 @@ export default function Jobs() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 font-bold">
-                <Lock className="h-5 w-5 text-primary" /> Login Necessário
+                <Lock className="h-5 w-5" /> Login Necessário
               </DialogTitle>
-              <DialogDescription>
-                Para adicionar vagas e automatizar envios, você precisa acessar sua conta.
-              </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-2 mt-4 text-left">
-              <Button
-                onClick={() => {
-                  setShowLoginDialog(false);
-                  navigate("/auth");
-                }}
-                className="w-full font-bold"
-              >
+            <div className="flex flex-col gap-2 mt-4 text-center">
+              <Button onClick={() => navigate("/auth")} className="w-full">
                 Fazer Login agora
               </Button>
-              <Button variant="ghost" onClick={() => setShowLoginDialog(false)} className="w-full">
+              <Button variant="ghost" onClick={() => setShowLoginDialog(false)}>
                 Continuar navegando
               </Button>
             </div>
