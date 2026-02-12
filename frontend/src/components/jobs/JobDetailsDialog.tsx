@@ -366,18 +366,7 @@ export function JobDetailsDialog({
           </div>
         </DialogHeader>
 
-        {job && isEarlyAccess(job.visa_type) && (
-          <Alert
-            variant="destructive"
-            className="mx-4 sm:mx-6 mt-4 bg-red-50 border-red-200 text-red-800 flex items-center py-2"
-          >
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            <AlertDescription className="text-sm font-semibold">
-              {getEarlyAccessDisclaimer(i18n.language)}
-            </AlertDescription>
-          </Alert>
-        )}
-
+        {/* RESTANTE DO CÓDIGO PERMANECE IGUAL */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/30">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-6">
@@ -393,7 +382,6 @@ export function JobDetailsDialog({
                   <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                 </div>
               </div>
-
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-2 text-slate-600">
@@ -406,28 +394,17 @@ export function JobDetailsDialog({
                     {job?.openings ? job.openings : "N/A"}
                   </Badge>
                 </div>
-
                 <div>
                   <div className="flex items-center gap-2 text-green-700 font-bold text-lg mb-2">
                     <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Compensation")}</span>
                   </div>
                   <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
-                  {job?.pay_frequency && (
-                    <p className="text-sm text-slate-500 font-medium capitalize mt-1">
-                      {t("jobs.details.pay_frequency", {
-                        frequency: job.pay_frequency,
-                        defaultValue: `Payment: ${job.pay_frequency}`,
-                      })}
-                    </p>
-                  )}
                 </div>
               </div>
-
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                   {t("jobs.details.company_contacts", "Company Contacts")}
                 </div>
-
                 <div
                   className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 cursor-pointer hover:border-blue-200 transition-colors"
                   onClick={() => copyToClipboard(job?.email || "")}
@@ -440,33 +417,8 @@ export function JobDetailsDialog({
                     <span className="truncate font-medium text-slate-700 text-base">{job?.email}</span>
                   </div>
                 </div>
-
-                {job?.phone && (
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={`tel:${job.phone}`}>
-                        <Phone className="h-4 w-4 mr-1" /> {t("jobs.details.call_action", "Call")}
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={`sms:${cleanPhone(job.phone)}?body=${encodedMessage}`}>
-                        <MessageSquare className="h-4 w-4 mr-1" /> SMS
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href={`https://wa.me/${cleanPhone(job.phone)}?text=${encodedMessage}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <WhatsAppIcon className="h-4 w-4 mr-1" /> WA
-                      </a>
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
-
             <div className="lg:col-span-8 space-y-8">
               {job?.job_min_special_req && (
                 <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
@@ -478,7 +430,6 @@ export function JobDetailsDialog({
                   </p>
                 </div>
               )}
-
               {job?.job_duties && (
                 <div className="space-y-4">
                   <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
@@ -493,7 +444,6 @@ export function JobDetailsDialog({
             </div>
           </div>
         </div>
-
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-20 shadow-lg">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job", "Save Job")}
