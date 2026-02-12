@@ -366,46 +366,36 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* CENTRAL DE COMANDO DA FILA - DESIGN PREMIUM ANTI-BOUNCE */}
+        {/* CENTRAL DE COMANDO MINIMALISTA - Sincronizada com a Fila */}
         {queuedJobIds.size > 0 && (
-          <div className="relative group mb-8 animate-in fade-in zoom-in-95 duration-500">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative bg-slate-900/95 backdrop-blur-sm border border-slate-800/50 rounded-2xl p-5 sm:p-6 shadow-2xl overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-5">
-                  <div className="relative shrink-0">
-                    <div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-2xl flex items-center justify-center shadow-inner group-hover:rotate-3 transition-transform duration-300">
-                      <Zap className="h-7 w-7 text-white fill-white/20 animate-pulse" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-black h-6 w-6 rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg">
-                      {queuedJobIds.size}
-                    </div>
+          <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg py-3 px-4 sm:px-6 shadow-sm flex items-center justify-between gap-4 group transition-all hover:border-blue-500/50">
+              <div className="flex items-center gap-3 overflow-hidden text-left">
+                <div className="relative shrink-0">
+                  <div className="h-10 w-10 bg-blue-600/10 rounded-md flex items-center justify-center border border-blue-500/30">
+                    <Zap className="h-5 w-5 text-blue-500 fill-blue-500/20" />
                   </div>
-                  <div className="text-left space-y-1">
-                    <h3 className="text-white font-bold text-xl tracking-tight leading-none">
-                      Vagas prontas para enviar!
-                    </h3>
-                    <p className="text-slate-400 text-sm font-medium">
-                      Suas <span className="text-blue-400 font-bold">{queuedJobIds.size} vagas</span> salvas esperam por
-                      você na fila de automação.
-                    </p>
+                  <div className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-slate-900 animate-in zoom-in duration-300">
+                    {queuedJobIds.size}
                   </div>
                 </div>
-                <div className="flex w-full md:w-auto items-center gap-4">
-                  <div className="hidden lg:block text-right">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Próximo Passo</p>
-                    <p className="text-xs text-slate-300">Configurar e Disparar</p>
-                  </div>
-                  <Button
-                    onClick={() => navigate("/queue")}
-                    className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black px-10 h-14 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] transition-all duration-300 active:scale-[0.97] border-t border-white/20"
-                  >
-                    IR PARA ENVIOS AGORA{" "}
-                    <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
+                <div>
+                  <p className="text-slate-100 text-sm font-semibold tracking-tight leading-none mb-1">
+                    Vagas aguardando envio
+                  </p>
+                  <p className="text-slate-500 text-xs truncate">
+                    Finalize sua candidatura para as{" "}
+                    <span className="text-slate-300 font-medium">{queuedJobIds.size} vagas</span> selecionadas.
+                  </p>
                 </div>
               </div>
+              <Button
+                onClick={() => navigate("/queue")}
+                size="sm"
+                className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-bold h-9 px-5 rounded-md shadow-sm transition-all active:scale-95 group-hover:gap-3"
+              >
+                IR PARA ENVIOS <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
             </div>
           </div>
         )}
@@ -603,28 +593,13 @@ export default function Jobs() {
                       </button>
                     </TableHead>
                     <TableHead className="text-left">
-                      <button onClick={() => toggleSort("visa_type")}>
-                        {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>
                       <button onClick={() => toggleSort("posted_date")}>
                         {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
-                      <button onClick={() => toggleSort("start_date")}>
-                        {t("jobs.table.headers.start")} <SortIcon active={sortKey === "start_date"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button onClick={() => toggleSort("end_date")}>
-                        {t("jobs.table.headers.end")} <SortIcon active={sortKey === "end_date"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>{t("jobs.table.headers.experience")}</TableHead>
-                    <TableHead className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
+                    <TableHead className="text-left">Group</TableHead>
+                    <TableHead className="text-left">Exp.</TableHead>
+                    <TableHead className="text-right pr-6 sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
                       {t("jobs.table.headers.action")}
                     </TableHead>
                   </TableRow>
@@ -656,10 +631,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={cn(
-                              "line-clamp-1 text-slate-600",
-                              planSettings.job_db_blur && "blur-sm select-none",
-                            )}
+                            className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm select-none")}
                             translate="no"
                           >
                             {j.company}
