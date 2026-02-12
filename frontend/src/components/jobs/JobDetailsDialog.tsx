@@ -45,7 +45,6 @@ export type JobDetails = {
   email: string;
   phone?: string | null;
   job_title: string;
-  category: string | null;
   city: string;
   state: string;
   openings?: number | null;
@@ -57,6 +56,9 @@ export type JobDetails = {
   wage_from?: number | null;
   wage_to?: number | null;
   wage_unit?: string | null;
+  pay_frequency?: string | null;
+  wage_additional?: string | null;
+  rec_pay_deductions?: string | null;
   job_min_special_req?: string | null;
   job_duties?: string | null;
   randomization_group?: string | null;
@@ -174,7 +176,7 @@ export function JobDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border">
+      <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
         {/* HEADER FIXO */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex sm:hidden items-center mb-3 -mt-2">
@@ -189,7 +191,7 @@ export function JobDetailsDialog({
           </div>
 
           <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-1 w-full min-w-0 text-left">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {badgeConfig && (
                   <Badge variant={badgeConfig.variant} className={cn("text-[10px] sm:text-xs", badgeConfig.className)}>
@@ -232,9 +234,9 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* CONTEÚDO ROLÁVEL */}
+        {/* ÁREA DE CONTEÚDO ROLÁVEL */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
-          <div className="p-4 sm:p-6 space-y-5 pb-32 sm:pb-6 text-left">
+          <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {/* EARLY MATCH CARD */}
             {job?.was_early_access && (
               <div
@@ -258,25 +260,49 @@ export function JobDetailsDialog({
                   )}
                 </div>
                 {isBannerExpanded && (
-                  <div className="px-4 pb-4 pt-2 border-t border-amber-200/50 text-sm text-amber-800 leading-relaxed">
+                  <div className="px-4 pb-4 pt-2 border-t border-amber-200/50 text-sm text-amber-800 leading-relaxed font-medium">
                     {t("jobs.details.early_match.desc")}
                   </div>
                 )}
               </div>
             )}
 
-            {/* GRID PRINCIPAL */}
+            {/* GRUPOS DOL */}
+            {job?.randomization_group && groupConfig && (
+              <div className={cn("p-3 sm:p-4 rounded-xl border bg-opacity-40", groupConfig.className)}>
+                <div className="flex items-center gap-3 mb-1">
+                  <Badge
+                    variant="outline"
+                    className="bg-white/80 border-current font-bold text-[10px] uppercase tracking-wider"
+                  >
+                    {t("jobs.groups.group_label")} {job.randomization_group}
+                  </Badge>
+                  <span className="font-semibold text-xs flex items-center gap-1">
+                    <Info className="h-3.5 w-3.5" /> {groupConfig.shortDesc}
+                  </span>
+                </div>
+                <p className="text-xs opacity-90 leading-relaxed">
+                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig.tooltip}
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* COLUNA ESQUERDA (CARDS INFO) */}
               <div className="lg:col-span-4 space-y-6">
                 {/* TIMELINE */}
-                <div className="flex items-center justify-between text-sm bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+                <div className="flex items-center justify-between text-sm bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold uppercase text-slate-400">{t("jobs.details.posted")}</span>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      {t("jobs.details.posted")}
+                    </span>
                     <span className="text-xs font-semibold">{formatDate(job?.posted_date)}</span>
                   </div>
-                  <div className="h-px bg-slate-200 flex-1 mx-2"></div>
+                  <div className="h-px bg-slate-100 flex-1 mx-3"></div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold uppercase text-green-600">{t("jobs.details.start")}</span>
+                    <span className="text-[10px] font-bold uppercase text-green-600 mb-1">
+                      {t("jobs.details.start")}
+                    </span>
                     <span className="text-xs font-bold text-green-700">{formatDate(job?.start_date)}</span>
                   </div>
                 </div>
@@ -294,21 +320,51 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALÁRIO */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
-                    <span className="font-semibold text-sm text-slate-600">
-                      {t("jobs.details.available_positions")}
-                    </span>
-                    <Badge className="bg-blue-600 font-bold px-3">{job?.openings || "N/A"}</Badge>
+                {/* SALÁRIO E ADICIONAIS */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                      <span className="font-semibold text-sm text-slate-600">
+                        {t("jobs.details.available_positions")}
+                      </span>
+                      <Badge className="bg-blue-600 font-bold px-3">{job?.openings || "N/A"}</Badge>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
+                        <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
+                      </div>
+                      <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
+                      {job?.pay_frequency && (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                          {t("jobs.details.pay_frequency", { frequency: job.pay_frequency })}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* ADICIONAIS (Fundo Verde) */}
+                    {job?.wage_additional && (
+                      <div className="bg-green-50 border border-green-100 p-3 rounded-lg">
+                        <span className="block text-[10px] font-bold text-green-700 uppercase mb-1">
+                          {t("jobs.details.bonus")}
+                        </span>
+                        <p className="text-xs text-green-800 leading-relaxed font-medium">{job.wage_additional}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
-                    <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
-                  </div>
-                  <p className="text-2xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
+
+                  {/* DEDUÇÕES (Fundo Vermelho - Fora do padding principal para contraste) */}
+                  {job?.rec_pay_deductions && (
+                    <div className="bg-red-50 border-t border-red-100 p-4">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
+                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
+                      </span>
+                      <p className="text-xs text-red-800 leading-relaxed font-medium">{job.rec_pay_deductions}</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* CONTATOS DA EMPRESA (O que estava faltando) */}
+                {/* CONTATOS DA EMPRESA */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
                   <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-xs tracking-widest">
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
@@ -320,7 +376,7 @@ export function JobDetailsDialog({
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                         {t("jobs.details.email_label")}
                       </span>
-                      <div className="flex items-center gap-2 group">
+                      <div className="flex items-center gap-2">
                         <div
                           className={cn(
                             "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all",
@@ -358,7 +414,7 @@ export function JobDetailsDialog({
                             {job.phone}
                           </div>
                           {!planSettings?.job_db_blur && (
-                            <div className="flex gap-2 shrink-0">
+                            <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -385,20 +441,18 @@ export function JobDetailsDialog({
                       </div>
                     )}
 
-                    {/* Banner de Upgrade (se estiver borrado) */}
+                    {/* Banner Upgrade */}
                     {planSettings?.job_db_blur && (
-                      <div className="pt-2">
-                        <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-2 shadow-md h-10 text-xs">
-                          <Rocket className="h-4 w-4 mr-2" /> {t("jobs.upgrade.cta")}
-                        </Button>
-                      </div>
+                      <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-2 shadow-md h-10 text-xs">
+                        <Rocket className="h-4 w-4 mr-2" /> {t("jobs.upgrade.cta")}
+                      </Button>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* COLUNA DA DIREITA (DESCRIÇÕES) */}
-              <div className="lg:col-span-8 space-y-8">
+              {/* COLUNA DIREITA (DESCRIÇÕES) */}
+              <div className="lg:col-span-8 space-y-6">
                 {job?.job_min_special_req && (
                   <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm">
                     <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg">
@@ -411,7 +465,7 @@ export function JobDetailsDialog({
                 )}
                 {job?.job_duties && (
                   <div className="space-y-4">
-                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800">
+                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 px-1">
                       <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
                     </h4>
                     <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
