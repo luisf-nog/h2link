@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MobileJobCard } from "@/components/jobs/MobileJobCard";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,6 @@ import {
   Info,
   Search,
   Plus,
-  Check,
   Zap,
   ArrowUpDown,
   ArrowUp,
@@ -45,6 +44,30 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
+
+// Interface robusta definida localmente para evitar erros de importação
+interface Job {
+  id: string;
+  job_id: string;
+  job_title: string;
+  company: string;
+  city: string;
+  state: string;
+  email: string;
+  visa_type: string | null;
+  salary: number | null;
+  wage_from: number | null;
+  wage_to: number | null;
+  wage_unit: string | null;
+  openings: number | null;
+  posted_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  experience_months: number | null;
+  randomization_group: string | null;
+  was_early_access: boolean | null;
+  category: string | null;
+}
 
 // --- COMPONENTE DE ONBOARDING (MANTIDO) ---
 function OnboardingModal() {
@@ -115,10 +138,6 @@ function OnboardingModal() {
   );
 }
 
-interface Job extends JobDetails {
-  id: string;
-}
-
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -181,7 +200,7 @@ export default function Jobs() {
     return months < 12 ? `${months}m` : `${Math.floor(months / 12)}y`;
   };
 
-  const renderPrice = (job: JobDetails) => {
+  const renderPrice = (job: Job) => {
     if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
       return <span translate="no">{`$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`}</span>;
     }
@@ -200,7 +219,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-realtime-final")
+      .channel("sync-queue-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -403,16 +422,14 @@ export default function Jobs() {
                     ))}
                   </SelectContent>
                 </Select>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t("jobs.filters.visa.h2a_info")}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("jobs.filters.visa.h2a_info")}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -541,7 +558,7 @@ export default function Jobs() {
         </Card>
 
         {isMobile ? (
-          <div className="space-y-3">
+          <div className="space-y-3 text-left">
             {jobs.map((j) => (
               <MobileJobCard
                 key={j.id}
@@ -663,7 +680,7 @@ export default function Jobs() {
                         <TableCell>
                           {(() => {
                             const b = getVisaBadgeConfig(j.visa_type);
-                            const wasEarly = (j as any).was_early_access;
+                            const wasEarly = j.was_early_access;
                             return (
                               <Badge
                                 variant={b.variant}
@@ -683,7 +700,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           {(() => {
-                            const group = (j as any).randomization_group;
+                            const group = j.randomization_group;
                             if (!group) return "-";
                             const config = getGroupBadgeConfig(group);
                             return (
@@ -730,7 +747,7 @@ export default function Jobs() {
                             ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : queuedJobIds.has(j.id) ? (
-                              <Trash2 className="h-4 w-4 text-red-500" /> // O ÍCONE DA LIXEIRA FINALMENTE AQUI
+                              <Trash2 className="h-4 w-4 text-red-500" />
                             ) : (
                               <Plus className="h-4 w-4" />
                             )}
@@ -769,16 +786,17 @@ export default function Jobs() {
           </div>
         </div>
 
-        <JobDetailsDialog
-          open={!!selectedJob}
-          onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
-          job={selectedJob}
-          planSettings={profile}
-          formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
-          onAddToQueue={addToQueue}
-          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-          onShare={(j: any) => navigate(`/job/${j.id}`)}
-        />
+        {selectedJob && (
+          <JobDetailsDialog
+            open={!!selectedJob}
+            onOpenChange={(o) => !o && setSelectedJob(null)}
+            job={selectedJob}
+            planSettings={profile}
+            formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
+            onAddToQueue={addToQueue}
+            isInQueue={queuedJobIds.has(selectedJob.id)}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
