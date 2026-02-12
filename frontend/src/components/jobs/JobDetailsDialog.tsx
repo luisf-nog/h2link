@@ -286,7 +286,7 @@ export function JobDetailsDialog({
                   {job?.was_early_access && (
                     <Badge className="bg-amber-50 text-amber-700 border-amber-200 flex gap-1 items-center shadow-sm">
                       <Rocket className="h-3 w-3 fill-amber-500 text-amber-500" />
-                      <span className="font-bold text-[10px] uppercase">{t("jobs.details.early_match_badge")}</span>
+                      <span className="font-bold text-[10px] uppercase">{t("jobs.details.early_match.badge")}</span>
                     </Badge>
                   )}
 
@@ -328,7 +328,7 @@ export function JobDetailsDialog({
               </div>
             </div>
 
-            {/* BANNER INFORMATIVO DISCRETO (MERCHAN HUMILDE COM I18N) */}
+            {/* BANNER INFORMATIVO DISCRETO (EARLY MATCH) */}
             {job?.was_early_access && (
               <div className="mt-4 p-4 rounded-xl border border-amber-100 bg-amber-50/30 relative overflow-hidden">
                 <div className="relative flex gap-4 items-center">
@@ -337,10 +337,10 @@ export function JobDetailsDialog({
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-amber-900 uppercase tracking-tight">
-                      {t("jobs.details.early_match_title")}
+                      {t("jobs.details.early_match.title")}
                     </h4>
                     <p className="text-xs text-amber-800 leading-relaxed max-w-3xl">
-                      {t("jobs.details.early_match_desc")}
+                      {t("jobs.details.early_match.desc")}
                     </p>
                   </div>
                 </div>
