@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getJobShareUrl } from "@/lib/shareUtils";
+import { getVisaBadgeConfig } from "@/lib/visaTypes";
 import {
   Mail,
   MapPin,
@@ -13,15 +14,21 @@ import {
   Briefcase,
   DollarSign,
   Phone,
+  Plus,
+  Trash2,
+  Users,
+  ArrowLeft,
+  GraduationCap,
   Rocket,
+  Zap,
   ChevronDown,
   ChevronUp,
+  Copy,
   Clock,
   Lock,
   MessageCircle,
   MessageSquare,
   CheckCircle2,
-  GraduationCap,
   Info,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -41,12 +48,17 @@ export function JobDetailsDialog({
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
   // LÓGICA DE IDENTIFICAÇÃO PREMIUM
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
   const canSaveJob = isRegistered;
+
+  useEffect(() => {
+    if (open) setIsBannerExpanded(true);
+  }, [open, job?.id]);
 
   const handleGoToPlans = () => {
     onOpenChange(false);
@@ -74,12 +86,7 @@ export function JobDetailsDialog({
   const formatDate = (v: string | null | undefined) => {
     if (!v) return "-";
     const d = new Date(v);
-    return d.toLocaleDateString(i18n.language === "pt" ? "pt-BR" : "en-US", {
-      timeZone: "UTC",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
   const renderMainWage = () => {
@@ -155,56 +162,73 @@ export function JobDetailsDialog({
         {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
-            {/* BLOCO DE PRIORIDADE E ACESSO (O QUE VOCÊ PEDIU) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* EXPLICAÇÃO DO GRUPO */}
-              {job?.randomization_group && (
-                <div
-                  className={cn(
-                    "p-4 rounded-xl border flex gap-3 items-start shadow-sm transition-all",
-                    job.randomization_group === "A"
-                      ? "bg-emerald-50 border-emerald-100"
-                      : job.randomization_group === "B"
-                        ? "bg-blue-50 border-blue-100"
-                        : "bg-amber-50 border-amber-100",
-                  )}
-                >
-                  <Info
-                    className={cn(
-                      "h-6 w-6 shrink-0 mt-0.5",
-                      job.randomization_group === "A"
-                        ? "text-emerald-600"
-                        : job.randomization_group === "B"
-                          ? "text-blue-600"
-                          : "text-amber-600",
-                    )}
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-slate-900 uppercase">
-                      {t("jobs.details.group_title", { group: job.randomization_group })}
-                    </p>
-                    <p className="text-xs text-slate-600 leading-relaxed mt-1 font-medium">
-                      {job.randomization_group === "A"
-                        ? t("jobs.details.group_a_desc")
-                        : t("jobs.details.group_general_desc")}
-                    </p>
-                  </div>
+            {/* 🚨 ALERTA DE OPORTUNIDADE: VAGA ATIVA EM EARLY ACCESS 🚨 */}
+            {job?.visa_type === "Early Access" && (
+              <div className="bg-blue-600 border border-blue-400 rounded-2xl p-5 flex items-center gap-5 shadow-xl shadow-blue-100 animate-in fade-in slide-in-from-top-4 duration-700">
+                <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm border border-white/30 text-white shrink-0 shadow-inner">
+                  <Zap className="h-8 w-8 fill-white animate-pulse" />
                 </div>
-              )}
+                <div className="text-left">
+                  <h3 className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight uppercase">
+                    {t("jobs.details.active_early_title")}
+                  </h3>
+                  <p className="text-blue-50 text-sm sm:text-base font-medium leading-relaxed opacity-90 mt-1">
+                    {t("jobs.details.active_early_desc")}
+                  </p>
+                </div>
+              </div>
+            )}
 
-              {/* EXPLICAÇÃO EARLY ACCESS */}
-              {job?.was_early_access && (
-                <div className="p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white flex gap-3 items-start shadow-sm">
-                  <Rocket className="h-6 w-6 text-amber-500 shrink-0 mt-0.5 animate-pulse" />
-                  <div>
-                    <p className="text-sm font-bold text-amber-900 uppercase">{t("jobs.details.early_access_title")}</p>
-                    <p className="text-xs text-amber-700 leading-relaxed mt-1 font-medium">
-                      {t("jobs.details.early_access_desc")}
-                    </p>
-                  </div>
+            {/* EXPLICAÇÃO DO GRUPO (RESTAURADO) */}
+            {job?.randomization_group && (
+              <div
+                className={cn(
+                  "p-4 rounded-xl border flex gap-3 items-start shadow-sm",
+                  job.randomization_group === "A"
+                    ? "bg-emerald-50 border-emerald-100"
+                    : job.randomization_group === "B"
+                      ? "bg-blue-50 border-blue-100"
+                      : "bg-amber-50 border-amber-100",
+                )}
+              >
+                <Info
+                  className={cn(
+                    "h-6 w-6 shrink-0 mt-0.5",
+                    job.randomization_group === "A"
+                      ? "text-emerald-600"
+                      : job.randomization_group === "B"
+                        ? "text-blue-600"
+                        : "text-amber-600",
+                  )}
+                />
+                <div>
+                  <p className="text-sm font-bold text-slate-900 uppercase">
+                    {t("jobs.details.group_title", { group: job.randomization_group })}
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed mt-1 font-medium">
+                    {job.randomization_group === "A"
+                      ? t("jobs.details.group_a_desc")
+                      : t("jobs.details.group_general_desc")}
+                  </p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* CARD EVOLUÇÃO EARLY ACCESS (MANTIDO CONFORME SOLICITADO) */}
+            {job?.was_early_access && (
+              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
+                  <Rocket className="h-6 w-6 animate-bounce" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
+                  <p className="text-amber-800 text-xs">{t("jobs.details.early_access_evolution_text")}</p>
+                </div>
+                <div className="ml-auto hidden sm:block">
+                  <CheckCircle2 className="h-8 w-8 text-amber-500/30" />
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
@@ -251,7 +275,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALARIO, ADIÇÕES E DEDUÇÕES */}
+                {/* SALARIO */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">
@@ -342,40 +366,6 @@ export function JobDetailsDialog({
                       </div>
                     )}
                   </div>
-
-                  {canSeeContacts && (
-                    <div className="space-y-2 pt-2">
-                      <div className="flex gap-2">
-                        {job?.phone && (
-                          <>
-                            <Button
-                              variant="outline"
-                              className="flex-1 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 font-bold text-xs"
-                              onClick={() => window.open(`https://wa.me/${job.phone.replace(/\D/g, "")}`, "_blank")}
-                            >
-                              <MessageCircle className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 font-bold text-xs"
-                              onClick={() => (window.location.href = `sms:${job.phone}`)}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5 mr-1.5" /> iMessage
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      {job?.email && (
-                        <Button
-                          variant="outline"
-                          className="w-full bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs"
-                          onClick={() => (window.location.href = `mailto:${job.email}`)}
-                        >
-                          <Mail className="h-3.5 w-3.5 mr-1.5" /> {t("jobs.details.send_email")}
-                        </Button>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
