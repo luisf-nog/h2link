@@ -44,7 +44,6 @@ import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from "@/lib/pricing";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
@@ -95,12 +94,13 @@ function OnboardingModal() {
             <div>
               <h3 className="text-slate-900 font-bold text-sm sm:text-base">Service Transparency & Role</h3>
               <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
-                H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency...
+                H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency. We
+                provide high-performance tools, but the final decision is between you and the employer.
               </p>
             </div>
           </div>
         </div>
-        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6 text-left">
+        <div className="p-6 sm:p-8 space-y-6 text-left">
           <Button
             onClick={handleClose}
             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all active:scale-[0.98]"
@@ -113,14 +113,6 @@ function OnboardingModal() {
   );
 }
 
-const renderPrice = (job: JobDetails) => {
-  if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
-    return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
-  if (job.wage_from) return `$${job.wage_from.toFixed(2)}`;
-  if (job.salary) return `$${job.salary.toFixed(2)}`;
-  return "-";
-};
-
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -130,7 +122,6 @@ export default function Jobs() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ESTADOS RESTAURADOS
   const [jobs, setJobs] = useState<JobDetails[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -141,7 +132,7 @@ export default function Jobs() {
   const [showImporter, setShowImporter] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
-  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
+
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
@@ -151,7 +142,9 @@ export default function Jobs() {
   );
   const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
   const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
+  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
   const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
+
   const [selectedJob, setSelectedJob] = useState<JobDetails | null>(null);
   const [sortKey, setSortKey] = useState<any>(searchParams.get("sort") || "posted_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as any) || "desc");
@@ -160,9 +153,7 @@ export default function Jobs() {
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const visaLabel = visaType === "all" ? "All Visas" : visaType;
 
-  // FUNÇÕES DE BUSCA E FILTRO COMPLETAS
   const fetchJobs = async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
@@ -174,9 +165,11 @@ export default function Jobs() {
     if (searchTerm.trim())
       query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
+    if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
     if (minSalary) query = query.gte("salary", Number(minSalary));
+    if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
     query = query.range(from, to);
     const { data, error, count } = await query;
@@ -223,22 +216,59 @@ export default function Jobs() {
     });
   };
 
+  const removeFromQueue = async (job: JobDetails) => {
+    if (!profile?.id) return;
+    const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
+    if (!error) {
+      setQueuedJobIds((q) => {
+        const n = new Set(q);
+        n.delete(job.id);
+        return n;
+      });
+      setSelectedJob(null);
+    }
+  };
+
+  const toggleSort = (key: string) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
         <OnboardingModal />
-        <div className="flex flex-col gap-4">
-          <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-          <p className="text-muted-foreground">
-            {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel })}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
+            <p className="text-muted-foreground mt-1">
+              {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
+            </p>
+          </div>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowImporter(true)}>
+                <Database className="mr-2 h-4 w-4" /> Import Admin
+              </Button>
+              <JobImportDialog />
+            </div>
+          )}
         </div>
 
-        {/* FILTROS COMPLETOS RESTAURADOS */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col lg:flex-row gap-4">
-              <Select value={visaType} onValueChange={(v: any) => setVisaType(v)}>
+              <Select
+                value={visaType}
+                onValueChange={(v: any) => {
+                  setVisaType(v);
+                  setPage(1);
+                }}
+              >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -255,30 +285,72 @@ export default function Jobs() {
                 <Input
                   placeholder={t("jobs.search.placeholder")}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPage(1);
+                  }}
                   className="pl-10"
                 />
               </div>
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <Input placeholder="Estado" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} />
-            <Input placeholder="Cidade" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} />
+            <Input
+              placeholder="Estado"
+              value={stateFilter}
+              onChange={(e) => {
+                setStateFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              placeholder="Cidade"
+              value={cityFilter}
+              onChange={(e) => {
+                setCityFilter(e.target.value);
+                setPage(1);
+              }}
+            />
             <Input
               type="number"
-              placeholder="Salário Mín."
+              placeholder="Mín $"
               value={minSalary}
-              onChange={(e) => setMinSalary(e.target.value)}
+              onChange={(e) => {
+                setMinSalary(e.target.value);
+                setPage(1);
+              }}
             />
-            {isAdmin && (
-              <Button variant="outline" onClick={() => setShowImporter(true)}>
-                <Database className="mr-2 h-4 w-4" /> Import Admin
-              </Button>
-            )}
+            <Input
+              type="number"
+              placeholder="Máx $"
+              value={maxSalary}
+              onChange={(e) => {
+                setMaxSalary(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Select
+              value={groupFilter}
+              onValueChange={(v) => {
+                setGroupFilter(v === "all" ? "" : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Group" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Groups</SelectItem>
+                {["A", "B", "C", "D", "E", "F", "G"].map((g) => (
+                  <SelectItem key={g} value={g}>
+                    Group {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
 
-        {/* TABELA COMPLETA COM TODAS AS COLUNAS */}
         {isMobile ? (
           <div className="space-y-3">
             {jobs.map((j) => (
@@ -289,7 +361,6 @@ export default function Jobs() {
                 isQueued={queuedJobIds.has(j.id)}
                 onAddToQueue={() => addToQueue(j)}
                 onClick={() => setSelectedJob(j)}
-                reportData={jobReports[j.id]}
               />
             ))}
           </div>
@@ -298,31 +369,31 @@ export default function Jobs() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead>Empresa</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => toggleSort("job_title")}>
+                    Cargo <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => toggleSort("company")}>
+                    Empresa <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                  </TableHead>
                   <TableHead>Local</TableHead>
-                  <TableHead>Vagas</TableHead>
+                  <TableHead className="text-center">Vagas</TableHead>
                   <TableHead>Salário</TableHead>
                   <TableHead>Visto</TableHead>
-                  <TableHead>Postada</TableHead>
                   <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {jobs.map((j) => (
-                  <TableRow key={j.id} onClick={() => setSelectedJob(j)} className="cursor-pointer">
+                  <TableRow key={j.id} onClick={() => setSelectedJob(j)} className="cursor-pointer hover:bg-slate-50">
                     <TableCell className="font-medium">{j.job_title}</TableCell>
                     <TableCell className={cn(planSettings.job_db_blur && "blur-sm")}>{j.company}</TableCell>
                     <TableCell>
                       {j.city}, {j.state}
                     </TableCell>
                     <TableCell className="text-center">{j.openings}</TableCell>
-                    <TableCell>{renderPrice(j)}</TableCell>
+                    <TableCell>{j.salary ? `$${j.salary}/h` : "-"}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{j.visa_type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(j.posted_date!).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -349,20 +420,63 @@ export default function Jobs() {
           </Card>
         )}
 
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Anterior
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o) => !o && setSelectedJob(null)}
           job={selectedJob}
           planSettings={profile}
-          formatSalary={formatSalary}
+          formatSalary={(s: any) => (s ? `$${s}/h` : "-")}
           onAddToQueue={addToQueue}
+          onRemoveFromQueue={removeFromQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
         />
+
+        {showImporter && (
+          <Dialog open={showImporter} onOpenChange={setShowImporter}>
+            <DialogContent className="max-w-4xl p-0">
+              <MultiJsonImporter />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" /> Login Necessário
+              </DialogTitle>
+              <DialogDescription>Para adicionar vagas à sua fila, você precisa estar logado.</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-2 mt-4">
+              <Button
+                onClick={() => {
+                  setShowLoginDialog(false);
+                  navigate("/auth");
+                }}
+              >
+                Fazer Login
+              </Button>
+              <Button variant="ghost" onClick={() => setShowLoginDialog(false)}>
+                Continuar Navegando
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
-}
-
-function formatSalary(s: number | null) {
-  return s ? `$${s.toFixed(2)}/h` : "-";
 }
