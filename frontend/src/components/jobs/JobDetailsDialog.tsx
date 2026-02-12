@@ -27,6 +27,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Clock,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,9 @@ export type JobDetails = {
   pay_frequency?: string | null;
   wage_additional?: string | null;
   rec_pay_deductions?: string | null;
+  weekly_hours?: number | null;
+  shift_start?: string | null;
+  shift_end?: string | null;
   job_min_special_req?: string | null;
   job_duties?: string | null;
   randomization_group?: string | null;
@@ -234,7 +238,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* ÁREA DE CONTEÚDO ROLÁVEL */}
+        {/* CONTEÚDO ROLÁVEL */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {/* EARLY MATCH CARD */}
@@ -288,7 +292,6 @@ export function JobDetailsDialog({
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* COLUNA ESQUERDA (CARDS INFO) */}
               <div className="lg:col-span-4 space-y-6">
                 {/* TIMELINE */}
                 <div className="flex items-center justify-between text-sm bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -353,7 +356,7 @@ export function JobDetailsDialog({
                     )}
                   </div>
 
-                  {/* DEDUÇÕES (Fundo Vermelho - Fora do padding principal para contraste) */}
+                  {/* DEDUÇÕES (Fundo Vermelho) */}
                   {job?.rec_pay_deductions && (
                     <div className="bg-red-50 border-t border-red-100 p-4">
                       <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
@@ -362,6 +365,26 @@ export function JobDetailsDialog({
                       <p className="text-xs text-red-800 leading-relaxed font-medium">{job.rec_pay_deductions}</p>
                     </div>
                   )}
+                </div>
+
+                {/* CARGA HORÁRIA (Novo Card) */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                  <div className="bg-amber-50 p-3 rounded-full text-amber-600">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {t("jobs.details.weekly_hours")}
+                    </span>
+                    <span className="text-xl font-bold text-slate-800">
+                      {job?.weekly_hours ? `${job.weekly_hours}h / ${t("jobs.details.week", "week")}` : "N/A"}
+                    </span>
+                    {(job?.shift_start || job?.shift_end) && (
+                      <span className="block text-[10px] text-slate-500 font-medium">
+                        {job.shift_start} - {job.shift_end}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* CONTATOS DA EMPRESA */}
@@ -379,8 +402,8 @@ export function JobDetailsDialog({
                       <div className="flex items-center gap-2">
                         <div
                           className={cn(
-                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all",
-                            planSettings?.job_db_blur && "blur-sm select-none",
+                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all transition-all",
+                            planSettings?.job_db_blur && "blur-[5px] select-none pointer-events-none opacity-60",
                           )}
                         >
                           {job?.email}
@@ -407,8 +430,8 @@ export function JobDetailsDialog({
                         <div className="space-y-2">
                           <div
                             className={cn(
-                              "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100",
-                              planSettings?.job_db_blur && "blur-sm select-none",
+                              "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 transition-all",
+                              planSettings?.job_db_blur && "blur-[5px] select-none pointer-events-none opacity-60",
                             )}
                           >
                             {job.phone}
