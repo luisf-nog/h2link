@@ -23,7 +23,9 @@ import {
   MessageSquare,
   ArrowLeft,
   GraduationCap,
-  Info, // ÍCONE ADICIONADO AQUI!
+  Info,
+  Rocket,
+  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -183,7 +185,6 @@ export function JobDetailsDialog({
   const messageText = getMessage();
   const encodedMessage = encodeURIComponent(messageText);
 
-  // --- CONFIGURAÇÃO DO BANNER DO GOVERNO ---
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
@@ -258,7 +259,6 @@ export function JobDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
-        {/* HEADER */}
         <DialogHeader className="p-4 sm:p-6 pb-4 bg-white border-b sticky top-0 z-10 shadow-sm">
           <div className="flex sm:hidden items-center mb-4 -mt-2">
             <Button
@@ -280,6 +280,15 @@ export function JobDetailsDialog({
                       {badgeConfig.label}
                     </Badge>
                   )}
+
+                  {/* --- SELO DOURADO DE CURIOSIDADE (EARLY MATCH) --- */}
+                  {(job as any)?.was_early_access && (
+                    <Badge className="bg-amber-100 text-amber-700 border-amber-300 flex gap-1 items-center shadow-sm">
+                      <Rocket className="h-3 w-3 fill-amber-600 text-amber-600" />
+                      <span className="font-bold text-[10px] uppercase">Early Match</span>
+                    </Badge>
+                  )}
+
                   {job?.job_id && (
                     <span className="font-mono text-xs text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {job.job_id}
@@ -318,7 +327,29 @@ export function JobDetailsDialog({
               </div>
             </div>
 
-            {/* BANNER DE INTELIGÊNCIA DO GOVERNO (Sorteio DOL) */}
+            {/* --- BANNER DE MERCHAN: EXPLICAÇÃO DO EARLY MATCH --- */}
+            {(job as any)?.was_early_access && (
+              <div className="mt-4 p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 shadow-sm relative overflow-hidden">
+                <Rocket className="absolute -right-4 -bottom-4 h-20 w-20 text-amber-100/50 -rotate-12" />
+                <div className="relative flex gap-4 items-center">
+                  <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+                    <Zap className="h-5 w-5 text-white fill-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-amber-900 uppercase">
+                      H2 Linker Intelligence: Vantagem Exclusiva
+                    </h4>
+                    <p className="text-xs text-amber-800 leading-relaxed max-w-3xl">
+                      Nossa tecnologia monitorou esta vaga quando ela ainda era um rascunho oficial (Early Access).
+                      Enquanto a concorrência só descobriu esta oportunidade hoje, nossa IA já preparou os dados para
+                      você.
+                      <strong> Aplique com prioridade total!</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {group && groupConfig && (
               <div className={cn("mt-4 mb-2 p-4 rounded-xl border bg-opacity-40", groupConfig.className)}>
                 <div className="flex items-center gap-3 mb-2">
@@ -353,10 +384,7 @@ export function JobDetailsDialog({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/30">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-6">
-              {/* 1. LINHA DO TEMPO */}
               <Timeline />
-
-              {/* 2. EXPERIÊNCIA NECESSÁRIA */}
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                 <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                   <GraduationCap className="h-6 w-6" />
@@ -368,8 +396,6 @@ export function JobDetailsDialog({
                   <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                 </div>
               </div>
-
-              {/* 3. SALÁRIO */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-2 text-slate-600">
@@ -382,22 +408,12 @@ export function JobDetailsDialog({
                     {job?.openings ? job.openings : "N/A"}
                   </Badge>
                 </div>
-
                 <div>
                   <div className="flex items-center gap-2 text-green-700 font-bold text-lg mb-2">
                     <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Compensation")}</span>
                   </div>
                   <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
-                  {job?.pay_frequency && (
-                    <p className="text-sm text-slate-500 font-medium capitalize mt-1">
-                      {t("jobs.details.pay_frequency", {
-                        frequency: job.pay_frequency,
-                        defaultValue: `Payment: ${job.pay_frequency}`,
-                      })}
-                    </p>
-                  )}
                 </div>
-
                 {job?.wage_additional && (
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <span className="text-xs font-bold uppercase text-green-800 block mb-1">
@@ -406,130 +422,23 @@ export function JobDetailsDialog({
                     <p className="text-base text-green-900 leading-snug">{job.wage_additional}</p>
                   </div>
                 )}
-
-                {job?.rec_pay_deductions && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <span className="font-semibold text-slate-600 text-sm block mb-1">
-                      {t("jobs.details.deductions", "Planned Deductions:")}
-                    </span>
-                    <span className="text-sm text-slate-500 leading-relaxed">{job.rec_pay_deductions}</span>
-                  </div>
-                )}
               </div>
-
-              {/* 4. JORNADA DE TRABALHO */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
-                  <Clock className="h-6 w-6 text-slate-500" />{" "}
-                  <span>{t("jobs.details.schedule", "Work Schedule")}</span>
-                </div>
-                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
-                  <span className="text-slate-600 font-medium text-base">
-                    {t("jobs.details.weekly_hours", "Weekly Hours:")}
-                  </span>
-                  <span className="font-bold text-slate-900 text-xl">
-                    {job?.weekly_hours ? `${job.weekly_hours}h` : "-"}
-                  </span>
-                </div>
-              </div>
-
-              {/* 5. CONTATOS */}
-              <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                   {t("jobs.details.company_contacts", "Company Contacts")}
                 </div>
-
                 <div
-                  className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 cursor-pointer"
                   onClick={() => copyToClipboard(job?.email || "")}
                 >
                   <div className="bg-white p-2 rounded-full border border-slate-200 text-blue-500">
                     <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col overflow-hidden">
-                    <span className="text-xs text-slate-400 font-bold">{t("jobs.details.email_label", "EMAIL")}</span>
-                    <span className="truncate font-medium text-slate-700 text-base select-all">{job?.email}</span>
+                    <span className="text-xs text-slate-400 font-bold">EMAIL</span>
+                    <span className="truncate font-medium text-slate-700 text-base">{job?.email}</span>
                   </div>
                 </div>
-
-                {job?.phone && (
-                  <div className="space-y-2">
-                    <div
-                      className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-green-200 transition-colors cursor-pointer"
-                      onClick={() => copyToClipboard(job?.phone || "")}
-                    >
-                      <div className="bg-white p-2 rounded-full border border-slate-200 text-green-500">
-                        <Phone className="h-5 w-5" />
-                      </div>
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="text-xs text-slate-400 font-bold">
-                          {t("jobs.details.phone_label", "PHONE")}
-                        </span>
-                        <span className="truncate font-medium text-slate-700 text-base select-all">{job.phone}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex gap-1 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
-                        asChild
-                      >
-                        <a href={`tel:${job.phone}`}>
-                          <Phone className="h-4 w-4" /> {t("jobs.details.call_action", "Call")}
-                        </a>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                        asChild
-                      >
-                        <a href={`sms:${cleanPhone(job.phone)}?body=${encodedMessage}`}>
-                          <MessageSquare className="h-4 w-4" /> {t("jobs.details.sms_action", "SMS")}
-                        </a>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex gap-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
-                        asChild
-                      >
-                        <a
-                          href={`https://wa.me/${cleanPhone(job.phone)}?text=${encodedMessage}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <WhatsAppIcon className="h-4 w-4" /> {t("jobs.details.whatsapp_action", "WhatsApp")}
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {job?.website && (
-                  <a
-                    href={job.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-purple-200 transition-colors hover:bg-purple-50"
-                  >
-                    <div className="bg-white p-2 rounded-full border border-slate-200 text-purple-500">
-                      <Globe className="h-5 w-5" />
-                    </div>
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="text-xs text-slate-400 font-bold">
-                        {t("jobs.details.website_label", "WEBSITE")}
-                      </span>
-                      <span className="truncate font-medium text-purple-700 text-base">
-                        {t("jobs.details.visit_site", "Visit Official Site")}
-                      </span>
-                    </div>
-                  </a>
-                )}
               </div>
             </div>
 
@@ -537,17 +446,13 @@ export function JobDetailsDialog({
               {job?.job_min_special_req && (
                 <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
                   <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-4 text-xl">
-                    <AlertTriangle className="h-6 w-6" />{" "}
-                    {t("jobs.details.special_reqs", "Special Requirements & Conditions")}
+                    <AlertTriangle className="h-6 w-6" /> {t("jobs.details.special_reqs", "Special Requirements")}
                   </h4>
-                  <div className="prose prose-amber max-w-none">
-                    <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
-                      {job.job_min_special_req}
-                    </p>
-                  </div>
+                  <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
+                    {job.job_min_special_req}
+                  </p>
                 </div>
               )}
-
               {job?.job_duties && (
                 <div className="space-y-4">
                   <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
@@ -559,47 +464,11 @@ export function JobDetailsDialog({
                   </div>
                 </div>
               )}
-
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
-                <h4 className="font-bold flex items-center gap-2 text-slate-700 text-xl border-b border-slate-100 pb-3">
-                  <Home className="h-6 w-6 text-indigo-500" /> {t("jobs.details.housing_info", "Housing Information")}
-                </h4>
-
-                <div className="flex flex-wrap gap-4 items-center">
-                  <span className="text-slate-600 font-medium text-base">
-                    {t("jobs.details.housing_type", "Housing Type:")}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="text-base py-1 px-4 bg-slate-50 text-slate-800 font-medium border-slate-300"
-                  >
-                    {job?.housing_type || t("jobs.details.not_specified", "Not specified")}
-                  </Badge>
-                </div>
-
-                {job?.housing_info && (
-                  <div className="bg-slate-50 p-5 rounded-lg border border-slate-100">
-                    <span className="text-xs font-bold uppercase text-slate-400 block mb-2">
-                      {t("jobs.details.additional_details", "Additional Details")}
-                    </span>
-                    <p className="text-base text-slate-700 leading-relaxed">{job.housing_info}</p>
-                  </div>
-                )}
-
-                {job?.housing_addr && (
-                  <div className="flex gap-2 text-base text-slate-600 items-start pt-2 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-                    <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-indigo-500" />
-                    <span className="font-medium">
-                      {job.housing_addr}, {job.housing_city}
-                    </span>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
 
-        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
+        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-20">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job", "Save Job")}
           </Button>
