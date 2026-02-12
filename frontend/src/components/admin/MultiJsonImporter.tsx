@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, Database, Clock } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -11,13 +11,16 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
-  // --- 1. VALIDAÇÃO DE DINHEIRO ---
+  // Garante que a data postada seja HOJE (Horário Local) e não UTC (que pula o dia)
+  const getTodayLocal = () => {
+    const d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  };
+
   const calculateFinalWage = (rawVal: any, hours: any) => {
     if (!rawVal) return null;
     let val = parseFloat(String(rawVal).replace(/[$,]/g, ""));
     if (isNaN(val) || val <= 0) return null;
-
-    // Se o valor for "total anual/mensal" (ex: 3711), converte para hora
     if (val > 100) {
       const h = hours && hours > 0 ? hours : 40;
       let calc = val / (h * 4.333);
@@ -26,7 +29,18 @@ export function MultiJsonImporter() {
     return val;
   };
 
-  // --- 2. EXTRAÇÃO DE DNA (FINGERPRINT) ---
+  const formatToISODate = (dateStr: any) => {
+    if (!dateStr || dateStr === "N/A") return null;
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      // Normaliza para YYYY-MM-DD sem erro de fuso
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+    } catch {
+      return null;
+    }
+  };
+
   const getCaseBody = (id: string) => {
     if (!id) return id;
     const parts = id.split("-");
@@ -35,16 +49,11 @@ export function MultiJsonImporter() {
     return id;
   };
 
-  // --- 3. MAPEADOR DE COLUNAS VALIDADO ---
   const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
-    const lowerKeysMap: { [key: string]: any } = {};
-    for (const k of Object.keys(obj)) lowerKeysMap[k.toLowerCase()] = obj[k];
     for (const key of keys) {
-      const targetKey = key.toLowerCase();
-      if (lowerKeysMap[targetKey] !== undefined && lowerKeysMap[targetKey] !== null) {
-        return String(lowerKeysMap[targetKey]).trim();
-      }
+      const val = obj[key] || obj[key.toLowerCase()];
+      if (val !== undefined && val !== null) return String(val).trim();
     }
     return null;
   };
@@ -52,6 +61,8 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
+    const today = getTodayLocal();
+
     try {
       const rawJobsMap = new Map();
 
@@ -61,38 +72,31 @@ export function MultiJsonImporter() {
 
         if (isZip) {
           const zip = await new JSZip().loadAsync(file);
-          for (const [filename, zipObj] of Object.entries(zip.files)) {
-            if (!zipObj.dir && filename.endsWith(".json")) {
-              const text = await zipObj.async("string");
-              contents.push({ filename, content: text });
-            }
+          const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
+          for (const filename of jsonFiles) {
+            contents.push({ filename, content: await zip.files[filename].async("string") });
           }
         } else {
           contents.push({ filename: file.name, content: await file.text() });
         }
 
         for (const { filename, content } of contents) {
-          const json = JSON.parse(content);
-          const list = Array.isArray(json) ? json : json.data || json.results || [];
-          let visaType = filename.toLowerCase().includes("h2b")
+          const list = JSON.parse(content);
+          const visaType = filename.toLowerCase().includes("h2b")
             ? "H-2B"
             : filename.toLowerCase().includes("jo")
               ? "H-2A (Early Access)"
               : "H-2A";
 
-          for (const item of list) {
-            // Flatten nested objects found in JO/H2A structure
-            const clearance = item.clearanceOrder || {};
-            const jobReqs = (clearance.jobRequirements || item.jobRequirements || {}).qualification || {};
-            const flat = { ...item, ...clearance, ...jobReqs };
-
+          list.forEach((item: any) => {
+            const flat = { ...item, ...(item.clearanceOrder || {}), ...(item.jobRequirements?.qualification || {}) };
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
-            if (!rawJobId) continue;
+            if (!rawJobId) return;
 
             const fingerprint = getCaseBody(rawJobId);
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
 
-            const extractedJob = {
+            rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
               job_id: rawJobId.split("-GHOST-")[0].trim(),
               visa_type: visaType,
@@ -100,85 +104,57 @@ export function MultiJsonImporter() {
               job_title: getVal(flat, ["jobTitle", "tempneedJobtitle", "title"]),
               company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
               email: getVal(flat, ["recApplyEmail", "email"]),
-              phone: getVal(flat, ["recApplyPhone", "empPhone", "phone"]),
+              phone: getVal(flat, ["recApplyPhone", "empPhone"]),
               city: getVal(flat, ["jobCity", "city"]),
               state: getVal(flat, ["jobState", "state"]),
-              zip_code: getVal(flat, ["jobPostcode", "empPostalCode", "worksite_zip"]),
+              zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), weeklyHours),
-              start_date: getVal(flat, ["jobBeginDate", "tempneedStart", "start_date"]),
-              posted_date: getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued", "posted_date"]),
-              end_date: getVal(flat, ["jobEndDate", "tempneedEnd", "end_date"]),
-              job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "description"]),
-              job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "specialRequirements"]),
-              wage_additional: getVal(flat, ["wageAdditional", "addSpecialPayInfo", "jobSpecialPayInfo"]),
-              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
-              weekly_hours: weeklyHours || null,
-              category: getVal(flat, ["socTitle", "jobSocTitle", "tempneedSocTitle"]),
-
-              // --- COLUNAS QUE ESTAVAM FALTANDO (VALIDADAS) ---
-              openings: parseInt(
-                getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "jobWrksNeededH2a", "tempneedWkrPos"]) || "0",
-              ),
+              start_date: formatToISODate(getVal(flat, ["jobBeginDate", "tempneedStart"])),
+              // AQUI CORRIGIMOS A DATA POSTADA: Se o arquivo não tem, usa TODAY local
+              posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])) || today,
+              end_date: formatToISODate(getVal(flat, ["jobEndDate", "tempneedEnd"])),
+              job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
+              job_min_special_req: getVal(flat, ["jobMinspecialreq", "specialRequirements"]),
+              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"]) || "0"),
               experience_months: parseInt(
-                getVal(flat, ["jobMinexpmonths", "experienceMonths", "monthsExperience"]) || "0",
+                getVal(flat, ["experienceMonths", "jobMinexpmonths", "monthsExperience"]) || "0",
               ),
-              education_required: getVal(flat, ["educationLevel", "jobMinedu", "education_required"]),
-
-              transport_provided:
-                getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === "true" ||
-                getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === "Y",
-              source_url: getVal(flat, ["url", "jobRobotUrl", "recApplyUrl"]),
-              housing_info: visaType.includes("H-2A") ? "Yes (H-2A Mandated)" : getVal(flat, ["housing_info"]),
+              education_required: getVal(flat, ["educationLevel", "jobMinedu"]),
+              is_active: true,
               was_early_access: false,
-            };
-            rawJobsMap.set(fingerprint, extractedJob);
-          }
+            });
+          });
         }
       }
 
       const allJobs = Array.from(rawJobsMap.values()).filter((j) => j.email);
 
-      // Envio em lotes direto para o SQL
-      const BATCH_SIZE = 500;
+      // Envio em lotes maiores para ganhar velocidade
+      const BATCH_SIZE = 1000;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
         const batch = allJobs.slice(i, i + BATCH_SIZE);
         const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
         if (error) throw error;
       }
 
-      toast({
-        title: "V60 Validada - Sucesso!",
-        description: `${allJobs.length} vagas sincronizadas com todas as colunas.`,
-      });
+      toast({ title: "V61 Sincronizada!", description: `${allJobs.length} vagas com datas corrigidas.` });
     } catch (err: any) {
-      toast({ title: "Erro de Validação", description: err.message, variant: "destructive" });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <Card className="border-2 border-blue-600 shadow-2xl bg-white">
+    <Card className="border-2 border-indigo-600">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-blue-700 font-black">
-          <Database className="h-6 w-6" /> H2 Linker Sync V60
+        <CardTitle className="flex items-center gap-2">
+          <Database className="h-6 w-6" /> H2 Linker Sync V61
         </CardTitle>
-        <CardDescription>Mapeamento de Experiência e Vagas Validado.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-blue-50 p-2 rounded border border-blue-100">
-          <div className="flex items-center gap-1 text-green-700">
-            <CheckCircle2 size={12} /> Openings OK
-          </div>
-          <div className="flex items-center gap-1 text-green-700">
-            <CheckCircle2 size={12} /> Experience OK
-          </div>
-          <div className="flex items-center gap-1 text-green-700">
-            <CheckCircle2 size={12} /> DNA Case OK
-          </div>
-          <div className="flex items-center gap-1 text-blue-700">
-            <CheckCircle2 size={12} /> Direct DB OK
-          </div>
+        <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+          <Clock size={14} /> Fuso horário normalizado para evitar datas futuras.
         </div>
         <input
           type="file"
@@ -189,10 +165,10 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-12 bg-blue-700 hover:bg-blue-800 text-white font-bold"
+          className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 text-white font-bold transition-all"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção V60
+          Sincronizar Produção V61
         </Button>
       </CardContent>
     </Card>
