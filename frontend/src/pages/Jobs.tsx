@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -43,7 +36,6 @@ import {
   ChevronsUpDown,
   X,
   Bot,
-  Landmark,
   ShieldAlert,
   Briefcase,
   Rocket,
@@ -57,7 +49,7 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// --- COMPONENTE DE ONBOARDING ---
+// --- ONBOARDING MODAL ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -74,56 +66,31 @@ function OnboardingModal() {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl p-0 border-0 shadow-2xl bg-white rounded-xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
-        <div className="bg-slate-900 px-6 sm:px-8 py-5 sm:py-6 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-slate-900 px-6 py-5 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 text-white shrink-0">
               <Briefcase className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight">
-                H2 Linker Platform
-              </h2>
-              <p className="text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider font-semibold">
-                Official Automation Tool
-              </p>
+              <h2 className="text-lg font-bold text-white tracking-tight">H2 Linker Platform</h2>
+              <p className="text-slate-400 text-[10px] uppercase font-semibold">Official Automation Tool</p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full"
-          >
+          <button onClick={handleClose} className="text-slate-400 hover:text-white bg-slate-800/50 p-2 rounded-full">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6">
-          <div className="flex gap-3 sm:gap-4">
-            <div className="flex-shrink-0 mt-1 text-slate-700">
-              <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6" />
-            </div>
-            <div>
-              <h3 className="text-slate-900 font-bold text-sm sm:text-base">Service Transparency & Role</h3>
-              <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
-                H2 Linker is a <strong>software technology provider</strong>. We provide tools to automate your
-                outreach. The final hiring decision rests solely between you and the employer.
-              </p>
-            </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-slate-50 border-b border-slate-100 p-4 rounded-lg flex gap-3">
+            <ShieldAlert className="h-5 w-5 text-slate-700 shrink-0" />
+            <p className="text-slate-600 text-sm leading-relaxed">
+              H2 Linker is a software provider. We automate your outreach to US employers.
+            </p>
           </div>
-        </div>
-        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
-          <div className="grid gap-5 sm:gap-6">
-            <div className="flex gap-3 sm:gap-4 items-start group">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Exclusive Early Access Data</h4>
-                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                  Apply before the crowd with DOL official data.
-                </p>
-              </div>
-            </div>
-          </div>
-          <Button onClick={handleClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 shadow-lg">
+          <Button
+            onClick={handleClose}
+            className="w-full bg-slate-900 hover:bg-slate-800 h-12 shadow-lg transition-all active:scale-[0.98]"
+          >
             I Understand - Let's Start
           </Button>
         </div>
@@ -132,6 +99,7 @@ function OnboardingModal() {
   );
 }
 
+// --- FUNÇÕES AUXILIARES RECUPERADAS ---
 const renderPrice = (job: JobDetails) => {
   if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
     return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
@@ -139,6 +107,8 @@ const renderPrice = (job: JobDetails) => {
   if (job.salary) return `$${job.salary.toFixed(2)}`;
   return "-";
 };
+
+const formatSalary = (salary: number | null) => (salary ? `$${salary.toFixed(2)}/h` : "-");
 
 interface Job extends JobDetails {
   id: string;
@@ -153,39 +123,61 @@ export default function Jobs() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Estados de Dados
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
+
+  // Estados de UI
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
-  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
+  // Filtros
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    () => searchParams.get("categories")?.split(",") || [],
+    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
   );
+  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
   const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
   const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
-
+  const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
   const [sortKey, setSortKey] = useState<any>(() => searchParams.get("sort") || "posted_date");
   const [sortDir, setSortDir] = useState<any>(() => searchParams.get("dir") || "desc");
-  const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const visaLabel = visaType === "all" ? "All Visas" : visaType;
+
+  // --- COMPARTILHAMENTO ---
+  const handleShareJob = (job: Job) => {
+    const shareUrl = getJobShareUrl(job.id);
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `${job.job_title} - ${job.company}`,
+          text: `Job opportunity: ${job.job_title} in ${job.city}, ${job.state}`,
+          url: shareUrl,
+        })
+        .catch(() => {
+          navigator.clipboard.writeText(shareUrl);
+          toast({ title: "Link copiado!" });
+        });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Link copiado!" });
+    }
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -206,13 +198,12 @@ export default function Jobs() {
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
-    query = query.range(from, to);
-    const { data, error, count } = await query;
+    const { data, error, count } = await query.range(from, to);
 
     if (!error) {
       setJobs(data as Job[]);
       setTotalCount(count ?? 0);
-      if (profile?.id && !planSettings.job_db_blur && data?.length) {
+      if (profile?.id && data?.length) {
         const ids = data.map((j) => j.id);
         const { data: queueRows } = await supabase
           .from("my_queue")
@@ -228,6 +219,7 @@ export default function Jobs() {
   useEffect(() => {
     fetchJobs();
   }, [
+    page,
     visaType,
     searchTerm,
     stateFilter,
@@ -238,7 +230,6 @@ export default function Jobs() {
     maxSalary,
     sortKey,
     sortDir,
-    page,
   ]);
 
   const formatDate = (date: string | null | undefined) => {
@@ -249,8 +240,7 @@ export default function Jobs() {
 
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return "-";
-    if (months < 12) return `${months}mo`;
-    return `${Math.floor(months / 12)}yr`;
+    return months < 12 ? `${months}mo` : `${Math.floor(months / 12)}yr`;
   };
 
   const addToQueue = async (job: Job) => {
@@ -270,14 +260,6 @@ export default function Jobs() {
 
   const handleRowClick = (job: Job) => (planSettings.job_db_blur ? setShowUpgradeDialog(true) : setSelectedJob(job));
 
-  const getGroupBadgeConfig = (group: string) => {
-    const g = group.toUpperCase();
-    if (g === "A")
-      return { className: "bg-emerald-50 text-emerald-700 border-emerald-400", shortDesc: "High Priority" };
-    if (g === "B") return { className: "bg-blue-50 text-blue-700 border-blue-400", shortDesc: "Active" };
-    return { className: "bg-gray-50 text-gray-700 border-gray-300", shortDesc: "Standard" };
-  };
-
   const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => {
     if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />;
     return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
@@ -288,12 +270,10 @@ export default function Jobs() {
       <div className="space-y-6">
         <OnboardingModal />
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {formatNumber(totalCount)} {visaLabel} Jobs
-            </p>
+            <h1 className="text-3xl font-bold">Vagas</h1>
+            <p className="text-muted-foreground">{formatNumber(totalCount)} resultados encontrados</p>
           </div>
           {isAdmin && (
             <div className="flex gap-2">
@@ -306,59 +286,56 @@ export default function Jobs() {
         </div>
 
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <Select value={visaType} onValueChange={(v: any) => setVisaType(v)}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Visa Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {VISA_TYPE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="relative w-full lg:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search job, company or city..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-0">
-            <Input placeholder="State" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} />
-            <Input placeholder="City" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} />
-            <Select value={groupFilter} onValueChange={setGroupFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Group" />
+          <CardHeader className="pb-3 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <Select
+              value={visaType}
+              onValueChange={(v: any) => {
+                setVisaType(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Visto" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Groups</SelectItem>
-                {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
-                  <SelectItem key={g} value={g}>
-                    Group {g}
+                {VISA_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              type="number"
-              placeholder="Min Salary"
-              value={minSalary}
-              onChange={(e) => setMinSalary(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Max Salary"
-              value={maxSalary}
-              onChange={(e) => setMaxSalary(e.target.value)}
-            />
+            <div className="relative w-full lg:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-10"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-0">
+            <Input placeholder="Estado" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} />
+            <Input placeholder="Cidade" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} />
+            <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v === "all" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Grupo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
+                  <SelectItem key={g} value={g}>
+                    Grupo {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input type="number" placeholder="Min $" value={minSalary} onChange={(e) => setMinSalary(e.target.value)} />
+            <Input type="number" placeholder="Max $" value={maxSalary} onChange={(e) => setMaxSalary(e.target.value)} />
           </CardContent>
         </Card>
 
@@ -369,35 +346,35 @@ export default function Jobs() {
                 <TableRow className="whitespace-nowrap">
                   <TableHead>
                     <button onClick={() => setSortKey("job_title")}>
-                      Role <SortIcon active={sortKey === "job_title"} dir={sortDir} />
+                      Cargo <SortIcon active={sortKey === "job_title"} dir={sortDir} />
                     </button>
                   </TableHead>
                   <TableHead>
                     <button onClick={() => setSortKey("company")}>
-                      Company <SortIcon active={sortKey === "company"} dir={sortDir} />
+                      Empresa <SortIcon active={sortKey === "company"} dir={sortDir} />
                     </button>
                   </TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Openings</TableHead>
-                  <TableHead>Salary</TableHead>
-                  <TableHead>Visa</TableHead>
-                  <TableHead>Group</TableHead>
+                  <TableHead>Cidade/Estado</TableHead>
+                  <TableHead>Vagas</TableHead>
+                  <TableHead>Salário</TableHead>
+                  <TableHead>Visto</TableHead>
+                  <TableHead>Grupo</TableHead>
                   <TableHead>
                     <button onClick={() => setSortKey("posted_date")}>
-                      Posted <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
+                      Postada <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
                     </button>
                   </TableHead>
-                  <TableHead>Start</TableHead>
-                  <TableHead>End</TableHead>
+                  <TableHead>Início</TableHead>
+                  <TableHead>Fim</TableHead>
                   <TableHead>Exp.</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={12} className="text-center py-8">
-                      Loading...
+                      Carregando...
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -409,13 +386,13 @@ export default function Jobs() {
                     >
                       <TableCell className="font-medium">{j.job_title}</TableCell>
                       <TableCell className={cn(planSettings.job_db_blur && "blur-sm")}>{j.company}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell>
                         {j.city}, {j.state}
                       </TableCell>
                       <TableCell className="text-center">{j.openings || "-"}</TableCell>
                       <TableCell className="font-semibold text-slate-700">{renderPrice(j)}/h</TableCell>
 
-                      {/* COLUNA VISA COM O BADGE DOURADO (EARLY MATCH) */}
+                      {/* COLUNA VISTO - BADGE DOURADO EARLY MATCH */}
                       <TableCell>
                         {(() => {
                           const b = getVisaBadgeConfig(j.visa_type);
@@ -425,7 +402,7 @@ export default function Jobs() {
                               variant={b.variant}
                               className={cn(
                                 b.className,
-                                wasEarly && "border-amber-400 bg-amber-50 text-amber-700 shadow-sm transition-all",
+                                wasEarly && "border-amber-400 bg-amber-50 text-amber-700 shadow-sm",
                               )}
                             >
                               <div className="flex items-center gap-1">
@@ -440,19 +417,13 @@ export default function Jobs() {
                       <TableCell>
                         {(() => {
                           const g = (j as any).randomization_group;
-                          if (!g) return "-";
-                          const cfg = getGroupBadgeConfig(g);
-                          return (
-                            <Badge variant="outline" className={cfg.className}>
-                              {g}
-                            </Badge>
-                          );
+                          return g ? <Badge variant="outline">{g}</Badge> : "-";
                         })()}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(j.posted_date)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(j.start_date)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(j.end_date)}</TableCell>
-                      <TableCell>{formatExperience(j.experience_months)}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{formatDate(j.posted_date)}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{formatDate(j.start_date)}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{formatDate(j.end_date)}</TableCell>
+                      <TableCell className="text-sm">{formatExperience(j.experience_months)}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="sm"
@@ -473,18 +444,44 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        {/* DIALOGS */}
+        <div className="flex justify-between items-center mt-4">
+          <p className="text-sm text-muted-foreground">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
+              Anterior
+            </Button>
+            <Button variant="outline" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+
+        {/* DIALOGS INTEGRADOS COM AS FUNÇÕES FORMATSALARY E HANDLESHAREJOB */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o) => !o && setSelectedJob(null)}
           job={selectedJob}
           planSettings={planSettings}
+          formatSalary={formatSalary}
           onAddToQueue={addToQueue}
+          onRemoveFromQueue={removeFromQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+          onShare={handleShareJob}
         />
+
         <Dialog open={showImporter} onOpenChange={setShowImporter}>
           <DialogContent className="max-w-4xl p-0">
             <MultiJsonImporter />
+          </DialogContent>
+        </Dialog>
+        <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upgrade Necessário</DialogTitle>
+            </DialogHeader>
+            <Button onClick={() => navigate("/plans")}>Ver Planos</Button>
           </DialogContent>
         </Dialog>
       </div>
