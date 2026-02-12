@@ -186,7 +186,10 @@ export default function Jobs() {
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
+
+  // DEFINE tableColSpan AQUI PARA EVITAR O ERRO DE RUNTIME
+  const tableColSpan = 11;
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
@@ -368,6 +371,7 @@ export default function Jobs() {
           )}
         </div>
 
+        {/* CENTRAL DE COMANDO MODERNA */}
         {queuedJobIds.size > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all hover:shadow-[0_8px_30px_rgba(37,99,235,0.08)]">
@@ -680,7 +684,7 @@ export default function Jobs() {
                         <TableCell>
                           {(() => {
                             const b = getVisaBadgeConfig(j.visa_type);
-                            const wasEarly = (j as any).was_early_access;
+                            const wasEarly = j.was_early_access;
                             return (
                               <Badge
                                 variant={b.variant}
@@ -700,7 +704,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           {(() => {
-                            const group = (j as any).randomization_group;
+                            const group = j.randomization_group;
                             if (!group) return "-";
                             const config = getGroupBadgeConfig(group);
                             return (
@@ -727,7 +731,7 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
-                          {/* BOTAÃO DE AÇÃO ADAPTÁVEL - FUNDO VERMELHO E X BRANCO */}
+                          {/* BOTÃO ADAPTÁVEL - CORRIGIDO */}
                           <Button
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
@@ -735,21 +739,20 @@ export default function Jobs() {
                               "h-8 w-8 p-0 rounded-full transition-all",
                               !planSettings.job_db_blur &&
                                 queuedJobIds.has(j.id) &&
-                                "bg-red-600 border-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200",
+                                "bg-red-600 border-red-600 hover:bg-red-700 text-white shadow-md",
                             )}
                             onClick={(e) => {
                               e.stopPropagation();
                               queuedJobIds.has(j.id) ? removeFromQueue(j) : addToQueue(j);
                             }}
                             disabled={planSettings.job_db_blur || processingJobIds.has(j.id)}
-                            title={queuedJobIds.has(j.id) ? t("queue.actions.remove") : undefined}
                           >
                             {planSettings.job_db_blur ? (
                               <Lock className="h-4 w-4" />
                             ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : queuedJobIds.has(j.id) ? (
-                              <X className="h-4 w-4 text-white" /> // O "X" BRANCO AQUI
+                              <X className="h-4 w-4 text-white" />
                             ) : (
                               <Plus className="h-4 w-4" />
                             )}
