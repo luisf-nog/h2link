@@ -80,15 +80,10 @@ export function JobDetailsDialog({
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
   const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
   const isPremium = ["gold", "diamond", "black"].includes(planTier);
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
-
-  useEffect(() => {
-    if (open) setIsBannerExpanded(true);
-  }, [open, job?.id]);
 
   const handleGoToPlans = () => {
     onOpenChange(false);
@@ -119,15 +114,6 @@ export function JobDetailsDialog({
     return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
-  const renderMainWage = () => {
-    if (!job) return "-";
-    if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
-      return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)} / ${job.wage_unit || "hr"}`;
-    if (job.wage_from) return `$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`;
-    if (job.salary) return formatSalary(job.salary);
-    return t("jobs.details.view_details");
-  };
-
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return t("jobs.details.no_experience");
     if (months < 12) return t("jobs.table.experience_months", { count: months });
@@ -136,6 +122,15 @@ export function JobDetailsDialog({
     return rem === 0
       ? t("jobs.table.experience_years", { count: years })
       : t("jobs.table.experience_years_months", { years, months: rem });
+  };
+
+  const renderMainWage = () => {
+    if (!job) return "-";
+    if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
+      return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)} / ${job.wage_unit || "hr"}`;
+    if (job.wage_from) return `$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`;
+    if (job.salary) return formatSalary(job.salary);
+    return t("jobs.details.view_details");
   };
 
   const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
@@ -157,7 +152,7 @@ export function JobDetailsDialog({
                     className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
                     translate="no"
                   >
-                    {!isPremium ? maskJobId(job.job_id) : job.job_id.split("-GHOST")[0]}
+                    {isPremium ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
                   </span>
                 )}
               </div>
@@ -192,7 +187,6 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE DE 3 COLUNAS */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">Posted</span>
@@ -214,18 +208,18 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* BLOCO DE EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Experiência</span>
-                    <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
+                    <span className="text-xl font-bold text-slate-800" translate="no">
+                      {formatExperience(job?.experience_months)}
+                    </span>
                   </div>
                 </div>
 
-                {/* SALÁRIO E DEDUÇÕES */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">Vagas</span>
@@ -241,24 +235,8 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
-                  {job?.wage_additional && (
-                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
-                      <span translate="yes">{job.wage_additional}</span>
-                    </div>
-                  )}
-                  {job?.rec_pay_deductions && (
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
-                        <AlertTriangle className="h-3 w-3" /> Deduções
-                      </span>
-                      <p className="text-xs text-red-800 font-medium">
-                        <span translate="yes">{job.rec_pay_deductions}</span>
-                      </p>
-                    </div>
-                  )}
                 </div>
 
-                {/* CARGA HORÁRIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
@@ -273,13 +251,12 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
-                  {!isPremium && (
+                  {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <Lock className="h-7 w-7 text-amber-500 mb-2" />
                       <Button
-                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
+                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg"
                         onClick={handleGoToPlans}
                       >
                         Upgrade para Visualizar
@@ -295,19 +272,9 @@ export function JobDetailsDialog({
                         Email
                       </span>
                       <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
-                        {isPremium ? job?.email : "••••••••@•••••••.com"}
+                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
                       </div>
                     </div>
-                    {job?.phone && (
-                      <div className="space-y-2" translate="no">
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                          Telefone
-                        </span>
-                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
-                          {isPremium ? job.phone : "+1 (XXX) XXX-XXXX"}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -320,16 +287,6 @@ export function JobDetailsDialog({
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                     <span translate="yes">{job?.job_duties}</span>
                   </p>
-                  {job?.job_min_special_req && (
-                    <div className="mt-8 bg-amber-50 rounded-xl p-5 border border-amber-100">
-                      <h5 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        <AlertTriangle className="h-4 w-4" /> Requisitos Especiais
-                      </h5>
-                      <p className="text-xs text-amber-800 leading-relaxed">
-                        <span translate="yes">{job.job_min_special_req}</span>
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
