@@ -109,13 +109,15 @@ function OnboardingModal() {
           </div>
         </div>
 
-        <div className="p-6 sm:p-8">
-          <Button
-            onClick={handleClose}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg"
-          >
-            {t("jobs.onboarding.cta")}
-          </Button>
+        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6 text-left">
+          <div className="pt-5 border-t border-slate-100 mt-2">
+            <Button
+              onClick={handleClose}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all active:scale-[0.98]"
+            >
+              {t("jobs.onboarding.cta")}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -146,6 +148,12 @@ export default function Jobs() {
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
+  const locale = i18n.resolvedLanguage || i18n.language;
+  const currency = getCurrencyForLanguage(locale);
+  const formatPlanPrice = (tier: "gold" | "diamond") => {
+    const amount = getPlanAmountForCurrency(PLANS_CONFIG[tier], currency);
+    return formatCurrency(amount, currency, locale);
+  };
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -166,7 +174,7 @@ export default function Jobs() {
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
+    () => searchParams.get("categories")?.split(",") || [],
   );
   const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
   const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
@@ -184,9 +192,10 @@ export default function Jobs() {
     | "end_date";
   type SortDir = "asc" | "desc";
   const [sortKey, setSortKey] = useState<SortKey>(() => (searchParams.get("sort") as SortKey) || "posted_date");
-  const [sortDir, setSortDir] = useState<SortDir>(() => (searchParams.get("dir") as any) || "desc");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as any) || "desc");
   const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
@@ -194,7 +203,7 @@ export default function Jobs() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
   const tableColSpan = 12;
 
-  // VACINA DE SANITIZAÇÃO
+  // VACINA CONTRA PONTUAÇÃO E BUSCA POR ID
   const sanitizeSearchTerm = (term: string) => {
     return term.replace(/[()\[\]{}|\\^$*+?.<>]/g, "").trim();
   };
@@ -212,7 +221,6 @@ export default function Jobs() {
 
     const term = sanitizeSearchTerm(searchTerm);
     if (term) {
-      // INCLUI BUSCA POR JOB ID
       query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
     }
 
@@ -221,7 +229,6 @@ export default function Jobs() {
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
 
-    // LÓGICA CORRETA DE SALÁRIO
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
@@ -253,6 +260,7 @@ export default function Jobs() {
   };
 
   const fetchCategories = async () => {
+    setCategoriesLoading(true);
     const { data } = await supabase
       .from("public_jobs")
       .select("category")
@@ -261,6 +269,7 @@ export default function Jobs() {
       .limit(2000);
     if (data)
       setCategories(Array.from(new Set(data.map((r) => r.category?.trim()).filter(Boolean) as string[])).sort());
+    setCategoriesLoading(false);
   };
 
   useEffect(() => {
@@ -311,7 +320,7 @@ export default function Jobs() {
       return;
     }
     if (planSettings.job_db_blur) {
-      navigate("/plans");
+      setShowUpgradeDialog(true);
       return;
     }
     if (queuedJobIds.has(job.id)) return;
@@ -330,7 +339,7 @@ export default function Jobs() {
     });
   };
 
-  const handleRowClick = (job: Job) => (planSettings.job_db_blur ? navigate("/plans") : setSelectedJob(job));
+  const handleRowClick = (job: Job) => (planSettings.job_db_blur ? setShowUpgradeDialog(true) : setSelectedJob(job));
 
   const toggleSort = (key: SortKey) => {
     setPage(1);
@@ -352,15 +361,23 @@ export default function Jobs() {
         <OnboardingModal />
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
+            <p className="text-muted-foreground mt-1">
+              {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
+            </p>
+          </div>
           {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setShowImporter(true)}>
-              <Database className="mr-2 h-4 w-4" /> Admin
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowImporter(true)}>
+                <Database className="mr-2 h-4 w-4" /> Admin
+              </Button>
+              <JobImportDialog />
+            </div>
           )}
         </div>
 
-        {/* FILTROS RESTAURADOS (6 COLUNAS LINEARES) */}
+        {/* FILTROS: GRID DE 6 COLUNAS RESTAURADO */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4 text-left">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -651,6 +668,7 @@ export default function Jobs() {
           </div>
         </div>
 
+        {/* AJUSTE NA CHAMADA DO DIALOG: PASSANDO PROFILE E FUNÇÃO DE LOGIN */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
@@ -662,6 +680,7 @@ export default function Jobs() {
           onShare={(j: any) => navigate(`/job/${j.id}`)}
           setShowLoginDialog={setShowLoginDialog}
         />
+
         {showImporter && (
           <Dialog open={showImporter} onOpenChange={setShowImporter}>
             <DialogContent className="max-w-4xl p-0">
