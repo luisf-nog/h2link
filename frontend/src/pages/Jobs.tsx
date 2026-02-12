@@ -43,9 +43,11 @@ import {
   ChevronsUpDown,
   X,
   Bot,
+  Landmark,
   ShieldAlert,
   Briefcase,
   Rocket,
+  CheckCircle2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -115,11 +117,13 @@ function OnboardingModal() {
           </div>
         </div>
 
-        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6 text-left">
+        <div className="p-6 sm:p-8 space-y-5 sm:space-y-6">
           <div className="grid gap-5 sm:gap-6">
             <div className="flex gap-3 sm:gap-4 items-start group">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+              <div className="flex-shrink-0">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100 group-hover:bg-blue-100 transition-colors">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                </div>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">{t("jobs.onboarding.early_access_title")}</h4>
@@ -128,9 +132,12 @@ function OnboardingModal() {
                 </p>
               </div>
             </div>
+
             <div className="flex gap-3 sm:gap-4 items-start group">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-purple-50 flex items-center justify-center border border-purple-100">
-                <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+              <div className="flex-shrink-0">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-purple-50 flex items-center justify-center border border-purple-100 group-hover:bg-purple-100 transition-colors">
+                  <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                </div>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">{t("jobs.onboarding.ai_title")}</h4>
@@ -139,9 +146,12 @@ function OnboardingModal() {
                 </p>
               </div>
             </div>
+
             <div className="flex gap-3 sm:gap-4 items-start group">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+              <div className="flex-shrink-0">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-emerald-50 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+                </div>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 text-sm">{t("jobs.onboarding.automation_title")}</h4>
@@ -170,10 +180,15 @@ function OnboardingModal() {
 }
 
 const renderPrice = (job: JobDetails) => {
-  if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
-    return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
-  if (job.wage_from) return `$${job.wage_from.toFixed(2)}`;
-  if (job.salary) return `$${job.salary.toFixed(2)}`;
+  if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to) {
+    return <span translate="no">{`$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`}</span>;
+  }
+  if (job.wage_from) {
+    return <span translate="no">{`$${job.wage_from.toFixed(2)}`}</span>;
+  }
+  if (job.salary) {
+    return <span translate="no">{`$${job.salary.toFixed(2)}`}</span>;
+  }
   return "-";
 };
 
@@ -186,17 +201,40 @@ export default function Jobs() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+
+  const handleShareJob = (job: Job) => {
+    const shareUrl = getJobShareUrl(job.id);
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `${job.job_title} - ${job.company}`,
+          text: `${t("jobs.shareText", "Job opportunity")}: ${job.job_title} ${t("jobs.in", "in")} ${job.city}, ${job.state}`,
+          url: shareUrl,
+        })
+        .catch(() => copyToClipboard(shareUrl));
+    } else {
+      copyToClipboard(shareUrl);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Link copiado!",
+      description: "Link de compartilhamento copiado para área de transferência",
+    });
+  };
+
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
-
   const formatPlanPrice = (tier: "gold" | "diamond") => {
     const amount = getPlanAmountForCurrency(PLANS_CONFIG[tier], currency);
     return formatCurrency(amount, currency, locale);
   };
-
   const [searchParams, setSearchParams] = useSearchParams();
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -208,21 +246,25 @@ export default function Jobs() {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => {
     const v = searchParams.get("visa") as VisaTypeFilter | null;
-    return v || "all";
+    if (v === "H-2A") return "H-2A";
+    if (v === "H-2B") return "H-2B";
+    if (v === "H-2A (Early Access)") return "H-2A (Early Access)";
+    return "all";
   });
 
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    () => searchParams.get("categories")?.split(",") || [],
-  );
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    const catParam = searchParams.get("categories");
+    return catParam ? catParam.split(",") : [];
+  });
   const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
   const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
-  const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
 
   type SortKey =
     | "job_title"
@@ -236,12 +278,35 @@ export default function Jobs() {
     | "start_date"
     | "end_date";
   type SortDir = "asc" | "desc";
-  const [sortKey, setSortKey] = useState<SortKey>(() => (searchParams.get("sort") as SortKey) || "posted_date");
-  const [sortDir, setSortDir] = useState<SortDir>(() => (searchParams.get("dir") as SortDir) || "desc");
-  const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
+
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    const v = searchParams.get("sort") as SortKey | null;
+    const allowed: SortKey[] = [
+      "job_title",
+      "company",
+      "state",
+      "city",
+      "openings",
+      "salary",
+      "visa_type",
+      "posted_date",
+      "start_date",
+      "end_date",
+    ];
+    return v && allowed.includes(v) ? v : "posted_date";
+  });
+  const [sortDir, setSortDir] = useState<SortDir>(() => {
+    const v = searchParams.get("dir");
+    return v === "asc" || v === "desc" ? v : "desc";
+  });
+
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get("page") ?? "1");
+    return Number.isFinite(p) && p > 0 ? p : 1;
+  });
+
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
   const isFreeUser = planTier === "free";
@@ -251,6 +316,7 @@ export default function Jobs() {
   const isFreeLimitReached = isFreeUser && creditsUsedToday >= dailyLimitTotal;
   const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
+  const visaLabel = useMemo(() => (visaType === "all" ? "All Visas" : visaType), [visaType]);
   const tableColSpan = 12;
 
   const buildOrSearch = (term: string) =>
@@ -261,23 +327,31 @@ export default function Jobs() {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
+
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
-    if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false });
+    if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false, nullsFirst: false });
+    query = query.order("id", { ascending: true });
+
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim()) query = query.or(buildOrSearch(searchTerm.trim()));
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
-    if (minSalary) query = query.gte("salary", Number(minSalary));
-    if (maxSalary) query = query.lte("salary", Number(maxSalary));
+    if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
+    if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
+
     query = query.range(from, to);
     const { data, error, count } = await query;
-    if (!error && data) {
-      setJobs(data as Job[]);
+
+    if (error) {
+      toast({ title: t("jobs.toasts.load_error_title"), description: error.message, variant: "destructive" });
+    } else {
+      const nextJobs = (data as Job[]) || [];
+      setJobs(nextJobs);
       setTotalCount(count ?? 0);
-      if (profile?.id) {
-        const ids = data.map((j) => j.id);
+      if (profile?.id && !planSettings.job_db_blur && nextJobs.length) {
+        const ids = nextJobs.map((j) => j.id);
         const { data: queueRows } = await supabase
           .from("my_queue")
           .select("job_id")
@@ -300,15 +374,24 @@ export default function Jobs() {
 
   const fetchCategories = async () => {
     setCategoriesLoading(true);
-    const { data } = await supabase
-      .from("public_jobs")
-      .select("category")
-      .not("category", "is", null)
-      .neq("category", "")
-      .limit(2000);
-    if (data)
-      setCategories(Array.from(new Set(data.map((r) => r.category?.trim()).filter(Boolean) as string[])).sort());
-    setCategoriesLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("public_jobs")
+        .select("category")
+        .not("category", "is", null)
+        .neq("category", "")
+        .order("posted_date", { ascending: false })
+        .limit(2000);
+      if (error) throw error;
+      const uniq = Array.from(new Set(data?.map((r) => r.category?.trim()).filter(Boolean) as string[])).sort((a, b) =>
+        a.localeCompare(b),
+      );
+      setCategories(uniq);
+    } catch (err) {
+      console.warn(err);
+    } finally {
+      setCategoriesLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -330,6 +413,39 @@ export default function Jobs() {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const next = new URLSearchParams();
+      if (visaType !== "all") next.set("visa", visaType);
+      if (searchTerm.trim()) next.set("q", searchTerm.trim());
+      if (stateFilter.trim()) next.set("state", stateFilter.trim());
+      if (cityFilter.trim()) next.set("city", cityFilter.trim());
+      if (selectedCategories.length > 0) next.set("categories", selectedCategories.join(","));
+      if (groupFilter) next.set("group", groupFilter);
+      if (minSalary) next.set("min_salary", minSalary);
+      if (maxSalary) next.set("max_salary", maxSalary);
+      if (!(sortKey === "posted_date" && sortDir === "desc")) {
+        next.set("sort", sortKey);
+        next.set("dir", sortDir);
+      }
+      next.set("page", String(page));
+      setSearchParams(next, { replace: true });
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [
+    visaType,
+    searchTerm,
+    stateFilter,
+    cityFilter,
+    selectedCategories,
+    groupFilter,
+    minSalary,
+    maxSalary,
+    sortKey,
+    sortDir,
+    page,
+  ]);
+
   const toggleCategory = (category: string) => {
     setPage(1);
     setSelectedCategories((prev) =>
@@ -343,11 +459,6 @@ export default function Jobs() {
     setPage(1);
   };
 
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC" });
-  };
-
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return "-";
     if (months < 12) return t("jobs.table.experience_months", { count: months });
@@ -356,6 +467,42 @@ export default function Jobs() {
     return rem === 0
       ? t("jobs.table.experience_years", { count: years })
       : t("jobs.table.experience_years_months", { years, months: rem });
+  };
+
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  };
+
+  const formatSalaryProp = (salary: number | null) => (salary ? `$${salary.toFixed(2)}/h` : "-");
+
+  const getGroupBadgeConfig = (group: string) => {
+    const g = group.toUpperCase();
+    if (g === "A")
+      return {
+        className: "bg-emerald-50 text-emerald-700 border-emerald-400",
+        shortDesc: t("jobs.groups.a_short"),
+      };
+    if (g === "B")
+      return {
+        className: "bg-blue-50 text-blue-700 border-blue-400",
+        shortDesc: t("jobs.groups.b_short"),
+      };
+    if (g === "C" || g === "D")
+      return {
+        className: "bg-amber-50 text-amber-700 border-amber-400",
+        shortDesc: t("jobs.groups.cd_short"),
+      };
+    if (["E", "F", "G", "H"].includes(g))
+      return {
+        className: "bg-slate-50 text-slate-600 border-slate-300",
+        shortDesc: t("jobs.groups.risk_short"),
+      };
+    return {
+      className: "bg-gray-50 text-gray-700 border-gray-300",
+      shortDesc: t("jobs.groups.linear_short"),
+    };
   };
 
   const addToQueue = async (job: Job) => {
@@ -368,25 +515,42 @@ export default function Jobs() {
       return;
     }
     if (queuedJobIds.has(job.id)) return;
+
+    setQueuedJobIds((prev) => new Set(prev).add(job.id));
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
-    const { error } = await supabase
-      .from("my_queue")
-      .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
-    if (!error) {
-      setQueuedJobIds((prev) => new Set(prev).add(job.id));
-      toast({ title: t("jobs.toasts.added") });
-    }
+
+    const { error } = await supabase.from("my_queue").insert({
+      user_id: profile?.id,
+      job_id: job.id,
+      status: "pending",
+    });
+
     setProcessingJobIds((prev) => {
       const n = new Set(prev);
       n.delete(job.id);
       return n;
     });
+
+    if (error && error.code !== "23505") {
+      setQueuedJobIds((prev) => {
+        const n = new Set(prev);
+        n.delete(job.id);
+        return n;
+      });
+      toast({ title: t("common.errors.generic"), description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: "✓ Vaga adicionada!",
+        description: `${job.job_title} foi adicionada à sua fila para envio posterior.`,
+      });
+    }
   };
 
   const removeFromQueue = async (job: Job) => {
     if (!profile?.id) return;
     const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
-    if (!error) {
+    if (error) toast({ title: t("common.errors.delete_failed"), variant: "destructive" });
+    else {
       setQueuedJobIds((prev) => {
         const n = new Set(prev);
         n.delete(job.id);
@@ -398,13 +562,14 @@ export default function Jobs() {
 
   const handleRowClick = (job: Job) => (planSettings.job_db_blur ? setShowUpgradeDialog(true) : setSelectedJob(job));
 
-  const toggleSort = (key: SortKey) => {
+  const toggleSort = (key: SortKey, defaultDir: SortDir = "asc") => {
     setPage(1);
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("desc");
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      return;
     }
+    setSortKey(key);
+    setSortDir(defaultDir);
   };
 
   const SortIcon = ({ active, dir }: { active: boolean; dir: SortDir }) => {
@@ -434,26 +599,28 @@ export default function Jobs() {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
-            </p>
-          </div>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <Dialog open={showImporter} onOpenChange={setShowImporter}>
-                <Button variant="outline" onClick={() => setShowImporter(true)}>
-                  <Database className="h-4 w-4 mr-2" /> {t("jobs.import.json")}
-                </Button>
-                <DialogContent className="max-w-4xl p-0">
-                  <MultiJsonImporter />
-                </DialogContent>
-              </Dialog>
-              <JobImportDialog />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
+              <p className="text-muted-foreground mt-1">
+                {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel })}
+              </p>
             </div>
-          )}
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Dialog open={showImporter} onOpenChange={setShowImporter}>
+                  <Button variant="outline" onClick={() => setShowImporter(true)}>
+                    <Database className="h-4 w-4 mr-2" /> {t("jobs.import.json")}
+                  </Button>
+                  <DialogContent className="max-w-4xl p-0">
+                    <MultiJsonImporter />
+                  </DialogContent>
+                </Dialog>
+                <JobImportDialog />
+              </div>
+            )}
+          </div>
         </div>
 
         <Card>
@@ -462,8 +629,8 @@ export default function Jobs() {
               <div className="flex items-center gap-2">
                 <Select
                   value={visaType}
-                  onValueChange={(v: any) => {
-                    setVisaType(v);
+                  onValueChange={(v) => {
+                    setVisaType(v as VisaTypeFilter);
                     setPage(1);
                   }}
                 >
@@ -525,7 +692,7 @@ export default function Jobs() {
                     {selectedCategories.length > 0
                       ? t("jobs.filters.selected", { count: selectedCategories.length })
                       : t("jobs.filters.category")}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-[250px]" align="start">
@@ -614,25 +781,35 @@ export default function Jobs() {
 
         {isMobile ? (
           <div className="space-y-3">
-            {jobs.map((j) => (
-              <MobileJobCard
-                key={j.id}
-                job={j}
-                isBlurred={planSettings.job_db_blur}
-                isQueued={queuedJobIds.has(j.id)}
-                onAddToQueue={() => addToQueue(j)}
-                onClick={() => handleRowClick(j)}
-                formatDate={formatDate}
-                reportData={jobReports[j.id]}
-              />
-            ))}
+            {loading ? (
+              <Card>
+                <CardContent className="p-8 text-center">{t("jobs.table.loading")}</CardContent>
+              </Card>
+            ) : jobs.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">{t("jobs.table.empty")}</CardContent>
+              </Card>
+            ) : (
+              jobs.map((j) => (
+                <MobileJobCard
+                  key={j.id}
+                  job={j}
+                  isBlurred={planSettings.job_db_blur}
+                  isQueued={queuedJobIds.has(j.id)}
+                  onAddToQueue={() => addToQueue(j)}
+                  onClick={() => handleRowClick(j)}
+                  formatDate={formatDate}
+                  reportData={jobReports[j.id]}
+                />
+              ))
+            )}
           </div>
         ) : (
           <Card className="border-slate-200 overflow-hidden shadow-sm">
             <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="whitespace-nowrap">
+                  <TableRow className="whitespace-nowrap bg-slate-50/80">
                     <TableHead>
                       <button onClick={() => toggleSort("job_title")}>
                         {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
@@ -689,15 +866,21 @@ export default function Jobs() {
                   {loading ? (
                     <TableRow>
                       <TableCell colSpan={tableColSpan} className="text-center py-20">
-                        <Loader2 className="animate-spin inline" />
+                        <Loader2 className="animate-spin inline mr-2 h-4 w-4" /> {t("jobs.table.loading")}
+                      </TableCell>
+                    </TableRow>
+                  ) : jobs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={tableColSpan} className="text-center py-20">
+                        {t("jobs.table.empty")}
                       </TableCell>
                     </TableRow>
                   ) : (
                     jobs.map((j) => (
                       <TableRow
                         key={j.id}
+                        className="cursor-pointer hover:bg-slate-50/80 transition-all border-slate-100"
                         onClick={() => handleRowClick(j)}
-                        className="cursor-pointer hover:bg-slate-50 transition-all border-slate-100"
                       >
                         <TableCell className="font-semibold text-slate-900 py-4">
                           <div className="flex items-center gap-2">
@@ -707,18 +890,20 @@ export default function Jobs() {
                                 reasons={jobReports[j.id].reasons}
                               />
                             )}
-                            <span translate="no">{j.job_title}</span>
+                            <span className="line-clamp-1" translate="no">
+                              {j.job_title}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <span
-                            className={cn("line-clamp-2", planSettings.job_db_blur && "blur-sm select-none")}
+                            className={cn("line-clamp-1", planSettings.job_db_blur && "blur-sm select-none")}
                             translate="no"
                           >
                             {j.company}
                           </span>
                         </TableCell>
-                        <TableCell className="text-muted-foreground" translate="no">
+                        <TableCell className="text-muted-foreground whitespace-nowrap" translate="no">
                           {j.city}, {j.state}
                         </TableCell>
                         <TableCell className="text-center" translate="no">
@@ -726,7 +911,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium text-slate-700" translate="no">
+                            <span className="font-bold text-green-700" translate="no">
                               {renderPrice(j)}
                             </span>
                             <span className="text-[10px] uppercase text-muted-foreground">/{j.wage_unit || "h"}</span>
@@ -741,6 +926,7 @@ export default function Jobs() {
                                 variant={b.variant}
                                 className={cn(
                                   b.className,
+                                  "text-[10px]",
                                   wasEarly && "border-2 border-amber-400 bg-amber-50 shadow-sm",
                                 )}
                               >
@@ -761,7 +947,7 @@ export default function Jobs() {
                               <div className="flex flex-col items-start gap-1">
                                 <Badge
                                   variant="outline"
-                                  className={cn("font-bold text-[10px]", config.className)}
+                                  className={cn("font-bold text-[10px] py-0 h-5", config.className)}
                                   translate="no"
                                 >
                                   G-{group}
@@ -770,16 +956,16 @@ export default function Jobs() {
                             );
                           })()}
                         </TableCell>
-                        <TableCell className="text-xs opacity-70" translate="no">
+                        <TableCell className="text-xs opacity-70 whitespace-nowrap" translate="no">
                           {formatDate(j.posted_date)}
                         </TableCell>
-                        <TableCell className="text-xs opacity-70" translate="no">
+                        <TableCell className="text-xs opacity-70 whitespace-nowrap" translate="no">
                           {formatDate(j.start_date)}
                         </TableCell>
-                        <TableCell className="text-xs opacity-70" translate="no">
+                        <TableCell className="text-xs opacity-70 whitespace-nowrap" translate="no">
                           {formatDate(j.end_date)}
                         </TableCell>
-                        <TableCell className="text-xs opacity-70" translate="no">
+                        <TableCell className="text-xs opacity-70 whitespace-nowrap" translate="no">
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] z-10">
@@ -787,6 +973,7 @@ export default function Jobs() {
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
                             className={cn(
+                              "h-8 w-8 p-0",
                               !planSettings.job_db_blur &&
                                 queuedJobIds.has(j.id) &&
                                 "bg-primary text-primary-foreground border-primary",
@@ -801,7 +988,7 @@ export default function Jobs() {
                             ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : queuedJobIds.has(j.id) ? (
-                              <Check className="h-4 w-4" />
+                              <Check className="h-4 w-4 text-green-600" />
                             ) : (
                               <Plus className="h-4 w-4" />
                             )}
@@ -816,13 +1003,25 @@ export default function Jobs() {
           </Card>
         )}
 
-        <div className="flex items-center justify-between py-2">
-          <p className="text-xs text-muted-foreground">{t("jobs.pagination.page_of", { page, totalPages })}</p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-slate-500 font-medium">{t("jobs.pagination.page_of", { page, totalPages })}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-bold"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
               {t("common.previous")}
             </Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-bold"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
               {t("common.next")}
             </Button>
           </div>
@@ -833,26 +1032,33 @@ export default function Jobs() {
           onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
           job={selectedJob}
           planSettings={profile}
-          formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
-          onAddToQueue={addToQueue}
+          formatSalary={formatSalaryProp}
+          onAddToQueue={(j) => addToQueue(j as Job)}
+          onRemoveFromQueue={(j) => removeFromQueue(j as Job)}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-          onShare={(j: any) => handleShareJob(j)}
+          onShare={(j) => handleShareJob(j as Job)}
+          setShowLoginDialog={setShowLoginDialog}
         />
 
         <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" /> {t("jobs.upgrade.title")}
+                <Lock className="h-5 w-5" />
+                {t("jobs.upgrade.title")}
               </DialogTitle>
               <DialogDescription>{t("jobs.upgrade.description")}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 text-left">
               <div className="p-4 rounded-lg bg-plan-gold/10 border border-plan-gold/30">
                 <h4 className="font-semibold text-plan-gold">{t("plans.tiers.gold.label")}</h4>
                 <p className="text-sm mt-1">{t("jobs.upgrade.gold_desc", { price: formatPlanPrice("gold") })}</p>
               </div>
-              <Button className="w-full" onClick={() => navigate("/plans")}>
+              <div className="p-4 rounded-lg bg-plan-diamond/10 border border-plan-diamond/30">
+                <h4 className="font-semibold text-plan-diamond">{t("plans.tiers.diamond.label")}</h4>
+                <p className="text-sm mt-1">{t("jobs.upgrade.diamond_desc", { price: formatPlanPrice("diamond") })}</p>
+              </div>
+              <Button className="w-full" onClick={() => (window.location.href = "/plans")}>
                 {t("jobs.upgrade.cta")}
               </Button>
             </div>
@@ -863,22 +1069,29 @@ export default function Jobs() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" /> {t("loginDialog.title")}
+                <Lock className="h-5 w-5 text-primary" />
+                {t("loginDialog.title")}
               </DialogTitle>
               <DialogDescription>{t("loginDialog.descriptionQueue")}</DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-2 mt-4">
-              <Button
-                onClick={() => {
-                  setShowLoginDialog(false);
-                  navigate("/auth");
-                }}
-              >
-                {t("loginDialog.ctaLogin")}
-              </Button>
-              <Button variant="outline" onClick={() => setShowLoginDialog(false)}>
-                {t("loginDialog.ctaContinue")}
-              </Button>
+            <div className="space-y-4 text-left">
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+                <p className="text-sm">{t("loginDialog.benefit")}</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full font-bold"
+                  onClick={() => {
+                    setShowLoginDialog(false);
+                    navigate("/auth");
+                  }}
+                >
+                  {t("loginDialog.ctaLogin")}
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setShowLoginDialog(false)}>
+                  {t("loginDialog.ctaContinue")}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
