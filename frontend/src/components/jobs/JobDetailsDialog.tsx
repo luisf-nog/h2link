@@ -41,7 +41,6 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // LÓGICA DE IDENTIFICAÇÃO PREMIUM
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
@@ -73,7 +72,12 @@ export function JobDetailsDialog({
   const formatDate = (v: string | null | undefined) => {
     if (!v) return "-";
     const d = new Date(v);
-    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(i18n.language === "pt" ? "pt-BR" : "en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const renderMainWage = () => {
@@ -97,7 +101,6 @@ export function JobDetailsDialog({
       : t("jobs.table.experience_years_months", { years, months: rem });
   };
 
-  // DETECTA SE A VAGA É ATUALMENTE EARLY ACCESS
   const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access");
 
   return (
@@ -151,66 +154,67 @@ export function JobDetailsDialog({
 
         {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
-          <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6 text-left">
-            {/* 1. ALERTA DE OPORTUNIDADE ATUAL: VAGA É EARLY ACCESS */}
-            {isCurrentlyEarlyAccess && (
-              <div className="bg-blue-600 border border-blue-400 rounded-2xl p-5 flex items-center gap-5 shadow-xl shadow-blue-100 animate-in fade-in slide-in-from-top-4 duration-700">
-                <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm border border-white/30 text-white shrink-0 shadow-inner">
-                  <Zap className="h-8 w-8 fill-white animate-pulse" />
+          <div className="p-4 sm:p-6 space-y-4 pb-32 sm:pb-6 text-left">
+            {/* GRID DE AVISOS PADRONIZADOS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 1. AVISO EARLY ACCESS ATIVO (ROXO PARA PADRONIZAR COM A LISTA) */}
+              {isCurrentlyEarlyAccess && (
+                <div className="p-4 rounded-xl border border-violet-200 bg-violet-50/50 flex gap-3 items-start shadow-sm">
+                  <Zap className="h-6 w-6 text-violet-600 shrink-0 mt-0.5 fill-violet-600/10" />
+                  <div>
+                    <p className="text-sm font-bold text-violet-900 uppercase">
+                      {t("jobs.details.active_early_title")}
+                    </p>
+                    <p className="text-xs text-violet-700 leading-relaxed mt-1 font-medium">
+                      {t("jobs.details.active_early_desc")}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h3 className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight uppercase">
-                    {t("jobs.details.active_early_title")}
-                  </h3>
-                  <p className="text-blue-50 text-sm sm:text-base font-medium leading-relaxed opacity-90 mt-1">
-                    {t("jobs.details.active_early_desc")}
-                  </p>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* 2. EXPLICAÇÃO DO GRUPO */}
-            {job?.randomization_group && (
-              <div
-                className={cn(
-                  "p-4 rounded-xl border flex gap-3 items-start shadow-sm",
-                  job.randomization_group === "A"
-                    ? "bg-emerald-50 border-emerald-100"
-                    : job.randomization_group === "B"
-                      ? "bg-blue-50 border-blue-100"
-                      : "bg-amber-50 border-amber-100",
-                )}
-              >
-                <Info
+              {/* 2. EXPLICAÇÃO DO GRUPO */}
+              {job?.randomization_group && (
+                <div
                   className={cn(
-                    "h-6 w-6 shrink-0 mt-0.5",
+                    "p-4 rounded-xl border flex gap-3 items-start shadow-sm",
                     job.randomization_group === "A"
-                      ? "text-emerald-600"
+                      ? "bg-emerald-50 border-emerald-100"
                       : job.randomization_group === "B"
-                        ? "text-blue-600"
-                        : "text-amber-600",
+                        ? "bg-blue-50 border-blue-100"
+                        : "bg-amber-50 border-amber-100",
                   )}
-                />
-                <div className="text-left">
-                  <p className="text-sm font-bold text-slate-900 uppercase">
-                    {t("jobs.details.group_title", { group: job.randomization_group })}
-                  </p>
-                  <p className="text-xs text-slate-600 leading-relaxed mt-1 font-medium">
-                    {job.randomization_group === "A"
-                      ? t("jobs.details.group_a_desc")
-                      : t("jobs.details.group_general_desc")}
-                  </p>
+                >
+                  <Info
+                    className={cn(
+                      "h-6 w-6 shrink-0 mt-0.5",
+                      job.randomization_group === "A"
+                        ? "text-emerald-600"
+                        : job.randomization_group === "B"
+                          ? "text-blue-600"
+                          : "text-amber-600",
+                    )}
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900 uppercase">
+                      {t("jobs.details.group_title", { group: job.randomization_group })}
+                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed mt-1 font-medium">
+                      {job.randomization_group === "A"
+                        ? t("jobs.details.group_a_desc")
+                        : t("jobs.details.group_general_desc")}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* 3. CARD EVOLUÇÃO EARLY ACCESS (PROVA SOCIAL) */}
+            {/* 3. CARD HISTÓRICO (Dourado - Vaga que JÁ FOI early access) */}
             {job?.was_early_access && (
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
                 <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
                   <Rocket className="h-6 w-6 animate-bounce" />
                 </div>
-                <div className="text-left">
+                <div>
                   <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
                   <p className="text-amber-800 text-xs">{t("jobs.details.early_access_evolution_text")}</p>
                 </div>
@@ -220,10 +224,9 @@ export function JobDetailsDialog({
               </div>
             )}
 
-            {/* GRID DE INFORMAÇÕES TÉCNICAS */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* COLUNA LATERAL (TIMELINE, SALARIO, CONTATOS) */}
               <div className="lg:col-span-4 space-y-6">
+                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
@@ -316,6 +319,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -390,7 +394,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* COLUNA PRINCIPAL (DESCRIÇÃO E REQUISITOS) */}
+              {/* DESCRIÇÃO E REQUISITOS */}
               <div className="lg:col-span-8 space-y-6 text-left">
                 {job?.job_min_special_req && (
                   <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
