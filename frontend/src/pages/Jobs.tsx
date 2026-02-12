@@ -48,9 +48,9 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// --- ONBOARDING RESTAURADO ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
   useEffect(() => {
     const hasSeen = localStorage.getItem("hasSeenJobOnboarding_v6");
     if (!hasSeen) {
@@ -88,16 +88,14 @@ function OnboardingModal() {
         </div>
         <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6 text-left">
           <ShieldAlert className="h-6 w-6 text-slate-700 inline mr-2" />
-          <span className="text-xs sm:text-sm">
-            H2 Linker is a technology provider. The final decision is between you and the employer.
-          </span>
+          <span className="text-xs sm:text-sm">{t("jobs.onboarding.transparency")}</span>
         </div>
         <div className="p-6 sm:p-8">
           <Button
             onClick={handleClose}
             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg"
           >
-            I Understand - Let's Start
+            {t("jobs.onboarding.cta")}
           </Button>
         </div>
       </DialogContent>
@@ -228,13 +226,26 @@ export default function Jobs() {
       .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
     if (!error) {
       setQueuedJobIds((q) => new Set(q).add(job.id));
-      toast({ title: "✓ Vaga adicionada!" });
+      toast({ title: t("jobs.toasts.added") });
     }
     setProcessingJobIds((p) => {
       const n = new Set(p);
       n.delete(job.id);
       return n;
     });
+  };
+
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString(i18n.language, { timeZone: "UTC" });
+  };
+
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return "-";
+    if (months < 12) return t("jobs.table.experience_months", { count: months });
+    const years = Math.floor(months / 12);
+    return t("jobs.table.experience_years", { count: years });
   };
 
   const toggleSort = (key: string) => {
@@ -246,19 +257,6 @@ export default function Jobs() {
     setPage(1);
   };
 
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
-  };
-
-  const formatExperience = (months: number | null | undefined) => {
-    if (!months || months <= 0) return "-";
-    if (months < 12) return `${months}m`;
-    const years = Math.floor(months / 12);
-    return `${years}y`;
-  };
-
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -266,14 +264,14 @@ export default function Jobs() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-1">
               {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
             </p>
           </div>
           {isAdmin && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowImporter(true)}>
-                <Database className="mr-2 h-4 w-4" /> Import Admin
+                <Database className="mr-2 h-4 w-4" /> {t("jobs.import.admin")}
               </Button>
               <JobImportDialog />
             </div>
@@ -291,7 +289,7 @@ export default function Jobs() {
                 }}
               >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue />
+                  <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {VISA_TYPE_OPTIONS.map((o) => (
@@ -317,7 +315,7 @@ export default function Jobs() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-0">
             <Input
-              placeholder="Estado"
+              placeholder={t("jobs.filters.state")}
               value={stateFilter}
               onChange={(e) => {
                 setStateFilter(e.target.value);
@@ -325,27 +323,28 @@ export default function Jobs() {
               }}
             />
             <Input
-              placeholder="Cidade"
+              placeholder={t("jobs.filters.city")}
               value={cityFilter}
               onChange={(e) => {
                 setCityFilter(e.target.value);
                 setPage(1);
               }}
             />
+
             <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="justify-between text-muted-foreground font-normal">
                   {selectedCategories.length > 0
-                    ? `${selectedCategories.length} selecionadas`
+                    ? t("jobs.filters.selected", { count: selectedCategories.length })
                     : t("jobs.filters.category")}
                   <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="p-0 w-[250px]" align="start">
                 <Command>
-                  <CommandInput placeholder="Buscar..." />
+                  <CommandInput placeholder={t("jobs.filters.search_cat")} />
                   <CommandList>
-                    <CommandEmpty>Nenhuma.</CommandEmpty>
+                    <CommandEmpty>{t("common.empty")}</CommandEmpty>
                     <CommandGroup>
                       {categories.map((c) => (
                         <CommandItem
@@ -368,9 +367,10 @@ export default function Jobs() {
                 </Command>
               </PopoverContent>
             </Popover>
+
             <Input
               type="number"
-              placeholder="Mín $"
+              placeholder={t("jobs.filters.min_salary")}
               value={minSalary}
               onChange={(e) => {
                 setMinSalary(e.target.value);
@@ -385,13 +385,13 @@ export default function Jobs() {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Group" />
+                <SelectValue placeholder={t("jobs.filters.group")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Groups</SelectItem>
+                <SelectItem value="all">{t("common.all_groups")}</SelectItem>
                 {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
                   <SelectItem key={g} value={g}>
-                    Group {g}
+                    {t("jobs.groups.group_label")} {g}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -408,7 +408,7 @@ export default function Jobs() {
                 isBlurred={planSettings.job_db_blur}
                 isQueued={queuedJobIds.has(j.id)}
                 onAddToQueue={() => addToQueue(j)}
-                onClick={() => setSelectedJob(j)}
+                onClick={() => handleRowClick(j)}
                 formatDate={formatDate}
                 reportData={jobReports[j.id]}
               />
@@ -420,33 +420,33 @@ export default function Jobs() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer" onClick={() => toggleSort("job_title")}>
-                    Cargo <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                    {t("jobs.table.headers.job_title")} <ArrowUpDown className="ml-1 h-3 w-3 inline" />
                   </TableHead>
                   <TableHead className="cursor-pointer" onClick={() => toggleSort("company")}>
-                    Empresa <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                    {t("jobs.table.headers.company")} <ArrowUpDown className="ml-1 h-3 w-3 inline" />
                   </TableHead>
-                  <TableHead>Local</TableHead>
-                  <TableHead className="text-center">Vagas</TableHead>
-                  <TableHead>Salário</TableHead>
-                  <TableHead>Visto</TableHead>
-                  <TableHead>Group</TableHead>
-                  <TableHead>Postada</TableHead>
-                  <TableHead>Experience</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead>{t("jobs.table.headers.location")}</TableHead>
+                  <TableHead className="text-center">{t("jobs.table.headers.openings")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.salary")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.visa")}</TableHead>
+                  <TableHead>{t("jobs.groups.group_label")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.posted")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.experience")}</TableHead>
+                  <TableHead className="text-right">{t("jobs.table.headers.action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-10">
-                      <Loader2 className="animate-spin inline mr-2" /> Carregando...
+                      <Loader2 className="animate-spin inline mr-2" /> {t("common.loading")}
                     </TableCell>
                   </TableRow>
                 ) : (
                   jobs.map((j) => (
                     <TableRow
                       key={j.id}
-                      onClick={() => setSelectedJob(j)}
+                      onClick={() => handleRowClick(j)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors"
                     >
                       <TableCell className="font-medium">
@@ -482,7 +482,7 @@ export default function Jobs() {
                       <TableCell>
                         {j.randomization_group && (
                           <Badge variant="secondary" className="text-[10px]">
-                            Group {j.randomization_group}
+                            {t("jobs.groups.group_label")} {j.randomization_group}
                           </Badge>
                         )}
                       </TableCell>
@@ -518,10 +518,10 @@ export default function Jobs() {
           <p className="text-sm text-muted-foreground">{t("jobs.pagination.page_of", { page, totalPages })}</p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Anterior
+              {t("common.previous")}
             </Button>
             <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              Próxima
+              {t("common.next")}
             </Button>
           </div>
         </div>
@@ -536,32 +536,6 @@ export default function Jobs() {
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
           onShare={(j: any) => navigate(`/job/${j.id}`)}
         />
-
-        {showImporter && (
-          <Dialog open={showImporter} onOpenChange={setShowImporter}>
-            <DialogContent className="max-w-4xl p-0">
-              <MultiJsonImporter />
-            </DialogContent>
-          </Dialog>
-        )}
-
-        <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 font-bold">
-                <Lock className="h-5 w-5" /> Login Necessário
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-2 mt-4 text-center">
-              <Button onClick={() => navigate("/auth")} className="w-full">
-                Fazer Login agora
-              </Button>
-              <Button variant="ghost" onClick={() => setShowLoginDialog(false)}>
-                Continuar navegando
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </TooltipProvider>
   );
