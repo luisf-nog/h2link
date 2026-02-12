@@ -145,8 +145,8 @@ export function JobDetailsDialog({
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: t("jobs.details.copied", "Copied!"),
-      description: t("jobs.details.copy_success", "Text copied to clipboard."),
+      title: t("jobs.details.copied"),
+      description: t("jobs.details.copy_success"),
     });
   };
 
@@ -164,11 +164,11 @@ export function JobDetailsDialog({
       return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)} / ${job.wage_unit || "hr"}`;
     if (job.wage_from) return `$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`;
     if (job.salary) return formatSalary(job.salary);
-    return <span className="text-muted-foreground italic">{t("jobs.details.view_details", "View Details")}</span>;
+    return <span className="text-muted-foreground italic">{t("jobs.details.view_details")}</span>;
   };
 
   const formatExperience = (months: number | null | undefined) => {
-    if (!months || months <= 0) return t("jobs.details.no_experience", "None");
+    if (!months || months <= 0) return t("jobs.details.no_experience");
     if (months < 12) return t("jobs.table.experience_months", { count: months });
     const years = Math.floor(months / 12);
     const rem = months % 12;
@@ -187,15 +187,32 @@ export function JobDetailsDialog({
 
   const encodedMessage = encodeURIComponent(getMessage());
 
+  // CORREÇÃO DO ERRO TS2339: Adicionada a propriedade 'tooltip' no retorno
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
-      return { className: "bg-emerald-50 text-emerald-800 border-emerald-300", shortDesc: t("jobs.groups.a_short") };
+      return {
+        className: "bg-emerald-50 text-emerald-800 border-emerald-300",
+        shortDesc: t("jobs.groups.a_short"),
+        tooltip: t("jobs.groups.a_tooltip"),
+      };
     if (g === "B")
-      return { className: "bg-blue-50 text-blue-800 border-blue-300", shortDesc: t("jobs.groups.b_short") };
+      return {
+        className: "bg-blue-50 text-blue-800 border-blue-300",
+        shortDesc: t("jobs.groups.b_short"),
+        tooltip: t("jobs.groups.b_tooltip"),
+      };
     if (g === "C" || g === "D")
-      return { className: "bg-amber-50 text-amber-800 border-amber-300", shortDesc: t("jobs.groups.cd_short") };
-    return { className: "bg-slate-50 text-slate-700 border-slate-300", shortDesc: t("jobs.groups.risk_short") };
+      return {
+        className: "bg-amber-50 text-amber-800 border-amber-300",
+        shortDesc: t("jobs.groups.cd_short"),
+        tooltip: t("jobs.groups.cd_tooltip"),
+      };
+    return {
+      className: "bg-slate-50 text-slate-700 border-slate-300",
+      shortDesc: t("jobs.groups.risk_short"),
+      tooltip: t("jobs.groups.risk_tooltip"),
+    };
   };
 
   const groupConfig = job?.randomization_group ? getGroupBadgeConfig(job.randomization_group) : null;
@@ -238,7 +255,7 @@ export function JobDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-[95vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
-        {/* HEADER FIXO - APENAS TÍTULO E BOTÕES */}
+        {/* HEADER FIXO NO TOPO */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-30 shadow-sm">
           <div className="flex sm:hidden items-center mb-3 -mt-2">
             <Button
@@ -295,10 +312,10 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* ÁREA DE SCROLL - TUDO O QUE PODE SER GRANDE VAI AQUI */}
+        {/* ÁREA ROLÁVEL - CARD DOURADO ESTÁ AQUI DENTRO */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30">
           <div className="p-4 sm:p-6 space-y-6">
-            {/* O CARD DOURADO AGORA É ROLÁVEL */}
+            {/* CARD DOURADO QUE ROLA JUNTO COM O CONTEÚDO */}
             {job?.was_early_access && (
               <div
                 className="rounded-lg border border-amber-200 bg-amber-50/80 overflow-hidden transition-all duration-300 cursor-pointer shadow-sm"
@@ -333,8 +350,8 @@ export function JobDetailsDialog({
               </div>
             )}
 
-            {job?.randomization_group && (
-              <div className={cn("p-3 sm:p-4 rounded-xl border bg-opacity-40 text-left", groupConfig?.className)}>
+            {job?.randomization_group && groupConfig && (
+              <div className={cn("p-3 sm:p-4 rounded-xl border bg-opacity-40 text-left", groupConfig.className)}>
                 <div className="flex items-center gap-3 mb-1">
                   <Badge
                     variant="outline"
@@ -343,13 +360,22 @@ export function JobDetailsDialog({
                     {t("jobs.groups.group_label")} {job.randomization_group}
                   </Badge>
                   <span className="font-semibold text-xs flex items-center gap-1">
-                    <Info className="h-3.5 w-3.5" /> {groupConfig?.shortDesc}
+                    <Info className="h-3.5 w-3.5" /> {groupConfig.shortDesc}
                   </span>
                 </div>
                 <p className="text-xs opacity-90 leading-relaxed">
-                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig?.tooltip}
+                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig.tooltip}
                 </p>
               </div>
+            )}
+
+            {job && isEarlyAccess(job.visa_type) && (
+              <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800 flex items-center py-2">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                <AlertDescription className="text-xs font-semibold">
+                  {getEarlyAccessDisclaimer(i18n.language)}
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
