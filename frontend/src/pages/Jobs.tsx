@@ -48,7 +48,6 @@ interface Job extends JobDetails {
   id: string;
 }
 
-// --- COMPONENTE DE ONBOARDING ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -135,7 +134,6 @@ export default function Jobs() {
 
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
-  const [showImporter, setShowImporter] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -204,7 +202,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-realtime-final")
+      .channel("sync-queue-final-v5")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -320,13 +318,14 @@ export default function Jobs() {
     return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
-  // --- LÓGICA DE CORES DO GRUPO RESTAURADA ---
+  // --- LÓGICA DE TRADUÇÃO VISUAL DOS GRUPOS (RESTAURADA E MELHORADA) ---
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
-    if (g === "A") return { className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
-    if (g === "B") return { className: "bg-blue-50 text-blue-800 border-blue-300" };
-    if (g === "C" || g === "D") return { className: "bg-amber-50 text-amber-800 border-amber-300" };
-    return { className: "bg-slate-50 text-slate-700 border-slate-300" };
+    if (g === "A") return { label: "GRUPO - A", className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
+    if (g === "B") return { label: "GRUPO - B", className: "bg-blue-50 text-blue-800 border-blue-300" };
+    if (g === "C" || g === "D")
+      return { label: `GRUPO - ${g}`, className: "bg-amber-50 text-amber-800 border-amber-300" };
+    return { label: `GRUPO - ${g}`, className: "bg-slate-50 text-slate-700 border-slate-300" };
   };
 
   return (
@@ -517,7 +516,7 @@ export default function Jobs() {
                         {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>Group</TableHead>
+                    <TableHead>Grupo</TableHead>
                     <TableHead>
                       <button onClick={() => toggleSort("posted_date")}>
                         {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
@@ -615,10 +614,10 @@ export default function Jobs() {
                             return (
                               <Badge
                                 variant="outline"
-                                className={cn("font-bold text-[10px] py-0 h-5", config.className)}
+                                className={cn("font-bold text-[10px] py-0 h-5 whitespace-nowrap", config.className)}
                                 translate="no"
                               >
-                                G-{group}
+                                {config.label}
                               </Badge>
                             );
                           })()}
