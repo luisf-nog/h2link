@@ -8,7 +8,7 @@
     "descriptionGeneric": "Para acceder a esta funcionalidad, necesitas iniciar sesión.",
     "benefit": "✨ ¡Crea tu cuenta gratis y comienza a automatizar tus solicitudes de empleo H-2A/H-2B!",
     "ctaLogin": "Iniciar Sesión / Crear Cuenta",
-    "ctaLogin": "Continuar Navegando"
+    "ctaContinue": "Continuar Navegando"
   },
   "auth": {
     "browse_jobs": "Explorar Empleos Disponibles",
@@ -45,7 +45,7 @@
       },
       "actions": {
         "send_link": "Enviar enlace",
-        "back_to_login": "Volver al login",
+        "back_to_login": "Voltar al login",
         "save_new_password": "Guardar nueva contraseña",
         "cancel": "Cancelar"
       },
@@ -62,7 +62,7 @@
         "success_desc": "Todo listo. Ahora puedes crear una nueva contraseña.",
         "error_title": "No se pudo iniciar",
         "error_desc": "Algo salió mal al preparar tu restablecimiento. Inténtalo de nuevo.",
-        "finalizing": "Finalizing…",
+        "finalizing": "Finalizando…",
         "redirecting": "Abriendo restablecimiento…"
       },
       "errors": {
@@ -100,7 +100,7 @@
       "referral_code": "EJ: A1B2C3"
     },
     "validation": {
-      "invalid_age": "La edad debe estar entre 14 y 90.",
+      "invalid_age": "La edad debe estar entre 14 e 90.",
       "invalid_phone": "El teléfono debe estar en formato internacional (E.164), por ejemplo +15551234567.",
       "invalid_contact_email": "Ingresa un email de contacto válido.",
       "invalid_referral_code": "El código de referido debe tener 6 caracteres (A-Z, 0-9).",
@@ -145,7 +145,7 @@
       "redirecting": "Redirigiendo…",
       "session_timeout": "Tu confirmación fue recibida, pero la sesión tardó demasiado en iniciar. Vuelve e inicia sesión nuevamente.",
       "brand_tagline": "Confirmación segura",
-      "brand_title": "Acceso habilitado",
+      "brand_title": "Acesso habilitado",
       "brand_desc": "Estás a un paso de volver a H2 Linker — estamos sincronizando tu sesión."
     }
   },
@@ -188,7 +188,7 @@
       "title": "Conecta Tu Email",
       "description": "Usaremos tu email para enviar solicitudes en tu nombre.",
       "why_app_password_title": "¿Por qué usar Contraseña de Aplicación?",
-      "why_app_password_desc": "Por seguridad, Google y Microsoft no permiten que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails y puedes revocarla cuando quieras.",
+      "why_app_password_desc": "Por seguridad, Google e Microsoft no permiten que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails e puedes revocarla cuando quieras.",
       "gmail_guide_title": "Cómo crear en Gmail",
       "gmail_step1": "Activa la verificación en dos pasos (2FA) en tu cuenta Google",
       "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2 Linker\"",
@@ -271,7 +271,7 @@
     "settings": "Configuración"
   },
   "dashboard": {
-    "greeting": "Hola, {{name}}!",
+    "greeting": "¡Hola, {{name}}!",
     "subtitle": "Aquí está el resumen de tu cuenta {{plan}}",
     "promo": {
       "title": "🔥 ¡Promoción de Lanzamiento!",
@@ -353,7 +353,7 @@
         "save": "Guardar cambios"
       },
       "validation": {
-        "invalid_age": "La edad debe estar entre 14 y 90.",
+        "invalid_age": "La edad debe estar entre 14 e 90.",
         "invalid_phone": "El teléfono debe estar en formato internacional (E.164), por ejemplo +15551234567."
       }
     },
@@ -438,13 +438,13 @@
         "to": "destinatario@email.com"
       },
       "template_none": "Sin plantilla",
-      "template_hint": "Si seleccionas una plantilla, el Asunto y el Cuerpo se completarán automáticamente.",
+      "template_hint": "Si seleccionas una plantilla, el Asunto e o Cuerpo se completarán automáticamente.",
       "actions": {
         "send": "Enviar prueba"
       },
       "defaults": {
         "subject": "Solicitud H-2B - {{position}} ({{visa_type}})",
-        "body": "Hola {{company}},\n\nMi nombre es {{name}} y me gustaría postularme para el puesto de {{position}} bajo la visa {{visa_type}}.\n\nSaludos cordiales,\n{{name}}\n{{phone}}\n{{contact_email}}"
+        "body": "Hola {{company}},\n\nMi nombre es {{name}} e me gustaría postularme para el puesto de {{position}} bajo la visa {{visa_type}}.\n\nSaludos cordiales,\n{{name}}\n{{phone}}\n{{contact_email}}"
       }
     }
   },
@@ -529,7 +529,7 @@
   },
   "resume": {
     "title": "Currículum (IA)",
-    "subtitle": "Sube tu PDF, revisa los datos extraídos y guárdalos. El currículum será adjuntado a todos los emails.",
+    "subtitle": "Sube tu PDF, revisa los datos extraídos e guárdalos. El currículum será adjuntado a todos los emails.",
     "upload": {
       "label": "Subida de PDF",
       "note": "La IA puede equivocarse — revisa antes de guardar.",
@@ -552,12 +552,12 @@
       "bio": "Bio corta"
     },
     "actions": {
-      "save": "Guardar currículum",
+      "save": "Guardar currículo",
       "uploading": "Subiendo PDF..."
     },
     "toasts": {
       "parsed_title": "Currículum extraído",
-      "parsed_desc": "Revisa los campos y guarda.",
+      "parsed_desc": "Revisa los campos e guarda.",
       "parse_error_title": "Error al extraer currículum",
       "saved_title": "Currículum guardado",
       "save_error_title": "Error al guardar currículum"
@@ -643,7 +643,7 @@
       "title": "Empleos en cola",
       "description": "Administra los empleos a los que vas a aplicar",
       "headers": {
-        "select_all": "Seleccionar todas las pendientes",
+        "select_all": "Seleccionar todas as pendientes",
         "select_row": "Seleccionar elemento",
         "job_title": "Puesto",
         "company": "Empresa",
@@ -675,22 +675,21 @@
       "no_template_title": "No se encontraron plantillas",
       "no_template_desc": "Crea al menos una plantilla en Configuración antes de enviar.",
       "resume_required_title": "Currículum requerido",
-      "resume_required_desc": "En el plan Black, sube tu currículum en Configuración → Currículum para generar un email personalizado por empleo.",
-      "black_ai_failed_no_fallback": "La IA no pudo generar el email y no hay una plantilla de respaldo.",
+      "resume_required_desc": "En el plan Black, sube tu currículum en Configuración → Currículum para generar um email personalizado por empleo.",
       "bg_started_title": "Envío iniciado",
       "bg_started_desc": "Tu envío se está ejecutando en segundo plano. Puedes cerrar esta página.",
       "bg_started_selected_title": "Envío iniciado",
       "bg_started_selected_desc": "{{count}} elementos seleccionados se están ejecutando en segundo plano. Puedes cerrar esta página.",
       "mx_invalid_title": "Email inválido (sin MX)",
-      "mx_invalid_desc": "El dominio {{domain}} no tiene registros MX válidos. Para proteger tu reputación, el envío fue bloqueado.",
-      "load_error_title": "Error al cargar la cola",
+      "mx_invalid_desc": "El dominio {{domain}} no tiene registros MX válidos. Para proteger tu reputación, el envío foi bloqueado.",
+      "load_error_title": "Error al cargar a cola",
       "remove_error_title": "Error al eliminar",
       "remove_success_title": "Eliminado de la cola",
-      "remove_success_desc": "El empleo fue eliminado de tu cola.",
+      "remove_success_desc": "El empleo foi eliminado de tu cola.",
       "daily_limit_reached_title": "Límite diario alcanzado",
       "daily_limit_reached_desc": "Alcanzaste tu límite diario de envíos. Intenta de nuevo mañana o actualiza tu plan.",
       "sent_title": "¡Emails enviados!",
-      "sent_desc": "{{count}} solicitudes fueron enviadas.",
+      "sent_desc": "{{count}} solicitudes foram enviadas.",
       "partial_success_title": "Éxito parcial",
       "partial_success_desc": "{{sent}} emails enviados, {{failed}} fallaron. Revisa los elementos fallidos e intenta de nuevo.",
       "all_failed_desc": "Los {{count}} emails fallaron. Verifica tu configuración SMTP.",
@@ -705,7 +704,7 @@
     },
     "app_password_required": {
       "title": "Contraseña de app requerida",
-      "description": "Gmail requiere una Contraseña de App (not tu contraseña normal). Ve a myaccount.google.com > Seguridad > Contraseñas de app para generar una."
+      "description": "Gmail requiere una Contraseña de App (no tu contraseña normal). Ve a myaccount.google.com > Seguridad > Contraseñas de app para generar una."
     },
     "connection_timeout": {
       "title": "Tiempo de conexión agotado",
@@ -725,7 +724,7 @@
     },
     "recipient_rejected": {
       "title": "Destinatario rechazado",
-      "description": "El email del destinatario fue rechazado por el servidor. La dirección puede no existir o ser incorrecta."
+      "description": "El email del destinatario foi rechazado por el servidor. La dirección puede no existir o ser incorrecta."
     },
     "mailbox_full": {
       "title": "Buzón lleno",
@@ -737,19 +736,19 @@
     },
     "blocked_spam": {
       "title": "Bloqueado por spam",
-      "description": "El email fue bloqueado por políticas anti-spam del servidor. Revisa el contenido del template o espera unas horas."
+      "description": "El email foi bloqueado por políticas anti-spam del servidor. Revisa el contenido del template o espera unas horas."
     },
     "smtp_not_configured": {
       "title": "SMTP no configurado",
-      "description": "Tus credenciales SMTP no están configuradas. Ve a Configuración > Email para configurar."
+      "description": "Tus credenciales SMTP no estão configuradas. Ve a Configuración > Email para configurar."
     },
     "function_not_found": {
       "title": "SMTP no configurado o contraseña faltante",
-      "description": "Tus credenciales SMTP no fueron encontradas. Ve a Configuración > Email, ingresa tu email y la Contraseña de App de Gmail y guarda nuevamente."
+      "description": "Tus credenciales SMTP no foram encontradas. Ve a Configuración > Email, ingresa tu email y a Contraseña de App de Gmail e guarda nuevamente."
     },
     "function_not_deployed": {
       "title": "Función de envío no disponible",
-      "description": "La función de envío de email no está accesible en el servidor. Intenta usar el botón 'Enviar Todos' (que usa otra ruta) o contacta soporte para verificar el deploy de Edge Functions en Supabase."
+      "description": "La función de envío de email no está accesible en el servidor. Intenta usar el botón 'Enviar Todos' (que usa outra rota) o contacta soporte para verificar el deploy de Edge Functions en Supabase."
     },
     "server_error": {
       "title": "Error interno del servidor",
@@ -784,7 +783,7 @@
   },
   "plans": {
     "title": "Elige tu plan",
-    "subtitle": "Desbloquea todo el potencial de H2 Linker y acelera tus solicitudes",
+    "subtitle": "Desbloqueea todo el potencial de H2 Linker e acelera tus solicitudes",
     "recommended": "Recomendado",
     "promo_badge": "Lanzamiento",
     "promo": {
@@ -800,7 +799,7 @@
     "tiers": {
       "free": {
         "label": "Starter",
-        "description": "Para probar y conocer"
+        "description": "Para probar e conocer"
       },
       "gold": {
         "label": "Gold",
@@ -808,7 +807,7 @@
       },
       "diamond": {
         "label": "Diamond",
-        "description": "Más volumen y visibilidad"
+        "description": "Más volumen e visibilidad"
       },
       "black": {
         "label": "Black",
@@ -831,24 +830,24 @@
       "unlimited_generation": "Generación ilimitada",
       "auto_fill_templates": "Envío vía plantillas (Autocompletado)",
       "ai_real_writer": "IA Escritora Real (Email único por empleo)",
-      "ai_real_writer_tooltip": "Cada email es generado desde cero por IA, personalizado para el empleo específico. Ningún email será igual a otro.",
-      "resume_basic": "Extracción de currículum básica",
-      "resume_advanced": "Extracción de currículum avanzada (IA)",
-      "resume_view_tracking": "Seguimiento de visualización del currículum",
-      "resume_view_tracking_tooltip": "Sabe cuando los reclutadores ven tu perfil público con currículum. Rastrea el interés real de cada empresa.",
+      "ai_real_writer_tooltip": "Cada email es generado desde cero por IA, personalizado para el empleo específico. Ningún email será igual a outro.",
+      "resume_basic": "Extracción de currículo básica",
+      "resume_advanced": "Extracción de currículo avanzada (IA)",
+      "resume_view_tracking": "Seguimiento de visualización del currículo",
+      "resume_view_tracking_tooltip": "Sabe cuando os reclutadores ven tu perfil público con currículo. Rastrea el interés real de cada empresa.",
       "cloud_sending": "Envío en la nube",
       "mask_user_agent": "Protección anti-spam",
-      "mask_user_agent_tooltip": "Enmascara información técnica de tus envíos para reducir las posibilidades de bloqueo por filtros anti-spam.",
+      "mask_user_agent_tooltip": "Enmascara información técnica de tus envíos para reducir as posibilidades de bloqueo por filtros anti-spam.",
       "antispam_armored": "Protección anti-spam Blindada",
-      "antispam_armored_tooltip": "Capa avanzada de protección con múltiples técnicas de ofuscación para máxima entregabilidad.",
+      "antispam_armored_tooltip": "Capa avanzada de protección com múltiples técnicas de ofuscación para máxima entregabilidad.",
       "dns_bounce_check": "Verificación DNS",
-      "dns_bounce_check_tooltip": "Valida el MX del dominio antes de enviar. Evita bounces y protege tu reputación de remitente.",
+      "dns_bounce_check_tooltip": "Valida el MX del dominio antes de enviar. Evita bounces e protege tu reputación de remitente.",
       "delay_gold": "Delay fijo de 15s",
       "delay_gold_tooltip": "Intervalo fijo de 15 segundos entre cada envío para proteger tu reputación.",
       "delay_diamond": "Delay aleatorio 15-45s",
-      "delay_diamond_tooltip": "Intervalo aleatorio entre 15 y 45 segundos entre envíos, variando naturalmente para mayor seguridad.",
+      "delay_diamond_tooltip": "Intervalo aleatorio entre 15 e 45 segundos entre envíos, variando naturalmente para mayor seguridad.",
       "delay_black": "Delay humano 1-5 min",
-      "delay_black_tooltip": "Intervalo aleatorio entre 1 y 5 minutos entre envíos, simulando comportamiento humano real para máxima protección contra detección.",
+      "delay_black_tooltip": "Intervalo aleatorio entre 1 e 5 minutos entre envíos, simulando comportamiento humano real para máxima protección contra detección.",
       "priority_support": "Soporte prioritario"
     },
     "toasts": {
@@ -859,27 +858,27 @@
       "payment_canceled_title": "Pago cancelado",
       "error_title": "Error",
       "updated_title": "¡Plan actualizado!",
-      "updated_desc": "Ahora eres {{plan}}! 🎉"
+      "updated_desc": "¡Ahora eres {{plan}}! 🎉"
     },
-    "referral_note": "💡 El programa de referidos es exclusivo para usuarios del plan gratuito. Los bonos acumulados no se transfieren al adquirir un plan premium.",
+    "referral_note": "💡 El programa de referidos es exclusivo para usuarios del plan gratuito. Los bonos acumulados no se transfieren al adquirir um plan premium.",
     "footer": {
       "line1": "Pago único. Acceso de por vida.",
       "line2": "Pagos procesados de forma segura vía Stripe."
     },
     "payment_success": {
       "title": "Pago confirmado",
-      "subtitle": "Ahora tienes acceso a las funciones de tu plan. Mira todo lo que se desbloqueó.",
+      "subtitle": "Ahora tienes acceso a as funciones de tu plan. Mira todo lo que se desbloqueó.",
       "your_plan": "Tu plan",
       "refreshing": "Sincronizando tu plan…",
       "ready": "Todo listo — disfruta tus nuevas funciones.",
-      "free_note": "No pudimos detectar un plan premium activo en esta cuenta. Si acabas de pagar, espera unos segundos y recarga.",
+      "free_note": "No pudimos detectar um plan premium activo en esta cuenta. Si acabas de pagar, espera unos segundos e recarga.",
       "highlights": {
         "daily": "Envíos por día",
         "queue": "Tamaño de la cola",
         "templates": "Plantillas"
       },
       "whats_unlocked": "Qué se desbloqueó",
-      "whats_unlocked_desc": "Haz clic para ver detalles y atajos para usar cada función.",
+      "whats_unlocked_desc": "Haz clic para ver detalles e atajos para usar cada función.",
       "ctas": {
         "start_now": "Empezar ahora",
         "setup_templates": "Configurar plantillas",
@@ -894,53 +893,53 @@
           "title": "Límites de tu plan",
           "summary": "{{daily}} envíos/día • cola {{queue}} • {{templates}} plantilla(s)",
           "detail_daily": "Puedes enviar hasta {{daily}} emails por día.",
-          "detail_queue": "Tu cola soporta hasta {{queue}} empleos.",
+          "detail_queue": "Tu cola suporta hasta {{queue}} empleos.",
           "detail_templates": "Puedes crear hasta {{templates}} plantilla(s)."
         },
         "sending": {
           "title": "Envío premium",
-          "summary": "Envía con capacidades premium y mayor seguridad operativa.",
-          "detail_1": "Envío masivo y flujos premium para acelerar la operación.",
-          "detail_2": "Usa plantillas para estandarizar y mantener consistencia."
+          "summary": "Envía com capacidades premium e mayor seguridad operativa.",
+          "detail_1": "Envío masivo e flujos premium para acelerar a operación.",
+          "detail_2": "Usa plantillas para estandarizar e mantener consistencia."
         },
         "dns": {
           "title": "DNS check (anti-bounce)",
-          "summary": "Bloquea envíos a dominios sin MX válido para proteger tu reputación.",
+          "summary": "Bloqueea envíos a dominios sin MX válido para proteger tu reputación.",
           "detail_1": "Antes de enviar, validamos el MX del dominio.",
-          "detail_2": "Esto reduce bounces y ayuda a la entregabilidad."
+          "detail_2": "Esto reduce bounces e ajuda a a entregabilidad."
         },
         "privacy": {
           "title": "Anti-spam protection",
-          "summary": "Capas extra para reducir señales sospechosas y proteger tu cuenta.",
-          "detail_1": "Funciones de protección pueden reducir bloqueos temporales y caídas de entregabilidad."
+          "summary": "Capas extra para reducir señales sospechosas e proteger tu cuenta.",
+          "detail_1": "Funciones de protección pueden reducir bloqueos temporales e caídas de entregabilidad."
         },
         "magic_paste": {
           "title": "Magic Paste (IA)",
-          "summary": "Pegue datos y deje que el sistema rellene el resto rápidamente.",
-          "detail_1": "Acelera los flujos de trabajo repetitivos.",
+          "summary": "Pegue datos e deje que el sistema rellene el resto rápidamente.",
+          "detail_1": "Acelera os flujos de trabajo repetitivos.",
           "detail_2": "Ideal para rutinas de gran volumen."
         },
         "ai": {
           "title": "AI Email Writer",
           "summary": "Generate professional templates in a few clicks (when available on your plan).",
-          "detail_1": "H-2A/H-2B-oriented generation with professional tone.",
-          "detail_2": "Use as a base and customize for your strategy."
+          "detail_1": "H-2A/H-2B-oriented generation com professional tone.",
+          "detail_2": "Use as a base e customize for your strategy."
         },
         "support": {
           "title": "Soporte prioritario",
-          "summary": "Enrutamiento de soporte preferido para desbloquearte más rápido.",
-          "detail_1": "Sus solicitudes tienen prioridad en el triaje de soporte."
+          "summary": "Enrutamiento de suporte preferido para desbloquearte más rápido.",
+          "detail_1": "Sus solicitudes têm prioridad en el triaje de suporte."
         },
         "visual": {
           "title": "Jobs Hub premium details",
-          "summary": "Más contexto visual y beneficios para decidir más rápido.",
-          "detail_1": "Acceso a información premium y visual en el Hub de empleos."
+          "summary": "Más contexto visual e beneficios para decidir más rápido.",
+          "detail_1": "Acceso a información premium e visual en el Hub de empleos."
         },
         "delay": {
           "title": "Retraso humano (anti-spam)",
-          "summary": "Patrones de envío más naturales para proteger la reputación.",
-          "detail_1": "Intercala envíos con pausas para parecer más humano.",
-          "detail_2": "Ayuda a reducir los bloqueos temporales de los proveedores."
+          "summary": "Patrones de envío más naturales para proteger a reputación.",
+          "detail_1": "Intercala envíos com pausas para parecer más humano.",
+          "detail_2": "Ayuda a reducir os bloqueos temporales de os proveedores."
         }
       }
     }
@@ -950,13 +949,13 @@
       "dol_draw": "Sorteo Oficial (DOL)",
       "group_label": "Grupo",
       "a_short": "Mayor Probabilidad",
-      "a_tooltip": "Las vacantes del Grupo A son las primeras en la fila del gobierno. Tienen la MAYOR probabilidad de obtener la visa antes de que se agote el cupo anual.",
+      "a_tooltip": "Las vacantes del Grupo A son as primeras en a fila del gobierno. Têm a MAYOR probabilidad de obtener a visa antes de que se agote el cupo anual.",
       "b_short": "Alta Prioridad",
       "b_tooltip": "Procesadas justo después del Grupo A. Excelentes probabilidades de aprobación de visa.",
       "cd_short": "Riesgo Medio",
-      "cd_tooltip": "Procesadas en el medio de la fila. Probabilidad moderada, dependiendo de qué tan rápido se agote el cupo anual.",
+      "cd_tooltip": "Procesadas en el medio de a fila. Probabilidad moderada, dependiendo de qué tan rápido se agote el cupo anual.",
       "risk_short": "Cupo en Riesgo",
-      "risk_tooltip": "Últimas en la fila. Alto riesgo de que el cupo anual de visas se agote antes de ser analizadas.",
+      "risk_tooltip": "Últimas en a fila. Alto riesgo de que el cupo anual de visas se agote antes de ser analizadas.",
       "linear_short": "Estándar",
       "linear_tooltip": "Procesamiento estándar sin sorteo."
     },
@@ -967,12 +966,12 @@
         "all": "Todos (H-2A + H-2B)",
         "only_h2b": "Solo H-2B",
         "only_h2a": "Solo H-2A",
-        "h2a_info": "H-2A es agricultura: no tiene tope anual y la vivienda es obligatoria."
+        "h2a_info": "H-2A es agricultura: no tiene tope anual e a vivienda es obligatoria."
       },
       "state": "Estado (ej: FL)",
       "city": "Ciudad",
       "category": "Categoría",
-      "category_all": "Todas las categorías"
+      "category_all": "Todas as categorías"
     },
     "search": {
       "placeholder": "Buscar por puesto, empresa, ciudad..."
@@ -1007,10 +1006,10 @@
       "experience_years_plural": "{{count}} años",
       "experience_years_months": "{{years}}a {{months}}m",
       "loading": "Cargando empleos...",
-      "empty": "No se encontraron empleos"
+      "empty": "No se encontraro empleos"
     },
     "benefits": {
-      "housing_h2a": "H-2A: la vivienda es obligatoria por reglas de la visa.",
+      "housing_h2a": "H-2A: a vivienda es obligatoria por reglas de a visa.",
       "housing_available": "Vivienda disponible."
     },
     "details": {
@@ -1027,7 +1026,7 @@
       "deductions": "Deducciones Previstas:",
       "schedule": "Horario de Trabajo",
       "weekly_hours": "Horas Semanales:",
-      "company_contacts": "Contactos de la Empresa",
+      "company_contacts": "Contactos de a Empresa",
       "email_label": "EMAIL",
       "phone_label": "TELÉFONO",
       "website_label": "SITIO WEB",
@@ -1043,20 +1042,24 @@
       "additional_details": "Detalles Adicionales",
       "view_details": "Ver detalles",
       "save_job": "Guardar Empleo",
+      "save_job_mobile": "Guardar Empleo",
       "share": "Compartir",
       "remove": "Eliminar",
       "copied": "¡Copiado!",
       "copy_success": "Texto copiado al portapapeles.",
+      "send_email": "Enviar Correo",
+      "early_access_evolution_title": "Oportunidad Evolucionada",
+      "early_access_evolution_text": "Este puesto fue identificado anteriormente por nuestro Early Access e agora es una orden de trabajo oficial confirmada.",
       "early_match": {
         "badge": "Oportunidad Certificada",
         "title": "Inteligencia H2 Linker: Listos para Aplicar",
-        "desc": "Este puesto ha sido aprobado oficialmente. Nuestro sistema lo identificó durante la fase de registro, dándote la oportunidad de aplicar antes que el resto. Estás viendo una oportunidad verificada y activa con una ventaja competitiva."
+        "desc": "Este puesto ha sido aprobado oficialmente. Nuestro sistema lo identificó durante a fase de registro, dándote a oportunidad de aplicar antes que el resto. Estás viendo una oportunidad verificada e activa com una ventaja competitiva."
       }
     },
     "upgrade": {
       "title": "Contenido exclusivo",
-      "description": "Mejora tu plan para desbloquear datos de contacto y beneficios.",
-      "gold_desc": "Desbloquea emails y empresas por {{price}} (de por vida)",
+      "description": "Mejora tu plan para desbloquear datos de contacto e beneficios.",
+      "gold_desc": "Desbloqueea emails e empresas por {{price}} (de por vida)",
       "diamond_desc": "Acceso completo + IA + beneficios visuales por {{price}} (de por vida)",
       "cta": "Ver planes"
     },
@@ -1070,20 +1073,20 @@
     },
     "toasts": {
       "load_error_title": "Error al cargar empleos",
-      "already_in_queue_title": "Ya en la cola",
+      "already_in_queue_title": "Ya en a cola",
       "already_in_queue_desc": "Este empleo ya está en tu cola.",
       "add_error_title": "Error al agregar",
-      "add_success_title": "¡Agregado a la cola!",
-      "add_success_desc": "{{jobTitle}} fue agregado a tu cola.",
-      "remove_success_title": "¡Eliminado de la cola!",
-      "remove_success_desc": "{{jobTitle}} fue eliminado de tu cola."
+      "add_success_title": "¡Agregado a a cola!",
+      "add_success_desc": "{{jobTitle}} foi agregado a tu cola.",
+      "remove_success_title": "¡Eliminado de a cola!",
+      "remove_success_desc": "{{jobTitle}} foi eliminado de tu cola."
     },
     "shareText": "Mira esta oportunidad de empleo"
   },
   "job_import": {
     "trigger": "Importar",
     "title": "Importar empleos",
-    "description": "Sube un archivo .xlsx siguiendo la plantilla de importación.",
+    "description": "Sube um archivo .xlsx siguiendo a plantilla de importación.",
     "actions": {
       "select_file": "Seleccionar archivo",
       "import": "Importar",
@@ -1109,17 +1112,17 @@
       "need_login_title": "Debes iniciar sesión",
       "import_error_title": "Error al importar",
       "import_error_fallback": "Error al importar empleos",
-      "import_success_title": "¡{{count}} empleos importados con éxito!"
+      "import_success_title": "¡{{count}} empleos importados com éxito!"
     }
   },
   "referrals": {
     "title": "Referidos",
     "subtitle": "El bono se activa solo cuando tu amigo envía su primer email.",
     "page_title": "Referidos",
-    "page_subtitle": "Invita amigos y gana créditos extra de envío diario.",
+    "page_subtitle": "Invita amigos e gana créditos extra de envío diario.",
     "active_label": "Referidos activos",
     "bonus_label": "Tu bono actual (+emails/día)",
-    "explainer": "Invita a un amigo. En cuanto envíe su primer email, ambos ganan +5 en el límite diario.",
+    "explainer": "Invita a um amigo. En cuanto envíe su primer email, ambos ganan +5 en el límite diario.",
     "your_link": "Tu enlace de referencia",
     "copy": "Copiar enlace",
     "copied": "¡Copiado!",
@@ -1129,7 +1132,7 @@
     "unknown": "Usuario",
     "status_pending": "Pendiente",
     "status_active": "Activo",
-    "signup_hint": "Si tienes un código de referido, pégalo aquí (opcional).",
+    "signup_hint": "Si tienes um código de referido, pégalo aquí (opcional).",
     "stats": {
       "active": "Referidos activos",
       "bonus": "Bono de envíos",
@@ -1146,25 +1149,25 @@
   "warmup": {
     "onboarding": {
       "title": "Configuración de Cuenta de Email",
-      "description": "Ayúdanos a proteger la reputación de tu email informándonos sobre esta cuenta.",
+      "description": "Ayúdanos a proteger a reputación de tu email informándonos sobre esta cuenta.",
       "warning": "Seleccionar el perfil incorrecto puede hacer que tus emails se marquen como spam. Sé honesto para mejores resultados.",
-      "confirm": "Confirmar y Continuar"
+      "confirm": "Confirmar e Continuar"
     },
     "profiles": {
       "conservative": {
         "title": "Cuenta Nueva (< 3 meses)",
         "description": "Creé esta cuenta de email recientemente.",
-        "details": "Empieza con 20 emails/día, crece 30% diario"
+        "details": "Empieza com 20 emails/día, crece 30% diario"
       },
       "standard": {
         "title": "Cuenta Antigua (Poco Uso)",
-        "description": "Tengo esta cuenta hace tiempo, pero la uso poco.",
-        "details": "Empieza con 50 emails/día, crece 50% diario"
+        "description": "Tengo esta cuenta hace tiempo, pero a uso poco.",
+        "details": "Empieza com 50 emails/día, crece 50% diario"
       },
       "aggressive": {
         "title": "Cuenta Antigua (Uso Diario)",
-        "description": "Uso esta cuenta profesionalmente todos los días.",
-        "details": "Empieza con 100 emails/día, se duplica diariamente"
+        "description": "Uso esta cuenta profesionalmente todos os días.",
+        "details": "Empieza com 100 emails/día, se duplica diariamente"
       }
     },
     "widget": {
@@ -1188,7 +1191,7 @@
   },
   "ai_preferences": {
     "title": "Preferencias de Generación IA",
-    "description": "Personaliza cómo la IA genera tus emails de aplicación.",
+    "description": "Personalize cómo a IA genera tus emails de aplicación.",
     "saved": "¡Preferencias guardadas!",
     "save_error": "Error al guardar preferencias",
     "reset": "Preferencias restauradas a valores predeterminados",
@@ -1199,10 +1202,10 @@
     "paragraph_style": "Estilo de Párrafos",
     "paragraphs_multiple": "Múltiples párrafos",
     "paragraphs_single": "Párrafo único",
-    "formality": "Nivel de Formalidad",
-    "formality_casual": "Casual y amigable",
-    "formality_professional": "Profesional",
-    "formality_formal": "Formal y tradicional",
+    "formality": "Nivel de Formalidade",
+    "formality_casual": "Casual e amigável",
+    "formality_professional": "Professional",
+    "formality_formal": "Formal e tradicional",
     "greeting_style": "Estilo de Saludo",
     "greeting_varied": "Variar automáticamente (recomendado)",
     "greeting_hello": "Siempre 'Hello,'",
@@ -1215,14 +1218,14 @@
     "closing_varied": "Variar automáticamente",
     "opening_style": "Estilo de Apertura",
     "opening_varied": "Variar automáticamente (recomendado)",
-    "opening_question": "Empezar con pregunta",
+    "opening_question": "Empezar com pregunta",
     "opening_direct": "Afirmación directa",
-    "opening_company": "Mencionar la empresa",
+    "opening_company": "Mencionar a empresa",
     "emphasis_title": "Énfasis en el Contenido",
     "emphasize_availability": "Destacar disponibilidad",
     "emphasize_availability_hint": "Fines de semana, feriados, horas extra",
     "emphasize_strength": "Destacar fuerza física",
-    "emphasize_strength_hint": "Resistencia, capacidad de cargar 25kg+",
+    "emphasize_strength_hint": "Resistencia, capacidad de carregar 25kg+",
     "emphasize_languages": "Mencionar idiomas",
     "emphasize_languages_hint": "Portugués nativo, Inglés intermedio",
     "custom_instructions": "Instrucciones Personalizadas",
@@ -1234,7 +1237,7 @@
     "lines_count_other": "{{count}} líneas",
     "preview_title": "Vista Previa del Email",
     "preview_live": "En vivo",
-    "preview_description": "Vea cómo lucirá su email con la configuración actual",
+    "preview_description": "Vea cómo lucirá su email com a configuración actual",
     "preview_note": "Esta es una vista previa ilustrativa. El contenido real se generará dinámicamente para cada empleo."
   }
 }
