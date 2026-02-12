@@ -36,7 +36,6 @@ import {
   X,
   ShieldAlert,
   Lock,
-  Trash2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -45,7 +44,7 @@ import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
-// Interface robusta definida localmente para evitar erros de importação
+// Interface robusta para o Job
 interface Job {
   id: string;
   job_id: string;
@@ -69,7 +68,7 @@ interface Job {
   category: string | null;
 }
 
-// --- COMPONENTE DE ONBOARDING (MANTIDO) ---
+// --- COMPONENTE DE ONBOARDING ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -166,9 +165,9 @@ export default function Jobs() {
     () => searchParams.get("categories")?.split(",") || [],
   );
   const [groupFilter, setGroupFilter] = useState(() => searchParams.get("group") ?? "");
-  const [minSalary, setMinSalary] = useState(() => searchParams.get("min_salary") ?? "");
-  const [maxSalary, setMaxSalary] = useState(() => searchParams.get("max_salary") ?? "");
-  const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
+  const [minSalary, setMinSalary] = useState("");
+  const [maxSalary, setMaxSalary] = useState("");
+  const [page, setPage] = useState(1);
 
   type SortKey =
     | "job_title"
@@ -187,8 +186,7 @@ export default function Jobs() {
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
-  const tableColSpan = 12;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
@@ -219,7 +217,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-realtime")
+      .channel("sync-queue-realtime-final")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -247,8 +245,8 @@ export default function Jobs() {
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
-    if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
-    if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
+    if (minSalary) query = query.gte("salary", Number(minSalary));
+    if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
     query = query.range(from, to);
     const { data, error, count } = await query;
@@ -422,14 +420,16 @@ export default function Jobs() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("jobs.filters.visa.h2a_info")}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t("jobs.filters.visa.h2a_info")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -680,7 +680,7 @@ export default function Jobs() {
                         <TableCell>
                           {(() => {
                             const b = getVisaBadgeConfig(j.visa_type);
-                            const wasEarly = j.was_early_access;
+                            const wasEarly = (j as any).was_early_access;
                             return (
                               <Badge
                                 variant={b.variant}
@@ -700,7 +700,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           {(() => {
-                            const group = j.randomization_group;
+                            const group = (j as any).randomization_group;
                             if (!group) return "-";
                             const config = getGroupBadgeConfig(group);
                             return (
@@ -727,27 +727,29 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
+                          {/* BOTAÃO DE AÇÃO ADAPTÁVEL - FUNDO VERMELHO E X BRANCO */}
                           <Button
                             size="sm"
-                            variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "ghost" : "outline"}
+                            variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
                             className={cn(
                               "h-8 w-8 p-0 rounded-full transition-all",
                               !planSettings.job_db_blur &&
                                 queuedJobIds.has(j.id) &&
-                                "text-slate-400 hover:text-red-500 hover:bg-red-50",
+                                "bg-red-600 border-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200",
                             )}
                             onClick={(e) => {
                               e.stopPropagation();
                               queuedJobIds.has(j.id) ? removeFromQueue(j) : addToQueue(j);
                             }}
                             disabled={planSettings.job_db_blur || processingJobIds.has(j.id)}
+                            title={queuedJobIds.has(j.id) ? t("queue.actions.remove") : undefined}
                           >
                             {planSettings.job_db_blur ? (
                               <Lock className="h-4 w-4" />
                             ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : queuedJobIds.has(j.id) ? (
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <X className="h-4 w-4 text-white" /> // O "X" BRANCO AQUI
                             ) : (
                               <Plus className="h-4 w-4" />
                             )}
