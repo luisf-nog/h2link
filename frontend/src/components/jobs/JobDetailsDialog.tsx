@@ -30,7 +30,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
-// ... (WhatsAppIcon mantido igual)
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
@@ -53,10 +52,17 @@ export function JobDetailsDialog({
   const navigate = useNavigate();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
-  const planTier = planSettings?.tier || "visitor";
-  const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
-  const canSaveJob = isRegistered;
+  // ==========================================
+  // LÓGICA DE VALIDAÇÃO POR PLAN_TIER
+  // ==========================================
+  // Verifica se o usuário tem um plano que permite ver contatos
+  const currentTier = planSettings?.plan_tier?.toLowerCase() || "free";
+  const isPremium = ["gold", "diamond", "black"].includes(currentTier);
+
+  // Bloqueio para ID e Contatos
+  const isLocked = !isPremium;
+  // Bloqueio para Salvar Vaga (exige apenas estar logado, independente do tier)
+  const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
   useEffect(() => {
     if (open) setIsBannerExpanded(true);
@@ -74,13 +80,6 @@ export function JobDetailsDialog({
     toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
   };
 
-  const formatDate = (v: string | null | undefined) => {
-    if (!v) return "-";
-    const d = new Date(v);
-    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
-  };
-
-  // Proteção: IDs não devem ser traduzidos nunca
   const maskJobId = (id: string) => {
     const base = id.split("-GHOST")[0];
     if (base.length <= 6) return <span translate="no">••••••</span>;
@@ -92,6 +91,12 @@ export function JobDetailsDialog({
     );
   };
 
+  const formatDate = (v: string | null | undefined) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+  };
+
   const renderMainWage = () => {
     if (!job) return "-";
     if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
@@ -101,11 +106,20 @@ export function JobDetailsDialog({
     return t("jobs.details.view_details");
   };
 
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return t("jobs.details.no_experience");
+    if (months < 12) return t("jobs.table.experience_months", { count: months });
+    const years = Math.floor(months / 12);
+    const rem = months % 12;
+    return rem === 0
+      ? t("jobs.table.experience_years", { count: years })
+      : t("jobs.table.experience_years_months", { years, months: rem });
+  };
+
   const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Adicionado translate="no" na raiz do conteúdo sensível se necessário, mas aqui vamos por partes */}
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
         {/* HEADER */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
@@ -122,12 +136,12 @@ export function JobDetailsDialog({
                     className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
                     translate="no"
                   >
-                    {canSeeContacts ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
+                    {!isLocked ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
                   </span>
                 )}
               </div>
               <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
-                <span>{job?.job_title}</span>
+                <span translate="no">{job?.job_title}</span>
               </DialogTitle>
               <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
                 <span className="flex items-center gap-1 text-slate-900" translate="no">
@@ -145,15 +159,15 @@ export function JobDetailsDialog({
               <Button
                 onClick={() => job && onAddToQueue(job)}
                 className="px-6 font-bold shadow-sm"
-                disabled={!canSaveJob}
+                disabled={isLoggedOut}
               >
-                {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+                {isLoggedOut && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* SCROLLABLE CONTENT */}
+        {/* CONTENT */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -198,27 +212,12 @@ export function JobDetailsDialog({
                   </div>
                   <div>
                     <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
-                      <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
+                      <DollarSign className="h-5 w-5" /> <span>Remuneração</span>
                     </div>
                     <p className="text-3xl font-extrabold text-green-700 tracking-tight" translate="no">
                       {renderMainWage()}
                     </p>
                   </div>
-                  {job?.wage_additional && (
-                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
-                      <span>{job.wage_additional}</span>
-                    </div>
-                  )}
-                  {job?.rec_pay_deductions && (
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
-                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
-                      </span>
-                      <p className="text-xs text-red-800 font-medium">
-                        <span>{job.rec_pay_deductions}</span>
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* CARGA HORÁRIA */}
@@ -228,17 +227,17 @@ export function JobDetailsDialog({
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {t("jobs.details.weekly_hours")}
+                      Carga Horária
                     </span>
                     <span className="text-xl font-bold text-slate-800" translate="no">
-                      {job?.weekly_hours ? `${job.weekly_hours}h` : "N/A"}
+                      {job?.weekly_hours ? `${job.weekly_hours}h / semana` : "N/A"}
                     </span>
                   </div>
                 </div>
 
-                {/* CONTATOS */}
+                {/* CONTATOS (BLOQUEIO REAL) */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
-                  {!canSeeContacts && (
+                  {isLocked && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
                         <Lock className="h-7 w-7 text-amber-500" />
@@ -247,29 +246,29 @@ export function JobDetailsDialog({
                         className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
-                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
+                        <Rocket className="h-3.5 w-3.5 mr-2" /> Upgrade para Visualizar
                       </Button>
                     </div>
                   )}
                   <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest text-left">
-                    <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
+                    <Mail className="h-4 w-4 text-blue-500" /> Contatos da Empresa
                   </h4>
                   <div className="space-y-4 mt-4 text-left">
                     <div translate="no">
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                        {t("jobs.details.email_label")}
+                        Email
                       </span>
                       <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
-                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
+                        {!isLocked ? job?.email : "••••••••@•••••••.com"}
                       </div>
                     </div>
                     {job?.phone && (
                       <div className="space-y-2" translate="no">
                         <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                          {t("jobs.details.phone_label")}
+                          Telefone
                         </span>
                         <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
-                          {canSeeContacts ? job.phone : "+1 (XXX) XXX-XXXX"}
+                          {!isLocked ? job.phone : "+1 (XXX) XXX-XXXX"}
                         </div>
                       </div>
                     )}
@@ -277,24 +276,22 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* DESCRIÇÕES */}
+              {/* DESCRIÇÕES (SEMPRE VISÍVEIS) */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
-                    <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
+                    <Briefcase className="h-6 w-6 text-blue-600" /> Descrição da Vaga
                   </h4>
-                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {/* Envolver o texto em span ajuda o tradutor a não quebrar o layout do React */}
-                    <span>{job?.job_duties}</span>
-                  </div>
-
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    <span translate="yes">{job?.job_duties}</span>
+                  </p>
                   {job?.job_min_special_req && (
                     <div className="mt-8 bg-amber-50 rounded-xl p-5 border border-amber-100">
                       <h5 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        <AlertTriangle className="h-4 w-4" /> {t("jobs.details.special_reqs")}
+                        <AlertTriangle className="h-4 w-4" /> Requisitos Especiais
                       </h5>
                       <p className="text-xs text-amber-800 leading-relaxed">
-                        <span>{job.job_min_special_req}</span>
+                        <span translate="yes">{job.job_min_special_req}</span>
                       </p>
                     </div>
                   )}
@@ -308,10 +305,10 @@ export function JobDetailsDialog({
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button
             className="flex-1 font-bold h-12 text-base"
-            disabled={!canSaveJob}
+            disabled={isLoggedOut}
             onClick={() => job && onAddToQueue(job)}
           >
-            {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+            {isLoggedOut && <Lock className="h-4 w-4 mr-2" />} Salvar Vaga
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
             <Share2 className="h-5 w-5 text-slate-600" />
