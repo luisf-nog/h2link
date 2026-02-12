@@ -6,8 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+console.log("MOTOR DA FUNÇÃO INICIALIZADO EXTERNAMENTE");
+
 serve(async (req) => {
-  // 1. Lidar com CORS (Essencial para o navegador não bloquear)
+  // LOG 0: Entrada bruta
+  console.log(`Recebendo requisição: ${req.method}`);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,51 +19,40 @@ serve(async (req) => {
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // 2. Validação de Token (Mantenha sua lógica de segurança)
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing Authorization header");
+    const body = await req.json();
+    console.log("[DADOS] Corpo da requisição lido com sucesso.");
 
-    // 3. Receber os dados do Frontend
-    const { jobs } = await req.json();
+    const jobs = body.jobs;
+    console.log(`[DADOS] Total de jobs para processar: ${jobs?.length || 0}`);
 
-    if (!Array.isArray(jobs) || jobs.length === 0) {
-      return new Response(JSON.stringify({ error: "Nenhum job enviado" }), {
+    if (!jobs || jobs.length === 0) {
+      return new Response(JSON.stringify({ error: "Lista de jobs vazia" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
-    console.log(`[Edge Function] Processando ${jobs.length} vagas...`);
+    const { data, error: rpcError } = await supabase.rpc("process_jobs_bulk", {
+      jobs_data: jobs,
+    });
 
-    // 4. DISPARO TURBO (Batching)
-    // No Backend, podemos processar lotes muito maiores (1000+)
-    const BATCH_SIZE = 1000;
-    let totalProcessed = 0;
-
-    for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
-      const batch = jobs.slice(i, i + BATCH_SIZE);
-
-      // Chamamos a RPC inteligente que criamos no SQL Editor
-      // Ela cuida do Fingerprint, was_early_access e do conflito de ID
-      const { error: rpcError } = await supabase.rpc("process_jobs_bulk", {
-        jobs_data: batch,
+    if (rpcError) {
+      console.error("[ERRO SQL]", rpcError);
+      return new Response(JSON.stringify({ error: rpcError.message }), {
+        status: 500,
+        headers: corsHeaders,
       });
-
-      if (rpcError) {
-        console.error(`Erro no lote ${i}:`, rpcError);
-        throw rpcError;
-      }
-      totalProcessed += batch.length;
     }
 
-    return new Response(JSON.stringify({ success: true, imported: totalProcessed }), {
+    console.log("[SUCESSO] Lote processado com êxito.");
+    return new Response(JSON.stringify({ success: true, imported: jobs.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    console.error("[ERRO FATAL]:", err.message);
+  } catch (err) {
+    console.error("[ERRO DE SISTEMA]", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: corsHeaders,
     });
   }
 });
