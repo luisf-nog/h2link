@@ -176,7 +176,6 @@ export function JobDetailsDialog({
 
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  // CORREÇÃO TIPAGEM TS2339
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
@@ -243,9 +242,9 @@ export function JobDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl h-[95vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
-        {/* HEADER FIXO - TUDO O QUE É ESSENCIAL FICA AQUI */}
-        <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm">
+      <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border">
+        {/* HEADER FIXO - IMPORTANTE: TRAVADO NO TOPO */}
+        <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex sm:hidden items-center mb-3 -mt-2">
             <Button
               variant="ghost"
@@ -301,10 +300,10 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* ÁREA DE SCROLL - BANNER DOURADO E DETALHES TÉCNICOS */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/30">
-          <div className="p-4 sm:p-6 space-y-5">
-            {/* CARD DOURADO - AGORA ROLA JUNTO COM OS DETALHES */}
+        {/* ÁREA DE SCROLL - TUDO O QUE ROLA ESTÁ AQUI */}
+        <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
+          <div className="p-4 sm:p-6 space-y-5 pb-32 sm:pb-6">
+            {/* CARD DOURADO ROLÁVEL */}
             {job?.was_early_access && (
               <div
                 className="rounded-lg border border-amber-200 bg-amber-50/80 overflow-hidden transition-all duration-300 cursor-pointer shadow-sm"
@@ -365,7 +364,6 @@ export function JobDetailsDialog({
               </Alert>
             )}
 
-            {/* SEÇÃO DE DADOS TÉCNICOS */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
               <div className="lg:col-span-4 space-y-6">
                 <Timeline />
@@ -422,7 +420,7 @@ export function JobDetailsDialog({
                       <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
                     </h4>
                     <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
-                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap text-left">
                         {job.job_duties}
                       </p>
                     </div>
@@ -433,8 +431,8 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER FIXO NO MOBILE */}
-        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-40 shadow-lg">
+        {/* FOOTER FIXO NO MOBILE - PARA O BOTÃO NÃO SUMIR */}
+        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job")}
           </Button>
