@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Import necessário para navegar
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -35,35 +36,6 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export type JobDetails = {
-  id: string;
-  job_id: string;
-  visa_type: string | null;
-  company: string;
-  email: string;
-  phone?: string | null;
-  job_title: string;
-  city: string;
-  state: string;
-  openings?: number | null;
-  salary: number | null;
-  start_date: string | null;
-  end_date?: string | null;
-  posted_date: string;
-  experience_months?: number | null;
-  wage_from?: number | null;
-  wage_to?: number | null;
-  wage_unit?: string | null;
-  pay_frequency?: string | null;
-  wage_additional?: string | null;
-  rec_pay_deductions?: string | null;
-  weekly_hours?: number | null;
-  job_min_special_req?: string | null;
-  job_duties?: string | null;
-  randomization_group?: string | null;
-  was_early_access?: boolean | null;
-};
-
 export function JobDetailsDialog({
   open,
   onOpenChange,
@@ -77,9 +49,10 @@ export function JobDetailsDialog({
 }: any) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
+  const navigate = useNavigate(); // Hook de navegação
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // LOGICA DE BLOQUEIO SOMENTE PARA CONTATOS E ID
+  // Lógica de Bloqueio (Somente contatos e parte do ID)
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = planSettings?.tier || "visitor";
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
@@ -89,17 +62,17 @@ export function JobDetailsDialog({
     if (open) setIsBannerExpanded(true);
   }, [open, job?.id]);
 
+  // Função centralizada para levar aos planos
+  const handleGoToPlans = () => {
+    onOpenChange(false); // Fecha o modal atual
+    navigate("/plans"); // Vai para a página de planos
+  };
+
   const handleShare = () => {
     if (!job) return;
     const shareUrl = getJobShareUrl(job.id);
     navigator.clipboard.writeText(shareUrl);
     toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
-  };
-
-  const formatDate = (v: string | null | undefined) => {
-    if (!v) return "-";
-    const d = new Date(v);
-    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
   const maskJobId = (id: string) => {
@@ -113,6 +86,12 @@ export function JobDetailsDialog({
     );
   };
 
+  const formatDate = (v: string | null | undefined) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    return d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+  };
+
   const renderMainWage = () => {
     if (!job) return "-";
     if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
@@ -121,6 +100,8 @@ export function JobDetailsDialog({
     if (job.salary) return formatSalary(job.salary);
     return t("jobs.details.view_details");
   };
+
+  const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,7 +121,7 @@ export function JobDetailsDialog({
               <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
                 {job?.job_title}
               </DialogTitle>
-              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium">
+              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium text-left">
                 <span className="flex items-center gap-1 text-slate-900">
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
@@ -164,6 +145,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
+        {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -184,29 +166,27 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALARIO E DEDUÇÕES */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-6 space-y-4 text-left">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                      <span className="font-semibold text-sm text-slate-600">
-                        {t("jobs.details.available_positions")}
-                      </span>
-                      <Badge className="bg-blue-600 font-bold px-3">{job?.openings || "N/A"}</Badge>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
-                        <DollarSign className="h-5 w-5" /> <span>Remuneração</span>
-                      </div>
-                      <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
-                    </div>
-                    {job?.wage_additional && (
-                      <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
-                        {job.wage_additional}
-                      </div>
-                    )}
+                {/* SALARIO */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <span className="font-semibold text-sm text-slate-600">
+                      {t("jobs.details.available_positions")}
+                    </span>
+                    <Badge className="bg-blue-600 font-bold px-3">{job?.openings || "N/A"}</Badge>
                   </div>
+                  <div>
+                    <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
+                      <DollarSign className="h-5 w-5" /> <span>Remuneração</span>
+                    </div>
+                    <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
+                  </div>
+                  {job?.wage_additional && (
+                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
+                      {job.wage_additional}
+                    </div>
+                  )}
                   {job?.rec_pay_deductions && (
-                    <div className="bg-red-50 border-t border-red-100 p-4">
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
                       <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
                         <AlertTriangle className="h-3 w-3" /> Deduções
                       </span>
@@ -230,7 +210,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS (BLOQUEADO PARA VISITANTES/FREE) */}
+                {/* CONTATOS (BLOQUEIO CORRIGIDO) */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -239,16 +219,16 @@ export function JobDetailsDialog({
                       </div>
                       <Button
                         className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
-                        onClick={() => onOpenChange(false)}
+                        onClick={handleGoToPlans} // CORREÇÃO: Chama a navegação
                       >
                         <Rocket className="h-3.5 w-3.5 mr-2" /> Upgrade para Visualizar
                       </Button>
                     </div>
                   )}
-                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest text-left">
                     <Mail className="h-4 w-4 text-blue-500" /> Contatos da Empresa
                   </h4>
-                  <div className="space-y-4 mt-4">
+                  <div className="space-y-4 mt-4 text-left">
                     <div>
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email</span>
                       <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
@@ -267,7 +247,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* DESCRIÇÕES (SEMPRE VISÍVEIS AGORA) */}
+              {/* DESCRIÇÕES */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
