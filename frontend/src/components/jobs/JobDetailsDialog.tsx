@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getJobShareUrl } from "@/lib/shareUtils";
@@ -81,8 +81,9 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // DEFINIÇÃO DAS VARIÁVEIS DE CONTROLE (Onde estava o erro)
   const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
-  const isPremium = ["gold", "diamond", "black"].includes(planTier);
+  const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
   const handleGoToPlans = () => {
@@ -152,7 +153,7 @@ export function JobDetailsDialog({
                     className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
                     translate="no"
                   >
-                    {isPremium ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
+                    {canSeeContacts ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
                   </span>
                 )}
               </div>
@@ -187,6 +188,7 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
+                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">Posted</span>
@@ -208,6 +210,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
@@ -220,6 +223,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* SALARIO */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">Vagas</span>
@@ -235,6 +239,11 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
+                  {job?.wage_additional && (
+                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
+                      <span translate="yes">{job.wage_additional}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
@@ -251,12 +260,13 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <Lock className="h-7 w-7 text-amber-500 mb-2" />
                       <Button
-                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg"
+                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
                         Upgrade para Visualizar
@@ -287,10 +297,34 @@ export function JobDetailsDialog({
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                     <span translate="yes">{job?.job_duties}</span>
                   </p>
+                  {job?.job_min_special_req && (
+                    <div className="mt-8 bg-amber-50 rounded-xl p-5 border border-amber-100">
+                      <h5 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2 uppercase tracking-wider">
+                        <AlertTriangle className="h-4 w-4" /> Requisitos Especiais
+                      </h5>
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        <span translate="yes">{job.job_min_special_req}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* FOOTER MOBILE - CORRIGIDO canSeeContacts */}
+        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
+          <Button
+            className="flex-1 font-bold h-12 text-base"
+            disabled={isLoggedOut}
+            onClick={() => job && onAddToQueue(job)}
+          >
+            {isLoggedOut && <Lock className="h-4 w-4 mr-2" />} Salvar Vaga
+          </Button>
+          <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
+            <Share2 className="h-5 w-5 text-slate-600" />
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
