@@ -93,7 +93,6 @@ function OnboardingModal() {
             <X className="h-5 w-5" />
           </button>
         </div>
-
         <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6 text-left">
           <div className="flex gap-3 sm:gap-4">
             <div className="flex-shrink-0 mt-1 text-slate-700">
@@ -109,7 +108,6 @@ function OnboardingModal() {
             </div>
           </div>
         </div>
-
         <div className="p-6 sm:p-8 space-y-5 sm:space-y-6 text-left">
           <div className="pt-5 border-t border-slate-100 mt-2">
             <Button
@@ -151,10 +149,6 @@ export default function Jobs() {
   const isMobile = useIsMobile();
   const locale = i18n.resolvedLanguage || i18n.language;
   const currency = getCurrencyForLanguage(locale);
-  const formatPlanPrice = (tier: "gold" | "diamond") => {
-    const amount = getPlanAmountForCurrency(PLANS_CONFIG[tier], currency);
-    return formatCurrency(amount, currency, locale);
-  };
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -213,25 +207,18 @@ export default function Jobs() {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
-
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
     if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false });
-
     if (visaType !== "all") query = query.eq("visa_type", visaType);
-
     const term = sanitizeSearchTerm(searchTerm);
-    if (term) {
+    if (term)
       query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
-    }
-
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
-
     if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
     if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
-
     query = query.range(from, to);
     const { data, error, count } = await query;
     if (!error && data) {
@@ -298,12 +285,6 @@ export default function Jobs() {
     );
   };
 
-  const clearCategories = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedCategories([]);
-    setPage(1);
-  };
-
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
     return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC" });
@@ -355,6 +336,14 @@ export default function Jobs() {
     return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
+  const getGroupBadgeConfig = (group: string) => {
+    const g = group.toUpperCase();
+    if (g === "A") return { className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
+    if (g === "B") return { className: "bg-blue-50 text-blue-800 border-blue-300" };
+    if (g === "C" || g === "D") return { className: "bg-amber-50 text-amber-800 border-amber-300" };
+    return { className: "bg-slate-50 text-slate-700 border-slate-300" };
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -377,35 +366,52 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* BARRA DE AÇÃO DA FILA (ESTRATÉGIA ANTI-BOUNCE) */}
+        {/* CENTRAL DE COMANDO DA FILA - DESIGN PREMIUM ANTI-BOUNCE */}
         {queuedJobIds.size > 0 && (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-                  <Zap className="h-6 w-6 text-white animate-pulse" />
+          <div className="relative group mb-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative bg-slate-900/95 backdrop-blur-sm border border-slate-800/50 rounded-2xl p-5 sm:p-6 shadow-2xl overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-5">
+                  <div className="relative shrink-0">
+                    <div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-2xl flex items-center justify-center shadow-inner group-hover:rotate-3 transition-transform duration-300">
+                      <Zap className="h-7 w-7 text-white fill-white/20 animate-pulse" />
+                    </div>
+                    <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-black h-6 w-6 rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg">
+                      {queuedJobIds.size}
+                    </div>
+                  </div>
+                  <div className="text-left space-y-1">
+                    <h3 className="text-white font-bold text-xl tracking-tight leading-none">
+                      Vagas prontas para enviar!
+                    </h3>
+                    <p className="text-slate-400 text-sm font-medium">
+                      Suas <span className="text-blue-400 font-bold">{queuedJobIds.size} vagas</span> salvas esperam por
+                      você na fila de automação.
+                    </p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h3 className="text-white font-bold text-lg leading-tight">
-                    Você tem {queuedJobIds.size} vagas prontas!
-                  </h3>
-                  <p className="text-slate-400 text-sm">Suas vagas salvas estão aguardando na fila de envio.</p>
+                <div className="flex w-full md:w-auto items-center gap-4">
+                  <div className="hidden lg:block text-right">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Próximo Passo</p>
+                    <p className="text-xs text-slate-300">Configurar e Disparar</p>
+                  </div>
+                  <Button
+                    onClick={() => navigate("/queue")}
+                    className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black px-10 h-14 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] transition-all duration-300 active:scale-[0.97] border-t border-white/20"
+                  >
+                    IR PARA ENVIOS AGORA{" "}
+                    <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Button>
                 </div>
-              </div>
-              <div className="flex w-full sm:w-auto gap-2">
-                <Button
-                  onClick={() => navigate("/queue")}
-                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 h-12 shadow-lg transition-all active:scale-95"
-                >
-                  Ir para Envios agora <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
         )}
 
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-3 px-4 pt-4">
+          <CardHeader className="pb-3 px-4 pt-4 text-left">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Select
@@ -484,12 +490,16 @@ export default function Jobs() {
                       <CommandGroup>
                         {categories.map((c) => (
                           <CommandItem key={c} onSelect={() => toggleCategory(c)}>
-                            <Check
+                            <div
                               className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedCategories.includes(c) ? "opacity-100" : "opacity-0",
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                selectedCategories.includes(c)
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50 [&_svg]:invisible",
                               )}
-                            />
+                            >
+                              <Check className="h-4 w-4" />
+                            </div>
                             {c}
                           </CommandItem>
                         ))}
@@ -593,13 +603,28 @@ export default function Jobs() {
                       </button>
                     </TableHead>
                     <TableHead className="text-left">
+                      <button onClick={() => toggleSort("visa_type")}>
+                        {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead>Group</TableHead>
+                    <TableHead>
                       <button onClick={() => toggleSort("posted_date")}>
                         {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead className="text-left">Group</TableHead>
-                    <TableHead className="text-left">Exp.</TableHead>
-                    <TableHead className="text-right pr-6 sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
+                    <TableHead>
+                      <button onClick={() => toggleSort("start_date")}>
+                        {t("jobs.table.headers.start")} <SortIcon active={sortKey === "start_date"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button onClick={() => toggleSort("end_date")}>
+                        {t("jobs.table.headers.end")} <SortIcon active={sortKey === "end_date"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead>{t("jobs.table.headers.experience")}</TableHead>
+                    <TableHead className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
                       {t("jobs.table.headers.action")}
                     </TableHead>
                   </TableRow>
@@ -631,7 +656,10 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm select-none")}
+                            className={cn(
+                              "line-clamp-1 text-slate-600",
+                              planSettings.job_db_blur && "blur-sm select-none",
+                            )}
                             translate="no"
                           >
                             {j.company}
