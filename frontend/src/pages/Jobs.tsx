@@ -37,6 +37,7 @@ import {
   X,
   ShieldAlert,
   Lock,
+  Trash2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -277,6 +278,31 @@ export default function Jobs() {
       toast({
         title: t("jobs.toasts.add_success_title"),
         description: t("jobs.toasts.add_success_desc", { jobTitle: job.job_title }),
+      });
+    }
+    setProcessingJobIds((prev) => {
+      const n = new Set(prev);
+      n.delete(job.id);
+      return n;
+    });
+  };
+
+  // --- NOVA FUNÇÃO: REMOVER DA FILA ---
+  const removeFromQueue = async (job: Job) => {
+    if (!profile) return;
+    setProcessingJobIds((prev) => new Set(prev).add(job.id));
+    const { error } = await supabase
+      .from("my_queue")
+      .delete()
+      .eq("user_id", profile.id)
+      .eq("job_id", job.id)
+      .eq("status", "pending");
+
+    if (!error) {
+      syncQueue();
+      toast({
+        title: t("queue.toasts.remove_success_title"),
+        description: t("queue.toasts.remove_success_desc"),
       });
     }
     setProcessingJobIds((prev) => {
@@ -679,26 +705,29 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
+                          {/* BOTAÃO DE AÇÃO ADAPTÁVEL (RESTAURADO E ATUALIZADO) */}
                           <Button
                             size="sm"
-                            variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
+                            variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "ghost" : "outline"}
                             className={cn(
-                              "h-8 w-8 p-0",
+                              "h-8 w-8 p-0 rounded-full transition-all",
                               !planSettings.job_db_blur &&
                                 queuedJobIds.has(j.id) &&
-                                "bg-primary text-primary-foreground border-primary",
+                                "text-slate-400 hover:text-red-500 hover:bg-red-50",
                             )}
                             onClick={(e) => {
                               e.stopPropagation();
-                              addToQueue(j);
+                              queuedJobIds.has(j.id) ? removeFromQueue(j) : addToQueue(j);
                             }}
+                            disabled={planSettings.job_db_blur || processingJobIds.has(j.id)}
+                            title={queuedJobIds.has(j.id) ? t("queue.actions.remove") : undefined}
                           >
                             {planSettings.job_db_blur ? (
                               <Lock className="h-4 w-4" />
                             ) : processingJobIds.has(j.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : queuedJobIds.has(j.id) ? (
-                              <Check className="h-4 w-4 text-green-600" />
+                              <Trash2 className="h-4 w-4" /> // MOSTRA LIXEIRA SE JÁ ESTIVER NA FILA
                             ) : (
                               <Plus className="h-4 w-4" />
                             )}
