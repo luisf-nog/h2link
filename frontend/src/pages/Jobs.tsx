@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -95,29 +102,81 @@ function OnboardingModal() {
               <h3 className="text-slate-900 font-bold text-sm sm:text-base">Service Transparency & Role</h3>
               <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
                 H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency. We
-                provide high-performance tools, but the final decision is between you and the employer.
+                provide the high-performance tools to automate your outreach, but the final hiring decision and
+                interview process rest solely between you and the employer.
               </p>
             </div>
           </div>
         </div>
         <div className="p-6 sm:p-8 space-y-6 text-left">
-          <Button
-            onClick={handleClose}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all active:scale-[0.98]"
-          >
-            I Understand - Let's Start
-          </Button>
+          <div className="grid gap-6">
+            <div className="flex gap-4 items-start group">
+              <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
+                <Clock className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-900 text-sm">Exclusive Early Access Data</h4>
+                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                  Apply before the crowd. We extract official job orders directly from the DOL the moment they are
+                  filed.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start group">
+              <div className="h-10 w-10 rounded-md bg-purple-50 flex items-center justify-center shrink-0 border border-purple-100">
+                <Bot className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-900 text-sm">Adaptive AI Email Engine</h4>
+                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                  AI generates templates that adapt to each specific job, ensuring a perfect personalized first
+                  impression.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="pt-5 border-t border-slate-100 mt-2">
+            <Button
+              onClick={handleClose}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all"
+            >
+              I Understand - Let's Start
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
+const renderPrice = (job: JobDetails) => {
+  if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
+    return `$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)}`;
+  if (job.wage_from) return `$${job.wage_from.toFixed(2)}`;
+  if (job.salary) return `$${job.salary.toFixed(2)}`;
+  return "-";
+};
+
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+
+  const handleShareJob = (job: JobDetails) => {
+    const shareUrl = getJobShareUrl(job.id);
+    if (navigator.share) {
+      navigator.share({
+        title: `${job.job_title} - ${job.company}`,
+        text: `${t("jobs.shareText")}: ${job.job_title} ${t("jobs.in")} ${job.city}, ${job.state}`,
+        url: shareUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Link copiado!" });
+    }
+  };
+
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -161,9 +220,13 @@ export default function Jobs() {
     let query = supabase.from("public_jobs").select("*", { count: "exact" }).eq("is_banned", false);
 
     query = query.order(sortKey, { ascending: sortDir === "asc" });
+    if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false });
+
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim())
-      query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
+      query = query.or(
+        `job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,state.ilike.%${searchTerm}%`,
+      );
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
@@ -176,6 +239,17 @@ export default function Jobs() {
     if (!error) {
       setJobs(data as JobDetails[]);
       setTotalCount(count ?? 0);
+      if (profile?.id && data) {
+        const { data: queue } = await supabase
+          .from("my_queue")
+          .select("job_id")
+          .eq("user_id", profile.id)
+          .in(
+            "job_id",
+            data.map((j) => j.id),
+          );
+        setQueuedJobIds(new Set((queue ?? []).map((q) => q.job_id)));
+      }
     }
     setLoading(false);
   };
@@ -207,7 +281,7 @@ export default function Jobs() {
       .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
     if (!error) {
       setQueuedJobIds((q) => new Set(q).add(job.id));
-      toast({ title: "Vaga adicionada!" });
+      toast({ title: "✓ Vaga adicionada!" });
     }
     setProcessingJobIds((p) => {
       const n = new Set(p);
@@ -229,6 +303,12 @@ export default function Jobs() {
     }
   };
 
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  };
+
   const toggleSort = (key: string) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
@@ -245,7 +325,7 @@ export default function Jobs() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
             </p>
           </div>
@@ -270,7 +350,7 @@ export default function Jobs() {
                 }}
               >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue />
+                  <SelectValue placeholder="Visa Type" />
                 </SelectTrigger>
                 <SelectContent>
                   {VISA_TYPE_OPTIONS.map((o) => (
@@ -361,6 +441,8 @@ export default function Jobs() {
                 isQueued={queuedJobIds.has(j.id)}
                 onAddToQueue={() => addToQueue(j)}
                 onClick={() => setSelectedJob(j)}
+                formatDate={formatDate} // CORREÇÃO: Propriedade obrigatória adicionada
+                reportData={jobReports[j.id]}
               />
             ))}
           </div>
@@ -383,38 +465,50 @@ export default function Jobs() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {jobs.map((j) => (
-                  <TableRow key={j.id} onClick={() => setSelectedJob(j)} className="cursor-pointer hover:bg-slate-50">
-                    <TableCell className="font-medium">{j.job_title}</TableCell>
-                    <TableCell className={cn(planSettings.job_db_blur && "blur-sm")}>{j.company}</TableCell>
-                    <TableCell>
-                      {j.city}, {j.state}
-                    </TableCell>
-                    <TableCell className="text-center">{j.openings}</TableCell>
-                    <TableCell>{j.salary ? `$${j.salary}/h` : "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{j.visa_type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant={queuedJobIds.has(j.id) ? "secondary" : "default"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToQueue(j);
-                        }}
-                      >
-                        {processingJobIds.has(j.id) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : queuedJobIds.has(j.id) ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Plus className="h-4 w-4" />
-                        )}
-                      </Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10">
+                      <Loader2 className="animate-spin inline mr-2" /> Carregando...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  jobs.map((j) => (
+                    <TableRow
+                      key={j.id}
+                      onClick={() => setSelectedJob(j)}
+                      className="cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <TableCell className="font-medium">{j.job_title}</TableCell>
+                      <TableCell className={cn(planSettings.job_db_blur && "blur-sm")}>{j.company}</TableCell>
+                      <TableCell>
+                        {j.city}, {j.state}
+                      </TableCell>
+                      <TableCell className="text-center">{j.openings}</TableCell>
+                      <TableCell>{renderPrice(j)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{j.visa_type}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant={queuedJobIds.has(j.id) ? "secondary" : "default"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToQueue(j);
+                          }}
+                        >
+                          {processingJobIds.has(j.id) ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : queuedJobIds.has(j.id) ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -439,15 +533,16 @@ export default function Jobs() {
           onOpenChange={(o) => !o && setSelectedJob(null)}
           job={selectedJob}
           planSettings={profile}
-          formatSalary={(s: any) => (s ? `$${s}/h` : "-")}
+          formatSalary={(s: any) => (s ? `$${s.toFixed(2)}/h` : "-")}
           onAddToQueue={addToQueue}
           onRemoveFromQueue={removeFromQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+          onShare={handleShareJob}
         />
 
         {showImporter && (
           <Dialog open={showImporter} onOpenChange={setShowImporter}>
-            <DialogContent className="max-w-4xl p-0">
+            <DialogContent className="max-w-4xl p-0 shadow-2xl border-0 overflow-hidden">
               <MultiJsonImporter />
             </DialogContent>
           </Dialog>
@@ -456,10 +551,12 @@ export default function Jobs() {
         <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" /> Login Necessário
+              <DialogTitle className="flex items-center gap-2 font-bold">
+                <Lock className="h-5 w-5 text-primary" /> Login Necessário
               </DialogTitle>
-              <DialogDescription>Para adicionar vagas à sua fila, você precisa estar logado.</DialogDescription>
+              <DialogDescription>
+                Para adicionar vagas e automatizar envios, você precisa acessar sua conta.
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-2 mt-4">
               <Button
@@ -467,11 +564,12 @@ export default function Jobs() {
                   setShowLoginDialog(false);
                   navigate("/auth");
                 }}
+                className="w-full font-bold"
               >
-                Fazer Login
+                Fazer Login agora
               </Button>
-              <Button variant="ghost" onClick={() => setShowLoginDialog(false)}>
-                Continuar Navegando
+              <Button variant="ghost" onClick={() => setShowLoginDialog(false)} className="w-full">
+                Continuar navegando
               </Button>
             </div>
           </DialogContent>
