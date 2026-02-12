@@ -8,7 +8,7 @@
     "descriptionGeneric": "Para acceder a esta funcionalidad, necesitas iniciar sesión.",
     "benefit": "✨ ¡Crea tu cuenta gratis y comienza a automatizar tus solicitudes de empleo H-2A/H-2B!",
     "ctaLogin": "Iniciar Sesión / Crear Cuenta",
-    "ctaContinue": "Continuar Navegando"
+    "ctaLogin": "Continuar Navegando"
   },
   "auth": {
     "browse_jobs": "Explorar Empleos Disponibles",
@@ -62,7 +62,7 @@
         "success_desc": "Todo listo. Ahora puedes crear una nueva contraseña.",
         "error_title": "No se pudo iniciar",
         "error_desc": "Algo salió mal al preparar tu restablecimiento. Inténtalo de nuevo.",
-        "finalizing": "Finalizando…",
+        "finalizing": "Finalizing…",
         "redirecting": "Abriendo restablecimiento…"
       },
       "errors": {
@@ -237,6 +237,7 @@
     "share": "Compartir",
     "previous": "Anterior",
     "next": "Siguiente",
+    "back": "Atrás",
     "more_pages": "Más páginas",
     "pagination": {
       "previous_aria": "Ir a la página anterior",
@@ -704,7 +705,7 @@
     },
     "app_password_required": {
       "title": "Contraseña de app requerida",
-      "description": "Gmail requiere una Contraseña de App (no tu contraseña normal). Ve a myaccount.google.com > Seguridad > Contraseñas de app para generar una."
+      "description": "Gmail requiere una Contraseña de App (not tu contraseña normal). Ve a myaccount.google.com > Seguridad > Contraseñas de app para generar una."
     },
     "connection_timeout": {
       "title": "Tiempo de conexión agotado",
@@ -763,19 +764,19 @@
       "description": "El email del destinatario está vacío. Verifica los datos del empleo."
     },
     "invalid_domain": {
-      "title": "Invalid domain",
-      "description": "The recipient's email domain does not exist or does not accept emails."
+      "title": "Dominio inválido",
+      "description": "El dominio del correo electrónico del destinatario no existe o no acepta correos electrónicos."
     },
     "profile_incomplete": {
       "title": "Perfil incompleto",
       "description": "Complete su perfil (nombre, edad, teléfono, correo electrónico de contacto) antes de enviarlo."
     },
     "no_template": {
-      "title": "No template found",
+      "title": "Sin plantilla",
       "description": "No hay ninguna plantilla de correo electrónico configurada. Crea una plantilla en Configuración > Plantillas."
     },
     "unknown": {
-      "title": "Unknown error",
+      "title": "Error desconocido",
       "description": "Se ha producido un error inesperado al enviar. Vuelve a intentarlo o comprueba tu configuración de SMTP."
     },
     "show_raw_error": "Detalles técnicos",
@@ -915,9 +916,9 @@
         },
         "magic_paste": {
           "title": "Magic Paste (IA)",
-          "summary": "Paste data and let the system fill the rest quickly.",
-          "detail_1": "Speeds up repetitive workflows.",
-          "detail_2": "Great for high-volume routines."
+          "summary": "Pegue datos y deje que el sistema rellene el resto rápidamente.",
+          "detail_1": "Acelera los flujos de trabajo repetitivos.",
+          "detail_2": "Ideal para rutinas de gran volumen."
         },
         "ai": {
           "title": "AI Email Writer",
@@ -926,20 +927,20 @@
           "detail_2": "Use as a base and customize for your strategy."
         },
         "support": {
-          "title": "Priority support",
-          "summary": "Preferred support routing to unblock you faster.",
-          "detail_1": "Your requests are prioritized in support triage."
+          "title": "Soporte prioritario",
+          "summary": "Enrutamiento de soporte preferido para desbloquearte más rápido.",
+          "detail_1": "Sus solicitudes tienen prioridad en el triaje de soporte."
         },
         "visual": {
           "title": "Jobs Hub premium details",
-          "summary": "More visual context and benefits to decide faster.",
-          "detail_1": "Access premium and visual information in the Jobs Hub."
+          "summary": "Más contexto visual y beneficios para decidir más rápido.",
+          "detail_1": "Acceso a información premium y visual en el Hub de empleos."
         },
         "delay": {
-          "title": "Human-like delay (anti-spam)",
-          "summary": "More natural sending patterns to protect reputation.",
-          "detail_1": "Interleaves sends with pauses to look more human.",
-          "detail_2": "Helps reduce temporary blocks from providers."
+          "title": "Retraso humano (anti-spam)",
+          "summary": "Patrones de envío más naturales para proteger la reputación.",
+          "detail_1": "Intercala envíos con pausas para parecer más humano.",
+          "detail_2": "Ayuda a reducir los bloqueos temporales de los proveedores."
         }
       }
     }
@@ -1000,8 +1001,10 @@
         "email": "Email",
         "action": "Acción"
       },
-      "experience_months": "{{count}}m",
-      "experience_years": "{{count}}a",
+      "experience_months": "{{count}} mes",
+      "experience_months_plural": "{{count}} meses",
+      "experience_years": "{{count}} año",
+      "experience_years_plural": "{{count}} años",
       "experience_years_months": "{{years}}a {{months}}m",
       "loading": "Cargando empleos...",
       "empty": "No se encontraron empleos"
@@ -1017,6 +1020,8 @@
       "end": "Fin",
       "available_positions": "Vacantes Disponibles",
       "remuneration": "Compensación",
+      "experience": "Experiencia requerida",
+      "no_experience": "No se requiere experiencia",
       "pay_frequency": "Pago: {{frequency}}",
       "bonus": "Bono / Adicional",
       "deductions": "Deducciones Previstas:",
