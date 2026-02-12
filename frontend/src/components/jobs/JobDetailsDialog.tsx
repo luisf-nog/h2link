@@ -27,6 +27,8 @@ import {
   Clock,
   Lock,
   CheckCircle2,
+  MessageCircle,
+  MessageSquare,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -76,16 +78,10 @@ export function JobDetailsDialog({
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
-  const planTier = planSettings?.plan_tier?.toLowerCase() || planSettings?.tier || "visitor";
-  const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
-  const canSaveJob = isRegistered;
-
-  useEffect(() => {
-    if (open) setIsBannerExpanded(true);
-  }, [open, job?.id]);
+  const isBlurActive = planSettings?.job_db_blur !== false; // Se não houver config, assume blur por segurança
+  const canSeeContacts = isRegistered && !isBlurActive;
 
   const handleGoToPlans = () => {
     onOpenChange(false);
@@ -157,7 +153,6 @@ export function JobDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
-        {/* HEADER */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1 w-full min-w-0">
@@ -193,33 +188,28 @@ export function JobDetailsDialog({
                 <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
               </Button>
               <Button onClick={handleSaveAction} className="px-6 font-bold shadow-sm">
-                {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+                {!isRegistered && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {job?.was_early_access && (
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg shadow-amber-200">
+                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
                   <Rocket className="h-6 w-6 animate-bounce" />
                 </div>
                 <div>
                   <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
                   <p className="text-amber-800 text-xs">{t("jobs.details.early_access_evolution_text")}</p>
                 </div>
-                <div className="ml-auto hidden sm:block">
-                  <CheckCircle2 className="h-8 w-8 text-amber-500/30" />
-                </div>
               </div>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
@@ -247,7 +237,6 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
@@ -262,7 +251,6 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALARIO */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">
@@ -298,7 +286,6 @@ export function JobDetailsDialog({
                   )}
                 </div>
 
-                {/* CARGA HORÁRIA AJUSTADA (SOMENTE NÚMERO + H) */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
@@ -313,8 +300,8 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
+                {/* CONTATOS E BOTÕES DE REDIRECIONAMENTO */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
@@ -328,10 +315,11 @@ export function JobDetailsDialog({
                       </Button>
                     </div>
                   )}
-                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest text-left">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest">
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
-                  <div className="space-y-4 mt-4 text-left">
+
+                  <div className="space-y-4 mt-4">
                     <div translate="no">
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
                         {t("jobs.details.email_label")}
@@ -340,11 +328,55 @@ export function JobDetailsDialog({
                         {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
                       </div>
                     </div>
+                    {job?.phone && (
+                      <div className="space-y-2" translate="no">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
+                          {t("jobs.details.phone_label")}
+                        </span>
+                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
+                          {canSeeContacts ? job.phone : "+1 (XXX) XXX-XXXX"}
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* BOTÕES DE REDIRECIONAMENTO (RESTAURADOS) */}
+                  {canSeeContacts && (
+                    <div className="space-y-2 pt-2">
+                      <div className="flex gap-2">
+                        {job?.phone && (
+                          <>
+                            <Button
+                              variant="outline"
+                              className="flex-1 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 font-bold text-xs"
+                              onClick={() => window.open(`https://wa.me/${job.phone.replace(/\D/g, "")}`, "_blank")}
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 font-bold text-xs"
+                              onClick={() => (window.location.href = `sms:${job.phone}`)}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 mr-1.5" /> iMessage
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      {job?.email && (
+                        <Button
+                          variant="outline"
+                          className="w-full bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs"
+                          onClick={() => (window.location.href = `mailto:${job.email}`)}
+                        >
+                          <Mail className="h-3.5 w-3.5 mr-1.5" /> {t("jobs.details.send_email")}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* DESCRIÇÃO */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
@@ -369,10 +401,9 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button className="flex-1 font-bold h-12 text-base shadow-lg" onClick={handleSaveAction}>
-            {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job_mobile")}
+            {!isRegistered && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job_mobile")}
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShareInternal}>
             <Share2 className="h-5 w-5 text-slate-600" />
