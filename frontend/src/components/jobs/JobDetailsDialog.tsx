@@ -30,7 +30,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
-// EXPORTAÇÃO ESSENCIAL: Resolve o erro TS2305 no Jobs.tsx
 export type JobDetails = {
   id: string;
   job_id: string;
@@ -85,7 +84,6 @@ export function JobDetailsDialog({
 
   const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
   const isPremium = ["gold", "diamond", "black"].includes(planTier);
-  const canSeeContacts = isPremium;
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
   useEffect(() => {
@@ -194,6 +192,7 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
+                {/* TIMELINE DE 3 COLUNAS */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">Posted</span>
@@ -215,6 +214,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* BLOCO DE EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
@@ -225,6 +225,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* SALÁRIO E DEDUÇÕES */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">Vagas</span>
@@ -245,8 +246,19 @@ export function JobDetailsDialog({
                       <span translate="yes">{job.wage_additional}</span>
                     </div>
                   )}
+                  {job?.rec_pay_deductions && (
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
+                        <AlertTriangle className="h-3 w-3" /> Deduções
+                      </span>
+                      <p className="text-xs text-red-800 font-medium">
+                        <span translate="yes">{job.rec_pay_deductions}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
+                {/* CARGA HORÁRIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
@@ -261,12 +273,13 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
-                  {!canSeeContacts && (
+                  {!isPremium && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <Lock className="h-7 w-7 text-amber-500 mb-2" />
                       <Button
-                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg"
+                        className="bg-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
                         Upgrade para Visualizar
@@ -282,9 +295,19 @@ export function JobDetailsDialog({
                         Email
                       </span>
                       <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
-                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
+                        {isPremium ? job?.email : "••••••••@•••••••.com"}
                       </div>
                     </div>
+                    {job?.phone && (
+                      <div className="space-y-2" translate="no">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
+                          Telefone
+                        </span>
+                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
+                          {isPremium ? job.phone : "+1 (XXX) XXX-XXXX"}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
