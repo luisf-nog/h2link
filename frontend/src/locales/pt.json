@@ -961,6 +961,14 @@
       "risk_tooltip": "Últimas da fila. Alto risco de a cota anual de vistos acabar antes de serem analisadas.",
       "linear_short": "Linear",
       "linear_tooltip": "Processamento padrão."
+      "details": {
+  "early_access_evolution_title": "Oportunidade Evoluída",
+  "early_access_evolution_text": "Esta vaga foi identificada anteriormente pelo nosso Early Access e agora é uma ordem oficial de trabalho confirmada.",
+  "send_email": "Enviar E-mail",
+  "deductions": "Deduções e Descontos",
+  "special_reqs": "Requisitos e Condições Especiais",
+  "job_description": "Descrição das Funções"
+}
     },
     "subtitle": "{{totalCount}} vagas {{visaLabel}} disponíveis",
     "filters": {
