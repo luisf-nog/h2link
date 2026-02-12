@@ -1146,6 +1146,14 @@
       "profile_saved": "Email warm-up profile saved!",
       "profile_error": "Failed to save warm-up profile"
     }
+    "jobs": {
+    "details": {
+      "early_match_badge": "Early Match",
+      "early_match_title": "H2 Linker Intelligence: Exclusive Insight",
+      "early_match_desc": "Our system identified this opportunity during the government's initial processing phase. This allows you to review requirements and prepare your application with priority."
+    }
+  },
+  "ai_preferences": {
   },
   "ai_preferences": {
     "title": "AI Generation Preferences",
