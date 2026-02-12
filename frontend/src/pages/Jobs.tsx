@@ -130,13 +130,14 @@ export default function Jobs() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  //queuedJobIds: Todas as vagas na fila (independente do status) para o X Vermelho
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
-  //pendingCount: Apenas vagas com status 'pending' para o Banner do topo
   const [pendingCount, setPendingCount] = useState(0);
 
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
+  const [showImporter, setShowImporter] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
@@ -190,16 +191,11 @@ export default function Jobs() {
     return "-";
   };
 
-  // --- SINCRONIZAÇÃO EM TEMPO REAL DUPLA ---
   const syncQueue = async () => {
     if (!profile?.id) return;
-
-    // Busca tudo para marcar os botões com X
     const { data: allData } = await supabase.from("my_queue").select("job_id, status").eq("user_id", profile.id);
-
     if (allData) {
       setQueuedJobIds(new Set(allData.map((r) => r.job_id)));
-      // Filtra apenas pendentes para o banner do topo
       setPendingCount(allData.filter((r) => r.status === "pending").length);
     }
   };
@@ -208,7 +204,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-realtime-v4")
+      .channel("sync-queue-realtime-final")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -324,6 +320,7 @@ export default function Jobs() {
     return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
   };
 
+  // --- LÓGICA DE CORES DO GRUPO RESTAURADA ---
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A") return { className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
@@ -354,7 +351,6 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* BANNER DO TOPO: SÓ APARECE SE HOUVER PENDENTES */}
         {pendingCount > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all">
@@ -385,30 +381,27 @@ export default function Jobs() {
           </div>
         )}
 
-        {/* FILTROS (MANTIDOS) */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4 text-left">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Select
-                  value={visaType}
-                  onValueChange={(v: any) => {
-                    setVisaType(v);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VISA_TYPE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={visaType}
+                onValueChange={(v: any) => {
+                  setVisaType(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[200px] bg-white">
+                  <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISA_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -473,7 +466,6 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        {/* TABELA DE VAGAS */}
         {isMobile ? (
           <div className="space-y-3">
             {jobs.map((j) => (
@@ -644,7 +636,6 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
-                          {/* O BOTÃO COM X VERMELHO PERMANECE ENQUANTO EXISTIR NA TABELA MY_QUEUE */}
                           <Button
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
@@ -652,7 +643,7 @@ export default function Jobs() {
                               "h-8 w-8 p-0 rounded-full transition-all",
                               !planSettings.job_db_blur &&
                                 queuedJobIds.has(j.id) &&
-                                "bg-red-600 border-red-600 hover:bg-red-700 text-white shadow-md",
+                                "bg-red-600 border-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200",
                             )}
                             onClick={(e) => {
                               e.stopPropagation();
