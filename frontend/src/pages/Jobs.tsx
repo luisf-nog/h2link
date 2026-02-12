@@ -36,6 +36,7 @@ import {
   X,
   ShieldAlert,
   Lock,
+  Trash2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -44,7 +45,6 @@ import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
-// Interface robusta para o Job
 interface Job {
   id: string;
   job_id: string;
@@ -68,7 +68,6 @@ interface Job {
   category: string | null;
 }
 
-// --- COMPONENTE DE ONBOARDING ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -187,8 +186,6 @@ export default function Jobs() {
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
-
-  // DEFINE tableColSpan AQUI PARA EVITAR O ERRO DE RUNTIME
   const tableColSpan = 11;
 
   const formatDate = (date: string | null | undefined) => {
@@ -210,9 +207,12 @@ export default function Jobs() {
     return "-";
   };
 
+  // --- SINCRONIZAÇÃO EM TEMPO REAL AJUSTADA ---
   const syncQueue = async () => {
     if (!profile?.id) return;
-    const { data } = await supabase.from("my_queue").select("job_id").eq("user_id", profile.id).eq("status", "pending");
+    // Removido o filtro de status: "pending" para que o X permaneça mesmo após o envio (status: "sent")
+    const { data } = await supabase.from("my_queue").select("job_id").eq("user_id", profile.id);
+
     setQueuedJobIds(new Set((data ?? []).map((r) => r.job_id)));
   };
 
@@ -220,7 +220,7 @@ export default function Jobs() {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-realtime-final")
+      .channel("sync-queue-full-status")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -310,12 +310,7 @@ export default function Jobs() {
   const removeFromQueue = async (job: Job) => {
     if (!profile) return;
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
-    const { error } = await supabase
-      .from("my_queue")
-      .delete()
-      .eq("user_id", profile.id)
-      .eq("job_id", job.id)
-      .eq("status", "pending");
+    const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
     if (!error) {
       syncQueue();
       toast({ title: t("queue.toasts.remove_success_title"), description: t("queue.toasts.remove_success_desc") });
@@ -351,10 +346,10 @@ export default function Jobs() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <div className="space-y-6 text-left">
         <OnboardingModal />
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
             <p className="text-muted-foreground mt-1">
@@ -371,11 +366,11 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* CENTRAL DE COMANDO MODERNA */}
+        {/* CENTRAL DE COMANDO MODERNA - REATIVA */}
         {queuedJobIds.size > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all hover:shadow-[0_8px_30px_rgba(37,99,235,0.08)]">
-              <div className="flex items-center gap-4 overflow-visible text-left">
+              <div className="flex items-center gap-4 overflow-visible">
                 <div className="relative shrink-0 p-1">
                   <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
                     <Zap className="h-6 w-6 text-white fill-white/20" />
@@ -402,6 +397,7 @@ export default function Jobs() {
           </div>
         )}
 
+        {/* FILTROS INTEGRADOS */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4 text-left">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -424,16 +420,14 @@ export default function Jobs() {
                     ))}
                   </SelectContent>
                 </Select>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t("jobs.filters.visa.h2a_info")}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("jobs.filters.visa.h2a_info")}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -562,7 +556,7 @@ export default function Jobs() {
         </Card>
 
         {isMobile ? (
-          <div className="space-y-3 text-left">
+          <div className="space-y-3">
             {jobs.map((j) => (
               <MobileJobCard
                 key={j.id}
@@ -684,7 +678,7 @@ export default function Jobs() {
                         <TableCell>
                           {(() => {
                             const b = getVisaBadgeConfig(j.visa_type);
-                            const wasEarly = j.was_early_access;
+                            const wasEarly = (j as any).was_early_access;
                             return (
                               <Badge
                                 variant={b.variant}
@@ -704,7 +698,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           {(() => {
-                            const group = j.randomization_group;
+                            const group = (j as any).randomization_group;
                             if (!group) return "-";
                             const config = getGroupBadgeConfig(group);
                             return (
@@ -731,7 +725,7 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
-                          {/* BOTÃO ADAPTÁVEL - CORRIGIDO */}
+                          {/* BOTÃO ADAPTÁVEL - X VERMELHO PERMANENTE SE NA FILA */}
                           <Button
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
@@ -791,17 +785,16 @@ export default function Jobs() {
           </div>
         </div>
 
-        {selectedJob && (
-          <JobDetailsDialog
-            open={!!selectedJob}
-            onOpenChange={(o) => !o && setSelectedJob(null)}
-            job={selectedJob}
-            planSettings={profile}
-            formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
-            onAddToQueue={addToQueue}
-            isInQueue={queuedJobIds.has(selectedJob.id)}
-          />
-        )}
+        <JobDetailsDialog
+          open={!!selectedJob}
+          onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
+          job={selectedJob}
+          planSettings={profile}
+          formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
+          onAddToQueue={addToQueue}
+          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+          onShare={(j: any) => navigate(`/job/${j.id}`)}
+        />
       </div>
     </TooltipProvider>
   );
