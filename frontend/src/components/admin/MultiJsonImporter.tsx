@@ -11,7 +11,6 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
-  // --- DATA LOCAL REAL (Evita o erro do fuso horário) ---
   const getTodayDate = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -45,7 +44,7 @@ export function MultiJsonImporter() {
 
   const getCaseBody = (id: string) => {
     if (!id) return id;
-    const cleanId = id.split("-GHOST")[0].trim(); // Limpa antes de processar
+    const cleanId = id.split("-GHOST")[0].trim();
     const parts = cleanId.split("-");
     if (parts[0] === "JO" && parts[1] === "A") return parts.slice(2).join("-");
     if (parts[0] === "H") return parts.slice(1).join("-");
@@ -96,7 +95,6 @@ export function MultiJsonImporter() {
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
             if (!rawJobId) return;
 
-            // --- TRAVA DE SEGURANÇA: E-MAIL ---
             const email = getVal(flat, ["recApplyEmail", "email"]);
             if (!email || email.toUpperCase() === "N/A" || email.trim() === "") return;
 
@@ -106,7 +104,7 @@ export function MultiJsonImporter() {
 
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
-              job_id: rawJobId.split("-GHOST")[0].trim(), // TRAVA: REMOVE GHOST NO ID
+              job_id: rawJobId.split("-GHOST")[0].trim(),
               visa_type: visaType,
               fingerprint: fingerprint,
               job_title: getVal(flat, ["jobTitle", "tempneedJobtitle", "title"]),
@@ -115,7 +113,7 @@ export function MultiJsonImporter() {
               phone: getVal(flat, ["recApplyPhone", "empPhone"]),
               city: getVal(flat, ["jobCity", "city"]),
               state: getVal(flat, ["jobState", "state"]),
-              zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
+              zip: getVal(flat, ["jobPostcode", "empPostalCode"]), // MUDANÇA AQUI: de zip_code para zip
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), weeklyHours),
               start_date: formatToISODate(getVal(flat, ["jobBeginDate", "tempneedStart"])),
               posted_date: posted || today,
@@ -146,7 +144,7 @@ export function MultiJsonImporter() {
         description: `${allJobs.length} vagas processadas com sucesso.`,
       });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro de Importação", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
