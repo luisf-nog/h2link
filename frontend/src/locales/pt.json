@@ -29,24 +29,24 @@
     "errors": {
       "email_rate_limit_title": "Muitos e-mails de confirmação",
       "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente. Limitamos temporariamente novos e-mails de confirmação para proteger a entrega.",
-      "weak_password_desc": "Esta senha é muito comum e fácil de adivinar. Por favor, escolha uma senha mais forte."
+      "weak_password_desc": "Esta senha é muito comum e fácil de adivinhar. Por favor, escolha uma senha mais forte."
     },
     "recovery": {
       "link": "Esqueci minha senha",
       "request_title": "Redefinir senha",
       "request_desc": "Informe seu e-mail e enviaremos um link seguro para redefinir sua senha.",
       "sent_title": "Link enviado",
-      "sent_desc": "Si {{email}} existir no sistema, você receberá um link de redefinição em alguns minutos.",
-      "reset_title": "Criar nova senha",
-      "reset_desc": "Defina uma nova senha para sua conta.",
+      "sent_desc": "Se {{email}} existir no sistema, você receberá um link de redefinição em alguns minutos.",
+      "reset_title": "Set a new password",
+      "reset_desc": "Choose a new password for your account.",
       "fields": {
-        "new_password": "Nova senha",
-        "confirm_new_password": "Confirmar nova senha"
+        "new_password": "New password",
+        "confirm_new_password": "Confirm new password"
       },
       "actions": {
         "send_link": "Enviar link",
         "back_to_login": "Voltar para login",
-        "save_new_password": "Salvar nova senha",
+        "save_new_password": "Save new password",
         "cancel": "Cancelar"
       },
       "toasts": {
@@ -150,9 +150,9 @@
     }
   },
   "footer": {
-    "tagline": "Conexões inteligentes. Oportunidades reais.",
-    "terms": "Termos de Uso",
-    "privacy": "Política de Privacidade"
+    "tagline": "Smart connections. Real opportunities.",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy"
   },
   "reports": {
     "button": "Sinalizar erro",
@@ -206,10 +206,10 @@
       "title": "Proteja Sua Reputação",
       "subtitle": "Configure o aquecimento inteligente do seu email",
       "why_title": "Por que o aquecimento é essencial?",
-      "why_desc": "Provedores como Gmail e Outlook monitoram padrões de envio. Se você enviar muitos emails de uma só vez com uma conta nova, corre o risco de:",
-      "why_point1": "Seus emails irem direto para a pasta de Spam",
-      "why_point2": "Bloqueio temporário ou permanente da sua conta",
-      "why_point3": "Prejudicar sua reputação de remetente a longo prazo",
+      "why_desc": "Provedores like Gmail and Outlook monitor sending patterns. If you send too many emails at once with a new account, you risk:",
+      "why_point1": "Your emails going straight to Spam",
+      "why_point2": "Temporary or permanent account blocks",
+      "why_point3": "Damaging your sender reputation long-term",
       "recommendation_title": "💡 Nossa recomendação",
       "recommendation_desc": "Para usuários novos, recomendamos o perfil \"Equilibrado\". Ele oferece o melhor balanço entre velocidade e segurança. Usuários experientes com contas já aquecidas podem considerar o \"Agressivo\".",
       "recommended_badge": "Recomendado",
@@ -395,18 +395,18 @@
       "title": "Como gerar sua Senha de Aplicativo (App Password)",
       "intro_title": "Por que preciso disso?",
       "intro_body": "Para conectar seu e-mail ao nosso sistema com segurança, você não deve usar sua senha normal de login.",
-      "security_body": "Google e Microsoft exigem uma Senha de Aplicativo: um código usado para permitir envios sem revelar sua senha principal.",
+      "security_body": "Google and Microsoft require an App Password: a special code that allows sending emails without exposing your main password.",
       "gmail_title": "Gmail (Google)",
       "gmail_warning": "Atenção: para a opção aparecer, você precisa estar com a Verificação em duas etapas (2FA) ativada.",
-      "gmail_steps": "Acesse sua conta Google (myaccount.google.com) e clique em Segurança.\nVerifique se a Verificação em duas etapas está ATIVADA (ative se necessário).\nUse a busca e digite: Senhas de app.\nAbra Senhas de app (o Google pode pedir sua senha novamente).\nEm Selecionar app, escolha Outro (Nome personalizado).\nDigite o nome: H2 Linker.\nClique em Gerar e copie a senha de 16 caracteres.",
+      "gmail_steps": "Acesse sua conta Google (myaccount.google.com) and go to Security.\nMake sure 2-Step Verification is ON (turn it on if needed).\nUse the search bar and type: App passwords.\nOpen App passwords (Google may ask for your password again).\nIn Select app, choose Other (Custom name).\nType: H2 Linker.\nClick Generate and copy the 16-character password.",
       "gmail_tip": "Dica: você pode colar a senha toda junta, sem espaços.",
       "outlook_title": "Outlook / Hotmail (Microsoft)",
-      "outlook_steps": "Acesse sua conta Microsoft (account.microsoft.com) e vá em Segurança.\nAbra Opções de segurança avançadas.\nAtive a Verificação em duas etapas (2FA), se estiver desligada.\nProcure por Senhas de aplicativos.\nClique em Criar uma nova senha de aplicativo.\nCopie a senha gerada e cole no sistema.",
+      "outlook_steps": "Open your Microsoft account (account.microsoft.com) and go to Security.\nOpen Advanced security options.\nEnable 2-step verification (2FA) if it’s off.\nFind App passwords.\nClick Create a new app password.\nCopy the generated password and paste it into the app.",
       "faq_title": "Perguntas comuns",
       "faq_q_safe": "Isso é seguro?",
-      "faq_a_safe": "Sim. Essa senha serve apenas para enviar e-mails. Se quiser revogar, basta excluir a senha de app sem mudar sua senha principal.",
+      "faq_a_safe": "Yes. This password is only for sending email. You can revoke access by deleting the app password without changing your main password.",
       "faq_q_where": "Onde eu colo essa senha?",
-      "faq_a_where": "Aqui em Configurasões → SMTP, no campo “Senha de app”."
+      "faq_a_where": "Here in Settings → SMTP, in the “App password” field."
     },
     "toasts": {
       "load_error_title": "Não foi possível carregar as configurações SMTP",
@@ -422,7 +422,7 @@
     },
     "test": {
       "title": "Enviar email de teste",
-      "subtitle": "Pré-visualize o template selecionado enviando para um destinatário.",
+      "subtitle": "Preview the selected template by sending it to a recipient.",
       "fields": {
         "template": "Template",
         "visa_type": "Tipo de visto",
@@ -435,10 +435,10 @@
       "placeholders": {
         "company": "Acme Farms",
         "position": "Trabalhador rural",
-        "to": "destinatario@email.com"
+        "to": "recipient@email.com"
       },
-      "template_none": "Sem template",
-      "template_hint": "Se você selecionar um template, Assunto e Corpo serão preenchidos automaticamente.",
+      "template_none": "No template",
+      "template_hint": "If you select a template, Subject and Body will be filled automatically.",
       "actions": {
         "send": "Enviar teste"
       },
@@ -450,19 +450,19 @@
   },
   "templates": {
     "title": "Templates de email",
-    "subtitle": "Crie e gerencie templates para acelerar suas aplicações.",
+    "subtitle": "Create and manage templates to speed up your applications.",
     "actions": {
       "new": "Novo template",
       "new_fallback": "Criar template de fallback",
-      "generate_ai": "Gerar com IA",
-      "rewrite_ai": "✨ Reescrever com IA"
+      "generate_ai": "Generate with AI",
+      "rewrite_ai": "✨ Rewrite with AI"
     },
     "ai_writer": {
       "title": "IA Dinâmica Activa",
       "description": "Seus emails são gerados automaticamente por IA para cada vaga.",
-      "active_title": "Geração automática ativada",
-      "active_desc": "Cada email que você enviar será único, gerado pela IA com base no seu currículo e na descrição da vaga. Não é necessário criar templates.",
-      "fallback_note": "Opcionalmente, você pode criar templates de fallback caso a IA não consiga gerar o email."
+      "active_title": "Auto-generation enabled",
+      "active_desc": "Each email you send will be unique, generated by AI based on your resume and job description. No templates needed.",
+      "fallback_note": "Optionally, you can create fallback templates in case the AI cannot generate the email."
     },
     "ai_counter": "Tentativas hoje: {{used}}/{{limit}}",
     "ai_limit_reached": "Você atingiu o limite de 3 gerações por dia. Tente novamente amanhã.",
@@ -485,7 +485,7 @@
     },
     "editor": {
       "new_title": "Novo template",
-      "edit_title": "Editar template",
+      "edit_title": "Edit template",
       "placeholders_help": "Você pode usar placeholders como"
     },
     "spam_warning": {
@@ -493,16 +493,16 @@
       "desc": "Termo detectado: '{{term}}'. Isso pode aumentar a chance de cair na caixa de Spam."
     },
     "fields": {
-      "visa_type": "Tipo de visto",
-      "visa_type_hint": "Usado apenas para gerar com IA. No envio, o sistema usa o visto de cada vaga.",
-      "name": "Nome",
-      "subject": "Assunto",
-      "body": "Corpo"
+      "visa_type": "Visa type",
+      "visa_type_hint": "Used only for AI generation. Sending uses each job’s visa type.",
+      "name": "Name",
+      "subject": "Subject",
+      "body": "Body"
     },
     "placeholders": {
-      "name": "Nome do template",
-      "subject": "Assunto do email",
-      "body": "Corpo do email"
+      "name": "Template name",
+      "subject": "Email subject",
+      "body": "Email body"
     },
     "table": {
       "name": "Nome",
@@ -517,11 +517,11 @@
       "created": "Template criado.",
       "updated": "Template atualizado.",
       "deleted": "Template removido.",
-      "save_error_title": "Erro ao salvar",
+      "save_error_title": "Save error",
       "delete_error_title": "Erro ao remover",
       "generated_title": "Template gerado",
       "remaining_today": "{{count}} gerações de IA restantes hoje",
-      "generate_error_title": "Erro na geração por IA",
+      "generate_error_title": "AI generation error",
       "generate_error_fallback": "Não foi possível gerar o template.",
       "limit_reached_title": "Limite de templates atingido",
       "limit_reached_desc": "Seu plano permite até {{max}} template(s). Faça upgrade para criar mais."
@@ -532,23 +532,23 @@
     "subtitle": "Envie seu PDF, revise os dados extraídos e salve. O currículo será anexado em todos os emails enviados.",
     "upload": {
       "label": "Upload do PDF",
-      "note": "A IA pode errar — revise antes de salvar.",
+      "note": "AI can be wrong — review before saving.",
       "actions": {
         "parse": "Extraer com IA"
       }
     },
     "status": {
-      "attached": "Currículo anexado",
-      "attached_desc": "Este PDF será anexado automaticamente a todos os emails enviados.",
-      "view": "Visualizar"
+      "attached": "Resume attached",
+      "attached_desc": "This PDF will be automatically attached to all emails sent.",
+      "view": "View"
     },
     "fields": {
-      "name": "Nome",
-      "skills": "Skills (separe por vírgula)",
-      "skills_hint": "Ex: farm worker, landscaping, forklift",
-      "experience_years": "Anos de experiência",
-      "previous_jobs": "Trabalhos anteriores (vírgula)",
-      "previous_jobs_hint": "Ex: Farm worker, Construction",
+      "name": "Name",
+      "skills": "Skills (comma-separated)",
+      "skills_hint": "e.g. farm worker, landscaping, forklift",
+      "experience_years": "Years of experience",
+      "previous_jobs": "Previous jobs (comma-separated)",
+      "previous_jobs_hint": "e.g. Farm worker, Construction",
       "bio": "Bio curta"
     },
     "actions": {
@@ -564,58 +564,42 @@
     }
   },
   "queue": {
-    "smtp_required": {
-      "title": "Configure o SMTP primeiro",
-      "description": "Para enviar emails, você precisa configurar seu SMTP em Configurações → SMTP.",
-      "actions": {
-        "cancel": "Agora não",
-        "go_settings": "Abrir configurações SMTP"
-      }
-    },
-    "upgrade_required": {
-      "title": "Limite diário atingido!",
-      "description": "Você atingiu seu limite de {{limit}} envios por dia. Faça upgrade para enviar mais.",
-      "actions": {
-        "cancel": "Voltar",
-        "view_plans": "Ver planos premium"
-      }
-    },
     "title": "Minha Fila",
     "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
     "actions": {
       "add_manual": "Adicionar Empresa",
       "send": "Enviar todos ({{pendingCount}})",
       "send_selected": "Enviar selecionados ({{count}})",
-      "retry": "Reenviar",
-      "retry_all_failed": "Reenviar falhos ({{count}})",
-      "resend": "Enviar novamente",
+      "retry": "Retry",
+      "retry_all_failed": "Retry failed ({{count}})",
+      "resend": "Resend",
       "view_history": "Ver histórico"
     },
     "history": {
       "title": "Histórico de Envios",
-      "empty": "Nenhum envio registrado.",
-      "status_success": "Sucesso",
+      "empty": "No sends recorded.",
+      "status_success": "Success",
       "status_failed": "Falhou",
       "status_skipped": "Pulado",
       "sent_at": "Enviado",
-      "opened_at": "Visualizado",
+      "opened_at": "Opened",
       "not_opened": "Não visualizado"
     },
     "manual_dialog": {
       "title": "Adicionar Empresa",
       "fields": {
-        "company": "Nome *",
+        "company": "Name *",
         "email": "Email *",
         "job_title": "Vaga",
         "eta_number": "ETA Number",
         "phone": "Telefone"
       },
       "placeholders": {
-        "company": "Nome da empresa",
-        "email": "email@empresa.com",
-        "job_title": "Ex: Landscaper",
-        "eta_number": "Ex: H-300-12345",
-        "phone": "Ex: +1 (555) 123-4567"
+        "company": "Company name",
+        "email": "email@company.com",
+        "job_title": "e.g. Landscaper",
+        "eta_number": "e.g. H-300-12345",
+        "phone": "e.g. +1 (555) 123-4567"
       },
       "actions": {
         "add": "Adicionar"
@@ -624,6 +608,22 @@
         "add_success_title": "Adicionado à fila!",
         "add_success_desc": "A empresa foi adicionada à sua fila.",
         "add_error_title": "Erro ao adicionar"
+      }
+    },
+    "smtp_required": {
+      "title": "Configure o SMTP primeiro",
+      "description": "Para enviar emails, você precisa configurar seu SMTP em Configurações → SMTP.",
+      "actions": {
+        "cancel": "Not now",
+        "go_settings": "Abrir configurações SMTP"
+      }
+    },
+    "upgrade_required": {
+      "title": "Limite diário atingido!",
+      "description": "You've reached your limit of {{limit}} emails per day. Upgrade to send more.",
+      "actions": {
+        "cancel": "Voltar",
+        "view_plans": "View premium plans"
       }
     },
     "sending_status": {
@@ -636,12 +636,12 @@
     },
     "stats": {
       "in_queue": "Na Fila",
-      "sent_today": "Enviados Hoje",
+      "sent_today": "Envios Hoje",
       "daily_limit": "Limite Diário"
     },
     "table": {
       "title": "Vagas na Fila",
-      "description": "Gerencie as vagas que você vai aplicar",
+      "description": "Manage the jobs you will apply to",
       "headers": {
         "select_all": "Selecionar todas as pendentes",
         "select_row": "Selecionar item",
@@ -650,6 +650,7 @@
         "email": "Email",
         "status": "Status",
         "open_tracking": "Leitura",
+        "cv": "CV",
         "action": "Ação"
       },
       "loading": "Carregando fila...",
@@ -657,11 +658,11 @@
       "go_jobs": "Abrir Hub Vagas"
     },
     "open_tracking": {
-      "waiting": "Aguardando leitura",
-      "opened": "Visualizado",
+      "waiting": "Awaiting read",
+      "opened": "Opened",
       "not_opened": "Não visualizado",
-      "opened_at": "Visualizado em: {{date}}",
-      "disclaimer": "A confirmação de leitura depende das configurações de privacidade do destinatário."
+      "opened_at": "Viewed at: {{date}}",
+      "disclaimer": "Read confirmation depends on the recipient's privacy settings."
     },
     "status": {
       "sent": "Enviado",
@@ -672,145 +673,146 @@
       "skipped_invalid_domain": "Domínio inválido"
     },
     "toasts": {
-      "bg_started_title": "Envio iniciado",
-      "bg_started_desc": "Seu envio está rodando em background. Você pode fechar esta página.",
-      "bg_started_selected_title": "Envio iniciado",
-      "bg_started_selected_desc": "{{count}} itens selecionados estão rodando em background. Você pode fechar esta página.",
-      "mx_invalid_title": "Email inválido (sem MX)",
-      "mx_invalid_desc": "O domínio {{domain}} não possui MX válido. Para proteger sua reputação, o envio foi bloqueado.",
       "no_template_title": "Nenhum template encontrado",
       "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar.",
-      "resume_required_title": "Currículo necessário",
-      "resume_required_desc": "Para o plano Black, envie seu currículo na aba Currículo (Configurações) para gerar e-mails por vaga.",
-      "bulk_premium_title": "Recurso Premium",
-      "bulk_premium_desc": "O envio em massa (Enviar todos) é exclusivo para planos Premium. Faça upgrade para enviar tudo de uma vez.",
-      "bulk_premium_cta": "Ver planos",
+      "resume_required_title": "Resume required",
+      "resume_required_desc": "On Black plan, upload your resume in Settings → Resume so we can generate a tailored email for each job.",
+      "black_ai_failed_no_fallback": "AI failed to generate the email and there is no fallback template.",
+      "bg_started_title": "Envio iniciado",
+      "bg_started_desc": "Your sending is running in the background. You can close this page.",
+      "bg_started_selected_title": "Envio iniciado",
+      "bg_started_selected_desc": "{{count}} selected items are running in the background. You can close this page.",
+      "mx_invalid_title": "Email inválido (sem MX)",
+      "mx_invalid_desc": "The domain {{domain}} has no valid MX records. To protect your reputation, sending was blocked.",
       "load_error_title": "Erro ao carregar fila",
       "remove_error_title": "Erro ao remover",
       "remove_success_title": "Removido da fila",
       "remove_success_desc": "A vaga foi removida da sua fila.",
       "daily_limit_reached_title": "Limite diário atingido",
-      "daily_limit_reached_desc": "Você atingiu seu limite diário de envios. Tente novamente amanhã ou faça upgrade do plano.",
+      "daily_limit_reached_desc": "You’ve reached your daily sending limit. Try again tomorrow or upgrade your plan.",
       "sent_title": "Emails enviados!",
-      "sent_desc": "{{count}} aplicações foram enviadas.",
+      "sent_desc": "{{count}} candidaturas foram enviadas.",
       "partial_success_title": "Sucesso parcial",
       "partial_success_desc": "{{sent}} emails enviados, {{failed}} falharam. Verifique os itens com falha e tente novamente.",
       "all_failed_desc": "Todos os {{count}} emails falharam. Verifique suas configurações SMTP.",
-      "all_failed_detail": "Todos os {{count}} emails falharam: {{reason}}",
-      "error_detail": "Erro: {{message}}"
+      "all_failed_detail": "All {{count}} emails failed: {{reason}}",
+      "error_detail": "Error: {{message}}",
+      "bulk_premium_title": "Recurso Premium",
+      "bulk_premium_desc": "O envio em massa (Enviar todos) é exclusivo para planos Premium. Faça upgrade para enviar tudo de uma vez.",
+      "bulk_premium_cta": "Ver planos"
     }
   },
   "smtp_errors": {
     "auth_failed": {
       "title": "Autenticação falhou",
-      "description": "Senha de app incorreta ou expirada. Para Gmail, gere uma nova senha de app em myaccount.google.com > Segurança > Senhas de app."
+      "description": "Incorrect or expired app password. For Gmail, generate a new App Password at myaccount.google.com > Security > App Passwords."
     },
     "app_password_required": {
       "title": "Senha de app necessária",
-      "description": "O Gmail exige uma Senha de App (não sua senha normal). Acesse myaccount.google.com > Segurança > Senhas de app para gerar uma."
+      "description": "Gmail requires an App Password (not your regular password). Go to myaccount.google.com > Security > App Passwords to generate one."
     },
     "connection_timeout": {
       "title": "Timeout de conexão",
-      "description": "Não foi possível conectar ao servidor SMTP a tempo. Verifique sua internet e tente novamente."
+      "description": "Could not connect to the SMTP server in time. Check your internet and try again."
     },
     "connection_refused": {
       "title": "Conexão recusada",
-      "description": "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail/Outlook) está correto nas configurações."
+      "description": "The SMTP server refused the connection. Check if the provider (Gmail/Outlook) is correct in settings."
     },
     "connection_closed": {
       "title": "Conexão encerrada",
-      "description": "O servidor SMTP encerrou a conexão inesperadamente. Tente novamente em alguns minutos."
+      "description": "The SMTP server closed the connection unexpectedly. Try again in a few minutes."
     },
     "tls_error": {
       "title": "Erro de segurança (TLS/SSL)",
-      "description": "Falha na conexão segura com o servidor. Verifique se o provedor selecionado está correto."
+      "description": "Secure connection to the server failed. Check if the selected provider is correct."
     },
     "recipient_rejected": {
       "title": "Destinatário rejeitado",
-      "description": "O email do destinatário foi rejeitado pelo servidor. O endereço pode não existir ou estar incorreto."
+      "description": "The recipient's email was rejected by the server. The address may not exist or be incorrect."
     },
     "mailbox_full": {
       "title": "Caixa de entrada cheia",
-      "description": "A caixa de entrada do destinatário está cheia. Tente novamente mais tarde."
+      "description": "The recipient's mailbox is full. Try again later."
     },
     "rate_limited": {
       "title": "Limite de envio atingido",
-      "description": "Você atingiu o limite de envios. Aguarde um tempo antes de tentar novamente ou faça upgrade do plano."
+      "description": "You've reached the sending limit. Wait a while before trying again or upgrade your plan."
     },
     "blocked_spam": {
       "title": "Bloqueado por spam",
-      "description": "O email foi bloqueado por políticas anti-spam do servidor. Revise o conteúdo do template ou aguarde algumas horas."
+      "description": "The email was blocked by the server's anti-spam policies. Review the template content or wait a few hours."
     },
     "smtp_not_configured": {
       "title": "SMTP não configurado",
-      "description": "Suas credenciais SMTP não estão configuradas. Vá em Configurações > Email para configurar."
+      "description": "Your SMTP credentials are not set up. Go to Settings > Email to configure."
     },
     "function_not_found": {
       "title": "SMTP não configurado ou senha ausente",
-      "description": "Suas credenciais SMTP não foram encontradas. Vá em Configurações > Email, insira seu email e a Senha de App do Gmail e salve novamente."
+      "description": "Your SMTP credentials were not found. Go to Settings > Email, enter your email and Gmail App Password, and save again."
     },
     "function_not_deployed": {
       "title": "Função de envio não disponível",
-      "description": "A função de envio de email não está acessível no servidor. Tente usar o botão 'Enviar Todos' (que usa outra rota) ou contate o suporte para verificar o deploy das Edge Functions no Supabase."
+      "description": "The email sending function is not accessible on the server. Try using the 'Send All' button (which uses a different route) or contact support to check Edge Functions deployment on Supabase."
     },
     "server_error": {
       "title": "Erro interno do servidor",
-      "description": "Ocorreu um erro no servidor de email. Tente novamente em alguns minutos. Si persiste, reconfigure sua senha SMTP."
+      "description": "An error occurred on the email server. Try again in a few minutes. If it persists, reconfigure your SMTP password."
     },
     "session_expired": {
       "title": "Sessão expirada",
-      "description": "Sua sessão expirou. Faça logout e login novamente para continuar enviando emails."
+      "description": "Your session has expired. Log out and log back in to continue sending emails."
     },
     "missing_email": {
       "title": "Email ausente",
-      "description": "O email do destinatário está vazio. Verifique os dados da vaga."
+      "description": "The recipient's email is empty. Check the job data."
     },
     "invalid_domain": {
       "title": "Domínio inválido",
-      "description": "O domínio do e-mail do destinatário não existe ou não aceita e-mails."
+      "description": "The recipient's email domain does not exist or does not accept emails."
     },
     "profile_incomplete": {
       "title": "Perfil incompleto",
-      "description": "Complete seu perfil (nome, idade, telefone, e-mail de contato) antes de enviar."
+      "description": "Complete your profile (name, age, phone, contact email) before sending."
     },
     "no_template": {
       "title": "Template não encontrado",
-      "description": "Nenhum template de email configurado. Crie um template em Configurações > Templates."
+      "description": "No email template configured. Create a template in Settings > Templates."
     },
     "unknown": {
       "title": "Erro desconhecido",
-      "description": "Ocorreu um erro inesperado ao enviar. Tente novamente ou verifique as configurações SMTP."
+      "description": "An unexpected error occurred while sending. Try again or check your SMTP settings."
     },
     "show_raw_error": "Detalhes técnicos",
     "click_for_details": "Clique para ver detalhes do erro"
   },
   "plans": {
     "title": "Escolha seu Plano",
-    "subtitle": "Desbloqueie todo o potencial do H2 Linker e acelere suas aplicações",
+    "subtitle": "Unlock H2 Linker and accelerate your applications",
     "recommended": "Recomendado",
-    "promo_badge": "Lançamento",
+    "promo_badge": "Launch",
     "promo": {
-      "title": "🔥 Promoção de Lançamento - Tempo Limitado!",
-      "subtitle": "Garanta seu plano com desconto especial antes que acabe!",
-      "days": "dias",
-      "hours": "horas",
+      "title": "🔥 Launch Promotion - Limited Time!",
+      "subtitle": "Get your plan with a special discount before it ends!",
+      "days": "days",
+      "hours": "hours",
       "minutes": "min",
-      "seconds": "seg"
+      "seconds": "sec"
     },
     "free": "Grátis",
-    "lifetime": "(vitalício)",
+    "lifetime": "(lifetime)",
     "tiers": {
       "free": {
         "label": "Starter",
-        "description": "Para testar e conhecer"
+        "description": "To test and explore"
       },
       "gold": {
         "label": "Gold",
-        "description": "Volume com templates salvos"
+        "description": "Volume with saved templates"
       },
       "diamond": {
         "label": "Diamond",
-        "description": "Mais volume e visibilidade"
+        "description": "More volume and visibility"
       },
       "black": {
         "label": "Black",
@@ -819,7 +821,7 @@
     },
     "method": {
       "static": "Templates",
-      "dynamic": "IA Dinâmica"
+      "dynamic": "Dynamic AI"
     },
     "actions": {
       "current": "Plano Atual",
@@ -829,125 +831,130 @@
     "features": {
       "daily_emails": "{{count}} envios/dia",
       "basic_template": "1 template básico",
-      "templates_saved": "{{count}} templates salvos",
-      "unlimited_generation": "Geração ilimitada",
-      "auto_fill_templates": "Envio via templates (Preenchimento Automático)",
-      "ai_real_writer": "IA Escritora Real (Email único por vaga)",
-      "ai_real_writer_tooltip": "Cada email é gerado do zero pela IA, personalizado para a vaga específica. Nenhum email será igual ao outro.",
-      "resume_basic": "Extração de currículo básica",
-      "resume_advanced": "Extração de currículo avançada (IA)",
-      "resume_view_tracking": "Rastreamento de visualização do currículo",
-      "resume_view_tracking_tooltip": "Saiba quando recrutadores visualizam seu perfil público com currículo. Acompanhe o interesse real de cada empresa.",
-      "cloud_sending": "Envio pela nuvem",
-      "mask_user_agent": "Proteção anti-spam",
-      "mask_user_agent_tooltip": "Mascara informações técnicas do seu envio para reduzir chances de bloqueio por filtros anti-spam.",
-      "antispam_armored": "Proteção anti-spam Blindada",
-      "antispam_armored_tooltip": "Camada avançada de proteção com múltiplas técnicas de ofuscação para máxima entregabilidade.",
-      "dns_bounce_check": "Verificação DNS",
-      "dns_bounce_check_tooltip": "Valida o MX do domínio antes de enviar. Evita bounces e protege sua reputação de remetente.",
-      "delay_gold": "Delay fixo de 15s",
-      "delay_gold_tooltip": "Intervalo fixo de 15 segundos entre cada envio para proteger sua reputação.",
-      "delay_diamond": "Delay aleatório 15-45s",
-      "delay_diamond_tooltip": "Intervalo aleatório entre 15 e 45 segundos entre envios, variando naturalmente para maior segurança.",
-      "delay_black": "Delay humano 1-5 min",
-      "delay_black_tooltip": "Intervalo aleatório entre 1 e 5 minutos entre envios, simulando comportamento humano real para máxima proteção contra detecção.",
-      "priority_support": "Suporte prioritário"
+      "templates_saved": "{{count}} saved templates",
+      "unlimited_generation": "Unlimited generation",
+      "auto_fill_templates": "Template sending (Auto-Fill)",
+      "ai_real_writer": "Real AI Writer (Unique email per job)",
+      "ai_real_writer_tooltip": "Each email is generated from scratch by AI, personalized for the specific job. No two emails will be alike.",
+      "resume_basic": "Basic resume extraction",
+      "resume_advanced": "Advanced resume extraction (AI)",
+      "resume_view_tracking": "Resume view tracking",
+      "resume_view_tracking_tooltip": "Know when recruiters view your public profile with resume. Track real interest from each company.",
+      "cloud_sending": "Cloud sending",
+      "mask_user_agent": "Anti-spam protection",
+      "mask_user_agent_tooltip": "Masks technical information from your sends to reduce chances of being blocked by spam filters.",
+      "antispam_armored": "Armored anti-spam protection",
+      "antispam_armored_tooltip": "Advanced protection layer with multiple obfuscation techniques for maximum deliverability.",
+      "dns_bounce_check": "DNS verification",
+      "dns_bounce_check_tooltip": "Validates the domain's MX record before sending. Prevents bounces and protects your sender reputation.",
+      "delay_gold": "Fixed 15s delay",
+      "delay_gold_tooltip": "Fixed 15-second interval between each send to protect your reputation.",
+      "delay_diamond": "Random 15-45s delay",
+      "delay_diamond_tooltip": "Random interval between 15 and 45 seconds between sends, varying naturally for greater security.",
+      "delay_black": "Human delay 1-5 min",
+      "delay_black_tooltip": "Random interval between 1 and 5 minutes between sends, simulating real human behavior for maximum protection against detection.",
+      "priority_support": "Priority support"
     },
     "toasts": {
       "processing_title": "Processando...",
-      "processing_desc": "Atualizando seu plano...",
+      "processing_desc": "Updating your plan...",
       "payment_success_title": "Pagamento aprovado!",
-      "payment_success_desc": "Seu plano foi atualizado com sucesso.",
-      "payment_canceled_title": "Pagamento cancelado",
-      "error_title": "Erro",
-      "updated_title": "Plano atualizado!",
-      "updated_desc": "Você agora é {{plan}}! 🎉"
+      "payment_success_desc": "Your plan has been successfully updated.",
+      "payment_canceled_title": "Payment canceled",
+      "error_title": "Error",
+      "updated_title": "Plan updated!",
+      "updated_desc": "You are now {{plan}}! 🎉"
     },
-    "referral_note": "💡 O programa de indicações é exclusivo para usuários do plano gratuito. Bônus acumulados não são transferidos ao adquirir um plano premium.",
+    "referral_note": "💡 The referral program is exclusive to Free plan users. Accumulated bonuses do not carry over when upgrading to a premium plan.",
     "footer": {
-      "line1": "Pagamento único. Acesso vitalício.",
-      "line2": "Pagamentos processados com segurança via Stripe."
+      "line1": "One-time payment. Lifetime access.",
+      "line2": "Payments securely processed via Stripe."
     },
     "payment_success": {
-      "title": "Pagamento confirmado",
-      "subtitle": "Agora você tem acesso às funcionalidades do seu plano. Veja tudo o que foi desbloqueado.",
-      "your_plan": "Seu plano",
-      "refreshing": "Sincronizando seu plano…",
-      "ready": "Tudo certo — aproveite as novas funcionalidades.",
-      "free_note": "Não identificamos um plano premium ativo nesta conta. Se você acabou de pagar, aguarde alguns segundos e tente recarregar.",
+      "title": "Payment confirmed",
+      "subtitle": "You now have access to your plan features. Here’s what was unlocked.",
+      "your_plan": "Your plan",
+      "refreshing": "Syncing your plan…",
+      "ready": "All set — enjoy your new features.",
+      "free_note": "We couldn’t detect an active premium plan for this account. If you just paid, wait a few seconds and refresh.",
       "highlights": {
         "daily": "Envios por dia",
-        "queue": "Tamanho da fila",
+        "queue": "Queue size",
         "templates": "Templates"
       },
-      "whats_unlocked": "O que foi desbloqueado",
-      "whats_unlocked_desc": "Clique para ver detalhes e atalhos para usar cada recurso.",
+      "whats_unlocked": "What’s unlocked",
+      "whats_unlocked_desc": "Click to see details and shortcuts to use each feature.",
       "ctas": {
-        "start_now": "Começar agora",
-        "setup_templates": "Configurar templates",
-        "open_queue": "Abrir fila",
-        "open_jobs": "Abrir Hub Vagas",
-        "open_templates": "Abrir templates",
-        "go_settings": "Abrir configurações",
-        "back_plans": "Ver planos"
+        "start_now": "Start now",
+        "setup_templates": "Set up templates",
+        "open_queue": "Open queue",
+        "open_jobs": "Open Jobs Hub",
+        "open_templates": "Open templates",
+        "go_settings": "Open settings",
+        "back_plans": "View plans"
       },
       "sections": {
         "limits": {
-          "title": "Limites do seu plano",
-          "summary": "{{daily}} envios/dia • fila {{queue}} • {{templates}} template(s)",
-          "detail_daily": "Você pode enviar até {{daily}} e-mails por dia.",
-          "detail_queue": "Sua fila suporta até {{queue}} vagas para enviar.",
-          "detail_templates": "Você pode criar até {{templates}} template(s)."
+          "title": "Your plan limits",
+          "summary": "{{daily}} envios/dia • queue {{queue}} • {{templates}} template(s)",
+          "detail_daily": "You can send up to {{daily}} emails per day.",
+          "detail_queue": "Your queue supports up to {{queue}} jobs.",
+          "detail_templates": "You can create up to {{templates}} template(s)."
         },
         "sending": {
-          "title": "Envio premium",
-          "summary": "Envie com recursos premium e maior segurança operacional.",
-          "detail_1": "Envio em lote e recursos premium para acelerar sua operação.",
-          "detail_2": "Use templates para padronizar e manter consistencia."
+          "title": "Premium sending",
+          "summary": "Send with premium capabilities and higher operational safety.",
+          "detail_1": "Bulk sending and premium workflows to speed up operations.",
+          "detail_2": "Use templates to standardize and stay consistent."
         },
         "dns": {
-          "title": "Verificação DNS (anti-bounce)",
-          "summary": "Bloqueia envios para dominios sem MX válido para proteger sua reputação.",
-          "detail_1": "Antes de enviar, validamos o MX do domínio do destinatário.",
-          "detail_2": "Isso reduz bounce e ajuda a manter entregabilidade."
+          "title": "DNS check (anti-bounce)",
+          "summary": "Blocks sending to domains without valid MX records to protect your reputation.",
+          "detail_1": "Before sending, we validate the domain’s MX record.",
+          "detail_2": "This reduces bounces and helps deliverability."
         },
         "privacy": {
-          "title": "Proteção anti-spam",
-          "summary": "Camadas extras para reduzir sinais suspeitos e proteger a conta.",
-          "detail_1": "Recursos de proteção ajudam a reduzir bloqueios e quedas de entregabilidade."
+          "title": "Anti-spam protection",
+          "summary": "Extra layers to reduce suspicious signals and protect your account.",
+          "detail_1": "Protection features can help reduce temporary blocks and deliverability drops."
         },
         "magic_paste": {
-          "title": "Magic Paste (IA)",
-          "summary": "Copie/cole dados e deixe o sistema completar o restante com agilidade.",
-          "detail_1": "Acelera o preenchimento e montagem de operações.",
-          "detail_2": "Ideal para rotinas repetitivas com grande volume."
+          "title": "Magic Paste (AI)",
+          "summary": "Paste data and let the system fill the rest quickly.",
+          "detail_1": "Speeds up repetitive workflows.",
+          "detail_2": "Great for high-volume routines."
         },
         "ai": {
-          "title": "Escritor de Email com IA",
-          "summary": "Gere templates profissionais com poucos cliques (quando disponível no seu plano).",
-          "detail_1": "Geração orientada para H-2A/H-2B com linguagem profissional.",
-          "detail_2": "Use como base e personalize para sua estratégia."
+          "title": "AI Email Writer",
+          "summary": "Generate professional templates in a few clicks (when available on your plan).",
+          "detail_1": "H-2A/H-2B-oriented generation with professional tone.",
+          "detail_2": "Use as a base and customize for your strategy."
         },
         "support": {
-          "title": "Suporte prioritário",
-          "summary": "Atendimento preferencial para destravar sua operação mais rápido.",
-          "detail_1": "Sua solicitação entra na frente na fila de suporte."
+          "title": "Priority support",
+          "summary": "Preferred support routing to unblock you faster.",
+          "detail_1": "Your requests are prioritized in support triage."
         },
         "visual": {
-          "title": "Hub Vagas com detalhes premium",
-          "summary": "Mais contexto visual e benefícios para decidir rápido.",
-          "detail_1": "Acesso a informações premium e visuais na base de vagas."
+          "title": "Jobs Hub premium details",
+          "summary": "More visual context and benefits to decide faster.",
+          "detail_1": "Access premium and visual information in the Jobs Hub."
         },
         "delay": {
-          "title": "Delay humano (anti-spam)",
-          "summary": "Padrões de envio mais naturais para proteger a reputação.",
-          "detail_1": "Intercala envios com pausas para parecer mais humano.",
-          "detail_2": "Ajuda a reduzir bloqueios temporários em provedores."
+          "title": "Human-like delay (anti-spam)",
+          "summary": "More natural sending patterns to protect reputation.",
+          "detail_1": "Interleaves sends with pauses to look more human.",
+          "detail_2": "Helps reduce temporary blocks from providers."
         }
       }
     }
   },
   "jobs": {
+    "queue_banner": {
+      "title": "Pronto para ser contratado? 🚀",
+      "subtitle": "Você tem {{count}} candidaturas prontas para envio. Não deixe essas oportunidades expirarem — envie seus e-mails agora!",
+      "cta": "Enviar Candidaturas Agora"
+    },
     "groups": {
       "dol_draw": "Sorteio Oficial (DOL)",
       "group_label": "Grupo",
@@ -955,10 +962,10 @@
       "a_tooltip": "Vagas do Grupo A são as primeiras da fila do governo. Têm a MAIOR chance de conseguir o visto antes que a cota acabe.",
       "b_short": "Alta Prioridade",
       "b_tooltip": "Processadas logo após o Grupo A. Excelentes chances de aprovação do visto.",
-      "cd_short": "Risco Médio",
-      "cd_tooltip": "Processadas no meio da fila. Chance moderada, depende da velocidade de esgotamento da cota anual.",
-      "risk_short": "Cota em Risco",
-      "risk_tooltip": "Últimas da fila. Alto risco de a cota anual de vistos acabar antes de serem analisadas.",
+      "cd_short": "Medium Risk",
+      "cd_tooltip": "Processed in the middle of the queue. Moderate chances, depending on how fast the annual cap is reached.",
+      "risk_short": "Cap at Risk",
+      "risk_tooltip": "Last in the queue. High risk of the annual visa cap being reached before these are reviewed.",
       "linear_short": "Linear",
       "linear_tooltip": "Processamento padrão."
     },
@@ -980,9 +987,9 @@
       "placeholder": "Buscar por cargo, empresa, cidade..."
     },
     "salary": {
-      "placeholder": "Faixa de salário",
-      "any": "Salário (qualquer)",
-      "lt15": "Até $14.99/h",
+      "placeholder": "Salary range",
+      "any": "Salary (any)",
+      "lt15": "Up to $14.99/h",
       "15_18": "$15 – $18/h",
       "18_22": "$18 – $22/h",
       "22_26": "$22 – $26/h",
@@ -1027,32 +1034,37 @@
       "pay_frequency": "Pagamento: {{frequency}}",
       "bonus": "Bônus / Adicional",
       "deductions": "Deduções Previstas:",
-      "schedule": "Jornada de Trabalho",
+      "schedule": "Work Schedule",
       "weekly_hours": "Carga Horária Semanal:",
       "company_contacts": "Contatos da Empresa",
       "email_label": "EMAIL",
       "phone_label": "TELEFONE",
       "website_label": "WEBSITE",
-      "visit_site": "Visitar site oficial",
-      "call_action": "Ligar",
+      "visit_site": "Visit official site",
+      "call_action": "Call",
       "sms_action": "SMS",
       "whatsapp_action": "WhatsApp",
       "special_reqs": "Requisitos Especiais & Condições",
       "job_description": "Descrição das Funções",
-      "housing_info": "Informações de Moradia",
-      "housing_type": "Tipo de Acomodação:",
+      "housing_info": "Housing Information",
+      "housing_type": "Housing Type:",
       "not_specified": "Não especificado",
       "additional_details": "Detalhes Adicionais",
       "view_details": "Ver detalhes",
       "save_job": "Salvar Vaga",
       "save_job_mobile": "Salvar Vaga",
       "share": "Compartilhar",
-      "remove": "Remover",
+      "remove": "Remove",
       "copied": "Copiado!",
       "copy_success": "Texto copiado para a área de transferência.",
       "send_email": "Enviar E-mail",
-      "early_access_evolution_title": "Oportunidade Evoluída",
-      "early_access_evolution_text": "Esta vaga foi identificada anteriormente pelo nosso Early Access e agora é uma ordem oficial de trabalho confirmada.",
+      "active_early_title": "Prioridade: Early Access Ativo ⚡",
+      "active_early_desc": "Esta vaga foi detectada no momento em que foi enviada para aprovação governamental. Importante: por ser acesso antecipado, ela ainda aguarda certificação final (pode ou não ser aprovada). A vantagem? Você chega primeiro! Se aprovada, seu currículo já estará no topo da lista antes da concorrência em massa.",
+      "group_title": "Prioridade: GRUPO - {{group}} ℹ️",
+      "group_a_desc": "Vagas de prioridade máxima. Estas empresas estão em fase ativa de contratação e costumam processar envios automáticos mais rápido.",
+      "group_general_desc": "Vaga verificada e disponível para processamento. Segue o fluxo padrão de candidatura e resposta da plataforma.",
+      "early_access_evolution_title": "Oportunidade Certificada 🚀",
+      "early_access_evolution_text": "Esta vaga foi identificada originalmente via Early Access e agora é uma ordem oficial de trabalho H-2A/H-2B confirmada.",
       "early_match": {
         "badge": "Vaga Confirmada",
         "title": "Inteligência H2 Linker: Pronta para Candidatura",
@@ -1060,10 +1072,10 @@
       }
     },
     "upgrade": {
-      "title": "Conteúdo Exclusivo",
-      "description": "Faça upgrade para desbloquear informações de contato e benefícios das vagas.",
-      "gold_desc": "Desbloqueie emails e empresas por {{price}} (vitalício)",
-      "diamond_desc": "Acesso completo + IA + benefícios visuais por {{price}} (vitalício)",
+      "title": "Exclusive Content",
+      "description": "Upgrade to unlock contact details and benefits.",
+      "gold_desc": "Unlock emails and companies for {{price}} (lifetime)",
+      "diamond_desc": "Full access + AI + visual benefits for {{price}} (lifetime)",
       "cta": "Ver Planos"
     },
     "upgrade_banner": {
@@ -1201,7 +1213,7 @@
     "reset_defaults": "Restaurar Padrões",
     "email_length": "Tamanho do Email",
     "paragraphs_count_one": "{{count}} parágrafo",
-    "paragraphs_count_other": "{{count}} párrafos",
+    "paragraphs_count_other": "{{count}} parágrafos",
     "paragraph_style": "Estilo de Parágrafos",
     "paragraphs_multiple": "Múltiplos parágrafos",
     "paragraphs_single": "Parágrafo único",
