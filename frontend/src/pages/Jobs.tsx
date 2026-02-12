@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
+import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MobileJobCard } from "@/components/jobs/MobileJobCard";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,6 @@ import {
   X,
   ShieldAlert,
   Lock,
-  Trash2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -45,29 +44,11 @@ import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
-interface Job {
+interface Job extends JobDetails {
   id: string;
-  job_id: string;
-  job_title: string;
-  company: string;
-  city: string;
-  state: string;
-  email: string;
-  visa_type: string | null;
-  salary: number | null;
-  wage_from: number | null;
-  wage_to: number | null;
-  wage_unit: string | null;
-  openings: number | null;
-  posted_date: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  experience_months: number | null;
-  randomization_group: string | null;
-  was_early_access: boolean | null;
-  category: string | null;
 }
 
+// --- COMPONENTE DE ONBOARDING ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -148,12 +129,14 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  //queuedJobIds: Todas as vagas na fila (independente do status) para o X Vermelho
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
+  //pendingCount: Apenas vagas com status 'pending' para o Banner do topo
+  const [pendingCount, setPendingCount] = useState(0);
+
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
-  const [showImporter, setShowImporter] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
@@ -207,20 +190,25 @@ export default function Jobs() {
     return "-";
   };
 
-  // --- SINCRONIZAÇÃO EM TEMPO REAL AJUSTADA ---
+  // --- SINCRONIZAÇÃO EM TEMPO REAL DUPLA ---
   const syncQueue = async () => {
     if (!profile?.id) return;
-    // Removido o filtro de status: "pending" para que o X permaneça mesmo após o envio (status: "sent")
-    const { data } = await supabase.from("my_queue").select("job_id").eq("user_id", profile.id);
 
-    setQueuedJobIds(new Set((data ?? []).map((r) => r.job_id)));
+    // Busca tudo para marcar os botões com X
+    const { data: allData } = await supabase.from("my_queue").select("job_id, status").eq("user_id", profile.id);
+
+    if (allData) {
+      setQueuedJobIds(new Set(allData.map((r) => r.job_id)));
+      // Filtra apenas pendentes para o banner do topo
+      setPendingCount(allData.filter((r) => r.status === "pending").length);
+    }
   };
 
   useEffect(() => {
     if (!profile?.id) return;
     syncQueue();
     const channel = supabase
-      .channel("sync-queue-full-status")
+      .channel("sync-queue-realtime-v4")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "my_queue", filter: `user_id=eq.${profile.id}` },
@@ -358,7 +346,7 @@ export default function Jobs() {
           </div>
           {isAdmin && (
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowImporter(true)}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/importer")}>
                 <Database className="mr-2 h-4 w-4" /> Admin
               </Button>
               <JobImportDialog />
@@ -366,23 +354,23 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* CENTRAL DE COMANDO MODERNA - REATIVA */}
-        {queuedJobIds.size > 0 && (
+        {/* BANNER DO TOPO: SÓ APARECE SE HOUVER PENDENTES */}
+        {pendingCount > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all hover:shadow-[0_8px_30px_rgba(37,99,235,0.08)]">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all">
               <div className="flex items-center gap-4 overflow-visible">
                 <div className="relative shrink-0 p-1">
                   <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
                     <Zap className="h-6 w-6 text-white fill-white/20" />
                   </div>
                   <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[11px] font-black h-6 w-6 rounded-full flex items-center justify-center border-[3px] border-white shadow-md animate-in zoom-in duration-300">
-                    {queuedJobIds.size}
+                    {pendingCount}
                   </div>
                 </div>
                 <div>
                   <h3 className="text-slate-900 font-bold text-base leading-tight">{t("jobs.queue_banner.title")}</h3>
                   <p className="text-slate-500 text-sm truncate">
-                    {t("jobs.queue_banner.subtitle", { count: queuedJobIds.size })}
+                    {t("jobs.queue_banner.subtitle", { count: pendingCount })}
                   </p>
                 </div>
               </div>
@@ -397,7 +385,7 @@ export default function Jobs() {
           </div>
         )}
 
-        {/* FILTROS INTEGRADOS */}
+        {/* FILTROS (MANTIDOS) */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4 text-left">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -420,14 +408,6 @@ export default function Jobs() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("jobs.filters.visa.h2a_info")}</p>
-                  </TooltipContent>
-                </Tooltip>
               </div>
               <div className="relative w-full lg:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -461,68 +441,6 @@ export default function Jobs() {
                   setPage(1);
                 }}
               />
-              <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-between text-muted-foreground font-normal h-10 text-sm">
-                    {selectedCategories.length > 0
-                      ? t("jobs.filters.selected", { count: selectedCategories.length })
-                      : t("jobs.filters.category")}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 w-[250px]" align="start">
-                  <Command>
-                    <CommandInput placeholder={t("jobs.filters.search_cat")} />
-                    <CommandList>
-                      <CommandEmpty>{t("common.empty")}</CommandEmpty>
-                      <CommandGroup>
-                        {categories.map((c) => (
-                          <CommandItem
-                            key={c}
-                            onSelect={() => {
-                              setSelectedCategories((prev) =>
-                                prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
-                              );
-                              setPage(1);
-                            }}
-                          >
-                            <div
-                              className={cn(
-                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                selectedCategories.includes(c)
-                                  ? "bg-primary text-primary-foreground"
-                                  : "opacity-50 [&_svg]:invisible",
-                              )}
-                            >
-                              <Check className="h-4 w-4" />
-                            </div>
-                            {c}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <Select
-                value={groupFilter}
-                onValueChange={(v) => {
-                  setGroupFilter(v === "all" ? "" : v);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("common.all_groups")}</SelectItem>
-                  {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {t("jobs.groups.group_label")} {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <div className="relative w-full">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">
                   $ Min
@@ -555,6 +473,7 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
+        {/* TABELA DE VAGAS */}
         {isMobile ? (
           <div className="space-y-3">
             {jobs.map((j) => (
@@ -725,7 +644,7 @@ export default function Jobs() {
                           {formatExperience(j.experience_months)}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
-                          {/* BOTÃO ADAPTÁVEL - X VERMELHO PERMANENTE SE NA FILA */}
+                          {/* O BOTÃO COM X VERMELHO PERMANECE ENQUANTO EXISTIR NA TABELA MY_QUEUE */}
                           <Button
                             size="sm"
                             variant={!planSettings.job_db_blur && queuedJobIds.has(j.id) ? "default" : "outline"}
