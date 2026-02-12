@@ -961,14 +961,6 @@
       "risk_tooltip": "Últimas da fila. Alto risco de a cota anual de vistos acabar antes de serem analisadas.",
       "linear_short": "Linear",
       "linear_tooltip": "Processamento padrão."
-      "details": {
-  "early_access_evolution_title": "Oportunidade Evoluída",
-  "early_access_evolution_text": "Esta vaga foi identificada anteriormente pelo nosso Early Access e agora é uma ordem oficial de trabalho confirmada.",
-  "send_email": "Enviar E-mail",
-  "deductions": "Deduções e Descontos",
-  "special_reqs": "Requisitos e Condições Especiais",
-  "job_description": "Descrição das Funções"
-}
     },
     "subtitle": "{{totalCount}} vagas {{visaLabel}} disponíveis",
     "filters": {
@@ -1046,17 +1038,21 @@
       "sms_action": "SMS",
       "whatsapp_action": "WhatsApp",
       "special_reqs": "Requisitos Especiais & Condições",
-      "job_description": "Descrição da Vaga",
+      "job_description": "Descrição das Funções",
       "housing_info": "Informações de Moradia",
       "housing_type": "Tipo de Acomodação:",
       "not_specified": "Não especificado",
       "additional_details": "Detalhes Adicionais",
       "view_details": "Ver detalhes",
       "save_job": "Salvar Vaga",
+      "save_job_mobile": "Salvar Vaga",
       "share": "Compartilhar",
       "remove": "Remover",
       "copied": "Copiado!",
       "copy_success": "Texto copiado para a área de transferência.",
+      "send_email": "Enviar E-mail",
+      "early_access_evolution_title": "Oportunidade Evoluída",
+      "early_access_evolution_text": "Esta vaga foi identificada anteriormente pelo nosso Early Access e agora é uma ordem oficial de trabalho confirmada.",
       "early_match": {
         "badge": "Vaga Confirmada",
         "title": "Inteligência H2 Linker: Pronta para Candidatura",
