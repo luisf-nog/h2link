@@ -144,10 +144,7 @@ export function JobDetailsDialog({
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: t("jobs.details.copied"),
-      description: t("jobs.details.copy_success"),
-    });
+    toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
   };
 
   const formatDate = (v: string | null | undefined) => {
@@ -179,15 +176,7 @@ export function JobDetailsDialog({
 
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
-  const getMessage = () => {
-    if (!job) return "";
-    const loc = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
-    return `Hello, I am interested in the ${job.job_title} position at ${job.company}${loc}. I would like to apply. Thank you.`;
-  };
-
-  const encodedMessage = encodeURIComponent(getMessage());
-
-  // CORREÇÃO DO ERRO TS2339: Adicionada a propriedade 'tooltip' no retorno
+  // CORREÇÃO TIPAGEM TS2339
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
@@ -255,8 +244,8 @@ export function JobDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-[95vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
-        {/* HEADER FIXO NO TOPO */}
-        <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-30 shadow-sm">
+        {/* HEADER FIXO - TUDO O QUE É ESSENCIAL FICA AQUI */}
+        <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm">
           <div className="flex sm:hidden items-center mb-3 -mt-2">
             <Button
               variant="ghost"
@@ -270,7 +259,7 @@ export function JobDetailsDialog({
 
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1 w-full min-w-0 text-left">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
                 {badgeConfig && (
                   <Badge variant={badgeConfig.variant} className={cn("text-[10px] sm:text-xs", badgeConfig.className)}>
                     {badgeConfig.label}
@@ -282,14 +271,14 @@ export function JobDetailsDialog({
                   </span>
                 )}
               </div>
-              <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary mt-1 font-bold tracking-tight truncate">
+              <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold tracking-tight truncate uppercase sm:normal-case">
                 {job?.job_title}
               </DialogTitle>
-              <DialogDescription className="flex flex-wrap items-center gap-2 text-base sm:text-lg text-slate-600">
-                <span className="font-bold text-foreground flex items-center gap-1">
+              <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-lg text-slate-600 font-medium">
+                <span className="flex items-center gap-1 text-slate-900">
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
-                <span className="inline-flex items-center gap-1">
+                <span className="flex items-center gap-1">
                   <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
                 </span>
               </DialogDescription>
@@ -312,10 +301,10 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* ÁREA ROLÁVEL - CARD DOURADO ESTÁ AQUI DENTRO */}
+        {/* ÁREA DE SCROLL - BANNER DOURADO E DETALHES TÉCNICOS */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30">
-          <div className="p-4 sm:p-6 space-y-6">
-            {/* CARD DOURADO QUE ROLA JUNTO COM O CONTEÚDO */}
+          <div className="p-4 sm:p-6 space-y-5">
+            {/* CARD DOURADO - AGORA ROLA JUNTO COM OS DETALHES */}
             {job?.was_early_access && (
               <div
                 className="rounded-lg border border-amber-200 bg-amber-50/80 overflow-hidden transition-all duration-300 cursor-pointer shadow-sm"
@@ -327,7 +316,7 @@ export function JobDetailsDialog({
                       <Zap className="h-4 w-4 text-amber-600 fill-amber-600" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-none mb-1">
+                      <span className="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest leading-none mb-1">
                         {t("jobs.details.early_match.badge")}
                       </span>
                       <h4 className="text-sm font-bold text-amber-900 leading-tight text-left">
@@ -341,10 +330,8 @@ export function JobDetailsDialog({
                   </div>
                 </div>
                 {isBannerExpanded && (
-                  <div className="px-4 pb-4 pt-2 animate-in fade-in slide-in-from-top-1 duration-200 border-t border-amber-200/50 text-left">
-                    <p className="text-sm text-amber-800 leading-relaxed font-medium">
-                      {t("jobs.details.early_match.desc")}
-                    </p>
+                  <div className="px-4 pb-4 pt-2 animate-in fade-in slide-in-from-top-1 duration-200 border-t border-amber-200/50 text-left text-sm text-amber-800 leading-relaxed font-medium">
+                    {t("jobs.details.early_match.desc")}
                   </div>
                 )}
               </div>
@@ -378,20 +365,23 @@ export function JobDetailsDialog({
               </Alert>
             )}
 
+            {/* SEÇÃO DE DADOS TÉCNICOS */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
               <div className="lg:col-span-4 space-y-6">
                 <Timeline />
+
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
                   </div>
                   <div>
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider text-left">
                       {t("jobs.details.experience")}
                     </span>
                     <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                   </div>
                 </div>
+
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <div className="flex items-center gap-2 text-slate-600">
@@ -401,7 +391,7 @@ export function JobDetailsDialog({
                       </span>
                     </div>
                     <Badge className="text-base sm:text-lg px-3 sm:px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
-                      {job?.openings ? job.openings : "N/A"}
+                      {job?.openings || "N/A"}
                     </Badge>
                   </div>
                   <div>
@@ -415,9 +405,9 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              <div className="lg:col-span-8 space-y-8 text-left">
+              <div className="lg:col-span-8 space-y-8">
                 {job?.job_min_special_req && (
-                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm text-left">
+                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm">
                     <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg text-left">
                       <AlertTriangle className="h-5 w-5" /> {t("jobs.details.special_reqs")}
                     </h4>
@@ -427,12 +417,12 @@ export function JobDetailsDialog({
                   </div>
                 )}
                 {job?.job_duties && (
-                  <div className="space-y-4 text-left">
+                  <div className="space-y-4">
                     <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800">
                       <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
                     </h4>
                     <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
-                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap text-left">
+                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
                         {job.job_duties}
                       </p>
                     </div>
@@ -443,7 +433,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER FIXO */}
+        {/* FOOTER FIXO NO MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-40 shadow-lg">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job")}
