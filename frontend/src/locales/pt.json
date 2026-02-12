@@ -14,7 +14,10 @@
     "browse_jobs": "Explorar Vagas Disponíveis",
     "browse_jobs_hint": "Navegue sem criar conta • Acesso gratuito",
     "hero_tagline": "Economize tempo e encontre oportunidades H-2A e H-2B reais",
-    "tabs": { "signin": "Entrar", "signup": "Criar Conta" },
+    "tabs": {
+      "signin": "Entrar",
+      "signup": "Criar Conta"
+    },
     "signin": {
       "title": "Bem-vindo de volta",
       "description": "Entre com sua conta para continuar"
@@ -26,7 +29,7 @@
     "errors": {
       "email_rate_limit_title": "Muitos e-mails de confirmação",
       "email_rate_limit_desc": "Aguarde alguns minutos e tente novamente. Limitamos temporariamente novos e-mails de confirmação para proteger a entrega.",
-      "weak_password_desc": "Esta senha é muito comum e fácil de adivinhar. Por favor, escolha uma senha mais forte."
+      "weak_password_desc": "Esta senha é muito comum e fácil de adivinar. Por favor, escolha uma senha mais forte."
     },
     "recovery": {
       "link": "Esqueci minha senha",
@@ -148,7 +151,7 @@
   },
   "footer": {
     "tagline": "Conexões inteligentes. Oportunidades reais.",
-    "terms": "Termos de Uso",
+    "terms": "Terms of Use",
     "privacy": "Política de Privacidade"
   },
   "reports": {
@@ -189,7 +192,7 @@
       "gmail_guide_title": "Como criar no Gmail",
       "gmail_step1": "Ative a verificação em duas etapas (2FA) na sua conta Google",
       "gmail_step2": "Acesse Senhas de App e crie uma com o nome \"H2 Linker\"",
-      "gmail_step3": "Copie a senha de 16 caracteres gerada",
+      "gmail_step3": "Copie a senha de 16 caracteres generada",
       "gmail_link": "Abrir Senhas de App do Google →",
       "outlook_guide_title": "Como criar no Outlook",
       "outlook_step1": "Ative a verificação em duas etapas na sua conta Microsoft",
@@ -210,7 +213,7 @@
       "recommendation_title": "💡 Nossa recomendação",
       "recommendation_desc": "Para usuários novos, recomendamos o perfil \"Equilibrado\". Ele oferece o melhor balanço entre velocidade e segurança. Usuários experientes com contas já aquecidas podem considerar o \"Agressivo\".",
       "recommended_badge": "Recomendado",
-      "how_it_works": "O limite aumenta automaticamente a cada dia que você usa pelo menos 80% da sua cota. Quanto mais consistente, mais rápido você atinge a velocidade máxima do seu plano.",
+      "how_it_works": "O limite aumenta automaticamente a cada dia que você usa pelo menos 80% de sua cota. Quanto mais consistente, mais rápido você atinge a velocidade máxima do seu plano.",
       "continue": "Salvar & Continuar"
     },
     "complete": {
@@ -315,7 +318,7 @@
     },
     "free_warning": {
       "title": "Aviso: envio em velocidade máxima",
-      "description": "O envio sem delay pode causar bloqueios temporários no seu Gmail. Para ativar o Modo de Envio Seguro (Anti-Spam), considere o plano Diamond.",
+      "description": "O envio sem delay pode causar bloqueios temporários no seu Gmail. Para ativar o Modo de Envío Seguro (Anti-Spam), considere o plano Diamond.",
       "cta": "Ver planos"
     }
   },
@@ -346,7 +349,9 @@
       },
       "email_note": "O email não pode ser alterado",
       "contact_email_note": "Este email será usado na assinatura do seu template.",
-      "actions": { "save": "Salvar Alterações" },
+      "actions": {
+        "save": "Salvar Alterações"
+      },
       "validation": {
         "invalid_age": "A idade deve estar entre 14 e 90.",
         "invalid_phone": "O telefone deve estar no formato internacional (E.164), por exemplo +5511999999999."
@@ -358,7 +363,9 @@
       "current_plan": "Plano atual",
       "credits_used_today": "Créditos usados hoje",
       "member_since": "Membro desde",
-      "actions": { "manage_plan": "Gerenciar Plano" }
+      "actions": {
+        "manage_plan": "Gerenciar Plano"
+      }
     },
     "toasts": {
       "update_error_title": "Erro ao atualizar",
@@ -399,7 +406,7 @@
       "faq_q_safe": "Isso é seguro?",
       "faq_a_safe": "Sim. Essa senha serve apenas para enviar e-mails. Se quiser revogar, basta excluir a senha de app sem mudar sua senha principal.",
       "faq_q_where": "Onde eu colo essa senha?",
-      "faq_a_where": "Aqui em Configurações → SMTP, no campo “Senha de app”."
+      "faq_a_where": "Aqui em Configurasões → SMTP, no campo “Senha de app”."
     },
     "toasts": {
       "load_error_title": "Não foi possível carregar as configurações SMTP",
@@ -432,7 +439,9 @@
       },
       "template_none": "Sem template",
       "template_hint": "Se você selecionar um template, Assunto e Corpo serão preenchidos automaticamente.",
-      "actions": { "send": "Enviar teste" },
+      "actions": {
+        "send": "Enviar teste"
+      },
       "defaults": {
         "subject": "Aplicação H-2B - {{position}} ({{visa_type}})",
         "body": "Olá {{company}},\n\nMeu nome é {{name}} e gostaria de me candidatar para a vaga de {{position}} sob o visto {{visa_type}}.\n\nAtenciosamente,\n{{name}}\n{{phone}}\n{{contact_email}}"
@@ -524,7 +533,9 @@
     "upload": {
       "label": "Upload do PDF",
       "note": "A IA pode errar — revise antes de salvar.",
-      "actions": { "parse": "Extrair com IA" }
+      "actions": {
+        "parse": "Extrair com IA"
+      }
     },
     "status": {
       "attached": "Currículo anexado",
@@ -556,12 +567,18 @@
     "smtp_required": {
       "title": "Configure o SMTP primeiro",
       "description": "Para enviar emails, você precisa configurar seu SMTP em Configurações → SMTP.",
-      "actions": { "cancel": "Agora não", "go_settings": "Abrir configurações SMTP" }
+      "actions": {
+        "cancel": "Agora não",
+        "go_settings": "Abrir configurações SMTP"
+      }
     },
     "upgrade_required": {
       "title": "Limite diário atingido!",
       "description": "Você atingiu seu limite de {{limit}} envios por dia. Faça upgrade para enviar mais.",
-      "actions": { "cancel": "Voltar", "view_plans": "Ver planos premium" }
+      "actions": {
+        "cancel": "Voltar",
+        "view_plans": "Ver planos premium"
+      }
     },
     "title": "Minha Fila",
     "subtitle": "{{pendingCount}} vagas pendentes • {{sentCount}} enviadas",
@@ -575,7 +592,7 @@
       "view_history": "Ver histórico"
     },
     "history": {
-      "title": "Histórico de Envios",
+      "title": "Historial de Envios",
       "empty": "Nenhum envio registrado.",
       "status_success": "Sucesso",
       "status_failed": "Falhou",
@@ -600,7 +617,9 @@
         "eta_number": "Ex: H-300-12345",
         "phone": "Ex: +1 (555) 123-4567"
       },
-      "actions": { "add": "Adicionar" },
+      "actions": {
+        "add": "Adicionar"
+      },
       "toasts": {
         "add_success_title": "Adicionado à fila!",
         "add_success_desc": "A empresa foi adicionada à sua fila.",
@@ -663,7 +682,6 @@
       "no_template_desc": "Crie pelo menos um template nas Configurações antes de enviar.",
       "resume_required_title": "Currículo necessário",
       "resume_required_desc": "Para o plano Black, envie seu currículo na aba Currículo (Configurações) para gerar e-mails por vaga.",
-      "black_ai_failed_no_fallback": "Falha ao gerar e-mail com IA e não há template de fallback.",
       "bulk_premium_title": "Recurso Premium",
       "bulk_premium_desc": "O envio em massa (Enviar todos) é exclusivo para planos Premium. Faça upgrade para enviar tudo de uma vez.",
       "bulk_premium_cta": "Ver planos",
@@ -782,10 +800,22 @@
     "free": "Grátis",
     "lifetime": "(vitalício)",
     "tiers": {
-      "free": { "label": "Starter", "description": "Para testar e conhecer" },
-      "gold": { "label": "Gold", "description": "Volume com templates salvos" },
-      "diamond": { "label": "Diamond", "description": "Mais volume e visibilidade" },
-      "black": { "label": "Black", "description": "IA dinâmica por vaga" }
+      "free": {
+        "label": "Starter",
+        "description": "Para testar e conhecer"
+      },
+      "gold": {
+        "label": "Gold",
+        "description": "Volume com templates salvos"
+      },
+      "diamond": {
+        "label": "Diamond",
+        "description": "Mais volume e visibilidade"
+      },
+      "black": {
+        "label": "Black",
+        "description": "IA dinâmica por vaga"
+      }
     },
     "method": {
       "static": "Templates",
@@ -812,7 +842,7 @@
       "mask_user_agent": "Proteção anti-spam",
       "mask_user_agent_tooltip": "Mascara informações técnicas do seu envio para reduzir chances de bloqueio por filtros anti-spam.",
       "antispam_armored": "Proteção anti-spam Blindada",
-      "antispam_armored_tooltip": "Camada avançada de proteção com múltiplas técnicas de ofuscação para máxima entregabilidade.",
+      "antispam_armored_tooltip": "Camada avançada de proteção com múltiplas técnicas de ofuscación para máxima entregabilidade.",
       "dns_bounce_check": "Verificação DNS",
       "dns_bounce_check_tooltip": "Valida o MX do domínio antes de enviar. Evita bounces e protege sua reputação de remetente.",
       "delay_gold": "Delay fixo de 15s",
@@ -851,7 +881,7 @@
         "templates": "Templates"
       },
       "whats_unlocked": "O que foi desbloqueado",
-      "whats_unlocked_desc": "Clique para ver detalhes e atalhos para usar cada recurso.",
+      "whats_unlocked_desc": "Clique para ver detalhes e atajos para usar cada recurso.",
       "ctas": {
         "start_now": "Começar agora",
         "setup_templates": "Configurar templates",
@@ -946,7 +976,9 @@
       "category": "Categoria",
       "category_all": "Todas as categorias"
     },
-    "search": { "placeholder": "Buscar por cargo, empresa, cidade..." },
+    "search": {
+      "placeholder": "Buscar por cargo, empresa, cidade..."
+    },
     "salary": {
       "placeholder": "Faixa de salário",
       "any": "Salário (qualquer)",
@@ -1012,7 +1044,12 @@
       "share": "Compartilhar",
       "remove": "Remover",
       "copied": "Copiado!",
-      "copy_success": "Texto copiado para a área de transferência."
+      "copy_success": "Texto copiado para a área de transferência.",
+      "early_match": {
+        "badge": "Vaga Confirmada",
+        "title": "Inteligência H2 Linker: Pronta para Candidatura",
+        "desc": "Esta vaga já foi oficialmente aprovada pelo governo. Nosso sistema a detectou durante a fase inicial de registro, permitindo que você se prepare e aplique antes da maioria dos candidatos. Você tem em mãos uma oportunidade verificada e ativa com vantagem competitiva."
+      }
     },
     "upgrade": {
       "title": "Conteúdo Exclusivo",
@@ -1040,80 +1077,6 @@
       "remove_success_desc": "{{jobTitle}} foi removido da sua fila."
     },
     "shareText": "Confira esta vaga"
-  },
-  "not_found": {
-    "subtitle": "Ops! Página não encontrada",
-    "cta": "Voltar para Home"
-  },
-  "job_details": {
-    "sections": {
-      "contact": "Contato",
-      "worksite": "Local de trabalho",
-      "details": "Detalhes",
-      "benefits": "Benefícios",
-      "compensation": "Remuneração",
-      "job_info": "Informações",
-      "schedule": "Horários",
-      "wages": "Salário",
-      "overtime": "Hora Extra",
-      "housing": "Moradia",
-      "transport_tools": "Transporte e Ferramentas",
-      "physical_requirements": "Requisitos Físicos"
-    },
-    "fields": {
-      "openings": "Aberturas",
-      "salary": "Salário",
-      "overtime": "Hora extra",
-      "overtime_available": "Hora extra disponível",
-      "overtime_range": "Faixa hora extra",
-      "weekly_hours": "Horas semanais",
-      "posted_date": "Data de postagem",
-      "start_date": "Início",
-      "end_date": "Fim",
-      "experience": "Experiência",
-      "training": "Treinamento",
-      "crop_activities": "Atividades/Culturas",
-      "shift": "Turno",
-      "wage_range": "Faixa salarial",
-      "pay_frequency": "Frequência de pagamento",
-      "job_id": "Job ID",
-      "education": "Educação",
-      "requirements": "Requisitos",
-      "special_requirements": "Requisitos Especiais",
-      "job_duties": "Tarefas do Trabalho",
-      "description": "Descrição",
-      "housing": "Moradia",
-      "housing_type": "Tipo de moradia",
-      "housing_capacity": "Capacidade",
-      "housing_location": "Local da moradia",
-      "meals": "Refeições",
-      "transport": "Transporte",
-      "transport_reimburse": "Reembolso transporte",
-      "tools": "Ferramentas",
-      "wage_additional": "Informações Adicionais de Salário",
-      "pay_deductions": "Deduções do Pagamento",
-      "lifting": "Carregar peso",
-      "drug_screen": "Teste de drogas",
-      "background_check": "Verificação antecedentes",
-      "driver_required": "CNH necessária",
-      "website": "Visitar Site"
-    },
-    "values": {
-      "months": "{{count}} meses",
-      "housing_required_h2a": "Obrigatória (detalhes não informados).",
-      "not_provided": "Não informado."
-    },
-    "contact": {
-      "message": "Enviar Mensagem",
-      "call": "Ligar",
-      "whatsapp": "Abrir WhatsApp",
-      "landline": "Fixo",
-      "landline_tooltip": "Este é um número fixo (não WhatsApp)"
-    },
-    "actions": {
-      "add_to_queue": "Adicionar à Fila",
-      "remove_from_queue": "Remover da Fila"
-    }
   },
   "job_import": {
     "trigger": "Importar",
@@ -1189,17 +1152,17 @@
       "conservative": {
         "title": "Conta Nova (< 3 meses)",
         "description": "Criei esta conta de email recentemente.",
-        "details": "Começa com 20 emails/dia, cresce 30% ao dia"
+        "details": "Começa com 20 emails/day, cresce 30% ao dia"
       },
       "standard": {
         "title": "Conta Antiga (Pouco Uso)",
         "description": "Tenho esta conta há tempo, mas uso pouco.",
-        "details": "Começa com 50 emails/dia, cresce 50% ao dia"
+        "details": "Começa com 50 emails/day, cresce 50% ao dia"
       },
       "aggressive": {
         "title": "Conta Antiga (Uso Diário)",
         "description": "Uso esta conta profissionalmente todo dia.",
-        "details": "Começa com 100 emails/dia, dobra a cada dia"
+        "details": "Começa com 100 emails/day, dobra a cada dia"
       }
     },
     "widget": {
@@ -1259,7 +1222,7 @@
     "emphasize_strength": "Destacar força física",
     "emphasize_strength_hint": "Resistência, capacidade de carregar 25kg+",
     "emphasize_languages": "Mencionar idiomas",
-    "emphasize_languages_hint": "Portugués nativo, Inglês intermediário",
+    "emphasize_languages_hint": "Português nativo, Inglês intermediário",
     "custom_instructions": "Instruções Personalizadas",
     "custom_instructions_placeholder": "Ex: Sempre mencione minha experiência em construção civil. Evite falar de idade.",
     "custom_instructions_hint": "A IA seguirá estas instruções ao gerar cada email.",
