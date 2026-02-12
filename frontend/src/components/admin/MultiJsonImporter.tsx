@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database, Clock } from "lucide-react";
+import { Loader2, RefreshCw, Database } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -11,10 +11,13 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
-  // Garante que a data postada seja HOJE (Horário Local) e não UTC (que pula o dia)
-  const getTodayLocal = () => {
-    const d = new Date();
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  // --- DATA LOCAL REAL (Evita o erro do fuso horário/dia 12) ---
+  const getTodayDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // Retorna sempre a data que você vê no seu relógio
   };
 
   const calculateFinalWage = (rawVal: any, hours: any) => {
@@ -34,8 +37,8 @@ export function MultiJsonImporter() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-      // Normaliza para YYYY-MM-DD sem erro de fuso
-      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+      // Garante YYYY-MM-DD sem pular o dia pelo fuso
+      return d.toLocaleDateString("en-CA");
     } catch {
       return null;
     }
@@ -61,7 +64,7 @@ export function MultiJsonImporter() {
   const processJobs = async () => {
     if (files.length === 0) return;
     setProcessing(true);
-    const today = getTodayLocal();
+    const today = getTodayDate();
 
     try {
       const rawJobsMap = new Map();
@@ -95,6 +98,7 @@ export function MultiJsonImporter() {
 
             const fingerprint = getCaseBody(rawJobId);
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
+            const posted = formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE"]));
 
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
@@ -110,11 +114,10 @@ export function MultiJsonImporter() {
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), weeklyHours),
               start_date: formatToISODate(getVal(flat, ["jobBeginDate", "tempneedStart"])),
-              // AQUI CORRIGIMOS A DATA POSTADA: Se o arquivo não tem, usa TODAY local
-              posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])) || today,
+              posted_date: posted || today, // Usa a data local se o arquivo não tiver
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "tempneedEnd"])),
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
-              job_min_special_req: getVal(flat, ["jobMinspecialreq", "specialRequirements"]),
+              job_min_special_req: getVal(flat, ["jobMinspecialreq", "specialRequirements", "jobAddReqinfo"]),
               openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"]) || "0"),
               experience_months: parseInt(
                 getVal(flat, ["experienceMonths", "jobMinexpmonths", "monthsExperience"]) || "0",
@@ -128,16 +131,16 @@ export function MultiJsonImporter() {
       }
 
       const allJobs = Array.from(rawJobsMap.values()).filter((j) => j.email);
-
-      // Envio em lotes maiores para ganhar velocidade
-      const BATCH_SIZE = 1000;
+      const BATCH_SIZE = 1500; // Lote maior para ser mais rápido
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
-        const batch = allJobs.slice(i, i + BATCH_SIZE);
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
+        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
         if (error) throw error;
       }
 
-      toast({ title: "V61 Sincronizada!", description: `${allJobs.length} vagas com datas corrigidas.` });
+      toast({
+        title: "Sincronização V62 Concluída!",
+        description: `${allJobs.length} vagas processadas com data de ${today}.`,
+      });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -146,16 +149,13 @@ export function MultiJsonImporter() {
   };
 
   return (
-    <Card className="border-2 border-indigo-600">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-6 w-6" /> H2 Linker Sync V61
+    <Card className="border-4 border-indigo-700 shadow-2xl">
+      <CardHeader className="bg-indigo-50">
+        <CardTitle className="flex items-center gap-2 text-indigo-900">
+          <Database className="h-6 w-6" /> H2 Linker Sync V62 (Turbo Mode)
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
-          <Clock size={14} /> Fuso horário normalizado para evitar datas futuras.
-        </div>
+      <CardContent className="pt-6 space-y-4">
         <input
           type="file"
           multiple
@@ -165,10 +165,10 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 text-white font-bold transition-all"
+          className="w-full h-14 bg-indigo-700 hover:bg-indigo-900 text-white font-black text-lg"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção V61
+          Sincronizar Produção V62
         </Button>
       </CardContent>
     </Card>
