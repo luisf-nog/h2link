@@ -26,6 +26,7 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
+  Copy,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -47,51 +48,17 @@ export type JobDetails = {
   category: string | null;
   city: string;
   state: string;
-  worksite_address?: string | null;
-  worksite_zip?: string | null;
   openings?: number | null;
   salary: number | null;
   start_date: string | null;
   end_date?: string | null;
   posted_date: string;
-  source_url?: string | null;
   experience_months?: number | null;
-  description?: string | null;
-  requirements?: string | null;
   wage_from?: number | null;
   wage_to?: number | null;
   wage_unit?: string | null;
-  pay_frequency?: string | null;
-  overtime_available?: boolean | null;
-  overtime_from?: number | null;
-  overtime_to?: number | null;
-  transport_min_reimburse?: number | null;
-  transport_max_reimburse?: number | null;
-  transport_desc?: string | null;
-  housing_type?: string | null;
-  housing_addr?: string | null;
-  housing_city?: string | null;
-  housing_state?: string | null;
-  housing_zip?: string | null;
-  housing_capacity?: number | null;
-  is_meal_provision?: boolean | null;
-  meal_charge?: number | null;
-  transport_provided?: boolean | null;
-  housing_info?: string | null;
   job_min_special_req?: string | null;
-  wage_additional?: string | null;
-  rec_pay_deductions?: string | null;
-  education_required?: string | null;
-  job_is_lifting?: boolean | null;
-  job_lifting_weight?: string | null;
-  job_is_drug_screen?: boolean | null;
-  job_is_background?: boolean | null;
-  job_is_driver?: boolean | null;
-  weekly_hours?: number | null;
-  shift_start?: string | null;
-  shift_end?: string | null;
   job_duties?: string | null;
-  website?: string | null;
   randomization_group?: string | null;
   was_early_access?: boolean | null;
 };
@@ -125,13 +92,18 @@ export function JobDetailsDialog({
 }) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
-
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
+
+  const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
   useEffect(() => {
     if (open) setIsBannerExpanded(true);
   }, [open, job?.id]);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
+  };
 
   const handleShare = () => {
     if (!job) return;
@@ -140,11 +112,6 @@ export function JobDetailsDialog({
       const shareUrl = getJobShareUrl(job.id);
       copyToClipboard(shareUrl);
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
   };
 
   const formatDate = (v: string | null | undefined) => {
@@ -205,45 +172,10 @@ export function JobDetailsDialog({
 
   const groupConfig = job?.randomization_group ? getGroupBadgeConfig(job.randomization_group) : null;
 
-  const Timeline = () => (
-    <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
-      <div className="flex flex-col items-center text-center">
-        <span className="font-semibold text-slate-700 mb-1 text-[10px] uppercase tracking-wider">
-          {t("jobs.details.posted")}
-        </span>
-        <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 text-xs">
-          {formatDate(job?.posted_date)}
-        </span>
-      </div>
-      <div className="h-px bg-slate-300 flex-1 mx-2 relative top-[-10px]">
-        <ArrowRight className="absolute right-0 top-[-5px] h-3 w-3 text-slate-400" />
-      </div>
-      <div className="flex flex-col items-center text-center">
-        <span className="font-semibold text-green-700 mb-1 text-[10px] uppercase tracking-wider">
-          {t("jobs.details.start")}
-        </span>
-        <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-800 font-bold text-xs">
-          {formatDate(job?.start_date)}
-        </span>
-      </div>
-      <div className="h-px bg-slate-300 flex-1 mx-2 relative top-[-10px]">
-        <ArrowRight className="absolute right-0 top-[-5px] h-3 w-3 text-slate-400" />
-      </div>
-      <div className="flex flex-col items-center text-center">
-        <span className="font-semibold text-red-700 mb-1 text-[10px] uppercase tracking-wider">
-          {t("jobs.details.end")}
-        </span>
-        <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-800 font-medium text-xs">
-          {formatDate(job?.end_date)}
-        </span>
-      </div>
-    </div>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border">
-        {/* HEADER FIXO - IMPORTANTE: TRAVADO NO TOPO */}
+        {/* HEADER FIXO */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex sm:hidden items-center mb-3 -mt-2">
             <Button
@@ -266,7 +198,7 @@ export function JobDetailsDialog({
                 )}
                 {job?.job_id && (
                   <span className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                    {job.job_id}
+                    {job.job_id.split("-GHOST")[0]}
                   </span>
                 )}
               </div>
@@ -300,113 +232,176 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* ÁREA DE SCROLL - TUDO O QUE ROLA ESTÁ AQUI */}
+        {/* CONTEÚDO ROLÁVEL */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
-          <div className="p-4 sm:p-6 space-y-5 pb-32 sm:pb-6">
-            {/* CARD DOURADO ROLÁVEL */}
+          <div className="p-4 sm:p-6 space-y-5 pb-32 sm:pb-6 text-left">
+            {/* EARLY MATCH CARD */}
             {job?.was_early_access && (
               <div
-                className="rounded-lg border border-amber-200 bg-amber-50/80 overflow-hidden transition-all duration-300 cursor-pointer shadow-sm"
+                className="rounded-lg border border-amber-200 bg-amber-50/80 overflow-hidden cursor-pointer shadow-sm"
                 onClick={() => setIsBannerExpanded(!isBannerExpanded)}
               >
                 <div className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
-                      <Zap className="h-4 w-4 text-amber-600 fill-amber-600" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest leading-none mb-1">
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-5 w-5 text-amber-600 fill-amber-600" />
+                    <div>
+                      <span className="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest">
                         {t("jobs.details.early_match.badge")}
                       </span>
-                      <h4 className="text-sm font-bold text-amber-900 leading-tight text-left">
-                        {t("jobs.details.early_match.title")}
-                      </h4>
+                      <h4 className="text-sm font-bold text-amber-900">{t("jobs.details.early_match.title")}</h4>
                     </div>
                   </div>
-                  <div className="flex items-center text-amber-600 shrink-0">
-                    {!isBannerExpanded && <span className="text-[10px] font-bold mr-2 uppercase opacity-70">Ver</span>}
-                    {isBannerExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </div>
+                  {isBannerExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-amber-600" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-amber-600" />
+                  )}
                 </div>
                 {isBannerExpanded && (
-                  <div className="px-4 pb-4 pt-2 animate-in fade-in slide-in-from-top-1 duration-200 border-t border-amber-200/50 text-left text-sm text-amber-800 leading-relaxed font-medium">
+                  <div className="px-4 pb-4 pt-2 border-t border-amber-200/50 text-sm text-amber-800 leading-relaxed">
                     {t("jobs.details.early_match.desc")}
                   </div>
                 )}
               </div>
             )}
 
-            {job?.randomization_group && groupConfig && (
-              <div className={cn("p-3 sm:p-4 rounded-xl border bg-opacity-40 text-left", groupConfig.className)}>
-                <div className="flex items-center gap-3 mb-1">
-                  <Badge
-                    variant="outline"
-                    className="bg-white/80 border-current font-bold text-[10px] uppercase tracking-wider"
-                  >
-                    {t("jobs.groups.group_label")} {job.randomization_group}
-                  </Badge>
-                  <span className="font-semibold text-xs flex items-center gap-1">
-                    <Info className="h-3.5 w-3.5" /> {groupConfig.shortDesc}
-                  </span>
-                </div>
-                <p className="text-xs opacity-90 leading-relaxed">
-                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig.tooltip}
-                </p>
-              </div>
-            )}
-
-            {job && isEarlyAccess(job.visa_type) && (
-              <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800 flex items-center py-2">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                <AlertDescription className="text-xs font-semibold">
-                  {getEarlyAccessDisclaimer(i18n.language)}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+            {/* GRID PRINCIPAL */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                <Timeline />
+                {/* TIMELINE */}
+                <div className="flex items-center justify-between text-sm bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">{t("jobs.details.posted")}</span>
+                    <span className="text-xs font-semibold">{formatDate(job?.posted_date)}</span>
+                  </div>
+                  <div className="h-px bg-slate-200 flex-1 mx-2"></div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold uppercase text-green-600">{t("jobs.details.start")}</span>
+                    <span className="text-xs font-bold text-green-700">{formatDate(job?.start_date)}</span>
+                  </div>
+                </div>
 
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
+                {/* EXPERIÊNCIA */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
                   </div>
                   <div>
-                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider text-left">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
                       {t("jobs.details.experience")}
                     </span>
                     <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
                   </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Users className="h-5 w-5 text-blue-500" />
-                      <span className="font-semibold text-sm sm:text-base">
-                        {t("jobs.details.available_positions")}
-                      </span>
-                    </div>
-                    <Badge className="text-base sm:text-lg px-3 sm:px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
-                      {job?.openings || "N/A"}
-                    </Badge>
+                {/* SALÁRIO */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
+                    <span className="font-semibold text-sm text-slate-600">
+                      {t("jobs.details.available_positions")}
+                    </span>
+                    <Badge className="bg-blue-600 font-bold px-3">{job?.openings || "N/A"}</Badge>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 text-green-700 font-bold text-base mb-2">
-                      <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
+                  <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
+                    <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
+                  </div>
+                  <p className="text-2xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
+                </div>
+
+                {/* CONTATOS DA EMPRESA (O que estava faltando) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-xs tracking-widest">
+                    <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
+                  </h4>
+
+                  <div className="space-y-4">
+                    {/* Email */}
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        {t("jobs.details.email_label")}
+                      </span>
+                      <div className="flex items-center gap-2 group">
+                        <div
+                          className={cn(
+                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all",
+                            planSettings?.job_db_blur && "blur-sm select-none",
+                          )}
+                        >
+                          {job?.email}
+                        </div>
+                        {!planSettings?.job_db_blur && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => job?.email && copyToClipboard(job.email)}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-extrabold text-green-700 tracking-tight">
-                      {renderMainWage()}
-                    </p>
+
+                    {/* Telefone */}
+                    {job?.phone && (
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          {t("jobs.details.phone_label")}
+                        </span>
+                        <div className="space-y-2">
+                          <div
+                            className={cn(
+                              "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100",
+                              planSettings?.job_db_blur && "blur-sm select-none",
+                            )}
+                          >
+                            {job.phone}
+                          </div>
+                          {!planSettings?.job_db_blur && (
+                            <div className="flex gap-2 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-9 gap-2 text-xs font-bold"
+                                asChild
+                              >
+                                <a href={`tel:${cleanPhone(job.phone)}`}>
+                                  <Phone className="h-3.5 w-3.5" /> {t("jobs.details.call_action")}
+                                </a>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-9 gap-2 text-xs font-bold border-green-200 hover:bg-green-50 text-green-700"
+                                asChild
+                              >
+                                <a href={`https://wa.me/${cleanPhone(job.phone)}`} target="_blank" rel="noreferrer">
+                                  <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                                </a>
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Banner de Upgrade (se estiver borrado) */}
+                    {planSettings?.job_db_blur && (
+                      <div className="pt-2">
+                        <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-2 shadow-md h-10 text-xs">
+                          <Rocket className="h-4 w-4 mr-2" /> {t("jobs.upgrade.cta")}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* COLUNA DA DIREITA (DESCRIÇÕES) */}
               <div className="lg:col-span-8 space-y-8">
                 {job?.job_min_special_req && (
                   <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm">
-                    <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg text-left">
+                    <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg">
                       <AlertTriangle className="h-5 w-5" /> {t("jobs.details.special_reqs")}
                     </h4>
                     <p className="text-sm sm:text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
@@ -420,7 +415,7 @@ export function JobDetailsDialog({
                       <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
                     </h4>
                     <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
-                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap text-left">
+                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
                         {job.job_duties}
                       </p>
                     </div>
@@ -431,7 +426,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER FIXO NO MOBILE - PARA O BOTÃO NÃO SUMIR */}
+        {/* FOOTER FIXO MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
             <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job")}
