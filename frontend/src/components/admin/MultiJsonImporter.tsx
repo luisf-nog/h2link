@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Fingerprint, Lock } from "lucide-react";
+import { Loader2, RefreshCw, Fingerprint, Lock, Users, Briefcase } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -112,7 +112,7 @@ export function MultiJsonImporter() {
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
 
-            // Lógica de Transição (Match de DNA no Mapa)
+            // Lógica de Transição (Match de DNA)
             const existing = rawJobsMap.get(fingerprint);
             let isTransition = false;
             if (
@@ -123,7 +123,21 @@ export function MultiJsonImporter() {
               isTransition = true;
             }
 
-            // --- CAMPOS TRAVADOS (V56) - NÃO REMOVER ---
+            // --- MAPEAMENTO DE VAGAS E EXPERIÊNCIA (CORRIGIDO V57) ---
+            const openingsCount = parseInt(
+              String(
+                getVal(flat, ["jobWrksNeeded", "jobWrksNeededH2a", "totalWorkersNeeded", "tempneedWkrPos"]) || "0",
+              ),
+              10,
+            );
+
+            const expMonths = parseInt(
+              String(
+                getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || getVal(reqs, ["monthsExperience"]) || "0",
+              ),
+              10,
+            );
+
             const extractedJob = {
               id: crypto.randomUUID(),
               job_id: rawJobId.split("-GHOST-")[0].trim(),
@@ -142,7 +156,7 @@ export function MultiJsonImporter() {
               posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
 
-              // Dados Detalhados
+              // Campos Detalhados
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "job_duties"]),
               job_min_special_req:
                 getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) ||
@@ -150,20 +164,12 @@ export function MultiJsonImporter() {
               wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
 
-              // Quantitativos
+              // Quantitativos (TRAVADOS)
               weekly_hours: weeklyHours || null,
               category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle"]),
-              openings:
-                parseInt(String(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"), 10) ||
-                null,
-              experience_months:
-                parseInt(
-                  String(
-                    getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || getVal(reqs, ["monthsExperience"]) || "0",
-                  ),
-                  10,
-                ) || 0,
-              education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
+              openings: openingsCount || null,
+              experience_months: expMonths || 0,
+              education_required: getVal(flat, ["jobMinedu", "educationLevel"]) || getVal(reqs, ["educationLevel"]),
 
               // Outros
               transport_provided:
@@ -188,11 +194,12 @@ export function MultiJsonImporter() {
       const BATCH_SIZE = 500;
       for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
         setProgress({ current: i, total: finalJobs.length });
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: finalJobs.slice(i, i + BATCH_SIZE) });
+        const batch = finalJobs.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
         if (error) throw error;
       }
 
-      toast({ title: "H2 Linker V56 Sincronizado", description: "Colunas travadas e transições mapeadas." });
+      toast({ title: "V57 - Sucesso Total!", description: "Vagas, Experiência e DNA mapeados corretamente." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -204,10 +211,18 @@ export function MultiJsonImporter() {
     <Card className="border-2 border-indigo-600 shadow-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-indigo-700">
-          <Lock className="h-6 w-6" /> H2 Linker Sync V56 (Columns Locked)
+          <Fingerprint className="h-6 w-6" /> H2 Linker V57 (Full Data)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="flex items-center gap-2 p-2 bg-slate-100 rounded text-xs">
+            <Users className="w-4 h-4 text-indigo-600" /> Vagas: Mapeado
+          </div>
+          <div className="flex items-center gap-2 p-2 bg-slate-100 rounded text-xs">
+            <Briefcase className="w-4 h-4 text-indigo-600" /> Exp: Mapeado
+          </div>
+        </div>
         <input
           type="file"
           multiple
@@ -220,7 +235,7 @@ export function MultiJsonImporter() {
           className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 font-bold text-white transition-all"
         >
           {processing ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <RefreshCw className="h-5 w-5 mr-2" />}
-          Sincronizar com DNA e Colunas Travadas
+          Sincronizar Produção (V57)
         </Button>
       </CardContent>
     </Card>
