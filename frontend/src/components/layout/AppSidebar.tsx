@@ -14,6 +14,7 @@ import {
   BarChart3,
   Upload,
   FileText,
+  Radar,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +61,7 @@ export function AppSidebar() {
     { title: t("nav.jobs"), url: "/jobs", icon: Search },
     { title: t("nav.queue"), url: "/queue", icon: ListTodo },
     ...(isFreeUser ? [{ title: t("nav.referrals"), url: "/referrals", icon: Users }] : []),
+    ...(!isFreeUser ? [{ title: "Radar", url: "/radar", icon: Radar }] : []),
     { title: t("nav.plans"), url: "/plans", icon: Diamond },
     // ITEM ESPECIAL: Resume AI (Coming Soon)
     {

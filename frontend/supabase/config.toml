@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.convert-resume]
 verify_jwt = false
+
+[functions.process-radar]
+verify_jwt = false

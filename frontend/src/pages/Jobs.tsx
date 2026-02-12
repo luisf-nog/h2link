@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
+import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
+import type { Tables } from "@/integrations/supabase/types";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MobileJobCard } from "@/components/jobs/MobileJobCard";
 import { Badge } from "@/components/ui/badge";
@@ -44,9 +45,7 @@ import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
-interface Job extends JobDetails {
-  id: string;
-}
+type Job = Tables<"public_jobs">;
 
 function OnboardingModal() {
   const [open, setOpen] = useState(false);

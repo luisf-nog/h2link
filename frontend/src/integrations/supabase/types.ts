@@ -677,6 +677,80 @@ export type Database = {
           },
         ]
       }
+      radar_matched_jobs: {
+        Row: {
+          auto_queued: boolean
+          id: string
+          job_id: string
+          matched_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_queued?: boolean
+          id?: string
+          job_id: string
+          matched_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_queued?: boolean
+          id?: string
+          job_id?: string
+          matched_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_matched_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "public_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radar_profiles: {
+        Row: {
+          auto_send: boolean
+          categories: string[] | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_scan_at: string | null
+          min_wage: number | null
+          state: string | null
+          updated_at: string
+          user_id: string
+          visa_type: string | null
+        }
+        Insert: {
+          auto_send?: boolean
+          categories?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scan_at?: string | null
+          min_wage?: number | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+          visa_type?: string | null
+        }
+        Update: {
+          auto_send?: boolean
+          categories?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scan_at?: string | null
+          min_wage?: number | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+          visa_type?: string | null
+        }
+        Relationships: []
+      }
       referral_links: {
         Row: {
           activated_at: string | null

@@ -24,6 +24,7 @@ import AdminImport from "./pages/AdminImport";
 import PublicProfile from "./pages/PublicProfile";
 import SharedJobView from "./pages/SharedJobView";
 import ResumeConverter from "./pages/ResumeConverter";
+import Radar from "./pages/Radar";
 
 const queryClient = new QueryClient();
 
@@ -203,6 +204,14 @@ const AppRoutes = () => (
         <OnboardingRoute>
           <Onboarding />
         </OnboardingRoute>
+      }
+    />
+    <Route
+      path="/radar"
+      element={
+        <ProtectedRoute>
+          <Radar />
+        </ProtectedRoute>
       }
     />
     <Route
