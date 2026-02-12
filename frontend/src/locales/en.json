@@ -801,22 +801,10 @@
     "free": "Free",
     "lifetime": "(lifetime)",
     "tiers": {
-      "free": {
-        "label": "Starter",
-        "description": "To test and explore"
-      },
-      "gold": {
-        "label": "Gold",
-        "description": "Volume with saved templates"
-      },
-      "diamond": {
-        "label": "Diamond",
-        "description": "More volume and visibility"
-      },
-      "black": {
-        "label": "Black",
-        "description": "Dynamic AI per job"
-      }
+      "free": { "label": "Starter", "description": "To test and explore" },
+      "gold": { "label": "Gold", "description": "Volume with saved templates" },
+      "diamond": { "label": "Diamond", "description": "More volume and visibility" },
+      "black": { "label": "Black", "description": "Dynamic AI per job" }
     },
     "method": {
       "static": "Templates",
@@ -1045,7 +1033,12 @@
       "share": "Share",
       "remove": "Remove",
       "copied": "Copied!",
-      "copy_success": "Text copied to clipboard."
+      "copy_success": "Text copied to clipboard.",
+      "early_match": {
+        "badge": "Early Match",
+        "title": "H2 Linker Intelligence: Exclusive Insight",
+        "desc": "Our system identified this opportunity during the government's initial processing phase. This allows you to view details and prepare in advance with priority."
+      }
     },
     "upgrade": {
       "title": "Exclusive Content",
