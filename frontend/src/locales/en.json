@@ -992,8 +992,10 @@
         "email": "Email",
         "action": "Action"
       },
-      "experience_months": "{{count}}mo",
-      "experience_years": "{{count}}yr",
+      "experience_months": "{{count}} month",
+      "experience_months_plural": "{{count}} months",
+      "experience_years": "{{count}} year",
+      "experience_years_plural": "{{count}} years",
       "experience_years_months": "{{years}}yr {{months}}mo",
       "loading": "Loading jobs...",
       "empty": "No jobs found"
