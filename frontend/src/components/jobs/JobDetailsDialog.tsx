@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -6,19 +8,16 @@ import { cn } from "@/lib/utils";
 import { getJobShareUrl } from "@/lib/shareUtils";
 import { getVisaBadgeConfig, isEarlyAccess, getEarlyAccessDisclaimer } from "@/lib/visaTypes";
 import {
-  Home,
   Mail,
   MapPin,
   Share2,
   AlertTriangle,
   Briefcase,
-  Clock,
   DollarSign,
   ArrowRight,
   Phone,
   Plus,
   Trash2,
-  Globe,
   Users,
   MessageSquare,
   ArrowLeft,
@@ -26,6 +25,8 @@ import {
   Info,
   Rocket,
   Zap,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -127,6 +128,12 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
+  const [isBannerExpanded, setIsBannerExpanded] = useState(true);
+
+  useEffect(() => {
+    if (open) setIsBannerExpanded(true);
+  }, [open, job?.id]);
+
   const handleShare = () => {
     if (!job) return;
     if (onShare) onShare(job);
@@ -163,94 +170,66 @@ export function JobDetailsDialog({
 
   const formatExperience = (months: number | null | undefined) => {
     if (!months || months <= 0) return t("jobs.details.no_experience", "None");
-    if (months < 12) return t("jobs.table.experience_months", { count: months, defaultValue: `${months} months` });
+    if (months < 12) return t("jobs.table.experience_months", { count: months });
     const years = Math.floor(months / 12);
-    const remainingMonths = months % 12;
-    if (remainingMonths === 0)
-      return t("jobs.table.experience_years", { count: years, defaultValue: `${years} years` });
-    return t("jobs.table.experience_years_months", {
-      years,
-      months: remainingMonths,
-      defaultValue: `${years} years ${remainingMonths} months`,
-    });
+    const rem = months % 12;
+    return rem === 0
+      ? t("jobs.table.experience_years", { count: years })
+      : t("jobs.table.experience_years_months", { years, months: rem });
   };
 
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
 
   const getMessage = () => {
     if (!job) return "";
-    const location = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
-    return `Hello, I am interested in the ${job.job_title} position at ${job.company}${location}. I would like to apply. Please let me know the next steps. Thank you.`;
+    const loc = job.city && job.state ? ` in ${job.city}, ${job.state}` : "";
+    return `Hello, I am interested in the ${job.job_title} position at ${job.company}${loc}. I would like to apply. Thank you.`;
   };
 
-  const messageText = getMessage();
-  const encodedMessage = encodeURIComponent(messageText);
+  const encodedMessage = encodeURIComponent(getMessage());
 
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
     if (g === "A")
-      return {
-        className: "bg-emerald-50 text-emerald-800 border-emerald-300",
-        shortDesc: t("jobs.groups.a_short"),
-        tooltip: t("jobs.groups.a_tooltip"),
-      };
+      return { className: "bg-emerald-50 text-emerald-800 border-emerald-300", shortDesc: t("jobs.groups.a_short") };
     if (g === "B")
-      return {
-        className: "bg-blue-50 text-blue-800 border-blue-300",
-        shortDesc: t("jobs.groups.b_short"),
-        tooltip: t("jobs.groups.b_tooltip"),
-      };
+      return { className: "bg-blue-50 text-blue-800 border-blue-300", shortDesc: t("jobs.groups.b_short") };
     if (g === "C" || g === "D")
-      return {
-        className: "bg-amber-50 text-amber-800 border-amber-300",
-        shortDesc: t("jobs.groups.cd_short"),
-        tooltip: t("jobs.groups.cd_tooltip"),
-      };
-    if (["E", "F", "G", "H"].includes(g))
-      return {
-        className: "bg-slate-50 text-slate-700 border-slate-300",
-        shortDesc: t("jobs.groups.risk_short"),
-        tooltip: t("jobs.groups.risk_tooltip"),
-      };
-    return {
-      className: "bg-gray-50 text-gray-700 border-gray-300",
-      shortDesc: t("jobs.groups.linear_short"),
-      tooltip: t("jobs.groups.linear_tooltip"),
-    };
+      return { className: "bg-amber-50 text-amber-800 border-amber-300", shortDesc: t("jobs.groups.cd_short") };
+    return { className: "bg-slate-50 text-slate-700 border-slate-300", shortDesc: t("jobs.groups.risk_short") };
   };
 
-  const group = job?.randomization_group;
-  const groupConfig = group ? getGroupBadgeConfig(group) : null;
+  const groupConfig = job?.randomization_group ? getGroupBadgeConfig(job.randomization_group) : null;
 
   const Timeline = () => (
     <div className="flex items-center justify-between text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
-      <div className="flex flex-col items-center">
-        <span className="font-semibold text-slate-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.posted", "Posted")}
+      <div className="flex flex-col items-center text-center">
+        <span className="font-semibold text-slate-700 mb-1 text-[10px] uppercase tracking-wider">
+          {t("jobs.details.posted")}
         </span>
-        <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700">
+        <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 text-xs">
           {formatDate(job?.posted_date)}
         </span>
       </div>
-      <div className="h-px bg-slate-300 flex-1 mx-3 relative top-[-10px]">
+      <div className="h-px bg-slate-300 flex-1 mx-2 relative top-[-10px]">
         <ArrowRight className="absolute right-0 top-[-5px] h-3 w-3 text-slate-400" />
       </div>
-      <div className="flex flex-col items-center">
-        <span className="font-semibold text-green-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.start", "Start")}
+      <div className="flex flex-col items-center text-center">
+        <span className="font-semibold text-green-700 mb-1 text-[10px] uppercase tracking-wider">
+          {t("jobs.details.start")}
         </span>
-        <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-800 font-bold">
+        <span className="bg-green-50 px-2 py-0.5 rounded border border-green-200 text-green-800 font-bold text-xs">
           {formatDate(job?.start_date)}
         </span>
       </div>
-      <div className="h-px bg-slate-300 flex-1 mx-3 relative top-[-10px]">
+      <div className="h-px bg-slate-300 flex-1 mx-2 relative top-[-10px]">
         <ArrowRight className="absolute right-0 top-[-5px] h-3 w-3 text-slate-400" />
       </div>
-      <div className="flex flex-col items-center">
-        <span className="font-semibold text-red-700 mb-1 text-xs uppercase tracking-wider">
-          {t("jobs.details.end", "End")}
+      <div className="flex flex-col items-center text-center">
+        <span className="font-semibold text-red-700 mb-1 text-[10px] uppercase tracking-wider">
+          {t("jobs.details.end")}
         </span>
-        <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-800 font-medium">
+        <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200 text-red-800 font-medium text-xs">
           {formatDate(job?.end_date)}
         </span>
       </div>
@@ -259,194 +238,190 @@ export function JobDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
-        <DialogHeader className="p-4 sm:p-6 pb-4 bg-white border-b sticky top-0 z-10 shadow-sm">
-          <div className="flex sm:hidden items-center mb-4 -mt-2">
+      <DialogContent className="sm:max-w-7xl h-[95vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg">
+        {/* HEADER FIXO - APENAS TÍTULO E BOTÕES */}
+        <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-30 shadow-sm">
+          <div className="flex sm:hidden items-center mb-3 -mt-2">
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="-ml-3 flex items-center gap-2 text-slate-600 hover:text-slate-900"
+              className="-ml-3 flex items-center gap-2 text-slate-600"
             >
               <ArrowLeft className="h-5 w-5" />
-              <span className="text-base font-semibold">{t("common.back", "Back")}</span>
+              <span className="text-base font-semibold">{t("common.back")}</span>
             </Button>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-start">
-              <div className="flex flex-col gap-1 w-full">
-                <div className="flex flex-wrap items-center gap-2">
-                  {badgeConfig && (
-                    <Badge variant={badgeConfig.variant} className={badgeConfig.className}>
-                      {badgeConfig.label}
-                    </Badge>
-                  )}
-
-                  {/* BADGE DOURADO DISCRETO (EARLY MATCH) */}
-                  {job?.was_early_access && (
-                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 flex gap-1 items-center shadow-sm">
-                      <Rocket className="h-3 w-3 fill-amber-500 text-amber-500" />
-                      <span className="font-bold text-[10px] uppercase">{t("jobs.details.early_match.badge")}</span>
-                    </Badge>
-                  )}
-
-                  {job?.job_id && (
-                    <span className="font-mono text-xs text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      {job.job_id}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between w-full pr-8">
-                  <DialogTitle className="text-2xl sm:text-3xl leading-tight text-primary mt-2 font-bold tracking-tight">
-                    {job?.job_title}
-                  </DialogTitle>
-                </div>
-                <DialogDescription className="flex flex-wrap items-center gap-2 text-lg text-slate-600 mt-1">
-                  <span className="font-bold text-foreground flex items-center gap-1">
-                    <Briefcase className="h-5 w-5 text-slate-400" /> {job?.company}
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-1 w-full min-w-0 text-left">
+              <div className="flex flex-wrap items-center gap-2">
+                {badgeConfig && (
+                  <Badge variant={badgeConfig.variant} className={cn("text-[10px] sm:text-xs", badgeConfig.className)}>
+                    {badgeConfig.label}
+                  </Badge>
+                )}
+                {job?.job_id && (
+                  <span className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    {job.job_id}
                   </span>
-                  <span className="hidden sm:inline text-slate-300">|</span>
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-5 w-5 text-slate-400" /> {job?.city}, {job?.state}
-                  </span>
-                </DialogDescription>
-              </div>
-
-              <div className="hidden sm:flex gap-2 shrink-0">
-                <Button variant="outline" onClick={handleShare}>
-                  <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share", "Share")}
-                </Button>
-                {isInQueue ? (
-                  <Button variant="destructive" onClick={() => job && onRemoveFromQueue?.(job)}>
-                    <Trash2 className="h-4 w-4 mr-2" /> {t("jobs.details.remove", "Remove")}
-                  </Button>
-                ) : (
-                  <Button onClick={() => job && onAddToQueue(job)} className="px-6 font-bold shadow-sm">
-                    <Plus className="h-4 w-4 mr-2" /> {t("jobs.details.save_job", "Save Job")}
-                  </Button>
                 )}
               </div>
+              <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary mt-1 font-bold tracking-tight truncate">
+                {job?.job_title}
+              </DialogTitle>
+              <DialogDescription className="flex flex-wrap items-center gap-2 text-base sm:text-lg text-slate-600">
+                <span className="font-bold text-foreground flex items-center gap-1">
+                  <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
+                </span>
+              </DialogDescription>
             </div>
 
-            {/* BANNER INFORMATIVO DISCRETO (EARLY MATCH) */}
-            {job?.was_early_access && (
-              <div className="mt-4 p-4 rounded-xl border border-amber-100 bg-amber-50/30 relative overflow-hidden">
-                <div className="relative flex gap-4 items-center">
-                  <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
-                    <Zap className="h-5 w-5 text-amber-600 fill-amber-600" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-amber-900 uppercase tracking-tight">
-                      {t("jobs.details.early_match.title")}
-                    </h4>
-                    <p className="text-xs text-amber-800 leading-relaxed max-w-3xl">
-                      {t("jobs.details.early_match.desc")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {group && groupConfig && (
-              <div className={cn("mt-4 mb-2 p-4 rounded-xl border bg-opacity-40", groupConfig.className)}>
-                <div className="flex items-center gap-3 mb-2">
-                  <Badge variant="outline" className="bg-white/80 border-current font-bold uppercase tracking-wider">
-                    {t("jobs.groups.group_label", "Grupo")} {group}
-                  </Badge>
-                  <span className="font-semibold text-sm flex items-center gap-1">
-                    <Info className="h-4 w-4" />
-                    {groupConfig.shortDesc}
-                  </span>
-                </div>
-                <p className="text-sm opacity-90 leading-relaxed">
-                  <strong>{t("jobs.groups.dol_draw", "Sorteio Oficial (DOL)")}:</strong> {groupConfig.tooltip}
-                </p>
-              </div>
-            )}
-          </div>
-        </DialogHeader>
-
-        {/* RESTANTE DO CÓDIGO PERMANECE IGUAL */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/30">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-4 space-y-6">
-              <Timeline />
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div className="bg-blue-50 p-3 rounded-full text-blue-600">
-                  <GraduationCap className="h-6 w-6" />
-                </div>
-                <div>
-                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    {t("jobs.details.experience", "Experience Required")}
-                  </span>
-                  <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Users className="h-5 w-5 text-blue-500" />
-                    <span className="font-semibold text-base">
-                      {t("jobs.details.available_positions", "Available Positions")}
-                    </span>
-                  </div>
-                  <Badge className="text-lg px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
-                    {job?.openings ? job.openings : "N/A"}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 text-green-700 font-bold text-lg mb-2">
-                    <DollarSign className="h-6 w-6" /> <span>{t("jobs.details.remuneration", "Compensation")}</span>
-                  </div>
-                  <p className="text-3xl font-extrabold text-green-700 tracking-tight">{renderMainWage()}</p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  {t("jobs.details.company_contacts", "Company Contacts")}
-                </div>
-                <div
-                  className="group flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 cursor-pointer hover:border-blue-200 transition-colors"
-                  onClick={() => copyToClipboard(job?.email || "")}
-                >
-                  <div className="bg-white p-2 rounded-full border border-slate-200 text-blue-500">
-                    <Mail className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-xs text-slate-400 font-bold">{t("jobs.details.email_label", "EMAIL")}</span>
-                    <span className="truncate font-medium text-slate-700 text-base">{job?.email}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="lg:col-span-8 space-y-8">
-              {job?.job_min_special_req && (
-                <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 shadow-sm">
-                  <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-4 text-xl">
-                    <AlertTriangle className="h-6 w-6" /> {t("jobs.details.special_reqs", "Special Requirements")}
-                  </h4>
-                  <p className="text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
-                    {job.job_min_special_req}
-                  </p>
-                </div>
-              )}
-              {job?.job_duties && (
-                <div className="space-y-4">
-                  <h4 className="flex items-center gap-2 font-bold text-2xl text-slate-800">
-                    <Briefcase className="h-7 w-7 text-blue-600" />{" "}
-                    {t("jobs.details.job_description", "Job Description")}
-                  </h4>
-                  <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-base text-slate-700 leading-7 whitespace-pre-wrap">{job.job_duties}</p>
-                  </div>
-                </div>
+            <div className="hidden sm:flex gap-2 shrink-0">
+              <Button variant="outline" onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
+              </Button>
+              {isInQueue ? (
+                <Button variant="destructive" onClick={() => job && onRemoveFromQueue?.(job)}>
+                  <Trash2 className="h-4 w-4 mr-2" /> {t("jobs.details.remove")}
+                </Button>
+              ) : (
+                <Button onClick={() => job && onAddToQueue(job)} className="px-6 font-bold shadow-sm">
+                  <Plus className="h-4 w-4 mr-2" /> {t("jobs.details.save_job")}
+                </Button>
               )}
             </div>
           </div>
         </div>
-        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-20 shadow-lg">
+
+        {/* ÁREA DE SCROLL - TUDO O QUE PODE SER GRANDE VAI AQUI */}
+        <div className="flex-1 overflow-y-auto bg-slate-50/30">
+          <div className="p-4 sm:p-6 space-y-6">
+            {/* O CARD DOURADO AGORA É ROLÁVEL */}
+            {job?.was_early_access && (
+              <div
+                className="rounded-lg border border-amber-200 bg-amber-50/80 overflow-hidden transition-all duration-300 cursor-pointer shadow-sm"
+                onClick={() => setIsBannerExpanded(!isBannerExpanded)}
+              >
+                <div className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
+                      <Zap className="h-4 w-4 text-amber-600 fill-amber-600" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-none mb-1">
+                        {t("jobs.details.early_match.badge")}
+                      </span>
+                      <h4 className="text-sm font-bold text-amber-900 leading-tight text-left">
+                        {t("jobs.details.early_match.title")}
+                      </h4>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-amber-600 shrink-0">
+                    {!isBannerExpanded && <span className="text-[10px] font-bold mr-2 uppercase opacity-70">Ver</span>}
+                    {isBannerExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+                </div>
+                {isBannerExpanded && (
+                  <div className="px-4 pb-4 pt-2 animate-in fade-in slide-in-from-top-1 duration-200 border-t border-amber-200/50 text-left">
+                    <p className="text-sm text-amber-800 leading-relaxed font-medium">
+                      {t("jobs.details.early_match.desc")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {job?.randomization_group && (
+              <div className={cn("p-3 sm:p-4 rounded-xl border bg-opacity-40 text-left", groupConfig?.className)}>
+                <div className="flex items-center gap-3 mb-1">
+                  <Badge
+                    variant="outline"
+                    className="bg-white/80 border-current font-bold text-[10px] uppercase tracking-wider"
+                  >
+                    {t("jobs.groups.group_label")} {job.randomization_group}
+                  </Badge>
+                  <span className="font-semibold text-xs flex items-center gap-1">
+                    <Info className="h-3.5 w-3.5" /> {groupConfig?.shortDesc}
+                  </span>
+                </div>
+                <p className="text-xs opacity-90 leading-relaxed">
+                  <strong>{t("jobs.groups.dol_draw")}:</strong> {groupConfig?.tooltip}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+              <div className="lg:col-span-4 space-y-6">
+                <Timeline />
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
+                  <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {t("jobs.details.experience")}
+                    </span>
+                    <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Users className="h-5 w-5 text-blue-500" />
+                      <span className="font-semibold text-sm sm:text-base">
+                        {t("jobs.details.available_positions")}
+                      </span>
+                    </div>
+                    <Badge className="text-base sm:text-lg px-3 sm:px-4 py-1 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm">
+                      {job?.openings ? job.openings : "N/A"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 text-green-700 font-bold text-base mb-2">
+                      <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-extrabold text-green-700 tracking-tight">
+                      {renderMainWage()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8 space-y-8 text-left">
+                {job?.job_min_special_req && (
+                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm text-left">
+                    <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg text-left">
+                      <AlertTriangle className="h-5 w-5" /> {t("jobs.details.special_reqs")}
+                    </h4>
+                    <p className="text-sm sm:text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
+                      {job.job_min_special_req}
+                    </p>
+                  </div>
+                )}
+                {job?.job_duties && (
+                  <div className="space-y-4 text-left">
+                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800">
+                      <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
+                    </h4>
+                    <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
+                      <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap text-left">
+                        {job.job_duties}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FOOTER FIXO */}
+        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-40 shadow-lg">
           <Button className="flex-1 font-bold h-12 text-base" onClick={() => job && onAddToQueue(job)}>
-            <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job", "Save Job")}
+            <Plus className="h-5 w-5 mr-2" /> {t("jobs.details.save_job")}
           </Button>
           <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
             <Share2 className="h-5 w-5 text-slate-600" />
