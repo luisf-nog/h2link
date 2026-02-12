@@ -30,6 +30,38 @@ import {
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
+// EXPORTAÇÃO ESSENCIAL: Resolve o erro TS2305 (No exported member 'JobDetails')
+export type JobDetails = {
+  id: string;
+  job_id: string;
+  visa_type?: string | null;
+  company?: string;
+  email?: string;
+  phone?: string | null;
+  job_title?: string;
+  city?: string;
+  state?: string;
+  openings?: number | null;
+  salary?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  posted_date?: string;
+  experience_months?: number | null;
+  wage_from?: number | null;
+  wage_to?: number | null;
+  wage_unit?: string | null;
+  pay_frequency?: string | null;
+  wage_additional?: string | null;
+  rec_pay_deductions?: string | null;
+  weekly_hours?: number | null;
+  job_min_special_req?: string | null;
+  job_duties?: string | null;
+  randomization_group?: string | null;
+  was_early_access?: boolean | null;
+  // Adicionando suporte a campos genéricos para evitar erros de compatibilidade com o tipo 'Job'
+  [key: string]: any;
+};
+
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
@@ -46,22 +78,26 @@ export function JobDetailsDialog({
   onRemoveFromQueue,
   isInQueue,
   onShare,
-}: any) {
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  job: JobDetails | null;
+  planSettings?: any;
+  formatSalary: (salary: number | null) => string;
+  onAddToQueue: (job: any) => void;
+  onRemoveFromQueue?: (job: any) => void;
+  isInQueue?: boolean;
+  onShare?: (job: any) => void;
+}) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // ==========================================
-  // LÓGICA DE VALIDAÇÃO POR PLAN_TIER
-  // ==========================================
-  // Verifica se o usuário tem um plano que permite ver contatos
-  const currentTier = planSettings?.plan_tier?.toLowerCase() || "free";
-  const isPremium = ["gold", "diamond", "black"].includes(currentTier);
-
-  // Bloqueio para ID e Contatos
-  const isLocked = !isPremium;
-  // Bloqueio para Salvar Vaga (exige apenas estar logado, independente do tier)
+  // Lógica de Permissão baseada no tier do profile
+  const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
+  const isPremium = ["gold", "diamond", "black"].includes(planTier);
+  const canSeeContacts = isPremium;
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
   useEffect(() => {
@@ -136,7 +172,7 @@ export function JobDetailsDialog({
                     className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
                     translate="no"
                   >
-                    {!isLocked ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
+                    {!isPremium ? maskJobId(job.job_id) : job.job_id.split("-GHOST")[0]}
                   </span>
                 )}
               </div>
@@ -200,6 +236,19 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
+                {/* EXPERIÊNCIA */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                  <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {t("jobs.details.experience")}
+                    </span>
+                    <span className="text-xl font-bold text-slate-800">{formatExperience(job?.experience_months)}</span>
+                  </div>
+                </div>
+
                 {/* SALARIO */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
@@ -218,6 +267,21 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
+                  {job?.wage_additional && (
+                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-green-800 text-xs font-medium">
+                      <span translate="yes">{job.wage_additional}</span>
+                    </div>
+                  )}
+                  {job?.rec_pay_deductions && (
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
+                        <AlertTriangle className="h-3 w-3" /> Deduções
+                      </span>
+                      <p className="text-xs text-red-800 font-medium">
+                        <span translate="yes">{job.rec_pay_deductions}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* CARGA HORÁRIA */}
@@ -235,9 +299,9 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS (BLOQUEIO REAL) */}
+                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
-                  {isLocked && (
+                  {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
                         <Lock className="h-7 w-7 text-amber-500" />
@@ -259,7 +323,7 @@ export function JobDetailsDialog({
                         Email
                       </span>
                       <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
-                        {!isLocked ? job?.email : "••••••••@•••••••.com"}
+                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
                       </div>
                     </div>
                     {job?.phone && (
@@ -268,7 +332,7 @@ export function JobDetailsDialog({
                           Telefone
                         </span>
                         <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
-                          {!isLocked ? job.phone : "+1 (XXX) XXX-XXXX"}
+                          {canSeeContacts ? job.phone : "+1 (XXX) XXX-XXXX"}
                         </div>
                       </div>
                     )}
@@ -276,7 +340,7 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* DESCRIÇÕES (SEMPRE VISÍVEIS) */}
+              {/* DESCRIÇÕES (Sempre Visíveis) */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
