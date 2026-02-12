@@ -801,10 +801,22 @@
     "free": "Free",
     "lifetime": "(lifetime)",
     "tiers": {
-      "free": { "label": "Starter", "description": "To test and explore" },
-      "gold": { "label": "Gold", "description": "Volume with saved templates" },
-      "diamond": { "label": "Diamond", "description": "More volume and visibility" },
-      "black": { "label": "Black", "description": "Dynamic AI per job" }
+      "free": {
+        "label": "Starter",
+        "description": "To test and explore"
+      },
+      "gold": {
+        "label": "Gold",
+        "description": "Volume with saved templates"
+      },
+      "diamond": {
+        "label": "Diamond",
+        "description": "More volume and visibility"
+      },
+      "black": {
+        "label": "Black",
+        "description": "Dynamic AI per job"
+      }
     },
     "method": {
       "static": "Templates",
@@ -1034,10 +1046,14 @@
       "additional_details": "Additional Details",
       "view_details": "View details",
       "save_job": "Save Job",
+      "save_job_mobile": "Save Job",
       "share": "Share",
       "remove": "Remove",
       "copied": "Copied!",
       "copy_success": "Text copied to clipboard.",
+      "send_email": "Send Email",
+      "early_access_evolution_title": "Evolved Opportunity",
+      "early_access_evolution_text": "This job was previously identified by our Early Access and is now a confirmed official job order.",
       "early_match": {
         "badge": "Certified Opportunity",
         "title": "H2 Linker Intelligence: Ready to Apply",
