@@ -38,6 +38,7 @@ import {
   ShieldAlert,
   Briefcase,
   Rocket,
+  CheckCircle2,
   ArrowRight,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
@@ -47,6 +48,7 @@ import { useTranslation } from "react-i18next";
 import { formatCurrency, getCurrencyForLanguage, getPlanAmountForCurrency } from "@/lib/pricing";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
+import { getJobShareUrl } from "@/lib/shareUtils";
 
 // --- COMPONENTE DE ONBOARDING ---
 function OnboardingModal() {
@@ -197,6 +199,37 @@ export default function Jobs() {
     return term.replace(/[()\[\]{}|\\^$*+?.<>]/g, "").trim();
   };
 
+  // --- LÓGICA DE SINCRONIZAÇÃO EM TEMPO REAL ---
+  const fetchQueuedIds = async () => {
+    if (!profile?.id) return;
+    const { data } = await supabase.from("my_queue").select("job_id").eq("user_id", profile.id).eq("status", "pending"); // Sincroniza apenas os não enviados
+
+    setQueuedJobIds(new Set((data ?? []).map((r) => r.job_id)));
+  };
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    fetchQueuedIds();
+
+    const channel = supabase
+      .channel("sync-queue-status")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "my_queue",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        () => fetchQueuedIds(), // Atualiza contagem instantaneamente
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
   const fetchJobs = async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
@@ -215,28 +248,21 @@ export default function Jobs() {
     if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
     if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
     query = query.range(from, to);
+
     const { data, error, count } = await query;
     if (!error && data) {
       setJobs(data as Job[]);
       setTotalCount(count ?? 0);
-      if (profile?.id) {
-        const ids = data.map((j) => j.id);
-        const { data: qRows } = await supabase
-          .from("my_queue")
-          .select("job_id")
-          .eq("user_id", profile.id)
-          .in("job_id", ids);
-        setQueuedJobIds(new Set((qRows ?? []).map((r) => r.job_id)));
-        const { data: reportRows } = await supabase.from("job_reports").select("job_id, reason").in("job_id", ids);
-        const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
-        for (const row of reportRows ?? []) {
-          if (!reportsMap[row.job_id]) reportsMap[row.job_id] = { count: 0, reasons: [] };
-          reportsMap[row.job_id].count++;
-          if (!reportsMap[row.job_id].reasons.includes(row.reason as ReportReason))
-            reportsMap[row.job_id].reasons.push(row.reason as ReportReason);
-        }
-        setJobReports(reportsMap);
+      const ids = data.map((j) => j.id);
+      const { data: reportRows } = await supabase.from("job_reports").select("job_id, reason").in("job_id", ids);
+      const reportsMap: Record<string, { count: number; reasons: ReportReason[] }> = {};
+      for (const row of reportRows ?? []) {
+        if (!reportsMap[row.job_id]) reportsMap[row.job_id] = { count: 0, reasons: [] };
+        reportsMap[row.job_id].count++;
+        if (!reportsMap[row.job_id].reasons.includes(row.reason as ReportReason))
+          reportsMap[row.job_id].reasons.push(row.reason as ReportReason);
       }
+      setJobReports(reportsMap);
     }
     setLoading(false);
   };
@@ -305,7 +331,7 @@ export default function Jobs() {
       .from("my_queue")
       .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
     if (!error) {
-      setQueuedJobIds((prev) => new Set(prev).add(job.id));
+      fetchQueuedIds(); // Atualiza contagem local imediatamente
       toast({ title: t("jobs.toasts.added") });
     }
     setProcessingJobIds((prev) => {
@@ -361,29 +387,40 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* CENTRAL DE COMANDO LIGHT MINIMALISTA */}
+        {/* CENTRAL DE COMANDO LIGHT MINIMALISTA - REALTIME */}
         {queuedJobIds.size > 0 && (
-          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="bg-blue-50/80 border border-blue-100 rounded-xl p-3 sm:px-5 flex items-center justify-between gap-4">
+          <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 sm:p-4 mb-6 flex items-center justify-between gap-4 shadow-sm group transition-all hover:bg-blue-50 hover:border-blue-200">
               <div className="flex items-center gap-3 overflow-hidden text-left">
-                <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                  <Zap className="h-5 w-5 text-white" />
+                <div className="relative shrink-0">
+                  <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-200 group-hover:scale-105 transition-transform">
+                    <Zap className="h-5 w-5 text-white fill-white/20" />
+                  </div>
+                  <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-in zoom-in duration-300">
+                    {queuedJobIds.size}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-blue-900 font-bold text-sm sm:text-base leading-tight">
-                    Você tem {queuedJobIds.size} vagas prontas!
+                <div className="min-w-0">
+                  <h3 className="text-blue-900 font-bold text-sm sm:text-base leading-tight tracking-tight">
+                    Vagas aguardando envio
                   </h3>
-                  <p className="text-blue-700/70 text-xs hidden sm:block">
-                    Finalize sua candidatura para as vagas selecionadas na sua fila.
+                  <p className="text-blue-700/60 text-xs truncate font-medium">
+                    Você tem{" "}
+                    <span className="text-blue-700 font-bold" translate="no">
+                      {queuedJobIds.size} {queuedJobIds.size === 1 ? "vaga" : "vagas"}
+                    </span>{" "}
+                    prontas na fila. Envie agora!
                   </p>
                 </div>
               </div>
               <Button
                 onClick={() => navigate("/queue")}
                 size="sm"
-                className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 px-4 sm:px-6 rounded-lg shadow-sm transition-all active:scale-95"
+                className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 px-5 sm:px-8 rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
               >
-                ENVIAR AGORA <ArrowRight className="ml-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">ENVIAR AGORA</span>
+                <span className="sm:hidden">ENVIAR</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
           </div>
@@ -640,10 +677,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={cn(
-                              "line-clamp-1 text-slate-600",
-                              planSettings.job_db_blur && "blur-sm select-none",
-                            )}
+                            className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm select-none")}
                             translate="no"
                           >
                             {j.company}
