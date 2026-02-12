@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -191,7 +184,7 @@ export default function Jobs() {
     | "end_date";
   type SortDir = "asc" | "desc";
   const [sortKey, setSortKey] = useState<SortKey>(() => (searchParams.get("sort") as SortKey) || "posted_date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">((searchParams.get("dir") as any) || "desc");
+  const [sortDir, setSortDir] = useState<SortDir>(() => (searchParams.get("dir") as any) || "desc");
   const [page, setPage] = useState(() => Number(searchParams.get("page") || "1"));
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
@@ -201,6 +194,7 @@ export default function Jobs() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
   const tableColSpan = 12;
 
+  // VACINA DE SANITIZAÇÃO
   const sanitizeSearchTerm = (term: string) => {
     return term.replace(/[()\[\]{}|\\^$*+?.<>]/g, "").trim();
   };
@@ -218,6 +212,7 @@ export default function Jobs() {
 
     const term = sanitizeSearchTerm(searchTerm);
     if (term) {
+      // INCLUI BUSCA POR JOB ID
       query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
     }
 
@@ -226,8 +221,9 @@ export default function Jobs() {
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
     if (groupFilter) query = query.eq("randomization_group", groupFilter);
 
-    if (minSalary && !isNaN(Number(minSalary))) query = query.gte("salary", Number(minSalary));
-    if (maxSalary && !isNaN(Number(maxSalary))) query = query.lte("salary", Number(maxSalary));
+    // LÓGICA CORRETA DE SALÁRIO
+    if (minSalary) query = query.gte("salary", Number(minSalary));
+    if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
     query = query.range(from, to);
     const { data, error, count } = await query;
@@ -301,7 +297,7 @@ export default function Jobs() {
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
-    return new Date(date).toLocaleDateString(i18n.language, { timeZone: "UTC" });
+    return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC" });
   };
 
   const formatExperience = (months: number | null | undefined) => {
@@ -364,6 +360,7 @@ export default function Jobs() {
           )}
         </div>
 
+        {/* FILTROS RESTAURADOS (6 COLUNAS LINEARES) */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4 text-left">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -418,7 +415,6 @@ export default function Jobs() {
               }}
               className="h-10"
             />
-
             <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="justify-between text-muted-foreground font-normal h-10 text-sm">
@@ -447,7 +443,6 @@ export default function Jobs() {
                 </Command>
               </PopoverContent>
             </Popover>
-
             <Select
               value={groupFilter}
               onValueChange={(v) => {
@@ -462,12 +457,11 @@ export default function Jobs() {
                 <SelectItem value="all">{t("common.all_groups")}</SelectItem>
                 {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
                   <SelectItem key={g} value={g}>
-                    Group {g}
+                    {t("jobs.groups.group_label")} {g}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
             <div className="relative w-full">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">
                 $ Min
@@ -516,115 +510,120 @@ export default function Jobs() {
           </div>
         ) : (
           <Card className="border-slate-200 overflow-hidden shadow-sm">
-            <Table>
-              <TableHeader className="bg-slate-50/80">
-                <TableRow className="whitespace-nowrap">
-                  <TableHead className="text-left py-4">
-                    <button onClick={() => toggleSort("job_title")}>
-                      {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-left">
-                    <button onClick={() => toggleSort("company")}>
-                      {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-center">
-                    <button onClick={() => toggleSort("openings")}>
-                      {t("jobs.table.headers.openings")} <SortIcon active={sortKey === "openings"} dir={sortDir} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-left">
-                    <button onClick={() => toggleSort("salary")}>
-                      {t("jobs.table.headers.salary")} <SortIcon active={sortKey === "salary"} dir={sortDir} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-left">
-                    <button onClick={() => toggleSort("posted_date")}>
-                      {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-left">Group</TableHead>
-                  <TableHead className="text-left">Exp.</TableHead>
-                  <TableHead className="text-right pr-6 sticky right-0 bg-slate-50 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                    {t("jobs.table.headers.action")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-20">
-                      <Loader2 className="animate-spin inline mr-2 h-4 w-4" /> {t("common.loading")}
-                    </TableCell>
+            <CardContent className="p-0 overflow-x-auto text-left">
+              <Table>
+                <TableHeader>
+                  <TableRow className="whitespace-nowrap bg-slate-50/80">
+                    <TableHead className="text-left py-4">
+                      <button onClick={() => toggleSort("job_title")}>
+                        {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-left">
+                      <button onClick={() => toggleSort("company")}>
+                        {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <button onClick={() => toggleSort("openings")}>
+                        {t("jobs.table.headers.openings")} <SortIcon active={sortKey === "openings"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-left">
+                      <button onClick={() => toggleSort("salary")}>
+                        {t("jobs.table.headers.salary")} <SortIcon active={sortKey === "salary"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-left">
+                      <button onClick={() => toggleSort("posted_date")}>
+                        {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-left">Group</TableHead>
+                    <TableHead className="text-left">Exp.</TableHead>
+                    <TableHead className="text-right pr-6 sticky right-0 bg-slate-50 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                      {t("jobs.table.headers.action")}
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  jobs.map((j) => (
-                    <TableRow
-                      key={j.id}
-                      onClick={() => handleRowClick(j)}
-                      className="cursor-pointer hover:bg-slate-50/80 transition-all border-slate-100"
-                    >
-                      <TableCell className="font-semibold text-slate-900 py-4 text-sm text-left">
-                        <div className="flex items-center gap-2">
-                          {jobReports[j.id] && (
-                            <JobWarningBadge reportCount={jobReports[j.id].count} reasons={jobReports[j.id].reasons} />
-                          )}
-                          <span translate="no">{j.job_title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <span
-                          className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm select-none")}
-                          translate="no"
-                        >
-                          {j.company}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-center text-slate-600" translate="no">
-                        {j.openings}
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-green-700" translate="no">
-                            {renderPrice(j)}
-                          </span>
-                          <span className="text-[10px] uppercase text-slate-400">/{j.wage_unit || "h"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 whitespace-nowrap text-left" translate="no">
-                        {formatDate(j.posted_date)}
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <Badge variant="outline" className="text-[10px] font-bold py-0 h-5" translate="no">
-                          G-{j.randomization_group || "?"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 text-left" translate="no">
-                        {formatExperience(j.experience_months)}
-                      </TableCell>
-                      <TableCell className="text-right pr-6 sticky right-0 bg-white shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                        <Button
-                          size="sm"
-                          variant={queuedJobIds.has(j.id) ? "secondary" : "outline"}
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToQueue(j);
-                          }}
-                        >
-                          {queuedJobIds.has(j.id) ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Plus className="h-4 w-4" />
-                          )}
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-20">
+                        <Loader2 className="animate-spin inline mr-2 h-4 w-4" /> {t("common.loading")}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    jobs.map((j) => (
+                      <TableRow
+                        key={j.id}
+                        onClick={() => handleRowClick(j)}
+                        className="cursor-pointer hover:bg-slate-50/80 transition-all border-slate-100"
+                      >
+                        <TableCell className="font-semibold text-slate-900 py-4 text-sm text-left">
+                          <div className="flex items-center gap-2">
+                            {jobReports[j.id] && (
+                              <JobWarningBadge
+                                reportCount={jobReports[j.id].count}
+                                reasons={jobReports[j.id].reasons}
+                              />
+                            )}
+                            <span translate="no">{j.job_title}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <span
+                            className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm select-none")}
+                            translate="no"
+                          >
+                            {j.company}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-center text-slate-600" translate="no">
+                          {j.openings}
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-green-700" translate="no">
+                              {renderPrice(j)}
+                            </span>
+                            <span className="text-[10px] uppercase text-slate-400">/{j.wage_unit || "h"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600 whitespace-nowrap text-left" translate="no">
+                          {formatDate(j.posted_date)}
+                        </TableCell>
+                        <TableCell className="text-left">
+                          <Badge variant="outline" className="text-[10px] font-bold py-0 h-5" translate="no">
+                            G-{j.randomization_group || "?"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600 text-left" translate="no">
+                          {formatExperience(j.experience_months)}
+                        </TableCell>
+                        <TableCell className="text-right pr-6 sticky right-0 bg-white shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                          <Button
+                            size="sm"
+                            variant={queuedJobIds.has(j.id) ? "secondary" : "outline"}
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToQueue(j);
+                            }}
+                          >
+                            {queuedJobIds.has(j.id) ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         )}
 
@@ -635,7 +634,7 @@ export default function Jobs() {
               variant="outline"
               size="sm"
               className="h-8 text-xs font-bold"
-              disabled={page <= 1}
+              disabled={page <= 1 || loading}
               onClick={() => setPage((p) => p - 1)}
             >
               {t("common.previous")}
