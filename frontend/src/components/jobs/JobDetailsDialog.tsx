@@ -158,7 +158,7 @@ export function JobDetailsDialog({
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-1 w-full min-w-0 text-left">
+            <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {job?.visa_type && (
                   <Badge className="text-[10px] uppercase font-bold" translate="no">
@@ -201,7 +201,7 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {job?.was_early_access && (
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
-                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
+                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg shadow-amber-200">
                   <Rocket className="h-6 w-6 animate-bounce" />
                 </div>
                 <div>
@@ -221,7 +221,7 @@ export function JobDetailsDialog({
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
                       {t("jobs.details.posted")}
                     </span>
-                    <span className="text-[11px] font-semibold" translate="no">
+                    <span className="text-[11px] font-semibold text-slate-600" translate="no">
                       {formatDate(job?.posted_date)}
                     </span>
                   </div>
@@ -301,12 +301,13 @@ export function JobDetailsDialog({
                       {t("jobs.details.weekly_hours")}
                     </span>
                     <span className="text-xl font-bold text-slate-800" translate="no">
+                      {/* CORREÇÃO DO COMMON.WEEK */}
                       {job?.weekly_hours ? `${job.weekly_hours}h / ${t("common.week")}` : "N/A"}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                       <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
