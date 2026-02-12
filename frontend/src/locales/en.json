@@ -1011,6 +1011,8 @@
       "end": "End",
       "available_positions": "Available Positions",
       "remuneration": "Compensation",
+      "experience": "Experience Required",
+      "no_experience": "No experience required",
       "pay_frequency": "Pay: {{frequency}}",
       "bonus": "Bonus / Additional",
       "deductions": "Planned Deductions:",
