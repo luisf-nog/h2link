@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database } from "lucide-react";
+import { Loader2, RefreshCw, Database, ShieldCheck } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -11,13 +11,12 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
-  // --- DATA LOCAL REAL (Evita o erro do fuso horário/dia 12) ---
   const getTodayDate = () => {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // Retorna sempre a data que você vê no seu relógio
+    return `${year}-${month}-${day}`;
   };
 
   const calculateFinalWage = (rawVal: any, hours: any) => {
@@ -37,7 +36,6 @@ export function MultiJsonImporter() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-      // Garante YYYY-MM-DD sem pular o dia pelo fuso
       return d.toLocaleDateString("en-CA");
     } catch {
       return null;
@@ -46,17 +44,24 @@ export function MultiJsonImporter() {
 
   const getCaseBody = (id: string) => {
     if (!id) return id;
-    const parts = id.split("-");
+    // Remove sufixos GHOST antes de processar o fingerprint
+    const cleanId = id.split("-GHOST")[0];
+    const parts = cleanId.split("-");
     if (parts[0] === "JO" && parts[1] === "A") return parts.slice(2).join("-");
     if (parts[0] === "H") return parts.slice(1).join("-");
-    return id;
+    return cleanId;
   };
 
   const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
     for (const key of keys) {
       const val = obj[key] || obj[key.toLowerCase()];
-      if (val !== undefined && val !== null) return String(val).trim();
+      if (val !== undefined && val !== null) {
+        const trimmed = String(val).trim();
+        // TRAVA: Se o valor for "N/A", retorna null para ser filtrado depois
+        if (trimmed.toUpperCase() === "N/A") return null;
+        return trimmed;
+      }
     }
     return null;
   };
@@ -65,6 +70,8 @@ export function MultiJsonImporter() {
     if (files.length === 0) return;
     setProcessing(true);
     const today = getTodayDate();
+    let skippedByEmail = 0;
+    let skippedByGhost = 0;
 
     try {
       const rawJobsMap = new Map();
@@ -93,8 +100,24 @@ export function MultiJsonImporter() {
 
           list.forEach((item: any) => {
             const flat = { ...item, ...(item.clearanceOrder || {}), ...(item.jobRequirements?.qualification || {}) };
-            const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
-            if (!rawJobId) return;
+
+            // 1. CAPTURA E LIMPEZA INICIAL DO ID
+            let rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
+
+            // TRAVA: IGNORAR SE TIVER "GHOST" NO ID ORIGINAL OU SE ESTIVER VAZIO
+            if (!rawJobId || rawJobId.toUpperCase().includes("GHOST")) {
+              skippedByGhost++;
+              return;
+            }
+
+            // 2. CAPTURA E VALIDAÇÃO DE EMAIL
+            const email = getVal(flat, ["recApplyEmail", "email"]);
+
+            // TRAVA: SE NÃO TIVER EMAIL VÁLIDO, DESCARTA
+            if (!email || email === "" || email.toUpperCase() === "N/A") {
+              skippedByEmail++;
+              return;
+            }
 
             const fingerprint = getCaseBody(rawJobId);
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
@@ -102,19 +125,19 @@ export function MultiJsonImporter() {
 
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
-              job_id: rawJobId.split("-GHOST-")[0].trim(),
+              job_id: rawJobId.split("-GHOST")[0].trim(), // Garante que nenhum lixo de ghost passe
               visa_type: visaType,
               fingerprint: fingerprint,
               job_title: getVal(flat, ["jobTitle", "tempneedJobtitle", "title"]),
               company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
-              email: getVal(flat, ["recApplyEmail", "email"]),
+              email: email,
               phone: getVal(flat, ["recApplyPhone", "empPhone"]),
               city: getVal(flat, ["jobCity", "city"]),
               state: getVal(flat, ["jobState", "state"]),
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), weeklyHours),
               start_date: formatToISODate(getVal(flat, ["jobBeginDate", "tempneedStart"])),
-              posted_date: posted || today, // Usa a data local se o arquivo não tiver
+              posted_date: posted || today,
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "tempneedEnd"])),
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
               job_min_special_req: getVal(flat, ["jobMinspecialreq", "specialRequirements", "jobAddReqinfo"]),
@@ -130,8 +153,10 @@ export function MultiJsonImporter() {
         }
       }
 
-      const allJobs = Array.from(rawJobsMap.values()).filter((j) => j.email);
-      const BATCH_SIZE = 1500; // Lote maior para ser mais rápido
+      // FILTRO FINAL DE SEGURANÇA
+      const allJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && !j.job_id.includes("GHOST"));
+
+      const BATCH_SIZE = 1500;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
         const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
         if (error) throw error;
@@ -139,7 +164,7 @@ export function MultiJsonImporter() {
 
       toast({
         title: "Sincronização V62 Concluída!",
-        description: `${allJobs.length} vagas processadas com data de ${today}.`,
+        description: `${allJobs.length} vagas inseridas. Bloqueios: ${skippedByEmail} sem e-mail e ${skippedByGhost} IDs ghost.`,
       });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -152,8 +177,11 @@ export function MultiJsonImporter() {
     <Card className="border-4 border-indigo-700 shadow-2xl">
       <CardHeader className="bg-indigo-50">
         <CardTitle className="flex items-center gap-2 text-indigo-900">
-          <Database className="h-6 w-6" /> H2 Linker Sync V62 (Turbo Mode)
+          <ShieldCheck className="h-6 w-6 text-emerald-600" /> H2 Linker Sync V62 (Armored Mode)
         </CardTitle>
+        <CardDescription className="text-indigo-700 font-bold">
+          Trava de integridade ativada: bloqueio automático de vagas sem e-mail ou com chaves corrompidas.
+        </CardDescription>
       </CardHeader>
       <CardContent className="pt-6 space-y-4">
         <input
@@ -165,10 +193,10 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-14 bg-indigo-700 hover:bg-indigo-900 text-white font-black text-lg"
+          className="w-full h-14 bg-indigo-700 hover:bg-indigo-900 text-white font-black text-lg shadow-lg"
         >
           {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção V62
+          Sincronizar Produção Protegida
         </Button>
       </CardContent>
     </Card>
