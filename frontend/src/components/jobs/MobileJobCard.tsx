@@ -94,15 +94,24 @@ export function MobileJobCard({
   const groupConfig = job.randomization_group ? getGroupBadgeConfig(job.randomization_group) : null;
 
   return (
-    <Card className="cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]" onClick={onClick}>
+    <Card
+      className="cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98] border-slate-200 shadow-sm overflow-hidden"
+      onClick={onClick}
+    >
       <CardContent className="p-4 space-y-3 text-left">
+        {/* HEADER: Título, Empresa e Badge de Visto */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-0.5">
               {reportData && <JobWarningBadge reportCount={reportData.count} reasons={reportData.reasons} />}
-              <h3 className="font-semibold text-foreground truncate">{job.job_title}</h3>
+              <h3 className="font-bold text-slate-900 truncate uppercase text-sm" translate="no">
+                {job.job_title}
+              </h3>
             </div>
-            <p className={cn("text-sm text-muted-foreground truncate", isBlurred && "blur-sm select-none")}>
+            <p
+              className={cn("text-xs font-medium text-slate-500 truncate", isBlurred && "blur-sm select-none")}
+              translate="no"
+            >
               {job.company}
             </p>
           </div>
@@ -110,20 +119,24 @@ export function MobileJobCard({
             <Badge
               variant={badgeConfig.variant}
               className={cn(
-                "text-[10px]",
+                "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0",
                 badgeConfig.className,
                 job.was_early_access && "border-amber-400 bg-amber-50 text-amber-700 shadow-sm",
               )}
+              translate="no"
             >
               <div className="flex items-center gap-1">
-                {job.was_early_access && <Rocket className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                {job.was_early_access && <Rocket className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />}
                 {badgeConfig.label}
               </div>
             </Badge>
             <Button
               size="icon"
               variant={!isBlurred && isQueued ? "default" : "outline"}
-              className={cn("h-8 w-8", !isBlurred && isQueued && "bg-emerald-500 border-emerald-500")}
+              className={cn(
+                "h-8 w-8 rounded-full shadow-sm",
+                !isBlurred && isQueued && "bg-emerald-500 border-emerald-500 hover:bg-emerald-600",
+              )}
               disabled={!isBlurred && isQueued}
               onClick={(e) => {
                 e.stopPropagation();
@@ -131,58 +144,65 @@ export function MobileJobCard({
               }}
             >
               {isBlurred ? (
-                <Lock className="h-4 w-4" />
+                <Lock className="h-3.5 w-3.5" />
               ) : isQueued ? (
-                <Check className="h-4 w-4" />
+                <Check className="h-3.5 w-3.5 text-white" />
               ) : (
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
               )}
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        {/* INFO PRINCIPAL: Localização e Salário */}
+        <div className="flex items-center gap-3 text-xs text-slate-600 font-medium bg-slate-50/50 p-2 rounded-lg border border-slate-100">
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <span className="truncate" translate="no">
               {job.city}, {job.state}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 text-green-700 font-bold">
             <DollarSign className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-medium">{formatSalary(job.salary)}</span>
+            <span translate="no">{formatSalary(job.salary)}</span>
           </div>
         </div>
 
+        {/* GROUP BADGE (Se existir) */}
         {groupConfig && (
-          <div className={cn("p-2 rounded border text-[10px] leading-tight", groupConfig.className)}>
-            <div className="flex items-center gap-1 font-bold mb-0.5">
-              <Info className="h-3 w-3" /> {t("jobs.groups.group_label")} {job.randomization_group}:{" "}
-              {groupConfig.shortDesc}
+          <div
+            className={cn("p-2 rounded border text-[10px] leading-tight flex items-start gap-2", groupConfig.className)}
+          >
+            <Info className="h-3 w-3 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold mb-0.5 uppercase tracking-wide" translate="no">
+                {t("jobs.groups.group_label")} {job.randomization_group}: {groupConfig.shortDesc}
+              </div>
+              <p className="opacity-80 line-clamp-2">{groupConfig.tooltip}</p>
             </div>
-            <p className="opacity-80">{groupConfig.tooltip}</p>
           </div>
         )}
 
-        <div className="flex items-center flex-wrap gap-3 text-[11px] text-muted-foreground">
+        {/* FOOTER DO CARD: Vagas, Data de Início e Experiência */}
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-[10px] text-slate-500 font-semibold uppercase tracking-tight pt-1">
           {typeof job.openings === "number" && (
             <div className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              <span>
+              <Users className="h-3 w-3 text-slate-400" />
+              <span translate="no">
                 {formatNumber(job.openings)} {t("jobs.table.headers.openings")}
               </span>
             </div>
           )}
           {job.start_date && (
             <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span>{formatDate(job.start_date)}</span>
+              <Calendar className="h-3 w-3 text-slate-400" />
+              <span translate="no">{formatDate(job.start_date)}</span>
             </div>
           )}
           {formatExperience(job.experience_months) && (
             <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>{formatExperience(job.experience_months)}</span>
+              <Clock className="h-3 w-3 text-slate-400" />
+              <span translate="no">{formatExperience(job.experience_months)}</span>
             </div>
           )}
         </div>
