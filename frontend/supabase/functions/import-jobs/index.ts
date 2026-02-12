@@ -7,43 +7,59 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // 1. Lidar com CORS (Essencial para o navegador não bloquear)
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // 1. Validação de Segurança (Omitida para brevidade, mantenha a sua de admin)
+    // 2. Validação de Token (Mantenha sua lógica de segurança)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Missing Authorization header");
 
+    // 3. Receber os dados do Frontend
     const { jobs } = await req.json();
 
     if (!Array.isArray(jobs) || jobs.length === 0) {
-      return new Response(JSON.stringify({ error: "No jobs provided" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Nenhum job enviado" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // 2. O Pulo do Gato: Em vez de .upsert(), chamamos a nossa RPC inteligente
-    // Processamos em lotes maiores (1000+) porque o backend aguenta muito mais
-    const BATCH_SIZE = 2000;
-    let totalImported = 0;
+    console.log(`[Edge Function] Processando ${jobs.length} vagas...`);
+
+    // 4. DISPARO TURBO (Batching)
+    // No Backend, podemos processar lotes muito maiores (1000+)
+    const BATCH_SIZE = 1000;
+    let totalProcessed = 0;
 
     for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
       const batch = jobs.slice(i, i + BATCH_SIZE);
 
-      // Chamamos a função SQL que criamos (process_jobs_bulk)
+      // Chamamos a RPC inteligente que criamos no SQL Editor
+      // Ela cuida do Fingerprint, was_early_access e do conflito de ID
       const { error: rpcError } = await supabase.rpc("process_jobs_bulk", {
         jobs_data: batch,
       });
 
       if (rpcError) {
-        console.error("Erro no lote:", rpcError);
+        console.error(`Erro no lote ${i}:`, rpcError);
         throw rpcError;
       }
-      totalImported += batch.length;
+      totalProcessed += batch.length;
     }
 
-    return new Response(JSON.stringify({ success: true, imported: totalImported }), {
+    return new Response(JSON.stringify({ success: true, imported: totalProcessed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+  } catch (err: any) {
+    console.error("[ERRO FATAL]:", err.message);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
