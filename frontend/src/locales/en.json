@@ -1,4 +1,5 @@
 {
+ {
   "app": {
     "name": "H2 Linker"
   },
@@ -14,7 +15,10 @@
     "browse_jobs": "Explore Available Jobs",
     "browse_jobs_hint": "Browse without account • Free access",
     "hero_tagline": "Save time and find real H-2A & H-2B opportunities",
-    "tabs": { "signin": "Sign in", "signup": "Create account" },
+    "tabs": {
+      "signin": "Sign in",
+      "signup": "Create account"
+    },
     "signin": {
       "title": "Welcome back",
       "description": "Sign in to continue"
@@ -346,7 +350,9 @@
       },
       "email_note": "Email cannot be changed",
       "contact_email_note": "This email will be used in your template signature.",
-      "actions": { "save": "Save changes" },
+      "actions": {
+        "save": "Save changes"
+      },
       "validation": {
         "invalid_age": "Age must be between 14 and 90.",
         "invalid_phone": "Phone must be in international format (E.164), e.g. +15551234567."
@@ -358,7 +364,9 @@
       "current_plan": "Current plan",
       "credits_used_today": "Credits used today",
       "member_since": "Member since",
-      "actions": { "manage_plan": "Manage plan" }
+      "actions": {
+        "manage_plan": "Manage plan"
+      }
     },
     "toasts": {
       "update_error_title": "Update error",
@@ -432,7 +440,9 @@
       },
       "template_none": "No template",
       "template_hint": "If you select a template, Subject and Body will be filled automatically.",
-      "actions": { "send": "Send test" },
+      "actions": {
+        "send": "Send test"
+      },
       "defaults": {
         "subject": "H-2B application - {{position}} ({{visa_type}})",
         "body": "Hello {{company}},\n\nMy name is {{name}} and I would like to apply for the {{position}} position under {{visa_type}}.\n\nBest regards,\n{{name}}\n{{phone}}\n{{contact_email}}"
@@ -524,7 +534,9 @@
     "upload": {
       "label": "PDF upload",
       "note": "AI can be wrong — review before saving.",
-      "actions": { "parse": "Extract with AI" }
+      "actions": {
+        "parse": "Extract with AI"
+      }
     },
     "status": {
       "attached": "Resume attached",
@@ -590,7 +602,9 @@
         "eta_number": "e.g. H-300-12345",
         "phone": "e.g. +1 (555) 123-4567"
       },
-      "actions": { "add": "Add" },
+      "actions": {
+        "add": "Add"
+      },
       "toasts": {
         "add_success_title": "Added to queue!",
         "add_success_desc": "The company was added to your queue.",
@@ -600,12 +614,18 @@
     "smtp_required": {
       "title": "Set up SMTP first",
       "description": "To send emails, you need to configure your SMTP account in Settings → SMTP.",
-      "actions": { "cancel": "Not now", "go_settings": "Open SMTP settings" }
+      "actions": {
+        "cancel": "Not now",
+        "go_settings": "Open SMTP settings"
+      }
     },
     "upgrade_required": {
       "title": "Daily limit reached!",
       "description": "You've reached your limit of {{limit}} emails per day. Upgrade to send more.",
-      "actions": { "cancel": "Go back", "view_plans": "View premium plans" }
+      "actions": {
+        "cancel": "Go back",
+        "view_plans": "View premium plans"
+      }
     },
     "sending_status": {
       "title": "Sending...",
@@ -782,10 +802,22 @@
     "free": "Free",
     "lifetime": "(lifetime)",
     "tiers": {
-      "free": { "label": "Starter", "description": "To test and explore" },
-      "gold": { "label": "Gold", "description": "Volume with saved templates" },
-      "diamond": { "label": "Diamond", "description": "More volume and visibility" },
-      "black": { "label": "Black", "description": "Dynamic AI per job" }
+      "free": {
+        "label": "Starter",
+        "description": "To test and explore"
+      },
+      "gold": {
+        "label": "Gold",
+        "description": "Volume with saved templates"
+      },
+      "diamond": {
+        "label": "Diamond",
+        "description": "More volume and visibility"
+      },
+      "black": {
+        "label": "Black",
+        "description": "Dynamic AI per job"
+      }
     },
     "method": {
       "static": "Templates",
@@ -946,7 +978,9 @@
       "category": "Category",
       "category_all": "All categories"
     },
-    "search": { "placeholder": "Search by role, company, city..." },
+    "search": {
+      "placeholder": "Search by role, company, city..."
+    },
     "salary": {
       "placeholder": "Salary range",
       "any": "Salary (any)",
@@ -1146,14 +1180,6 @@
       "profile_saved": "Email warm-up profile saved!",
       "profile_error": "Failed to save warm-up profile"
     }
-    "jobs": {
-    "details": {
-      "early_match_badge": "Early Match",
-      "early_match_title": "H2 Linker Intelligence: Exclusive Insight",
-      "early_match_desc": "Our system identified this opportunity during the government's initial processing phase. This allows you to review requirements and prepare your application with priority."
-    }
-  },
-  "ai_preferences": {
   },
   "ai_preferences": {
     "title": "AI Generation Preferences",
