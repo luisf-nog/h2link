@@ -296,6 +296,7 @@ export function JobDetailsDialog({
                     </Badge>
                   )}
 
+                  {/* BADGE DOURADO DISCRETO (EARLY MATCH) */}
                   {job?.was_early_access && (
                     <Badge className="bg-amber-50 text-amber-700 border-amber-200 flex gap-1 items-center shadow-sm">
                       <Rocket className="h-3 w-3 fill-amber-500 text-amber-500" />
@@ -463,7 +464,7 @@ export function JobDetailsDialog({
                   onClick={() => copyToClipboard(job?.email || "")}
                 >
                   <div className="bg-white p-2 rounded-full border border-slate-200 text-blue-500">
-                    <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col overflow-hidden">
                     <span className="text-[10px] text-slate-400 font-bold uppercase">
