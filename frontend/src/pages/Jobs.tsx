@@ -40,6 +40,7 @@ import {
   Briefcase,
   Rocket,
   CheckCircle2,
+  ArrowRight,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -376,6 +377,33 @@ export default function Jobs() {
           )}
         </div>
 
+        {/* BARRA DE AÇÃO DA FILA (ESTRATÉGIA ANTI-BOUNCE) */}
+        {queuedJobIds.size > 0 && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+                  <Zap className="h-6 w-6 text-white animate-pulse" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-white font-bold text-lg leading-tight">
+                    Você tem {queuedJobIds.size} vagas prontas!
+                  </h3>
+                  <p className="text-slate-400 text-sm">Suas vagas salvas estão aguardando na fila de envio.</p>
+                </div>
+              </div>
+              <div className="flex w-full sm:w-auto gap-2">
+                <Button
+                  onClick={() => navigate("/queue")}
+                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 h-12 shadow-lg transition-all active:scale-95"
+                >
+                  Ir para Envios agora <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3 px-4 pt-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -544,54 +572,34 @@ export default function Jobs() {
               <Table>
                 <TableHeader>
                   <TableRow className="whitespace-nowrap bg-slate-50/80">
-                    <TableHead>
+                    <TableHead className="text-left py-4">
                       <button onClick={() => toggleSort("job_title")}>
                         {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
+                    <TableHead className="text-left">
                       <button onClick={() => toggleSort("company")}>
                         {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
-                      <button onClick={() => toggleSort("city")}>
-                        {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>
+                    <TableHead className="text-center">
                       <button onClick={() => toggleSort("openings")}>
                         {t("jobs.table.headers.openings")} <SortIcon active={sortKey === "openings"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
+                    <TableHead className="text-left">
                       <button onClick={() => toggleSort("salary")}>
                         {t("jobs.table.headers.salary")} <SortIcon active={sortKey === "salary"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
-                      <button onClick={() => toggleSort("visa_type")}>
-                        {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>
+                    <TableHead className="text-left">
                       <button onClick={() => toggleSort("posted_date")}>
                         {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
                       </button>
                     </TableHead>
-                    <TableHead>
-                      <button onClick={() => toggleSort("start_date")}>
-                        {t("jobs.table.headers.start")} <SortIcon active={sortKey === "start_date"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button onClick={() => toggleSort("end_date")}>
-                        {t("jobs.table.headers.end")} <SortIcon active={sortKey === "end_date"} dir={sortDir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>{t("jobs.table.headers.experience")}</TableHead>
-                    <TableHead className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
+                    <TableHead className="text-left">Group</TableHead>
+                    <TableHead className="text-left">Exp.</TableHead>
+                    <TableHead className="text-right pr-6 sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
                       {t("jobs.table.headers.action")}
                     </TableHead>
                   </TableRow>
@@ -623,10 +631,7 @@ export default function Jobs() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={cn(
-                              "line-clamp-1 text-slate-600",
-                              planSettings.job_db_blur && "blur-sm select-none",
-                            )}
+                            className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm select-none")}
                             translate="no"
                           >
                             {j.company}
@@ -754,7 +759,6 @@ export default function Jobs() {
           </div>
         </div>
 
-        {/* AJUSTE ÚNICO AQUI: Passando o profile COMPLETO como planSettings */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
