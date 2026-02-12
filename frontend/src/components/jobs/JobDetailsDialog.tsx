@@ -30,22 +30,22 @@ import {
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 
-// EXPORTAÇÃO ESSENCIAL: Resolve o erro TS2305 (No exported member 'JobDetails')
+// EXPORTAÇÃO DO TIPO: Resolve o erro TS2305 no Jobs.tsx
 export type JobDetails = {
   id: string;
   job_id: string;
-  visa_type?: string | null;
-  company?: string;
-  email?: string;
+  visa_type: string | null;
+  company: string;
+  email: string;
   phone?: string | null;
-  job_title?: string;
-  city?: string;
-  state?: string;
+  job_title: string;
+  city: string;
+  state: string;
   openings?: number | null;
-  salary?: number | null;
-  start_date?: string | null;
+  salary: number | null;
+  start_date: string | null;
   end_date?: string | null;
-  posted_date?: string;
+  posted_date: string;
   experience_months?: number | null;
   wage_from?: number | null;
   wage_to?: number | null;
@@ -58,8 +58,6 @@ export type JobDetails = {
   job_duties?: string | null;
   randomization_group?: string | null;
   was_early_access?: boolean | null;
-  // Adicionando suporte a campos genéricos para evitar erros de compatibilidade com o tipo 'Job'
-  [key: string]: any;
 };
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -82,21 +80,21 @@ export function JobDetailsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   job: JobDetails | null;
-  planSettings?: any;
+  planSettings: any;
   formatSalary: (salary: number | null) => string;
-  onAddToQueue: (job: any) => void;
-  onRemoveFromQueue?: (job: any) => void;
+  onAddToQueue: (job: JobDetails) => void;
+  onRemoveFromQueue?: (job: JobDetails) => void;
   isInQueue?: boolean;
-  onShare?: (job: any) => void;
+  onShare?: (job: JobDetails) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // Lógica de Permissão baseada no tier do profile
-  const planTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
-  const isPremium = ["gold", "diamond", "black"].includes(planTier);
+  // VALIDAÇÃO: Bloqueia contatos se não for Gold/Diamond/Black ou se não estiver logado
+  const currentTier = planSettings?.plan_tier?.toLowerCase() || "visitor";
+  const isPremium = ["gold", "diamond", "black"].includes(currentTier);
   const canSeeContacts = isPremium;
   const isLoggedOut = !planSettings || Object.keys(planSettings).length === 0;
 
@@ -111,9 +109,12 @@ export function JobDetailsDialog({
 
   const handleShare = () => {
     if (!job) return;
-    const shareUrl = getJobShareUrl(job.id);
-    navigator.clipboard.writeText(shareUrl);
-    toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
+    if (onShare) onShare(job);
+    else {
+      const shareUrl = getJobShareUrl(job.id);
+      navigator.clipboard.writeText(shareUrl);
+      toast({ title: t("jobs.details.copied"), description: t("jobs.details.copy_success") });
+    }
   };
 
   const maskJobId = (id: string) => {
@@ -172,7 +173,7 @@ export function JobDetailsDialog({
                     className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
                     translate="no"
                   >
-                    {!isPremium ? maskJobId(job.job_id) : job.job_id.split("-GHOST")[0]}
+                    {canSeeContacts ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
                   </span>
                 )}
               </div>
@@ -203,40 +204,31 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
-                    <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
-                      {t("jobs.details.posted")}
-                    </span>
+                    <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">Posted</span>
                     <span className="text-[11px] font-semibold" translate="no">
                       {formatDate(job?.posted_date)}
                     </span>
                   </div>
                   <div className="border-x border-slate-100">
-                    <span className="block text-[9px] font-bold uppercase text-green-600 mb-1">
-                      {t("jobs.details.start")}
-                    </span>
+                    <span className="block text-[9px] font-bold uppercase text-green-600 mb-1">Start</span>
                     <span className="text-[11px] font-bold text-green-700" translate="no">
                       {formatDate(job?.start_date)}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[9px] font-bold uppercase text-red-600 mb-1">
-                      {t("jobs.details.end")}
-                    </span>
+                    <span className="block text-[9px] font-bold uppercase text-red-600 mb-1">End</span>
                     <span className="text-[11px] font-semibold text-red-700" translate="no">
                       {formatDate(job?.end_date)}
                     </span>
                   </div>
                 </div>
 
-                {/* EXPERIÊNCIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
                   <div className="bg-blue-50 p-3 rounded-full text-blue-600">
                     <GraduationCap className="h-6 w-6" />
@@ -249,7 +241,6 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALARIO */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left p-6 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                     <span className="font-semibold text-sm text-slate-600">
@@ -275,7 +266,7 @@ export function JobDetailsDialog({
                   {job?.rec_pay_deductions && (
                     <div className="bg-red-50 border border-red-100 p-3 rounded-lg mt-2">
                       <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-1">
-                        <AlertTriangle className="h-3 w-3" /> Deduções
+                        <AlertTriangle className="h-3 w-3" /> {t("jobs.details.deductions")}
                       </span>
                       <p className="text-xs text-red-800 font-medium">
                         <span translate="yes">{job.rec_pay_deductions}</span>
@@ -284,7 +275,6 @@ export function JobDetailsDialog({
                   )}
                 </div>
 
-                {/* CARGA HORÁRIA */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
@@ -299,7 +289,6 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -340,7 +329,6 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* DESCRIÇÕES (Sempre Visíveis) */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
@@ -365,7 +353,6 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button
             className="flex-1 font-bold h-12 text-base"
