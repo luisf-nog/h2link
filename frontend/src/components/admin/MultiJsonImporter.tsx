@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Fingerprint, Lock, Users, Briefcase } from "lucide-react";
+import { Loader2, RefreshCw, Send, Zap } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -93,136 +93,106 @@ export function MultiJsonImporter() {
           const json = JSON.parse(content);
           const list = Array.isArray(json) ? json : json.data || json.results || [];
 
-          let visaType = "H-2A";
-          if (filename.toLowerCase().includes("h2b")) visaType = "H-2B";
-          else if (filename.toLowerCase().includes("jo")) visaType = "H-2A (Early Access)";
+          let visaType = filename.toLowerCase().includes("h2b")
+            ? "H-2B"
+            : filename.toLowerCase().includes("jo")
+              ? "H-2A (Early Access)"
+              : "H-2A";
 
           for (const item of list) {
             const nested = getVal(item, ["clearanceOrder"]) || {};
             const flat = { ...item, ...nested };
             const reqs = getVal(flat, ["jobRequirements", "qualification"]) || {};
 
-            const title = (getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]) || "").trim();
-            const company = (getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]) || "").trim();
-            if (!title || !company) continue;
-
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
+            if (!rawJobId) continue;
+
             const fingerprint = getCaseBody(rawJobId);
-
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
-            const rawWage = getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]);
-
-            // Lógica de Transição (Match de DNA)
-            const existing = rawJobsMap.get(fingerprint);
-            let isTransition = false;
-            if (
-              existing &&
-              ((existing.visa_type.includes("Early Access") && visaType === "H-2A") ||
-                (visaType.includes("Early Access") && existing.visa_type === "H-2A"))
-            ) {
-              isTransition = true;
-            }
-
-            // --- MAPEAMENTO DE VAGAS E EXPERIÊNCIA (CORRIGIDO V57) ---
-            const openingsCount = parseInt(
-              String(
-                getVal(flat, ["jobWrksNeeded", "jobWrksNeededH2a", "totalWorkersNeeded", "tempneedWkrPos"]) || "0",
-              ),
-              10,
-            );
-
-            const expMonths = parseInt(
-              String(
-                getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || getVal(reqs, ["monthsExperience"]) || "0",
-              ),
-              10,
-            );
 
             const extractedJob = {
               id: crypto.randomUUID(),
               job_id: rawJobId.split("-GHOST-")[0].trim(),
               visa_type: visaType,
               fingerprint: fingerprint,
-              is_active: true,
-              job_title: title,
-              company: company,
+              job_title: getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]),
+              company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
               email: getVal(flat, ["recApplyEmail", "email"]),
               phone: getVal(flat, ["recApplyPhone", "empPhone", "phone"]),
               city: getVal(flat, ["jobCity", "city"]),
               state: getVal(flat, ["jobState"]),
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode"]),
-              salary: calculateFinalWage(rawWage, weeklyHours),
+              salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), weeklyHours),
               start_date: formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate", "start_date"])),
               posted_date: formatToISODate(getVal(flat, ["DECISION_DATE", "dateAcceptanceLtrIssued"])),
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
-
-              // Campos Detalhados
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription", "job_duties"]),
               job_min_special_req:
                 getVal(flat, ["jobMinspecialreq", "jobAddReqinfo"]) ||
                 getVal(reqs, ["specialRequirements", "jobMinSpecialReq"]),
               wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction"]),
-
-              // Quantitativos (TRAVADOS)
               weekly_hours: weeklyHours || null,
               category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle"]),
-              openings: openingsCount || null,
-              experience_months: expMonths || 0,
+              openings:
+                parseInt(
+                  String(
+                    getVal(flat, ["jobWrksNeeded", "jobWrksNeededH2a", "totalWorkersNeeded", "tempneedWkrPos"]) || "0",
+                  ),
+                  10,
+                ) || null,
+              experience_months:
+                parseInt(
+                  String(
+                    getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || getVal(reqs, ["monthsExperience"]) || "0",
+                  ),
+                  10,
+                ) || 0,
               education_required: getVal(flat, ["jobMinedu", "educationLevel"]) || getVal(reqs, ["educationLevel"]),
-
-              // Outros
               transport_provided:
                 getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === "true" ||
                 getVal(flat, ["recIsDailyTransport", "isDailyTransport"]) === true,
               source_url: getVal(flat, ["recApplyUrl", "jobRobotUrl", "url"]),
               housing_info: visaType.includes("H-2A") ? "Yes (H-2A Mandated)" : null,
-              was_early_access: isTransition || (existing?.was_early_access ?? false),
+              is_active: true,
             };
 
-            if (existing && existing.visa_type === "H-2A" && visaType.includes("Early Access")) {
-              existing.was_early_access = true;
-            } else {
-              rawJobsMap.set(fingerprint, extractedJob);
-            }
+            rawJobsMap.set(fingerprint, extractedJob);
           }
         }
       }
 
-      const finalJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && j.email.length > 2);
+      const allJobs = Array.from(rawJobsMap.values()).filter((j) => j.email && j.email.length > 2);
+      setProgress({ current: 0, total: allJobs.length });
 
-      const BATCH_SIZE = 500;
-      for (let i = 0; i < finalJobs.length; i += BATCH_SIZE) {
-        setProgress({ current: i, total: finalJobs.length });
-        const batch = finalJobs.slice(i, i + BATCH_SIZE);
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
-        if (error) throw error;
-      }
+      // --- COMO CHAMAR A FUNÇÃO EDGE (V58) ---
+      // 'import-jobs' deve ser o nome da sua pasta dentro de supabase/functions
+      const { data, error } = await supabase.functions.invoke("import-jobs", {
+        body: { jobs: allJobs },
+      });
 
-      toast({ title: "V57 - Sucesso Total!", description: "Vagas, Experiência e DNA mapeados corretamente." });
+      if (error) throw error;
+
+      toast({
+        title: "Sincronização Turbo Concluída!",
+        description: `Processamos ${data.imported} vagas via Edge Function.`,
+      });
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro no Importer", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <Card className="border-2 border-indigo-600 shadow-2xl">
+    <Card className="border-2 border-indigo-500 shadow-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-indigo-700">
-          <Fingerprint className="h-6 w-6" /> H2 Linker V57 (Full Data)
+          <Zap className="h-6 w-6" /> H2 Linker Sync V58 (Edge Mode)
         </CardTitle>
+        <CardDescription>Velocidade máxima de processamento via servidor.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <div className="flex items-center gap-2 p-2 bg-slate-100 rounded text-xs">
-            <Users className="w-4 h-4 text-indigo-600" /> Vagas: Mapeado
-          </div>
-          <div className="flex items-center gap-2 p-2 bg-slate-100 rounded text-xs">
-            <Briefcase className="w-4 h-4 text-indigo-600" /> Exp: Mapeado
-          </div>
-        </div>
         <input
           type="file"
           multiple
@@ -232,10 +202,17 @@ export function MultiJsonImporter() {
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-12 bg-indigo-700 hover:bg-indigo-800 font-bold text-white transition-all"
+          className="w-full h-12 bg-indigo-700 hover:bg-indigo-900 font-bold text-white"
         >
-          {processing ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <RefreshCw className="h-5 w-5 mr-2" />}
-          Sincronizar Produção (V57)
+          {processing ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="animate-spin h-5 w-5" /> Enviando ao Servidor...
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <Send className="h-5 w-5" /> Disparar para o Backend
+            </span>
+          )}
         </Button>
       </CardContent>
     </Card>
