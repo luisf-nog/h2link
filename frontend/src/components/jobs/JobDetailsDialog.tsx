@@ -238,7 +238,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* CONTEÚDO ROLÁVEL */}
+        {/* ÁREA DE CONTEÚDO ROLÁVEL */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {/* EARLY MATCH CARD */}
@@ -293,20 +293,31 @@ export function JobDetailsDialog({
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE */}
-                <div className="flex items-center justify-between text-sm bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                {/* TIMELINE - COM 3 COLUNAS */}
+                <div className="grid grid-cols-3 gap-1 items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex flex-col items-center text-center">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 leading-none">
                       {t("jobs.details.posted")}
                     </span>
-                    <span className="text-xs font-semibold">{formatDate(job?.posted_date)}</span>
+                    <span className="text-[11px] font-semibold text-slate-600 leading-tight">
+                      {formatDate(job?.posted_date)}
+                    </span>
                   </div>
-                  <div className="h-px bg-slate-100 flex-1 mx-3"></div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold uppercase text-green-600 mb-1">
+                  <div className="flex flex-col items-center text-center border-x border-slate-100 px-1">
+                    <span className="text-[10px] font-bold uppercase text-green-600 mb-1 leading-none">
                       {t("jobs.details.start")}
                     </span>
-                    <span className="text-xs font-bold text-green-700">{formatDate(job?.start_date)}</span>
+                    <span className="text-[11px] font-bold text-green-700 leading-tight">
+                      {formatDate(job?.start_date)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center text-center">
+                    <span className="text-[10px] font-bold uppercase text-red-600 mb-1 leading-none">
+                      {t("jobs.details.end")}
+                    </span>
+                    <span className="text-[11px] font-semibold text-red-700 leading-tight">
+                      {formatDate(job?.end_date)}
+                    </span>
                   </div>
                 </div>
 
@@ -387,7 +398,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS DA EMPRESA */}
+                {/* CONTATOS DA EMPRESA (Com correção de Blur agressivo) */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
                   <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-xs tracking-widest">
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
@@ -402,9 +413,11 @@ export function JobDetailsDialog({
                       <div className="flex items-center gap-2">
                         <div
                           className={cn(
-                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all transition-all",
-                            planSettings?.job_db_blur && "blur-[5px] select-none pointer-events-none opacity-60",
+                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all transition-all duration-300",
+                            planSettings?.job_db_blur &&
+                              "blur-md select-none pointer-events-none opacity-40 bg-slate-200",
                           )}
+                          style={planSettings?.job_db_blur ? { filter: "blur(8px)" } : {}}
                         >
                           {job?.email}
                         </div>
@@ -430,9 +443,11 @@ export function JobDetailsDialog({
                         <div className="space-y-2">
                           <div
                             className={cn(
-                              "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 transition-all",
-                              planSettings?.job_db_blur && "blur-[5px] select-none pointer-events-none opacity-60",
+                              "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 transition-all duration-300",
+                              planSettings?.job_db_blur &&
+                                "blur-md select-none pointer-events-none opacity-40 bg-slate-200",
                             )}
+                            style={planSettings?.job_db_blur ? { filter: "blur(8px)" } : {}}
                           >
                             {job.phone}
                           </div>
