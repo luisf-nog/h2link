@@ -18,6 +18,7 @@ import {
   Plus,
   Trash2,
   Users,
+  MessageSquare,
   ArrowLeft,
   GraduationCap,
   Info,
@@ -92,14 +93,14 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // BLOQUEIO SEGURO: Visitantes ou plano FREE
+  // BLOQUEIO MESTRE: Ativado se deslogado ou se planSettings mandar borrar
   const isBlurred = !planSettings || planSettings.job_db_blur === true;
+
+  const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
   useEffect(() => {
     if (open) setIsBannerExpanded(true);
   }, [open, job?.id]);
-
-  const badgeConfig = job ? getVisaBadgeConfig(job.visa_type) : null;
 
   const copyToClipboard = (text: string) => {
     if (isBlurred) return;
@@ -122,7 +123,6 @@ export function JobDetailsDialog({
       : d.toLocaleDateString(i18n.language, { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   };
 
-  // FUNÇÃO RESTAURADA
   const renderMainWage = () => {
     if (!job) return "-";
     if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
@@ -143,6 +143,20 @@ export function JobDetailsDialog({
   };
 
   const cleanPhone = (phone: string) => (phone ? phone.replace(/\D/g, "") : "");
+
+  const getJobIdDisplay = () => {
+    if (!job?.job_id) return null;
+    const cleanId = job.job_id.split("-GHOST")[0];
+    if (isBlurred && cleanId.length > 6) {
+      return (
+        <>
+          {cleanId.slice(0, -6)}
+          <span className="blur-[4px] select-none opacity-50 tracking-tighter">XXXXXX</span>
+        </>
+      );
+    }
+    return cleanId;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,8 +184,7 @@ export function JobDetailsDialog({
                 )}
                 {job?.job_id && (
                   <span className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                    {isBlurred ? `${job.job_id.substring(0, 10)}...` : job.job_id.split("-GHOST")[0]}
-                    {isBlurred && <span className="ml-1 blur-[3px] select-none opacity-40">XXXXX</span>}
+                    {getJobIdDisplay()}
                   </span>
                 )}
               </div>
@@ -191,19 +204,13 @@ export function JobDetailsDialog({
               <Button variant="outline" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
               </Button>
-              {isInQueue ? (
-                <Button variant="destructive" onClick={() => job && onRemoveFromQueue?.(job)}>
-                  <Trash2 className="h-4 w-4 mr-2" /> {t("jobs.details.remove")}
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => job && onAddToQueue(job)}
-                  className="px-6 font-bold shadow-sm"
-                  disabled={isBlurred}
-                >
-                  {isBlurred && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
-                </Button>
-              )}
+              <Button
+                onClick={() => job && onAddToQueue(job)}
+                className="px-6 font-bold shadow-sm"
+                disabled={isBlurred}
+              >
+                {isBlurred && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job")}
+              </Button>
             </div>
           </div>
         </div>
@@ -213,7 +220,7 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* TIMELINE RESTAURADA (3 DATAS) */}
+                {/* TIMELINE */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="text-center">
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
@@ -248,7 +255,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* SALÁRIO / DEDUÇÕES / ADICIONAIS */}
+                {/* SALÁRIO E ADICIONAIS */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-left">
                   <div className="p-6 space-y-4">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-4">
@@ -285,7 +292,7 @@ export function JobDetailsDialog({
                 </div>
 
                 {/* CARGA HORÁRIA */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 text-left">
                   <div className="bg-amber-50 p-3 rounded-full text-amber-600">
                     <Clock className="h-6 w-6" />
                   </div>
@@ -299,108 +306,84 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS COM BLUR AGRESSIVO */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                {/* CONTATOS (BLUR NO CARD TODO) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                  {/* Overlay de Bloqueio se estiver blurred */}
+                  {isBlurred && (
+                    <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[12px] flex flex-col items-center justify-center p-6 text-center transition-all">
+                      <div className="bg-white p-3 rounded-full shadow-lg mb-3 border border-slate-100">
+                        <Lock className="h-8 w-8 text-amber-500" />
+                      </div>
+                      <p className="text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-tight">
+                        {t("jobs.upgrade.title")}
+                      </p>
+                      <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-4 shadow-md animate-pulse">
+                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
+                      </Button>
+                    </div>
+                  )}
+
                   <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest">
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
-                  <div className="space-y-4">
+
+                  <div className="space-y-4 mt-4">
                     <div>
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                         {t("jobs.details.email_label")}
                       </span>
                       <div className="flex items-center gap-2">
-                        <div
-                          className={cn(
-                            "flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 select-none",
-                            isBlurred && "blur-[12px] opacity-20 pointer-events-none",
-                          )}
-                        >
-                          {isBlurred ? "protected@employer-info.com" : job?.email}
+                        <div className="flex-1 font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
+                          {job?.email}
                         </div>
-                        {!isBlurred && (
-                          <Button variant="ghost" size="icon" onClick={() => job?.email && copyToClipboard(job.email)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
                       </div>
                     </div>
+
                     {job?.phone && (
                       <div className="space-y-2">
                         <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                           {t("jobs.details.phone_label")}
                         </span>
-                        <div
-                          className={cn(
-                            "font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 select-none",
-                            isBlurred && "blur-[12px] opacity-20 pointer-events-none",
-                          )}
-                        >
-                          {isBlurred ? "+1 (XXX) XXX-XXXX" : job.phone}
+                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
+                          {job.phone}
                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 h-10 gap-2 font-bold"
-                            disabled={isBlurred}
-                            asChild={!isBlurred}
-                          >
-                            {isBlurred ? (
-                              <>
-                                <Lock className="h-3.5 w-3.5 text-amber-500" /> {t("jobs.details.call_action")}
-                              </>
-                            ) : (
-                              <a href={`tel:${job.phone}`}>
-                                <Phone className="h-3.5 w-3.5" /> {t("jobs.details.call_action")}
-                              </a>
-                            )}
+                          <Button variant="outline" size="sm" className="flex-1 h-10 gap-2 text-xs font-bold">
+                            <Phone className="h-3.5 w-3.5" /> {t("jobs.details.call_action")}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 h-10 gap-2 font-bold border-green-200 text-green-700"
-                            disabled={isBlurred}
-                            asChild={!isBlurred}
+                            className="flex-1 h-10 gap-2 text-xs font-bold border-green-200 text-green-700"
                           >
-                            {isBlurred ? (
-                              <>
-                                <Lock className="h-3.5 w-3.5 text-amber-500" /> WhatsApp
-                              </>
-                            ) : (
-                              <a href={`https://wa.me/${job.phone}`} target="_blank">
-                                <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
-                              </a>
-                            )}
+                            <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
                           </Button>
                         </div>
                       </div>
-                    )}
-                    {isBlurred && (
-                      <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-extrabold py-5 h-auto text-xs animate-pulse">
-                        <Rocket className="h-4 w-4 mr-2" /> {t("jobs.upgrade.cta")}
-                      </Button>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* COLUNA DIREITA (DESCRIÇÕES BLOQUEADAS PARA VISITANTES) */}
+              {/* COLUNA DIREITA (DESCRIÇÕES BLOQUEADAS) */}
               <div className="lg:col-span-8 space-y-6">
                 {job?.job_min_special_req && (
-                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm">
+                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 shadow-sm relative overflow-hidden">
                     <h4 className="flex items-center gap-2 font-bold text-amber-900 mb-3 text-lg">
                       <AlertTriangle className="h-5 w-5" /> {t("jobs.details.special_reqs")}
                     </h4>
-                    <div
-                      className={cn("relative", isBlurred && "blur-[15px] select-none pointer-events-none opacity-20")}
-                    >
-                      <p className="text-sm sm:text-base text-amber-900 leading-relaxed whitespace-pre-wrap text-left">
+                    <div className={cn(isBlurred && "blur-[14px] select-none pointer-events-none opacity-20")}>
+                      <p className="text-sm sm:text-base text-amber-900 leading-relaxed whitespace-pre-wrap">
                         {isBlurred
-                          ? "This information is protected to prevent unauthorized access. Please upgrade your plan to Gold or Diamond to view the specific requirements for this employer."
+                          ? "Protected content. Requirements and conditions are hidden. Please upgrade to Gold/Diamond to unlock full employer details and apply."
                           : job.job_min_special_req}
                       </p>
                     </div>
+                    {isBlurred && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Lock className="h-8 w-8 text-amber-600/50" />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -410,23 +393,20 @@ export function JobDetailsDialog({
                       <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
                     </h4>
                     <div className="bg-white p-5 sm:p-8 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                      <div
-                        className={cn(
-                          "transition-all duration-700",
-                          isBlurred && "blur-[20px] select-none pointer-events-none opacity-10",
-                        )}
-                      >
-                        <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap text-left">
+                      <div className={cn(isBlurred && "blur-[20px] select-none pointer-events-none opacity-10")}>
+                        <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
                           {isBlurred
-                            ? "The full job description and duties are currently hidden. Gold members have full access to employer intelligence and verified job descriptions. Subscribe now to unlock and start applying."
+                            ? "Employer intelligence and job description are hidden. Gold members have full access to job duties and verified contacts. Upgrade to unlock."
                             : job.job_duties}
                         </p>
                       </div>
                       {isBlurred && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/40">
-                          <div className="text-center">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center opacity-40">
                             <Lock className="h-10 w-10 text-slate-400 mx-auto mb-2" />
-                            <p className="text-sm font-bold text-slate-600">{t("jobs.upgrade.title")}</p>
+                            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">
+                              {t("jobs.upgrade.title")}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -438,7 +418,7 @@ export function JobDetailsDialog({
           </div>
         </div>
 
-        {/* FOOTER FIXO MOBILE */}
+        {/* FOOTER MOBILE */}
         <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
           <Button
             className="flex-1 font-bold h-12 text-base"
