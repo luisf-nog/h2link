@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { JobDetailsDialog, type JobDetails } from "@/components/jobs/JobDetailsDialog";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { MultiJsonImporter } from "@/components/admin/MultiJsonImporter";
@@ -46,6 +39,7 @@ import {
   ShieldAlert,
   Briefcase,
   Rocket,
+  CheckCircle2,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -55,7 +49,7 @@ import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 import { getJobShareUrl } from "@/lib/shareUtils";
 
-// --- COMPONENTE DE ONBOARDING ---
+// --- ONBOARDING RESTAURADO ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -94,55 +88,24 @@ function OnboardingModal() {
           </button>
         </div>
         <div className="bg-slate-50 border-b border-slate-100 px-6 sm:px-8 py-5 sm:py-6 text-left">
-          <div className="flex gap-3 sm:gap-4">
-            <div className="flex-shrink-0 mt-1 text-slate-700">
-              <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6" />
-            </div>
+          <div className="flex gap-3 sm:gap-4 text-left">
+            <ShieldAlert className="h-6 w-6 text-slate-700 shrink-0" />
             <div>
               <h3 className="text-slate-900 font-bold text-sm sm:text-base">Service Transparency & Role</h3>
               <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
                 H2 Linker is a <strong>software technology provider</strong>. We are not a recruitment agency. We
-                provide the high-performance tools to automate your outreach, but the final hiring decision and
-                interview process rest solely between you and the employer.
+                provide the tools, but the final decision rests solely between you and the employer.
               </p>
             </div>
           </div>
         </div>
         <div className="p-6 sm:p-8 space-y-6 text-left">
-          <div className="grid gap-6">
-            <div className="flex gap-4 items-start group">
-              <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-                <Clock className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Exclusive Early Access Data</h4>
-                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                  Apply before the crowd. We extract official job orders directly from the DOL the moment they are
-                  filed.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4 items-start group">
-              <div className="h-10 w-10 rounded-md bg-purple-50 flex items-center justify-center shrink-0 border border-purple-100">
-                <Bot className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Adaptive AI Email Engine</h4>
-                <p className="text-slate-600 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                  AI generates templates that adapt to each specific job, ensuring a perfect personalized first
-                  impression.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="pt-5 border-t border-slate-100 mt-2">
-            <Button
-              onClick={handleClose}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all"
-            >
-              I Understand - Let's Start
-            </Button>
-          </div>
+          <Button
+            onClick={handleClose}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-12 shadow-lg transition-all"
+          >
+            I Understand - Let's Start
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -162,25 +125,11 @@ export default function Jobs() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-
-  const handleShareJob = (job: JobDetails) => {
-    const shareUrl = getJobShareUrl(job.id);
-    if (navigator.share) {
-      navigator.share({
-        title: `${job.job_title} - ${job.company}`,
-        text: `${t("jobs.shareText")}: ${job.job_title} ${t("jobs.in")} ${job.city}, ${job.state}`,
-        url: shareUrl,
-      });
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      toast({ title: "Link copiado!" });
-    }
-  };
-
   const { isAdmin } = useIsAdmin();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // ESTADOS RESTAURADOS COMPLETOS
   const [jobs, setJobs] = useState<JobDetails[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -224,9 +173,7 @@ export default function Jobs() {
 
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim())
-      query = query.or(
-        `job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,state.ilike.%${searchTerm}%`,
-      );
+      query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (selectedCategories.length > 0) query = query.in("category", selectedCategories);
@@ -254,6 +201,14 @@ export default function Jobs() {
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    const { data } = await supabase.from("public_jobs").select("category").not("category", "is", null).limit(1000);
+    if (data) {
+      const uniq = Array.from(new Set(data.map((r) => r.category))).sort() as string[];
+      setCategories(uniq);
+    }
+  };
+
   useEffect(() => {
     fetchJobs();
   }, [
@@ -269,6 +224,9 @@ export default function Jobs() {
     sortDir,
     page,
   ]);
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const addToQueue = async (job: JobDetails) => {
     if (!profile) {
@@ -290,25 +248,6 @@ export default function Jobs() {
     });
   };
 
-  const removeFromQueue = async (job: JobDetails) => {
-    if (!profile?.id) return;
-    const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
-    if (!error) {
-      setQueuedJobIds((q) => {
-        const n = new Set(q);
-        n.delete(job.id);
-        return n;
-      });
-      setSelectedJob(null);
-    }
-  };
-
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
-  };
-
   const toggleSort = (key: string) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
@@ -318,6 +257,12 @@ export default function Jobs() {
     setPage(1);
   };
 
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -325,7 +270,7 @@ export default function Jobs() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-1">
               {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
             </p>
           </div>
@@ -391,21 +336,51 @@ export default function Jobs() {
                 setPage(1);
               }}
             />
+
+            {/* POPOVER DE CATEGORIAS RESTAURADO */}
+            <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-between text-muted-foreground font-normal">
+                  {selectedCategories.length > 0
+                    ? `${selectedCategories.length} selecionadas`
+                    : t("jobs.filters.category")}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[250px]" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar categoria..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhuma encontrada.</CommandEmpty>
+                    <CommandGroup>
+                      {categories.map((c) => (
+                        <CommandItem
+                          key={c}
+                          onSelect={() => {
+                            setSelectedCategories((prev) =>
+                              prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+                            );
+                            setPage(1);
+                          }}
+                        >
+                          <Check
+                            className={cn("mr-2 h-4 w-4", selectedCategories.includes(c) ? "opacity-100" : "opacity-0")}
+                          />
+                          {c}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
             <Input
               type="number"
               placeholder="Mín $"
               value={minSalary}
               onChange={(e) => {
                 setMinSalary(e.target.value);
-                setPage(1);
-              }}
-            />
-            <Input
-              type="number"
-              placeholder="Máx $"
-              value={maxSalary}
-              onChange={(e) => {
-                setMaxSalary(e.target.value);
                 setPage(1);
               }}
             />
@@ -421,7 +396,7 @@ export default function Jobs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Groups</SelectItem>
-                {["A", "B", "C", "D", "E", "F", "G"].map((g) => (
+                {["A", "B", "C", "D", "E", "F", "G", "H"].map((g) => (
                   <SelectItem key={g} value={g}>
                     Group {g}
                   </SelectItem>
@@ -441,7 +416,7 @@ export default function Jobs() {
                 isQueued={queuedJobIds.has(j.id)}
                 onAddToQueue={() => addToQueue(j)}
                 onClick={() => setSelectedJob(j)}
-                formatDate={formatDate} // CORREÇÃO: Propriedade obrigatória adicionada
+                formatDate={formatDate}
                 reportData={jobReports[j.id]}
               />
             ))}
@@ -484,9 +459,20 @@ export default function Jobs() {
                         {j.city}, {j.state}
                       </TableCell>
                       <TableCell className="text-center">{j.openings}</TableCell>
-                      <TableCell>{renderPrice(j)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{j.visa_type}</Badge>
+                        {renderPrice(j)}
+                        <span className="text-[10px] text-muted-foreground block">/{j.wage_unit || "h"}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={getVisaBadgeConfig(j.visa_type).variant}
+                          className={cn(
+                            getVisaBadgeConfig(j.visa_type).className,
+                            j.was_early_access && "border-amber-400 border-2",
+                          )}
+                        >
+                          {j.was_early_access && <Rocket className="h-3 w-3 mr-1 fill-amber-500" />} {j.visa_type}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -515,9 +501,7 @@ export default function Jobs() {
         )}
 
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("jobs.pagination.page_of", { page, totalPages })}</p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               Anterior
@@ -535,14 +519,12 @@ export default function Jobs() {
           planSettings={profile}
           formatSalary={(s: any) => (s ? `$${s.toFixed(2)}/h` : "-")}
           onAddToQueue={addToQueue}
-          onRemoveFromQueue={removeFromQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
-          onShare={handleShareJob}
         />
 
         {showImporter && (
           <Dialog open={showImporter} onOpenChange={setShowImporter}>
-            <DialogContent className="max-w-4xl p-0 shadow-2xl border-0 overflow-hidden">
+            <DialogContent className="max-w-4xl p-0">
               <MultiJsonImporter />
             </DialogContent>
           </Dialog>
@@ -558,7 +540,7 @@ export default function Jobs() {
                 Para adicionar vagas e automatizar envios, você precisa acessar sua conta.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-2 mt-4">
+            <div className="flex flex-col gap-2 mt-4 text-left">
               <Button
                 onClick={() => {
                   setShowLoginDialog(false);
