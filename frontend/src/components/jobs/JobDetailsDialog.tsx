@@ -28,6 +28,7 @@ import {
   Lock,
   MessageCircle,
   MessageSquare,
+  CheckCircle2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -48,7 +49,7 @@ export function JobDetailsDialog({
   const navigate = useNavigate();
   const [isBannerExpanded, setIsBannerExpanded] = useState(true);
 
-  // LÓGICA DE IDENTIFICAÇÃO PREMIUM (Ajustada para plan_tier do profile)
+  // LÓGICA DE IDENTIFICAÇÃO PREMIUM
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
@@ -96,6 +97,16 @@ export function JobDetailsDialog({
     if (job.wage_from) return <span translate="no">{`$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`}</span>;
     if (job.salary) return <span translate="no">{formatSalary(job.salary)}</span>;
     return t("jobs.details.view_details");
+  };
+
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return t("jobs.details.no_experience");
+    if (months < 12) return t("jobs.table.experience_months", { count: months });
+    const years = Math.floor(months / 12);
+    const rem = months % 12;
+    return rem === 0
+      ? t("jobs.table.experience_years", { count: years })
+      : t("jobs.table.experience_years_months", { years, months: rem });
   };
 
   return (
@@ -150,6 +161,22 @@ export function JobDetailsDialog({
         {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
+            {/* CARD EVOLUÇÃO EARLY ACCESS (RESTAURADO) */}
+            {job?.was_early_access && (
+              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+                <div className="bg-amber-500 p-2 rounded-lg text-white shadow-lg">
+                  <Rocket className="h-6 w-6 animate-bounce" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
+                  <p className="text-amber-800 text-xs">{t("jobs.details.early_access_evolution_text")}</p>
+                </div>
+                <div className="ml-auto hidden sm:block">
+                  <CheckCircle2 className="h-8 w-8 text-amber-500/30" />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
                 {/* TIMELINE */}
@@ -158,7 +185,7 @@ export function JobDetailsDialog({
                     <span className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
                       {t("jobs.details.posted")}
                     </span>
-                    <span className="text-[11px] font-semibold" translate="no">
+                    <span className="text-[11px] font-semibold text-slate-600" translate="no">
                       {formatDate(job?.posted_date)}
                     </span>
                   </div>
@@ -176,6 +203,21 @@ export function JobDetailsDialog({
                     </span>
                     <span className="text-[11px] font-semibold text-red-700" translate="no">
                       {formatDate(job?.end_date)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* EXPERIÊNCIA (RESTAURADO) */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                  <div className="bg-blue-50 p-3 rounded-full text-blue-600">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {t("jobs.details.experience")}
+                    </span>
+                    <span className="text-xl font-bold text-slate-800" translate="no">
+                      {formatExperience(job?.experience_months)}
                     </span>
                   </div>
                 </div>
@@ -244,7 +286,7 @@ export function JobDetailsDialog({
                         className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
                         onClick={handleGoToPlans}
                       >
-                        <Rocket className="h-3.5 w-3.5 mr-2" /> Upgrade para Visualizar
+                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
                       </Button>
                     </div>
                   )}
@@ -272,7 +314,6 @@ export function JobDetailsDialog({
                     )}
                   </div>
 
-                  {/* BOTÕES DE REDIRECIONAMENTO */}
                   {canSeeContacts && (
                     <div className="space-y-2 pt-2">
                       <div className="flex gap-2">
@@ -309,8 +350,23 @@ export function JobDetailsDialog({
                 </div>
               </div>
 
-              {/* DESCRIÇÕES */}
+              {/* DESCRIÇÕES COM ORDEM INVERTIDA */}
               <div className="lg:col-span-8 space-y-6">
+                {/* 1. REQUISITOS ESPECIAIS (AGORA EM CIMA E COM FONTE PADRONIZADA) */}
+                {job?.job_min_special_req && (
+                  <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
+                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
+                      <AlertTriangle className="h-6 w-6 text-amber-500" /> {t("jobs.details.special_reqs")}
+                    </h4>
+                    <div className="bg-amber-50 rounded-xl p-5 border border-amber-100">
+                      <p className="text-sm text-amber-900 leading-relaxed">
+                        <span translate="yes">{job.job_min_special_req}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. JOB DUTIES */}
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-left">
                   <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
                     <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
@@ -318,16 +374,6 @@ export function JobDetailsDialog({
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                     <span translate="yes">{job?.job_duties}</span>
                   </p>
-                  {job?.job_min_special_req && (
-                    <div className="mt-8 bg-amber-50 rounded-xl p-5 border border-amber-100">
-                      <h5 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        <AlertTriangle className="h-4 w-4" /> {t("jobs.details.special_reqs")}
-                      </h5>
-                      <p className="text-xs text-amber-800 leading-relaxed">
-                        <span translate="yes">{job.job_min_special_req}</span>
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
