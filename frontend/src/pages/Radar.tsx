@@ -25,6 +25,8 @@ import {
   MapPin,
   CircleDollarSign,
   Briefcase,
+  Users,
+  Building2,
   RefreshCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -211,38 +213,33 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Configurações Atualizadas!" });
+      toast({ title: "Radar Atualizado!" });
     }
     setSaving(false);
   };
 
   const handleSendApplication = async (matchId: string, jobId: string) => {
     try {
-      // 1. Inserir na my_queue
-      const { error: sendError } = await supabase.from("my_queue" as any).insert([
-        {
-          user_id: profile?.id,
-          job_id: jobId,
-          status: "pending",
-        },
-      ]);
+      const { error: sendError } = await supabase
+        .from("my_queue" as any)
+        .insert([{ user_id: profile?.id, job_id: jobId, status: "pending" }]);
 
       if (sendError) throw sendError;
 
-      // 2. Remover do Radar
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
         .eq("id", matchId);
-
-      // 3. Atualização local agressiva
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
 
-      toast({ title: "Enviado com sucesso!", description: "Vaga removida do Radar permanentemente." });
+      toast({
+        title: "Enviado!",
+        description: "A vaga agora está na sua My Queue.",
+        className: "bg-emerald-600 text-white",
+      });
     } catch (err: any) {
-      console.error("Erro no envio:", err);
-      toast({ title: "Erro", description: "Não foi possível processar o envio.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao enviar vaga.", variant: "destructive" });
     }
   };
 
@@ -284,7 +281,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ESQUERDA: CONFIG */}
+        {/* COLUNA ESQUERDA: CONFIG */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
@@ -332,7 +329,9 @@ export default function Radar() {
             </CardHeader>
             <CardContent className="p-5 space-y-4">
               <div className="flex justify-between items-center p-3 bg-indigo-50/30 rounded-xl border border-indigo-100">
-                <Label className="text-sm font-bold text-indigo-700">Auto-Enviar</Label>
+                <Label className="text-sm font-bold text-indigo-700 flex items-center gap-2">
+                  <Zap className="h-4 w-4" /> Envio Automático
+                </Label>
                 <Switch checked={autoSend} onCheckedChange={setAutoSend} />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -369,7 +368,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Salário Mín ($/h)</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Salário Mín.</Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -378,7 +377,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Exp Máx (Meses)</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Exp. Máx. (Mês)</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -394,7 +393,7 @@ export default function Radar() {
             <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center">
               <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Segmentos Alvo</CardTitle>
             </CardHeader>
-            <CardContent className="p-3 space-y-1 max-h-[400px] overflow-y-auto custom-scrollbar">
+            <CardContent className="p-3 space-y-1 max-h-[400px] overflow-y-auto">
               {Object.entries(groupedCategories).map(([segment, items]) => {
                 const isExpanded = expandedSegments.includes(segment);
                 const subCats = items.map((c) => c.raw_category);
@@ -462,25 +461,17 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* DIREITA: MATCHES */}
+        {/* COLUNA DIREITA: MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
-              <h2 className="text-xl font-black flex items-center gap-2 uppercase italic text-slate-900">
+              <h2 className="text-xl font-black uppercase italic text-slate-900">
                 <Target className="h-6 w-6 text-indigo-600 inline mr-2" /> Fila de Matches
               </h2>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider italic">
-                Vagas inéditas encontradas pelo robô
-              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
-                <RefreshCcw className="h-4 w-4" />
-              </Button>
-              <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-                {matchCount} Vagas
-              </Badge>
-            </div>
+            <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
+              {matchCount} Vagas
+            </Badge>
           </div>
 
           <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
@@ -502,14 +493,21 @@ export default function Radar() {
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono">
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
+                          <span className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
+                            <Users className="h-3 w-3" /> {job.nb_workers || 1} Vagas
+                          </span>
                         </div>
                         <div>
                           <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
                             {job.category}
                           </h3>
-                          <p className="text-[10px] font-bold text-slate-500 truncate max-w-lg italic">
-                            {job.job_title}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                            <p className="text-[11px] font-black text-slate-700 uppercase italic">
+                              {job.employer_name || "Empresa Confidencial"}
+                            </p>
+                          </div>
+                          <p className="text-[10px] font-bold text-slate-500 truncate mt-1 italic">{job.job_title}</p>
                         </div>
                         <div className="flex items-center gap-4 pt-1">
                           <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
@@ -520,11 +518,11 @@ export default function Radar() {
                           </span>
                         </div>
                       </div>
-                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l">
+                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-100 min-w-[140px]">
                         <Button
                           size="sm"
                           onClick={() => handleSendApplication(match.id, job.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full md:w-auto"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full"
                         >
                           ENVIAR
                         </Button>
