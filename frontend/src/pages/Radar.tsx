@@ -12,6 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Radar as RadarIcon,
   ShieldCheck,
   Loader2,
@@ -33,6 +41,8 @@ import {
   CheckCircle2,
   Zap,
   Layers,
+  HelpCircle,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -128,7 +138,6 @@ export default function Radar() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Hooks de Estado (Sempre no topo)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [batchSending, setBatchSending] = useState(false);
@@ -137,8 +146,8 @@ export default function Radar() {
   const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
 
-  // Estados dos Filtros
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -150,12 +159,15 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // Cálculos de Memoização
-  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
-  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
-  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
+  // Instruções automáticas no primeiro acesso
+  useEffect(() => {
+    const hasSeen = localStorage.getItem("h2_radar_instructions");
+    if (!hasSeen && !loading) {
+      setShowInstructions(true);
+      localStorage.setItem("h2_radar_instructions", "true");
+    }
+  }, [loading]);
 
-  // SOMA TOTAL DE VAGAS PARA O HEADER (SEU PEDIDO)
   const totalSinaisGeral = useMemo(
     () => Object.values(groupedCategories).reduce((acc, curr) => acc + curr.totalJobs, 0),
     [groupedCategories],
@@ -174,7 +186,6 @@ export default function Radar() {
     }
   };
 
-  // Funções de Dados
   const updateStats = async () => {
     try {
       const { data } = await supabase.rpc("get_radar_stats", {
@@ -272,7 +283,7 @@ export default function Radar() {
       setMatchedJobs([]);
       setMatchCount(0);
     } catch (err) {
-      toast({ title: "Erro no processamento", variant: "destructive" });
+      toast({ title: "Erro no lote", variant: "destructive" });
     } finally {
       setBatchSending(false);
     }
@@ -301,7 +312,6 @@ export default function Radar() {
     );
   };
 
-  // Efeitos (Dependências de filtros)
   useEffect(() => {
     updateStats();
   }, [visaType, stateFilter, minWage, maxExperience, groupFilter]);
@@ -356,6 +366,10 @@ export default function Radar() {
     radarProfile,
   ]);
 
+  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
+  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
+  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
+
   if (!isPremium)
     return (
       <div className="p-20 text-center">
@@ -374,11 +388,97 @@ export default function Radar() {
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
+      {/* MANUAL DE INSTRUÇÕES (MODAL) */}
+      <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
+        <DialogContent className="max-w-2xl bg-white border-indigo-100 shadow-2xl rounded-3xl overflow-hidden p-0">
+          <div className="bg-indigo-600 p-8 text-white relative overflow-hidden">
+            <Radio className="absolute -right-8 -top-8 h-40 w-40 text-white/10" />
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <Badge className="bg-white/20 text-white border-white/30 px-2 py-0.5 text-[10px] font-black tracking-widest uppercase">
+                  Protocolo Diamond
+                </Badge>
+              </div>
+              <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter leading-none">
+                H2 Linker Radar Signal
+              </DialogTitle>
+              <DialogDescription className="text-indigo-100 font-medium text-base mt-2">
+                Manual de Operações da sua Ferramenta de Elite.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="flex gap-4">
+              <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
+                <Activity className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h4 className="font-black text-slate-900 uppercase text-xs italic tracking-widest mb-1">
+                  Como Funciona?
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  O Radar faz uma varredura constante no banco de dados H2 Linker. Quando ele encontra uma vaga que bate
+                  exatamente com seus filtros, ele gera um <strong>Sinal de Match</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
+                <ShieldCheck className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h4 className="font-black text-slate-900 uppercase text-xs italic tracking-widest mb-1">
+                  Segurança Blindada
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  O sistema ignora automaticamente vagas que foram reportadas por outros usuários (job_reports),
+                  garantindo que você foque apenas em sinais de alta qualidade.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
+                <Zap className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h4 className="font-black text-slate-900 uppercase text-xs italic tracking-widest mb-1">
+                  Fila Inteligente
+                </h4>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Ao usar o botão <strong>Enviar Tudo</strong>, as vagas são movidas para sua fila principal. Elas serão
+                  enviadas respeitando rigorosamente o <strong>delay de segurança</strong> do seu plano para proteger
+                  seu e-mail.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <Button
+              onClick={() => setShowInstructions(false)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition-all"
+            >
+              ENTENDIDO, OPERAR RADAR
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* ESQUERDA: CONFIG */}
-        <div className="lg:col-span-6 space-y-6">
-          <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between">
+        <div className="lg:col-span-6 space-y-6 text-left">
+          <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+            {/* BOTÃO DE AJUDA */}
+            <button
+              onClick={() => setShowInstructions(true)}
+              className="absolute right-4 top-4 h-8 w-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center shadow-sm group"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="absolute right-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[9px] px-2 py-1 rounded-lg pointer-events-none uppercase font-black tracking-widest">
+                Manual
+              </span>
+            </button>
+
+            <div className="flex items-center justify-between pr-8">
               <div className="flex items-center gap-4">
                 <div
                   className={cn(
@@ -396,7 +496,7 @@ export default function Radar() {
                   </h1>
                   <div className="flex items-center gap-2 mt-2">
                     {isActive ? (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 shadow-sm">
                         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
                           LIVE TRACKING
@@ -432,7 +532,7 @@ export default function Radar() {
           </div>
 
           {/* FILTROS */}
-          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
                 <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência e Filtros
@@ -449,7 +549,7 @@ export default function Radar() {
             <CardContent className="p-5">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Visto</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
                     <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
@@ -463,9 +563,8 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Grupo</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Grupo</Label>
                   <Select value={groupFilter} onValueChange={setGroupFilter}>
                     <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
@@ -478,9 +577,8 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Estado</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Estado</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
                     <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
@@ -496,7 +594,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Salário Mín.</Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -505,7 +603,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Exp Máx.</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Exp Máx.</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -517,7 +615,7 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          {/* DIVISÕES COM SOMA TOTAL NO HEADER */}
+          {/* DIVISÕES */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
               <div className="flex items-center gap-3">
@@ -669,7 +767,6 @@ export default function Radar() {
                           <Badge className="bg-indigo-50 text-indigo-600 text-[9px] border-indigo-100 font-black px-2">
                             {job.visa_type}
                           </Badge>
-                          {/* DESTAQUE DO GRUPO (A, B, C) */}
                           {job.randomization_group && (
                             <Badge
                               className={cn(
