@@ -26,6 +26,7 @@ import {
   MapPin,
   CircleDollarSign,
   Briefcase,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +108,7 @@ export default function Radar() {
   const planTier = profile?.plan_tier || "free";
   const isPremium = planTier === "diamond" || planTier === "black";
 
+  // --- LÓGICA DE CATEGORIAS ---
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   };
@@ -117,26 +119,21 @@ export default function Radar() {
 
   const selectFullSegment = (segment: string) => {
     const subCats = groupedCategories[segment].map((c) => c.raw_category);
-    const allSelected = subCats.every((c) => selectedCategories.includes(c));
-    if (allSelected) {
+    const allSelectedInSegment = subCats.every((c) => selectedCategories.includes(c));
+
+    if (allSelectedInSegment) {
       setSelectedCategories((prev) => prev.filter((c) => !subCats.includes(c)));
     } else {
       setSelectedCategories((prev) => [...new Set([...prev, ...subCats])]);
     }
   };
 
+  // --- BUSCA DE DADOS ---
   const fetchMatches = async () => {
     if (!profile?.id) return;
     const { data, count } = await supabase
       .from("radar_matched_jobs")
-      .select(
-        `
-        id,
-        job_id,
-        public_jobs (*)
-      `,
-        { count: "exact" },
-      )
+      .select(`id, job_id, public_jobs (*)`, { count: "exact" })
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
@@ -185,9 +182,11 @@ export default function Radar() {
     loadData();
   }, [profile?.id]);
 
+  // --- SALVAMENTO E TRIGGER MANUAL ---
   const handleSave = async () => {
     if (!profile?.id) return;
     setSaving(true);
+
     const payload = {
       user_id: profile.id,
       is_active: isActive,
@@ -204,9 +203,14 @@ export default function Radar() {
       : await supabase.from("radar_profiles").insert(payload);
 
     if (!error) {
-      toast({ title: "Radar Configurado!", className: "bg-indigo-600 text-white" });
-      await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
-      await fetchMatches();
+      toast({ title: "Radar Armado!", description: "Iniciando varredura manual de vagas..." });
+
+      // DISPARO MANUAL DO CRON (Trigger Imediato)
+      if (isActive) {
+        await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
+        await fetchMatches();
+      }
+
       setRadarProfile(payload);
     }
     setSaving(false);
@@ -239,7 +243,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* COLUNA ESQUERDA: CONFIGURAÇÕES (4/12) */}
+        {/* COLUNA ESQUERDA: CONFIGURAÇÕES */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-5 rounded-2xl border shadow-sm">
             <div className="flex items-center gap-3">
@@ -252,26 +256,26 @@ export default function Radar() {
                 <RadarIcon className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-xl font-black uppercase italic leading-none">Radar Pro</h1>
+                <h1 className="text-xl font-black uppercase italic leading-none">Configuração do Robô</h1>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {isActive ? "Monitorando Base" : "Radar em Standby"}
+                  {isActive ? "Varredura Habilitada" : "Radar em Standby"}
                 </span>
               </div>
             </div>
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 rounded-xl"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} Salvar &
-              Scanear
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} SALVAR E
+              BUSCAR AGORA
             </Button>
           </div>
 
           <Card className="border-slate-200 rounded-2xl shadow-sm">
             <CardHeader className="p-5 border-b bg-slate-50/30">
               <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" /> Filtros e Regras
+                <ShieldCheck className="h-4 w-4" /> Inteligência de Match
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-5">
@@ -344,100 +348,119 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 rounded-2xl shadow-sm">
+          <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b bg-slate-50/30">
               <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-widest italic">
-                Categorias
+                Seleção de Categorias
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3 space-y-1 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {Object.entries(groupedCategories).map(([segment, items]) => (
-                <div key={segment} className="border rounded-xl overflow-hidden mb-1">
-                  <div
-                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50"
-                    onClick={() => toggleSegment(segment)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {expandedSegments.includes(segment) ? (
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
-                      )}
-                      <span className="text-[11px] font-black text-slate-700 uppercase italic tracking-tighter">
-                        {segment}
-                      </span>
-                    </div>
-                    <Badge variant="outline" className="text-[9px]">
-                      {items.length}
-                    </Badge>
-                  </div>
-                  {expandedSegments.includes(segment) && (
-                    <div className="p-2 bg-slate-50/50 flex flex-wrap gap-1 border-t">
-                      {items.map((cat) => (
-                        <button
-                          key={cat.raw_category}
-                          onClick={() => toggleCategory(cat.raw_category)}
-                          className={cn(
-                            "px-2 py-1 rounded-lg border text-[10px] font-bold transition-all",
-                            selectedCategories.includes(cat.raw_category)
-                              ? "bg-indigo-600 border-indigo-600 text-white"
-                              : "bg-white text-slate-600",
-                          )}
+            <CardContent className="p-3 space-y-1 max-h-[450px] overflow-y-auto custom-scrollbar">
+              {Object.entries(groupedCategories).map(([segment, items]) => {
+                const isExpanded = expandedSegments.includes(segment);
+                const subCats = items.map((c) => c.raw_category);
+                const allSelected = subCats.every((c) => selectedCategories.includes(c));
+
+                return (
+                  <div key={segment} className="border rounded-xl overflow-hidden mb-1">
+                    <div
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50"
+                      onClick={() => toggleSegment(segment)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        )}
+                        <span className="text-[11px] font-black text-slate-700 uppercase italic tracking-tighter">
+                          {segment}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={allSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectFullSegment(segment);
+                          }}
+                          className="h-6 text-[8px] font-black px-2 rounded-lg"
                         >
-                          {cat.raw_category}
-                        </button>
-                      ))}
+                          {allSelected ? <Check className="h-3 w-3 mr-1" /> : null}
+                          {allSelected ? "TUDO" : "ADD SEGMENTO"}
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                    {isExpanded && (
+                      <div className="p-2 bg-slate-50/50 flex flex-wrap gap-1 border-t">
+                        {items.map((cat) => (
+                          <button
+                            key={cat.raw_category}
+                            onClick={() => toggleCategory(cat.raw_category)}
+                            className={cn(
+                              "px-2 py-1 rounded-lg border text-[10px] font-bold transition-all",
+                              selectedCategories.includes(cat.raw_category)
+                                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                                : "bg-white text-slate-600",
+                            )}
+                          >
+                            {cat.raw_category}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: MATCHES (7/12) */}
+        {/* COLUNA DIREITA: FILA DE MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
               <h2 className="text-xl font-black flex items-center gap-2 tracking-tight uppercase italic text-slate-800">
-                <Target className="h-5 w-5 text-indigo-600" /> Matches Detectados
+                <Target className="h-5 w-5 text-indigo-600" /> Fila de Matches
               </h2>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                Ações pendentes na fila do robô
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider italic">
+                Vagas encontradas que atendem seus critérios
               </p>
             </div>
-            <div className="flex gap-2">
-              <Badge className="bg-indigo-600 text-white font-black">{matchCount} Vagas</Badge>
-            </div>
+            <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
+              {matchCount} Encontradas
+            </Badge>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[80vh] pr-2 custom-scrollbar">
             {matchedJobs.length > 0 ? (
               matchedJobs.map((match) => {
                 const job = match.public_jobs;
                 return (
                   <Card
                     key={match.id}
-                    className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm"
+                    className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm bg-white"
                   >
                     <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex-1 text-left space-y-1">
+                      <div className="flex-1 text-left space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black">
+                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black px-2">
                             {job.visa_type}
                           </Badge>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono">
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-800 leading-none uppercase">{job.category}</h3>
-                        <p className="text-[10px] font-bold text-slate-500 truncate max-w-md italic">{job.job_title}</p>
-                        <div className="flex items-center gap-3 pt-2">
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1">
-                            <CircleDollarSign className="h-3 w-3 text-indigo-600" /> ${job.salary || "N/A"}/hr
+                        <h3 className="text-sm font-black text-slate-900 leading-none uppercase tracking-tight">
+                          {job.category}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-500 truncate max-w-lg italic">{job.job_title}</p>
+                        <div className="flex items-center gap-4 pt-1">
+                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5">
+                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/hr
                           </span>
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1">
-                            <Briefcase className="h-3 w-3 text-indigo-600" /> {job.experience_months || 0}m exp
+                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5">
+                            <Briefcase className="h-3.5 w-3.5 text-indigo-600" /> {job.experience_months || 0}m exp
                           </span>
                         </div>
                       </div>
@@ -447,15 +470,15 @@ export default function Radar() {
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-9 w-9 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                          className="h-9 w-9 p-0 text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-4 rounded-xl shadow-md flex items-center gap-2"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-5 rounded-xl shadow-md flex items-center gap-2"
                         >
-                          <Send className="h-3 w-3" /> ENVIAR AGORA
+                          <Send className="h-3 w-3" /> ENVIAR
                         </Button>
                       </div>
                     </CardContent>
@@ -463,17 +486,13 @@ export default function Radar() {
                 );
               })
             ) : (
-              <div className="py-32 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4">
-                <div className="bg-white p-4 rounded-full shadow-sm">
-                  <RadarIcon className="h-8 w-8 text-slate-300" />
-                </div>
+              <div className="py-32 bg-slate-50/50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4">
+                <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-tighter">
-                    Nenhum match no momento
+                  <p className="text-sm font-black text-slate-400 uppercase tracking-tighter italic">
+                    Buscando novos sinais...
                   </p>
-                  <p className="text-[10px] text-slate-400 italic">
-                    Salve as configurações para iniciar uma varredura.
-                  </p>
+                  <p className="text-[10px] text-slate-400">Salve seus filtros para forçar uma varredura agora.</p>
                 </div>
               </div>
             )}
