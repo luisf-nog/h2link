@@ -29,34 +29,71 @@ import {
   Building2,
   RefreshCcw,
   Eye,
-  Activity,
-  LayoutGrid,
   Radio,
+  LayoutGrid,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO LÓGICO PARA CONTADOR (VINCULADO AO SEU CSV) ---
+// --- MAPEAMENTO LÓGICO POR PALAVRAS-CHAVE ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
-  "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural"],
-  "Maquinário Agrícola": ["Equipment Operators", "Tractor", "Agricultural Equipment"],
-  "Construção Civil": ["Construction", "Laborers", "Cement", "Masons", "Concrete", "Fence"],
-  "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Roofers"],
-  "Instalações e Manutenção": ["Electricians", "Installation", "Maintenance", "Repair", "Plumbers"],
-  "Mecânica e Reparos": ["Mechanics", "Service Technicians", "Automotive", "Diesel"],
+  "Agricultura e Colheita": [
+    "Farmworkers",
+    "Crop",
+    "Nursery",
+    "Harvest",
+    "Agricultural Products",
+    "Agriculture",
+    "Forest",
+  ],
+  "Maquinário Agrícola": ["Agricultural Equipment Operators", "Packers and Packagers, Agricultural", "Tractor"],
+  "Construção Civil": [
+    "Construction Laborers",
+    "Cement Masons",
+    "Concrete",
+    "Fence",
+    "Masons",
+    "Brickmasons",
+    "Iron and Rebar",
+    "Paving",
+    "Operating Engineers",
+  ],
+  "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
+  "Instalações e Manutenção": [
+    "Electricians",
+    "Plumbers",
+    "Installation",
+    "Pipelayers",
+    "Septic",
+    "Maintenance and Repair Workers",
+  ],
+  "Mecânica e Reparos": [
+    "Farm Equipment Mechanics",
+    "Service Technicians",
+    "Automotive",
+    "Diesel",
+    "Industrial Machinery Mechanics",
+  ],
   "Limpeza e Governança": ["Maids", "Housekeeping", "Janitors", "Cleaners"],
-  "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation"],
-  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Dishwashers"],
-  "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges"],
+  "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Chefs"],
+  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Fast Food and Counter", "Dishwashers"],
+  "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage", "Porters"],
   "Bar e Cafeteria": ["Baristas", "Bartenders"],
-  "Logística e Carga": ["Laborers", "Freight", "Stock", "Packers", "Order Fillers"],
-  "Transporte de Carga": ["Truck Drivers", "Shuttle", "Chauffeurs"],
-  "Manufatura e Produção": ["Assemblers", "Fabricators", "Production Workers"],
-  "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers"],
-  "Indústria da Madeira": ["Woodworking", "Sawing Machine"],
-  "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing"],
-  "Setor de Carnes": ["Meat", "Poultry", "Butchers", "Slaughterers"],
-  "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers"],
-  "Vendas e Comércio": ["Salespersons", "Counter", "Cashiers"],
+  "Logística e Carga": [
+    "Laborers and Freight",
+    "Stockers",
+    "Packers and Packagers, Hand",
+    "Industrial Truck and Tractor Operators",
+    "Order Fillers",
+  ],
+  "Transporte de Carga": ["Truck Drivers", "Shuttle", "Chauffeurs", "Delivery", "Taxi"],
+  "Manufatura e Produção": ["Assemblers", "Fabricators", "Production Workers", "Machine Feeders"],
+  "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers", "Brazers", "Forging"],
+  "Indústria da Madeira": ["Woodworking", "Sawing Machine Setters"],
+  "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing", "Upholsterers"],
+  "Setor de Carnes": ["Meat, Poultry", "Butchers", "Slaughterers"],
+  "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers", "Pesticide"],
+  "Vendas e Comércio": ["Salespersons", "Counter and Rental", "Cashiers", "Retail"],
 };
 
 const US_STATES = [
@@ -136,7 +173,6 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // LOGICA DE MUDANÇAS (CORREÇÃO DO ERRO)
   const hasChanges = useMemo(() => {
     if (!radarProfile) return false;
     const dbCats = radarProfile.categories || [];
@@ -185,6 +221,11 @@ export default function Radar() {
             acc[segment].totalJobs += curr.count || 0;
             return acc;
           }, {});
+
+          // Garante que todos os 20 setores apareçam mesmo com 0
+          Object.keys(SECTOR_KEYWORDS).forEach((s) => {
+            if (!grouped[s]) grouped[s] = { items: [], totalJobs: 0 };
+          });
           setGroupedCategories(grouped);
         }
 
@@ -225,7 +266,6 @@ export default function Radar() {
       state: stateFilter === "all" ? null : stateFilter,
       ...overrides,
     };
-
     const { error } = radarProfile
       ? await supabase
           .from("radar_profiles" as any)
@@ -239,9 +279,19 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Sincronizado", className: "bg-indigo-600 text-white" });
+      toast({ title: "Radar Armado", className: "bg-indigo-600 text-white" });
     }
     setSaving(false);
+  };
+
+  const toggleSector = (sectorName: string) => {
+    const sectorSubcats = groupedCategories[sectorName].items.map((i) => i.raw_category);
+    const allSelected = sectorSubcats.every((cat) => selectedCategories.includes(cat));
+    if (allSelected) {
+      setSelectedCategories((prev) => prev.filter((cat) => !sectorSubcats.includes(cat)));
+    } else {
+      setSelectedCategories((prev) => [...new Set([...prev, ...sectorSubcats])]);
+    }
   };
 
   const handleSendApplication = async (matchId: string, jobId: string) => {
@@ -253,9 +303,9 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Vaga Enviada!", className: "bg-emerald-600 text-white" });
+      toast({ title: "Signal Detected!", className: "bg-emerald-600 text-white" });
     } catch (err) {
-      toast({ title: "Erro no roteamento", variant: "destructive" });
+      toast({ title: "Routing Fail", variant: "destructive" });
     }
   };
 
@@ -278,8 +328,8 @@ export default function Radar() {
     return (
       <div className="p-20 text-center">
         <Radio className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
-        <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600">
-          Ativar Tecnologia Radar
+        <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600 shadow-lg">
+          Ativar Radar Signal
         </Button>
       </div>
     );
@@ -293,8 +343,9 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LADO ESQUERDO: CONFIGURAÇÕES */}
+        {/* COLUNA ESQUERDA: SYSTEM CONFIG */}
         <div className="lg:col-span-6 space-y-6">
+          {/* HEADER STATUS */}
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -302,7 +353,7 @@ export default function Radar() {
                   className={cn(
                     "p-4 rounded-xl transition-all border",
                     isActive
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-600"
                       : "bg-slate-50 border-slate-200 text-slate-400",
                   )}
                 >
@@ -314,7 +365,7 @@ export default function Radar() {
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
                     {isActive ? (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
                         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
                           LIVE TRACKING
@@ -322,7 +373,7 @@ export default function Radar() {
                       </div>
                     ) : (
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                        SISTEMA OFFLINE
+                        SYSTEM STANDBY
                       </span>
                     )}
                   </div>
@@ -342,17 +393,18 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all active:border-b-0 active:translate-y-1"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl shadow-lg transition-all active:scale-95 border-b-4 border-indigo-800"
               >
-                <Save className="h-4 w-4 mr-2" /> SALVAR CONFIGURAÇÕES
+                <Save className="h-4 w-4 mr-2" /> SALVAR PROTOCOLOS
               </Button>
             )}
           </div>
 
+          {/* FILTROS DE INTELIGÊNCIA */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência do Robô
+                <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência de Rastreio
               </CardTitle>
               <div className="flex items-center gap-3 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
                 <Label className="text-[10px] font-black text-indigo-700 cursor-pointer uppercase">Auto-Enviar</Label>
@@ -368,7 +420,7 @@ export default function Radar() {
                 <div className="space-y-1.5">
                   <Label className="text-[9px] font-black text-slate-400 uppercase">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="h-9 border-slate-200 text-slate-700 text-xs font-bold">
+                    <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -383,7 +435,7 @@ export default function Radar() {
                 <div className="space-y-1.5">
                   <Label className="text-[9px] font-black text-slate-400 uppercase">Estado</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="h-9 border-slate-200 text-slate-700 text-xs font-bold">
+                    <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -397,7 +449,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase">Salário Mín ($/h)</Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -406,7 +458,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Exp Máx.</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase">Exp Máx (Meses)</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -418,130 +470,179 @@ export default function Radar() {
             </CardContent>
           </Card>
 
+          {/* DIVISÕES DE TRABALHO EM 2 COLUNAS */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
+                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas (Setores)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 bg-slate-50/20">
               <div className="grid grid-cols-2 gap-4">
+                {/* LADO ESQUERDO (10 SETORES) */}
                 <div className="space-y-2">
-                  {leftSectors.map(([segment, data]) => (
-                    <div
-                      key={segment}
-                      className="border border-slate-200 bg-white rounded-xl overflow-hidden group hover:border-indigo-400 transition-all shadow-sm"
-                    >
+                  {leftSectors.map(([segment, data]) => {
+                    const allSelected =
+                      data.items.length > 0 && data.items.every((i) => selectedCategories.includes(i.raw_category));
+                    return (
                       <div
-                        className="p-2.5 cursor-pointer flex items-center justify-between"
-                        onClick={() =>
-                          setExpandedSegments((p) =>
-                            p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
-                          )
-                        }
+                        key={segment}
+                        className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-400 transition-all"
                       >
-                        <div className="flex flex-col text-left">
-                          <span className="text-[10px] font-black text-slate-700 uppercase leading-none">
-                            {segment}
-                          </span>
-                          <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
-                            {data.totalJobs} Vagas Disponíveis
-                          </span>
-                        </div>
-                        {expandedSegments.includes(segment) ? (
-                          <ChevronDown className="h-3 w-3 text-indigo-600" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 text-slate-300" />
-                        )}
-                      </div>
-                      {expandedSegments.includes(segment) && (
-                        <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
-                          {data.items.map((cat) => (
-                            <button
-                              key={cat.raw_category}
-                              onClick={() =>
-                                setSelectedCategories((p) =>
-                                  p.includes(cat.raw_category)
-                                    ? p.filter((c) => c !== cat.raw_category)
-                                    : [...p, cat.raw_category],
-                                )
-                              }
+                        <div
+                          className="p-2.5 cursor-pointer flex items-center justify-between group"
+                          onClick={() =>
+                            setExpandedSegments((p) =>
+                              p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
+                            )
+                          }
+                        >
+                          <div className="flex flex-col text-left">
+                            <span className="text-[10px] font-black text-slate-700 uppercase leading-none tracking-tight">
+                              {segment}
+                            </span>
+                            <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
+                              {data.totalJobs} Vagas Disponíveis
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSector(segment);
+                              }}
                               className={cn(
-                                "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all",
-                                selectedCategories.includes(cat.raw_category)
-                                  ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                                  : "bg-white text-slate-500 hover:border-indigo-200",
+                                "h-6 text-[7px] font-black px-1.5 rounded-lg border",
+                                allSelected
+                                  ? "bg-indigo-600 text-white"
+                                  : "hover:bg-indigo-50 text-indigo-600 border-indigo-100",
                               )}
                             >
-                              {cat.raw_category}
-                            </button>
-                          ))}
+                              {allSelected ? "REMOVER" : "ADD SETOR"}
+                            </Button>
+                            {expandedSegments.includes(segment) ? (
+                              <ChevronDown className="h-4 w-4 text-indigo-600" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-slate-300" />
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {expandedSegments.includes(segment) && (
+                          <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
+                            {data.items.map((cat) => (
+                              <button
+                                key={cat.raw_category}
+                                onClick={() =>
+                                  setSelectedCategories((p) =>
+                                    p.includes(cat.raw_category)
+                                      ? p.filter((c) => c !== cat.raw_category)
+                                      : [...p, cat.raw_category],
+                                  )
+                                }
+                                className={cn(
+                                  "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all flex justify-between items-center",
+                                  selectedCategories.includes(cat.raw_category)
+                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                                    : "bg-white text-slate-500 hover:border-indigo-200",
+                                )}
+                              >
+                                {cat.raw_category}
+                                <span className="text-[8px] opacity-60">({cat.count})</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+                {/* LADO DIREITO (10 SETORES) */}
                 <div className="space-y-2">
-                  {rightSectors.map(([segment, data]) => (
-                    <div
-                      key={segment}
-                      className="border border-slate-200 bg-white rounded-xl overflow-hidden group hover:border-indigo-400 transition-all shadow-sm"
-                    >
+                  {rightSectors.map(([segment, data]) => {
+                    const allSelected =
+                      data.items.length > 0 && data.items.every((i) => selectedCategories.includes(i.raw_category));
+                    return (
                       <div
-                        className="p-2.5 cursor-pointer flex items-center justify-between"
-                        onClick={() =>
-                          setExpandedSegments((p) =>
-                            p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
-                          )
-                        }
+                        key={segment}
+                        className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-400 transition-all"
                       >
-                        <div className="flex flex-col text-left">
-                          <span className="text-[10px] font-black text-slate-700 uppercase leading-none">
-                            {segment}
-                          </span>
-                          <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
-                            {data.totalJobs} Vagas Disponíveis
-                          </span>
-                        </div>
-                        {expandedSegments.includes(segment) ? (
-                          <ChevronDown className="h-3 w-3 text-indigo-600" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 text-slate-300" />
-                        )}
-                      </div>
-                      {expandedSegments.includes(segment) && (
-                        <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
-                          {data.items.map((cat) => (
-                            <button
-                              key={cat.raw_category}
-                              onClick={() =>
-                                setSelectedCategories((p) =>
-                                  p.includes(cat.raw_category)
-                                    ? p.filter((c) => c !== cat.raw_category)
-                                    : [...p, cat.raw_category],
-                                )
-                              }
+                        <div
+                          className="p-2.5 cursor-pointer flex items-center justify-between group"
+                          onClick={() =>
+                            setExpandedSegments((p) =>
+                              p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
+                            )
+                          }
+                        >
+                          <div className="flex flex-col text-left">
+                            <span className="text-[10px] font-black text-slate-700 uppercase leading-none tracking-tight">
+                              {segment}
+                            </span>
+                            <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
+                              {data.totalJobs} Vagas Disponíveis
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSector(segment);
+                              }}
                               className={cn(
-                                "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all",
-                                selectedCategories.includes(cat.raw_category)
-                                  ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                                  : "bg-white text-slate-500 hover:border-indigo-200",
+                                "h-6 text-[7px] font-black px-1.5 rounded-lg border",
+                                allSelected
+                                  ? "bg-indigo-600 text-white"
+                                  : "hover:bg-indigo-50 text-indigo-600 border-indigo-100",
                               )}
                             >
-                              {cat.raw_category}
-                            </button>
-                          ))}
+                              {allSelected ? "REMOVER" : "ADD SETOR"}
+                            </Button>
+                            {expandedSegments.includes(segment) ? (
+                              <ChevronDown className="h-4 w-4 text-indigo-600" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-slate-300" />
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {expandedSegments.includes(segment) && (
+                          <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
+                            {data.items.map((cat) => (
+                              <button
+                                key={cat.raw_category}
+                                onClick={() =>
+                                  setSelectedCategories((p) =>
+                                    p.includes(cat.raw_category)
+                                      ? p.filter((c) => c !== cat.raw_category)
+                                      : [...p, cat.raw_category],
+                                  )
+                                }
+                                className={cn(
+                                  "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all flex justify-between items-center",
+                                  selectedCategories.includes(cat.raw_category)
+                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                                    : "bg-white text-slate-500 hover:border-indigo-200",
+                                )}
+                              >
+                                {cat.raw_category}
+                                <span className="text-[8px] opacity-60">({cat.count})</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* LADO DIREITO: MATCHES */}
+        {/* COLUNA DIREITA: LIVE MATCH DETECTION */}
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4 text-left">
             <div>
@@ -549,7 +650,7 @@ export default function Radar() {
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Sincronização Database h2-linker
+                Real-time signal sync h2-linker protocol
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -557,7 +658,7 @@ export default function Radar() {
                 <RefreshCcw className="h-4 w-4" />
               </Button>
               <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-                {matchCount} Matches
+                {matchCount} Signals Detected
               </Badge>
             </div>
           </div>
@@ -579,10 +680,10 @@ export default function Radar() {
                             {job.visa_type}
                           </Badge>
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono border-l border-slate-100 pl-2">
-                            <MapPin className="h-3 w-3" /> {job.state}
+                            <MapPin className="h-3 w-3 text-slate-400" /> {job.state}
                           </span>
                           <span className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1 border-l border-slate-100 pl-2">
-                            <Users className="h-3 w-3" /> {job.openings || 1} Vagas
+                            <Users className="h-3 w-3 text-indigo-400" /> {job.openings || 1} Vagas
                           </span>
                         </div>
                         <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
@@ -617,7 +718,7 @@ export default function Radar() {
                           onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
                           className="text-[9px] font-black h-8 w-full border-slate-300 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2"
                         >
-                          <Eye className="h-3.5 w-3.5" /> VER HUB
+                          <Eye className="h-3.5 w-3.5" /> VER NO HUB
                         </Button>
                         <Button
                           size="sm"
@@ -637,7 +738,7 @@ export default function Radar() {
                 <Radio className="h-14 w-14 text-slate-200 animate-pulse" />
                 <div className="space-y-1">
                   <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Aguardando Sinais...</p>
-                  <p className="text-[10px] text-slate-400">Ative o Radar para capturar novas oportunidades.</p>
+                  <p className="text-[10px] text-slate-400">Ative o Radar para iniciar a sincronização.</p>
                 </div>
               </div>
             )}
