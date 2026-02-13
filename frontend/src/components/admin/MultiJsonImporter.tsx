@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Adicionado CardDescription aqui
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw, Database, FileJson, CheckCircle2 } from "lucide-react";
+// Adicionado Badge e Label que estavam faltando
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
@@ -104,7 +108,6 @@ export function MultiJsonImporter() {
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const posted = formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE"]));
 
-            // O uso do Map aqui já mata duplicatas dentro do mesmo lote de arquivos
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
               job_id: rawJobId.split("-GHOST")[0].trim(),
@@ -138,7 +141,6 @@ export function MultiJsonImporter() {
       const allJobs = Array.from(rawJobsMap.values());
       setStats({ total: allJobs.length, files: files.length });
 
-      // Envio em lotes para não estourar a memória da Edge Function
       const BATCH_SIZE = 1000;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
         const batch = allJobs.slice(i, i + BATCH_SIZE);
@@ -148,15 +150,13 @@ export function MultiJsonImporter() {
 
       toast({
         title: "Sincronização Turbo V62 Concluída!",
-        description: `${allJobs.length} vagas únicas foram processadas.`,
-        className: "bg-indigo-600 text-white font-bold",
+        description: `${allJobs.length} vagas únicas processadas.`,
       });
       setFiles([]);
     } catch (err: any) {
-      console.error("Erro na importação:", err);
       toast({
         title: "Erro na Importação",
-        description: err.message || "Erro desconhecido ao processar lotes.",
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -172,7 +172,7 @@ export function MultiJsonImporter() {
             <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
               <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Sync V62
             </CardTitle>
-            <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
+            <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest text-left">
               Production Batch Importer • Turbo Mode
             </CardDescription>
           </div>
@@ -185,7 +185,7 @@ export function MultiJsonImporter() {
       </CardHeader>
       <CardContent className="p-8 space-y-6 bg-white text-left">
         <div className="grid w-full items-center gap-4">
-          <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">
+          <Label className="text-xs font-black uppercase text-slate-500 tracking-widest text-left">
             Selecione arquivos JSON ou ZIP
           </Label>
           <div className="flex items-center justify-center w-full">
