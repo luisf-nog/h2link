@@ -211,14 +211,14 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Atualizado!" });
+      toast({ title: "Configurações Atualizadas!" });
     }
     setSaving(false);
   };
 
   const handleSendApplication = async (matchId: string, jobId: string) => {
     try {
-      // 1. Primeiro enviamos para a my_queue
+      // 1. Inserir na my_queue
       const { error: sendError } = await supabase.from("my_queue" as any).insert([
         {
           user_id: profile?.id,
@@ -229,33 +229,24 @@ export default function Radar() {
 
       if (sendError) throw sendError;
 
-      // 2. AGORA O PULO DO GATO: Deletamos do radar_matched_jobs
-      // Como o SQL agora tem o filtro NOT EXISTS my_queue, ela nunca mais voltará.
-      const { error: deleteError } = await supabase
+      // 2. Remover do Radar
+      await supabase
         .from("radar_matched_jobs" as any)
         .delete()
         .eq("id", matchId);
 
-      if (deleteError) throw deleteError;
-
-      // 3. Update visual imediato
+      // 3. Atualização local agressiva
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
 
-      toast({
-        title: "Vaga Enviada!",
-        description: "Ela saiu do Radar e está na sua fila oficial.",
-        className: "bg-emerald-600 text-white",
-      });
+      toast({ title: "Enviado com sucesso!", description: "Vaga removida do Radar permanentemente." });
     } catch (err: any) {
       console.error("Erro no envio:", err);
-      toast({ title: "Erro", description: "Falha ao processar envio.", variant: "destructive" });
+      toast({ title: "Erro", description: "Não foi possível processar o envio.", variant: "destructive" });
     }
   };
 
   const removeMatch = async (matchId: string) => {
-    // Ao excluir manualmente, ela sai da radar_matched_jobs.
-    // Dica: se quiser que ela NUNCA mais volte mesmo sem enviar, teria que ter uma tabela de "blacklist".
     const { error } = await supabase
       .from("radar_matched_jobs" as any)
       .delete()
@@ -293,7 +284,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUNA ESQUERDA: CONFIG */}
+        {/* ESQUERDA: CONFIG */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
@@ -307,9 +298,9 @@ export default function Radar() {
                   <RadarIcon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black uppercase italic leading-none">Radar H2 Linker</h1>
+                  <h1 className="text-xl font-black uppercase italic leading-none text-slate-900">Radar H2 Linker</h1>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {isActive ? "Varredura Ativa" : "Sistema Offline"}
+                    {isActive ? "Monitoramento Ativo" : "Sistema Offline"}
                   </span>
                 </div>
               </div>
@@ -326,7 +317,7 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-md transition-all active:scale-95"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl"
               >
                 <Save className="h-4 w-4 mr-2" /> APLICAR ALTERAÇÕES
               </Button>
@@ -346,7 +337,7 @@ export default function Radar() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Visto</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
@@ -362,13 +353,13 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Estado</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Qualquer</SelectItem>
+                      <SelectItem value="all">Qualquer Estado</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -378,7 +369,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Salário Mín ($/h)</Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -387,7 +378,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Exp. Máx.</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Exp Máx (Meses)</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -401,7 +392,7 @@ export default function Radar() {
 
           <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Segmentos de Atuação</CardTitle>
+              <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Segmentos Alvo</CardTitle>
             </CardHeader>
             <CardContent className="p-3 space-y-1 max-h-[400px] overflow-y-auto custom-scrollbar">
               {Object.entries(groupedCategories).map(([segment, items]) => {
@@ -409,10 +400,7 @@ export default function Radar() {
                 const subCats = items.map((c) => c.raw_category);
                 const allSelected = subCats.every((c) => selectedCategories.includes(c));
                 return (
-                  <div
-                    key={segment}
-                    className="border rounded-xl overflow-hidden mb-1 bg-white hover:border-indigo-200 transition-colors"
-                  >
+                  <div key={segment} className="border rounded-xl overflow-hidden mb-1 bg-white">
                     <div
                       className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50"
                       onClick={() =>
@@ -474,13 +462,16 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: MATCHES */}
+        {/* DIREITA: MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
-              <h2 className="text-xl font-black uppercase italic text-slate-900">
+              <h2 className="text-xl font-black flex items-center gap-2 uppercase italic text-slate-900">
                 <Target className="h-6 w-6 text-indigo-600 inline mr-2" /> Fila de Matches
               </h2>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider italic">
+                Vagas inéditas encontradas pelo robô
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
@@ -529,13 +520,13 @@ export default function Radar() {
                           </span>
                         </div>
                       </div>
-                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-100">
+                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l">
                         <Button
                           size="sm"
                           onClick={() => handleSendApplication(match.id, job.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full md:w-auto transition-all active:scale-95"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full md:w-auto"
                         >
-                          <Send className="h-3 w-3 mr-1" /> ENVIAR
+                          ENVIAR
                         </Button>
                         <Button
                           size="sm"
@@ -553,10 +544,7 @@ export default function Radar() {
             ) : (
               <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
                 <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
-                <p className="text-sm font-black text-slate-400 uppercase italic">Tudo limpo!</p>
-                <p className="text-[10px] text-slate-400 px-10">
-                  Você já interagiu com todas as vagas disponíveis para os filtros atuais.
-                </p>
+                <p className="text-sm font-black text-slate-400 uppercase italic">Tudo limpo por aqui!</p>
               </div>
             )}
           </div>
