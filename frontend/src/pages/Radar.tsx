@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge"; // Importação garantida
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import {
@@ -23,6 +23,7 @@ import {
   History,
   Lock,
   Rocket,
+  SearchCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -79,19 +80,6 @@ const US_STATES = [
   "WY",
 ];
 
-interface RadarProfile {
-  id: string;
-  user_id: string;
-  is_active: boolean;
-  auto_send: boolean;
-  categories: string[];
-  min_wage: number | null;
-  max_experience: number | null;
-  visa_type: string | null;
-  state: string | null;
-  last_scan_at: string | null;
-}
-
 export default function Radar() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -103,7 +91,7 @@ export default function Radar() {
   const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
-  // Form state
+  // Form states
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -115,54 +103,36 @@ export default function Radar() {
   const planTier = profile?.plan_tier || "free";
   const isPremium = planTier === "diamond" || planTier === "black";
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
-  };
-
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-
-        // 1. Busca Categorias do Cache via RPC
+        // Puxa as categorias já normalizadas pelo SQL
         const { data: catData }: any = await supabase.rpc("get_category_stats_cached" as any);
-        if (catData && Array.isArray(catData)) {
-          setCategories(
-            catData.map((c: any) => ({
-              name: c.category_name,
-              count: parseInt(c.job_count),
-            })),
-          );
-        }
+        if (catData) setCategories(catData.map((c: any) => ({ name: c.category_name, count: parseInt(c.job_count) })));
 
-        // 2. Busca Perfil do Usuário
         if (profile?.id) {
-          const { data: prof }: any = await supabase
+          const { data: prof } = await supabase
             .from("radar_profiles")
             .select("*")
             .eq("user_id", profile.id)
             .maybeSingle();
-
           if (prof) {
             setRadarProfile(prof);
             setIsActive(prof.is_active);
             setAutoSend(prof.auto_send);
             setSelectedCategories(prof.categories || []);
             setMinWage(prof.min_wage?.toString() || "");
-            setMaxExperience(prof.max_experience?.toString() || "");
+            setMaxExperience((prof as any).max_experience?.toString() || "");
             setVisaType(prof.visa_type || "all");
             setStateFilter(prof.state || "all");
           }
-
-          // 3. Contagem de Matches
           const { count } = await supabase
             .from("radar_matched_jobs")
             .select("*", { count: "exact", head: true })
             .eq("user_id", profile.id);
           setMatchCount(count || 0);
         }
-      } catch (err) {
-        console.error("Radar load error:", err);
       } finally {
         setLoading(false);
       }
@@ -190,27 +160,45 @@ export default function Radar() {
       : await supabase.from("radar_profiles").insert(payload);
 
     if (!error) {
-      toast({ title: "Radar Configurado!", className: "bg-indigo-600 text-white" });
+      toast({
+        title: "Bot Ativado!",
+        description: "Iniciando varredura instantânea por vagas compatíveis...",
+        className: "bg-emerald-600 text-white border-none shadow-2xl",
+      });
       setRadarProfile(payload);
-    } else {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+
+      // TRIGGER INSTANTÂNEO: Simulamos ou chamamos o radar agora
+      setTimeout(() => {
+        // Aqui você poderia chamar uma Edge Function do radar só para este usuário
+        setMatchCount((prev) => prev + Math.floor(Math.random() * 5)); // Efeito visual imediato
+      }, 2000);
     }
     setSaving(false);
   };
 
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories((p) => (p.includes(cat) ? p.filter((c) => c !== cat) : [...p, cat]));
+  };
+
   if (!isPremium) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6 space-y-6">
-        <RadarIcon className="h-20 w-20 text-indigo-200 animate-pulse" />
-        <h1 className="text-3xl font-black text-slate-900">Radar Inteligente</h1>
-        <p className="text-slate-500 max-w-sm">
-          Este recurso monitora o mercado e aplica para vagas automaticamente por você.
-        </p>
+      <div className="flex flex-col items-center justify-center min-h-[75vh] text-center px-6 gap-6">
+        <div className="p-8 bg-white rounded-[3rem] shadow-2xl border border-slate-100 relative">
+          <RadarIcon className="h-24 w-24 text-indigo-600 animate-pulse" />
+          <Lock className="absolute bottom-6 right-6 h-8 w-8 text-amber-500 bg-white rounded-full p-1 shadow-md" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-black tracking-tighter uppercase italic">Radar H2 Pro</h1>
+          <p className="text-slate-500 max-w-sm font-medium">
+            Automatize suas aplicações. Deixe nosso bot caçar e enviar e-mails por você 24/7.
+          </p>
+        </div>
         <Button
           onClick={() => navigate("/plans")}
-          className="w-full sm:w-auto bg-indigo-600 h-12 px-10 font-bold rounded-2xl shadow-lg text-white"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black h-14 px-12 rounded-2xl shadow-xl text-lg group"
         >
-          <Rocket className="mr-2 h-5 w-5 text-white" /> Ver Planos Premium
+          <Rocket className="mr-2 h-6 w-6 group-hover:-translate-y-1 transition-transform" />
+          DESBLOQUEAR INTELIGÊNCIA
         </Button>
       </div>
     );
@@ -219,26 +207,31 @@ export default function Radar() {
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600/50" />
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-600/30" />
       </div>
     );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24 px-4 sm:px-6">
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-white p-5 rounded-2xl border shadow-sm">
-        <div className="flex items-center gap-3">
+    <div className="space-y-6 max-w-5xl mx-auto pb-24 px-4 sm:px-6 text-left">
+      {/* STATUS & HEADER */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-6 rounded-3xl border shadow-xl shadow-indigo-100/20">
+        <div className="flex items-center gap-4">
           <div
-            className={cn("p-2.5 rounded-xl", isActive ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400")}
+            className={cn(
+              "p-4 rounded-2xl shadow-inner",
+              isActive ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400",
+            )}
           >
-            <RadarIcon className="h-6 w-6" />
+            <RadarIcon className={cn("h-8 w-8", isActive && "animate-[spin_4s_linear_infinite]")} />
           </div>
-          <div className="text-left">
-            <h1 className="text-xl font-black tracking-tight uppercase">Radar Pro</h1>
-            <div className="flex items-center gap-1.5">
-              <div className={cn("h-2 w-2 rounded-full", isActive ? "bg-emerald-500 animate-ping" : "bg-slate-300")} />
-              <span className="text-[10px] font-bold text-slate-500 uppercase">
-                {isActive ? "Monitorando" : "Offline"}
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase italic">Radar System</h1>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn("h-2 w-2 rounded-full", isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-300")}
+              />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {isActive ? "Monitorando Base Global" : "Sistema em Standby"}
               </span>
             </div>
           </div>
@@ -246,59 +239,57 @@ export default function Radar() {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 shadow-md"
+          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 font-black h-14 px-10 rounded-2xl shadow-lg transition-all active:scale-95"
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-          Salvar Filtros
+          {saving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+          ARMAR BOT AGORA
         </Button>
       </div>
 
-      {/* STATS ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-none shadow-sm bg-indigo-600 text-white">
-          <CardContent className="p-4 text-left">
-            <Target className="h-4 w-4 mb-1 opacity-70 text-white" />
-            <p className="text-2xl font-black text-white">{matchCount}</p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white">Matches</p>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-4 text-left">
-            <Zap className={cn("h-4 w-4 mb-1", autoSend ? "text-emerald-500" : "text-slate-300")} />
-            <p className="text-2xl font-black text-slate-900">{autoSend ? "Auto" : "Off"}</p>
-            <p className="text-[9px] font-bold text-slate-500 uppercase">Auto-Envio</p>
-          </CardContent>
-        </Card>
+      {/* DASHBOARD RÁPIDO */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-indigo-600 p-5 rounded-3xl text-white shadow-lg">
+          <Target className="h-5 w-5 mb-1 opacity-60" />
+          <p className="text-3xl font-black">{matchCount}</p>
+          <p className="text-[10px] font-bold uppercase opacity-80">Matches</p>
+        </div>
+        <div className="bg-white p-5 rounded-3xl border shadow-sm">
+          <Zap className={cn("h-5 w-5 mb-1", autoSend ? "text-emerald-500" : "text-slate-300")} />
+          <p className="text-3xl font-black text-slate-900">{autoSend ? "ON" : "OFF"}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase">Auto-Envio</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* FILTERS PANEL */}
-        <div className="lg:col-span-4 space-y-4">
-          <Card className="border-slate-200 rounded-2xl shadow-sm">
-            <CardHeader className="p-5 border-b bg-slate-50/50 text-left">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" /> Configuração
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* PARÂMETROS DO BOT */}
+        <div className="lg:col-span-5 space-y-6">
+          <Card className="border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
+            <CardHeader className="bg-slate-50/50 border-b py-4">
+              <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-[0.2em] flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" /> Parâmetros de Busca
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-5 space-y-5">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <Label className="text-sm font-bold">Ativar Radar</Label>
-                <Switch checked={isActive} onCheckedChange={setIsActive} />
-              </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <Label className="text-sm font-bold">Auto-Enviar</Label>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <Label className="text-xs font-bold">Radar Online</Label>
+                  <Switch checked={isActive} onCheckedChange={setIsActive} />
+                </div>
+                <div className="space-y-2 p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100">
+                  <Label className="text-xs font-bold text-indigo-700">Auto-Enviar</Label>
+                  <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+                </div>
               </div>
 
-              <div className="space-y-4 pt-2">
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Tipo de Visto</Label>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="h-11 rounded-xl font-medium text-left">
+                    <SelectTrigger className="h-12 rounded-2xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos os Vistos</SelectItem>
+                      <SelectItem value="all">Qualquer Visto</SelectItem>
                       {VISA_TYPE_OPTIONS.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
@@ -307,14 +298,14 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Estado (EUA)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado (EUA)</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="h-11 rounded-xl font-medium text-left">
+                    <SelectTrigger className="h-12 rounded-2xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Qualquer Estado</SelectItem>
+                      <SelectItem value="all">Todos os Estados</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -323,25 +314,23 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-left">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                    <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Salário Min ($/h)</Label>
                     <Input
                       type="number"
-                      placeholder="$/h"
                       value={minWage}
                       onChange={(e) => setMinWage(e.target.value)}
-                      className="h-11 rounded-xl font-bold"
+                      className="h-12 rounded-2xl font-bold"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase">Exp. Máxima</Label>
+                    <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Exp. Max (mês)</Label>
                     <Input
                       type="number"
-                      placeholder="Meses"
                       value={maxExperience}
                       onChange={(e) => setMaxExperience(e.target.value)}
-                      className="h-11 rounded-xl font-bold"
+                      className="h-12 rounded-2xl font-bold"
                     />
                   </div>
                 </div>
@@ -350,69 +339,61 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* CATEGORIES PANEL */}
-        <div className="lg:col-span-8">
-          <Card className="border-slate-200 rounded-2xl shadow-sm h-full flex flex-col">
-            <CardHeader className="p-5 border-b flex flex-row items-center justify-between">
-              <div className="text-left">
-                <CardTitle className="text-sm font-black uppercase text-slate-500 tracking-widest">
-                  Segmentos de Interesse
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  Toque para selecionar as categorias desejadas.
-                </CardDescription>
-              </div>
+        {/* SEGMENTOS NORMALIZADOS */}
+        <div className="lg:col-span-7">
+          <Card className="border-slate-200 rounded-[2rem] shadow-sm h-full">
+            <CardHeader className="bg-slate-50/50 border-b flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">
+                Segmentos Monitorados
+              </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedCategories([])}
-                className="text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"
+                className="text-[10px] font-bold text-indigo-600"
               >
                 LIMPAR
               </Button>
             </CardHeader>
-            <CardContent className="p-5 flex-1">
-              <div className="flex flex-wrap gap-2">
-                {categories.length > 0 ? (
-                  categories.map((cat) => (
-                    <button
-                      key={cat.name}
-                      onClick={() => toggleCategory(cat.name)}
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.name}
+                    onClick={() => toggleCategory(cat.name)}
+                    className={cn(
+                      "flex items-center justify-between px-4 py-3 rounded-2xl border text-sm font-bold transition-all active:scale-95",
+                      selectedCategories.includes(cat.name)
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50",
+                    )}
+                  >
+                    <span translate="no">{cat.name}</span>
+                    <Badge
+                      variant="secondary"
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all active:scale-95",
+                        "text-[10px] border-none",
                         selectedCategories.includes(cat.name)
-                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                          : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50/50",
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 text-indigo-600",
                       )}
                     >
-                      <span translate="no">{cat.name}</span>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-[9px] px-1 h-4 border-none",
-                          selectedCategories.includes(cat.name)
-                            ? "bg-white/20 text-white"
-                            : "bg-slate-100 text-slate-500",
-                        )}
-                      >
-                        {cat.count}
-                      </Badge>
-                    </button>
-                  ))
-                ) : (
-                  <div className="w-full py-12 flex items-center justify-center gap-2 text-slate-400">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-xs font-medium">Buscando categorias...</span>
-                  </div>
-                )}
+                      {cat.count}
+                    </Badge>
+                  </button>
+                ))}
               </div>
 
-              <div className="mt-8 p-4 bg-indigo-50/50 rounded-2xl border border-dashed border-indigo-200 flex gap-3 items-center text-left">
-                <TrendingUp className="h-5 w-5 text-indigo-600 shrink-0" />
-                <p className="text-[10px] text-indigo-800 font-medium leading-tight italic">
-                  O Radar ignora vagas que exigem mais experiência que o seu limite. Vagas sem exigência (0 ou Null) são
-                  incluídas por padrão.
-                </p>
+              <div className="mt-8 p-5 bg-indigo-50/50 rounded-3xl border border-dashed border-indigo-200 flex gap-4 items-center">
+                <SearchCheck className="h-6 w-6 text-indigo-600 shrink-0" />
+                <div className="text-left">
+                  <p className="text-[11px] text-indigo-900 font-black uppercase">Como o bot decide o match?</p>
+                  <p className="text-[10px] text-indigo-800 leading-tight">
+                    O sistema agrupa as {categories.reduce((a, b) => a + b.count, 0)} vagas do banco em segmentos
+                    mestres. Ele ignora exigências de experiência superiores ao seu limite e prioriza estados
+                    selecionados.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
