@@ -32,10 +32,11 @@ import {
   LayoutGrid,
   CheckCircle2,
   Zap,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO LÓGICO ---
+// --- MAPEAMENTO DE PALAVRAS-CHAVE ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
   "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
   "Maquinário Agrícola": ["Agricultural Equipment", "Tractor"],
@@ -224,7 +225,7 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Recalibrado", className: "bg-indigo-600 text-white" });
+      toast({ title: "Radar Recalibrado", className: "bg-indigo-600 text-white shadow-xl" });
     }
     setSaving(false);
   };
@@ -241,11 +242,7 @@ export default function Radar() {
         status: "pending",
       }));
 
-      // 1. Insere todos na My Queue
-      const { error: insertError } = await supabase.from("my_queue" as any).insert(applications);
-      if (insertError) throw insertError;
-
-      // 2. Limpa os matches do Radar
+      await supabase.from("my_queue" as any).insert(applications);
       const matchIds = matchedJobs.map((m) => m.id);
       await supabase
         .from("radar_matched_jobs" as any)
@@ -254,14 +251,13 @@ export default function Radar() {
 
       toast({
         title: "Envio em Massa Concluído",
-        description: `${matchCount} vagas foram movidas para sua fila principal.`,
-        className: "bg-emerald-600 text-white shadow-xl",
+        description: `${matchCount} vagas roteadas.`,
+        className: "bg-emerald-600 text-white",
       });
-
       setMatchedJobs([]);
       setMatchCount(0);
     } catch (err) {
-      toast({ title: "Erro no envio em massa", variant: "destructive" });
+      toast({ title: "Erro no processamento", variant: "destructive" });
     } finally {
       setBatchSending(false);
     }
@@ -276,7 +272,7 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Capturado!", className: "bg-emerald-600 text-white shadow-lg" });
+      toast({ title: "Sinal Capturado!", className: "bg-emerald-600 text-white shadow-sm" });
     } catch (err) {
       toast({ title: "Erro", variant: "destructive" });
     }
@@ -330,7 +326,7 @@ export default function Radar() {
     loadProfile();
   }, [profile?.id]);
 
-  const hasChanges = useMemo(() => {
+  const hasChangesComputed = useMemo(() => {
     if (!radarProfile) return false;
     return (
       isActive !== (radarProfile.is_active ?? false) ||
@@ -352,7 +348,7 @@ export default function Radar() {
       <div className="p-20 text-center">
         <Radio className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
         <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600">
-          Ativar Tecnologia Radar
+          Upgrade to Diamond
         </Button>
       </div>
     );
@@ -366,7 +362,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ESQUERDA: CONFIGURADOR */}
+        {/* ESQUERDA */}
         <div className="lg:col-span-6 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
@@ -375,7 +371,7 @@ export default function Radar() {
                   className={cn(
                     "p-4 rounded-xl border transition-all",
                     isActive
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-600"
                       : "bg-slate-50 border-slate-200 text-slate-400",
                   )}
                 >
@@ -387,8 +383,8 @@ export default function Radar() {
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
                     {isActive ? (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 shadow-sm">
+                        <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
                           LIVE TRACKING
                         </span>
@@ -411,21 +407,22 @@ export default function Radar() {
                 className="data-[state=checked]:bg-indigo-600"
               />
             </div>
-            {hasChanges && (
+            {hasChangesComputed && (
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all active:translate-y-1 active:border-b-0"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg transition-all active:translate-y-1 active:border-b-0 border-b-4 border-indigo-800"
               >
                 <Save className="h-4 w-4 mr-2" /> SALVAR PROTOCOLOS
               </Button>
             )}
           </div>
 
+          {/* FILTROS */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência e Filtros
+                <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência de Rastreio
               </CardTitle>
               <div className="flex items-center gap-3 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
                 <Label className="text-[10px] font-black text-indigo-700 cursor-pointer uppercase">Auto-Enviar</Label>
@@ -491,10 +488,11 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
+          {/* CATEGORIAS */}
+          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas (20 Setores)
+                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 bg-slate-50/20">
@@ -505,21 +503,17 @@ export default function Radar() {
                       const selectedInSector = data.items.filter((i) =>
                         selectedCategories.includes(i.raw_category),
                       ).length;
-                      const totalInSector = data.items.length;
-                      const allSelected = totalInSector > 0 && selectedInSector === totalInSector;
-                      const someSelected = selectedInSector > 0 && !allSelected;
+                      const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
                       return (
                         <div
                           key={segment}
                           className={cn(
                             "border bg-white rounded-xl overflow-hidden shadow-sm transition-all",
-                            allSelected || someSelected
-                              ? "border-indigo-400 ring-1 ring-indigo-100"
-                              : "border-slate-200",
+                            selectedInSector > 0 ? "border-indigo-400 ring-1 ring-indigo-100" : "border-slate-200",
                           )}
                         >
                           <div
-                            className="p-2.5 cursor-pointer flex items-center justify-between group"
+                            className="p-2.5 cursor-pointer flex items-center justify-between"
                             onClick={() =>
                               setExpandedSegments((p) =>
                                 p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -528,17 +522,15 @@ export default function Radar() {
                           >
                             <div className="flex flex-col text-left">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black text-slate-700 uppercase leading-none tracking-tight">
+                                <span className="text-[10px] font-black text-slate-700 uppercase leading-none">
                                   {segment}
                                 </span>
-                                {allSelected && <CheckCircle2 className="h-3 w-3 text-indigo-600" />}
-                                {someSelected && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="h-4 px-1.5 text-[7px] bg-indigo-50 text-indigo-600"
-                                  >
-                                    • {selectedInSector} Selecionadas
-                                  </Badge>
+                                {allSelected ? (
+                                  <CheckCircle2 className="h-3 w-3 text-indigo-600" />
+                                ) : (
+                                  selectedInSector > 0 && (
+                                    <span className="text-[8px] font-bold text-indigo-600">• {selectedInSector}</span>
+                                  )
                                 )}
                               </div>
                               <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">
@@ -554,9 +546,7 @@ export default function Radar() {
                               }}
                               className={cn(
                                 "h-6 text-[7px] font-black px-1.5 border",
-                                allSelected
-                                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                  : "text-indigo-600 border-indigo-100 hover:bg-indigo-50",
+                                allSelected ? "bg-indigo-600 text-white" : "text-indigo-600 border-indigo-100",
                               )}
                             >
                               {allSelected ? "REMOVER" : "ADD SETOR"}
@@ -596,7 +586,7 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* DIREITA: MATCHES */}
+        {/* DIREITA */}
         <div className="lg:col-span-6 space-y-4 text-left">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div>
@@ -604,7 +594,7 @@ export default function Radar() {
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Real-time signal sync protocol
+                Real-time database sync h2-linker protocol
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -615,23 +605,17 @@ export default function Radar() {
             </div>
           </div>
 
-          {/* BOTÃO ENVIAR TUDO (DIAMOND POWER) */}
           {matchedJobs.length > 0 && (
             <Button
               onClick={handleSendAll}
               disabled={batchSending}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-emerald-800 flex items-center justify-center gap-3 group transition-all"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-emerald-800 flex items-center justify-center gap-3 transition-all"
             >
-              {batchSending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Zap className="h-5 w-5 fill-white group-hover:scale-125 transition-transform" />
-              )}
-              ENVIAR TODOS PARA A FILA ({matchCount})
+              <Zap className="h-5 w-5 fill-white" /> ENVIAR TODOS PARA A FILA ({matchCount})
             </Button>
           )}
 
-          <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[75vh] pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
             {matchedJobs.length > 0 ? (
               matchedJobs.map((match) => {
                 const job = match.public_jobs;
@@ -647,11 +631,16 @@ export default function Radar() {
                           <Badge className="bg-indigo-50 text-indigo-600 text-[9px] border-indigo-100 font-black px-2">
                             {job.visa_type}
                           </Badge>
+                          {job.randomization_group && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] font-black border-slate-200 uppercase text-slate-400 flex items-center gap-1"
+                            >
+                              <Layers className="h-2.5 w-2.5" /> Grupo {job.randomization_group}
+                            </Badge>
+                          )}
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 border-l border-slate-100 pl-2 font-mono">
                             <MapPin className="h-3 w-3" /> {job.state}
-                          </span>
-                          <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 border-l border-slate-100 pl-2">
-                            <Users className="h-3 w-3" /> {job.openings || 1} Vagas
                           </span>
                         </div>
                         <h3 className="text-sm font-black text-slate-900 leading-tight uppercase">{job.category}</h3>
@@ -674,7 +663,7 @@ export default function Radar() {
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all border-b-2 border-emerald-900"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:translate-y-0.5 border-b-2 border-emerald-900"
                         >
                           <Send className="h-3.5 w-3.5 mr-1.5" /> ENVIAR
                         </Button>
@@ -704,7 +693,7 @@ export default function Radar() {
                 <Radio className="h-14 w-14 text-slate-200 animate-pulse" />
                 <div className="space-y-1">
                   <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Aguardando Sinais...</p>
-                  <p className="text-[10px] text-slate-400">Ative o Radar para iniciar a varredura.</p>
+                  <p className="text-[10px] text-slate-400">Ative o Radar para recalibrar a varredura.</p>
                 </div>
               </div>
             )}
