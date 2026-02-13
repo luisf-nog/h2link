@@ -7,24 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
-import {
-  ChevronDown,
-  ChevronRight,
-  Radar as RadarIcon,
-  Zap,
-  ShieldCheck,
-  Loader2,
-  Save,
-  Target,
-  TrendingUp,
-  History,
-  Lock,
-  Rocket,
-} from "lucide-react";
+import { Radar as RadarIcon, Zap, Save, Loader2, Target, History, Rocket, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const US_STATES = [
@@ -88,11 +75,10 @@ export default function Radar() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
-  const [groupedCategories, setGroupedCategories] = useState<Record<string, any[]>>({});
-  const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
-  // States do Formulário
+  // Form states
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -107,14 +93,17 @@ export default function Radar() {
     const loadData = async () => {
       try {
         setLoading(true);
+        // Puxa do cache as categorias já agrupadas pelo SQL
         const { data: catData }: any = await supabase.rpc("get_category_stats_cached" as any);
         if (catData) {
-          const grouped = catData.reduce((acc: any, curr: any) => {
-            if (!acc[curr.segment_name]) acc[curr.segment_name] = [];
-            acc[curr.segment_name].push(curr);
-            return acc;
-          }, {});
-          setGroupedCategories(grouped);
+          // Agrupamos por segmento para mostrar apenas os 10 nomes limpos
+          const uniqueSegments = Array.from(new Set(catData.map((c: any) => c.segment_name))).map((name) => {
+            const count = (catData as any[])
+              .filter((c) => c.segment_name === name)
+              .reduce((acc, curr) => acc + curr.job_count, 0);
+            return { name, count };
+          });
+          setCategories(uniqueSegments as any);
         }
 
         if (profile?.id) {
@@ -146,24 +135,6 @@ export default function Radar() {
     loadData();
   }, [profile?.id]);
 
-  const toggleSegment = (segment: string) => {
-    setExpandedSegments((prev) => (prev.includes(segment) ? prev.filter((s) => s !== segment) : [...prev, segment]));
-  };
-
-  const handleSelectCategory = (catName: string) => {
-    setSelectedCategories((prev) => (prev.includes(catName) ? prev.filter((c) => c !== catName) : [...prev, catName]));
-  };
-
-  const selectFullSegment = (segment: string) => {
-    const subCats = groupedCategories[segment].map((c) => c.raw_category);
-    const allSelected = subCats.every((c) => selectedCategories.includes(c));
-    if (allSelected) {
-      setSelectedCategories((prev) => prev.filter((c) => !subCats.includes(c)));
-    } else {
-      setSelectedCategories((prev) => [...new Set([...prev, ...subCats])]);
-    }
-  };
-
   const handleSave = async () => {
     if (!profile?.id) return;
     setSaving(true);
@@ -177,208 +148,195 @@ export default function Radar() {
       visa_type: visaType === "all" ? null : visaType,
       state: stateFilter === "all" ? null : stateFilter,
     };
+
     const { error } = radarProfile
       ? await supabase.from("radar_profiles").update(payload).eq("user_id", profile.id)
       : await supabase.from("radar_profiles").insert(payload);
 
     if (!error) {
-      toast({
-        title: "Radar Armado!",
-        description: "Iniciando varredura instantânea...",
-        className: "bg-indigo-600 text-white",
-      });
+      toast({ title: "Radar Armado!", description: "Iniciando busca por vagas retroativas..." });
       setRadarProfile(payload);
     }
     setSaving(false);
   };
 
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories((p) => (p.includes(cat) ? p.filter((c) => c !== cat) : [...p, cat]));
+  };
+
   if (!isPremium)
     return (
-      <div className="p-20 text-center">
-        <h1>Conteúdo Exclusivo Premium</h1>
-        <Button onClick={() => navigate("/plans")}>Ver Planos</Button>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-6">
+        <RadarIcon className="h-20 w-20 text-slate-300" />
+        <h1 className="text-3xl font-black">Radar Inteligente</h1>
+        <Button onClick={() => navigate("/plans")} className="bg-indigo-600 font-bold px-10 h-12">
+          Upgrade para Diamond
+        </Button>
       </div>
     );
+
   if (loading)
     return (
-      <div className="p-20 text-center text-indigo-600">
-        <Loader2 className="animate-spin h-10 w-10 mx-auto" />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-indigo-600" />
       </div>
     );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20 px-4">
-      {/* HEADER */}
-      <div className="bg-white p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className={cn("p-3 rounded-2xl", isActive ? "bg-emerald-500 text-white" : "bg-slate-100")}>
-            <RadarIcon />
-          </div>
-          <div className="text-left">
-            <h1 className="text-2xl font-black uppercase italic">Radar Inteligente</h1>
-            <p className="text-xs font-bold text-slate-400">STATUS: {isActive ? "MONITORANDO" : "OFFLINE"}</p>
-          </div>
+    <div className="max-w-4xl mx-auto space-y-8 pb-20 text-left">
+      {/* HEADER SIMPLES (LEGADO) */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+            <RadarIcon className="h-8 w-8 text-indigo-600" /> Radar
+          </h1>
+          <p className="text-slate-500">Configure seus filtros e deixe o robô trabalhar.</p>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="h-14 px-10 bg-indigo-600 font-bold rounded-2xl w-full md:w-auto"
-        >
-          {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} SALVAR CONFIGURAÇÃO
-        </Button>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <Badge variant={isActive ? "default" : "secondary"} className={cn("px-4 py-1", isActive && "bg-emerald-600")}>
+            {isActive ? "ATIVO" : "INATIVO"}
+          </Badge>
+          <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 font-bold flex-1 md:flex-none">
+            {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-4 w-4" />} Salvar
+            Configurações
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* PARÂMETROS ESQUERDA */}
-        <div className="lg:col-span-4 space-y-4">
-          <Card className="rounded-3xl shadow-sm border-slate-200">
-            <CardHeader className="bg-slate-50 border-b py-3">
-              <CardTitle className="text-xs uppercase font-black text-slate-500">Parâmetros do Bot</CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 space-y-6">
-              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                <Label className="text-sm font-bold">Ativar Radar</Label>
-                <Switch checked={isActive} onCheckedChange={setIsActive} />
+      {/* DASHBOARD DE STATUS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-slate-50 border-none shadow-sm">
+          <CardContent className="p-6 flex items-center gap-4">
+            <Target className="text-indigo-600" />
+            <div>
+              <p className="text-2xl font-black">{matchCount}</p>
+              <p className="text-xs text-slate-500 font-bold uppercase">Vagas Detectadas</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-50 border-none shadow-sm">
+          <CardContent className="p-6 flex items-center gap-4">
+            <Zap className={cn(autoSend ? "text-emerald-500" : "text-slate-300")} />
+            <div>
+              <p className="text-2xl font-black">{autoSend ? "Automático" : "Manual"}</p>
+              <p className="text-xs text-slate-500 font-bold uppercase">Modo de Envio</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* FILTROS (VISUAL LEGADO) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Critérios de Seleção</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border">
+              <div className="text-left">
+                <Label className="font-bold">Ativar Radar</Label>
+                <p className="text-[10px] text-slate-500 italic">O bot buscará vagas para você</p>
               </div>
-              <div className="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl">
-                <Label className="text-sm font-bold text-indigo-700">Auto-Enviar</Label>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            </div>
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border">
+              <div className="text-left">
+                <Label className="font-bold">Envio Automático</Label>
+                <p className="text-[10px] text-slate-500 italic">Candidatura imediata no match</p>
               </div>
-              <div className="space-y-4 text-left">
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Visto</Label>
-                  <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="rounded-xl h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {VISA_TYPE_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Estado</Label>
-                  <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="rounded-xl h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {US_STATES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Salário Min</Label>
-                    <Input
-                      type="number"
-                      value={minWage}
-                      onChange={(e) => setMinWage(e.target.value)}
-                      className="rounded-xl h-11"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exp Max (meses)</Label>
-                    <Input
-                      type="number"
-                      value={maxExperience}
-                      onChange={(e) => setMaxExperience(e.target.value)}
-                      className="rounded-xl h-11"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2 text-left">
+              <Label className="text-xs font-bold uppercase text-slate-500">Visto</Label>
+              <Select value={visaType} onValueChange={setVisaType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {VISA_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 text-left">
+              <Label className="text-xs font-bold uppercase text-slate-500">Estado</Label>
+              <Select value={stateFilter} onValueChange={setStateFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Qualquer Estado</SelectItem>
+                  {US_STATES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 text-left">
+              <Label className="text-xs font-bold uppercase text-slate-500">Salário Min ($/h)</Label>
+              <Input type="number" value={minWage} onChange={(e) => setMinWage(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="space-y-2 text-left">
+              <Label className="text-xs font-bold uppercase text-slate-500">Exp. Max (Meses)</Label>
+              <Input
+                type="number"
+                value={maxExperience}
+                onChange={(e) => setMaxExperience(e.target.value)}
+                placeholder="Ex: 6"
+              />
+            </div>
+          </div>
+
+          {/* CATEGORIAS (ESTILO BADGE LEGADO) */}
+          <div className="space-y-4 pt-4 border-t text-left">
+            <Label className="text-xs font-bold uppercase text-slate-500">Segmentos de Mercado</Label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <Badge
+                  key={cat.name}
+                  variant={selectedCategories.includes(cat.name) ? "default" : "outline"}
+                  className={cn(
+                    "cursor-pointer px-4 py-2 text-sm transition-all",
+                    selectedCategories.includes(cat.name) ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-indigo-50",
+                  )}
+                  onClick={() => toggleCategory(cat.name)}
+                >
+                  <span translate="no">{cat.name}</span>
+                  <span className="ml-2 opacity-60 text-[10px]">{cat.count}</span>
+                </Badge>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 italic">
+              * Selecione os segmentos para filtrar o Radar. Se nenhum for selecionado, o bot monitora todas as
+              categorias.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* BOTÃO DE VARREDURA INSTANTÂNEA */}
+      <div className="p-6 bg-indigo-50 rounded-2xl border border-dashed border-indigo-200 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="text-left">
+          <p className="font-bold text-indigo-900 flex items-center gap-2">
+            <Search className="h-4 w-4" /> Busca Retroativa
+          </p>
+          <p className="text-xs text-indigo-700">O Radar encontrou {matchCount} vagas que já estão no sistema.</p>
         </div>
-
-        {/* CATEGORIAS DIREITA - AGRUPADO POR SEGMENTO */}
-        <div className="lg:col-span-8">
-          <Card className="rounded-3xl shadow-sm border-slate-200 h-full">
-            <CardHeader className="bg-slate-50 border-b py-3 flex flex-row justify-between items-center">
-              <CardTitle className="text-xs uppercase font-black text-slate-500">Segmentos e Especialidades</CardTitle>
-              <Badge variant="outline" className="text-[10px] font-bold">
-                {selectedCategories.length} selecionadas
-              </Badge>
-            </CardHeader>
-            <CardContent className="p-4 space-y-2">
-              {Object.entries(groupedCategories).map(([segment, items]) => {
-                const isExpanded = expandedSegments.includes(segment);
-                const selectedInSegment = items.filter((i) => selectedCategories.includes(i.raw_category)).length;
-                const totalInSegment = items.reduce((acc, curr) => acc + curr.job_count, 0);
-
-                return (
-                  <div key={segment} className="border rounded-2xl overflow-hidden transition-all duration-200">
-                    <div
-                      className={cn(
-                        "flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50",
-                        isExpanded && "bg-slate-50 border-b",
-                      )}
-                    >
-                      <div className="flex items-center gap-3 flex-1" onClick={() => toggleSegment(segment)}>
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-slate-400" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-slate-400" />
-                        )}
-                        <div className="text-left">
-                          <p className="text-sm font-black text-slate-800">{segment}</p>
-                          <p className="text-[10px] text-indigo-600 font-bold">{totalInSegment} vagas ativas</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant={selectedInSegment === items.length ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => selectFullSegment(segment)}
-                        className="text-[10px] h-7 font-bold"
-                      >
-                        {selectedInSegment === items.length ? "REMOVER TUDO" : `SELECIONAR ${items.length}`}
-                      </Button>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="p-4 bg-white grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {items.map((cat) => (
-                          <div
-                            key={cat.raw_category}
-                            onClick={() => handleSelectCategory(cat.raw_category)}
-                            className={cn(
-                              "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
-                              selectedCategories.includes(cat.raw_category)
-                                ? "bg-indigo-600 border-indigo-600 text-white"
-                                : "bg-white hover:border-indigo-200",
-                            )}
-                          >
-                            <span className="text-xs font-bold text-left" translate="no">
-                              {cat.raw_category}
-                            </span>
-                            <Badge
-                              className={cn(
-                                "text-[9px]",
-                                selectedCategories.includes(cat.raw_category) ? "bg-white/20" : "bg-slate-100",
-                              )}
-                            >
-                              {cat.job_count}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
+        <Button
+          variant="outline"
+          className="border-indigo-600 text-indigo-600 font-bold hover:bg-indigo-600 hover:text-white transition-all"
+        >
+          Ver Matches Atuais
+        </Button>
       </div>
     </div>
   );
