@@ -31,6 +31,7 @@ import {
   Eye,
   LayoutGrid,
   Columns,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -165,13 +166,26 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
+  const hasChanges = useMemo(() => {
+    if (!radarProfile) return false;
+    const dbCats = radarProfile.categories || [];
+    const catsChanged = JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...dbCats].sort());
+    return (
+      isActive !== (radarProfile.is_active ?? false) ||
+      autoSend !== (radarProfile.auto_send ?? false) ||
+      catsChanged ||
+      minWage !== (radarProfile.min_wage?.toString() || "") ||
+      maxExperience !== (radarProfile.max_experience?.toString() || "") ||
+      visaType !== (radarProfile.visa_type || "all") ||
+      stateFilter !== (radarProfile.state || "all")
+    );
+  }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, radarProfile]);
+
   const fetchMatches = async () => {
     if (!profile?.id) return;
     const { data, error } = await supabase
       .from("radar_matched_jobs" as any)
-      .select(
-        `id, job_id, public_jobs!fk_radar_job (id, job_title, category, state, salary, visa_type, experience_months, company, openings)`,
-      )
+      .select(`id, job_id, public_jobs!fk_radar_job (*)`)
       .eq("user_id", profile.id);
     if (!error && data) {
       setMatchedJobs(data);
@@ -290,23 +304,24 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUNA ESQUERDA: CONFIG */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* COLUNA ESQUERDA: CONFIGURAÇÕES E CATEGORIAS */}
+        <div className="lg:col-span-6 space-y-6">
+          {/* HEADER E AÇÃO */}
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "p-3 rounded-2xl",
+                    "p-3 rounded-2xl transition-all",
                     isActive ? "bg-emerald-500 text-white shadow-lg animate-pulse" : "bg-slate-100 text-slate-400",
                   )}
                 >
                   <RadarIcon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black uppercase italic leading-none">Radar Diamond</h1>
+                  <h1 className="text-xl font-black uppercase italic leading-none text-slate-900">Radar Diamond</h1>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {isActive ? "Varredura Ativa" : "Sistema Offline"}
+                    {isActive ? "Monitoramento Ativo" : "Sistema em Standby"}
                   </span>
                 </div>
               </div>
@@ -319,29 +334,104 @@ export default function Radar() {
                 disabled={saving}
               />
             </div>
-            <Button
-              onClick={() => performSave()}
-              disabled={saving}
-              className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-md"
-            >
-              <Save className="h-4 w-4 mr-2" /> SALVAR CONFIGURAÇÕES
-            </Button>
+            {hasChanges && (
+              <Button
+                onClick={() => performSave()}
+                disabled={saving}
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-md transition-all active:scale-95"
+              >
+                <Save className="h-4 w-4 mr-2" /> APLICAR ALTERAÇÕES
+              </Button>
+            )}
           </div>
 
-          <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center">
+          {/* PAINEL DE INTELIGÊNCIA (FILTROS) */}
+          <Card className="border-slate-200 rounded-2xl shadow-sm">
+            <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center flex-row">
               <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2 italic">
-                <Columns className="h-4 w-4" /> 20 Divisões de Trabalho
+                <ShieldCheck className="h-4 w-4" /> Inteligência e Filtros
+              </CardTitle>
+              <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                <Label className="text-[10px] font-bold text-indigo-700 cursor-pointer">Auto-Enviar</Label>
+                <Switch checked={autoSend} onCheckedChange={setAutoSend} className="scale-75" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase">Visto</Label>
+                  <Select value={visaType} onValueChange={setVisaType}>
+                    <SelectTrigger className="h-9 rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Qualquer</SelectItem>
+                      {VISA_TYPE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase">Estado</Label>
+                  <Select value={stateFilter} onValueChange={setStateFilter}>
+                    <SelectTrigger className="h-9 rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">EUA Inteiro</SelectItem>
+                      {US_STATES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                  <Input
+                    type="number"
+                    value={minWage}
+                    onChange={(e) => setMinWage(e.target.value)}
+                    className="h-9 rounded-lg font-bold"
+                    placeholder="$"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase">Exp Máx.</Label>
+                  <Input
+                    type="number"
+                    value={maxExperience}
+                    onChange={(e) => setMaxExperience(e.target.value)}
+                    className="h-9 rounded-lg font-bold"
+                    placeholder="Meses"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SELETOR DE CATEGORIAS (2 COLUNAS) */}
+          <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <CardHeader className="p-5 border-b bg-slate-50/30">
+              <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2 italic">
+                <LayoutGrid className="h-4 w-4" /> 20 Divisões Diamond
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 bg-slate-50/20">
               <div className="grid grid-cols-2 gap-3">
-                {/* COLUNA 1 - 10 SETORES */}
+                {/* COLUNA 1 */}
                 <div className="space-y-2">
                   {leftSectors.map(([segment, data]) => (
-                    <div key={segment} className="border bg-white rounded-xl overflow-hidden shadow-sm">
+                    <div
+                      key={segment}
+                      className="border bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-200 transition-colors"
+                    >
                       <div
-                        className="p-2 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
+                        className="p-2 cursor-pointer flex items-center justify-between"
                         onClick={() =>
                           setExpandedSegments((p) =>
                             p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -350,8 +440,8 @@ export default function Radar() {
                       >
                         <div className="flex flex-col text-left">
                           <span className="text-[9px] font-black text-slate-700 uppercase leading-none">{segment}</span>
-                          <span className="text-[7px] font-bold text-indigo-600 uppercase mt-0.5">
-                            {data.totalJobs} Vagas
+                          <span className="text-[7px] font-bold text-indigo-600 uppercase mt-1">
+                            {data.totalJobs} Vagas Totais
                           </span>
                         </div>
                         {expandedSegments.includes(segment) ? (
@@ -387,12 +477,15 @@ export default function Radar() {
                     </div>
                   ))}
                 </div>
-                {/* COLUNA 2 - 10 SETORES */}
+                {/* COLUNA 2 */}
                 <div className="space-y-2">
                   {rightSectors.map(([segment, data]) => (
-                    <div key={segment} className="border bg-white rounded-xl overflow-hidden shadow-sm">
+                    <div
+                      key={segment}
+                      className="border bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-200 transition-colors"
+                    >
                       <div
-                        className="p-2 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
+                        className="p-2 cursor-pointer flex items-center justify-between"
                         onClick={() =>
                           setExpandedSegments((p) =>
                             p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -401,8 +494,8 @@ export default function Radar() {
                       >
                         <div className="flex flex-col text-left">
                           <span className="text-[9px] font-black text-slate-700 uppercase leading-none">{segment}</span>
-                          <span className="text-[7px] font-bold text-indigo-600 uppercase mt-0.5">
-                            {data.totalJobs} Vagas
+                          <span className="text-[7px] font-bold text-indigo-600 uppercase mt-1">
+                            {data.totalJobs} Vagas Totais
                           </span>
                         </div>
                         {expandedSegments.includes(segment) ? (
@@ -443,15 +536,25 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: MATCHES */}
-        <div className="lg:col-span-7 space-y-4">
+        {/* COLUNA DIREITA: FILA DE MATCHES */}
+        <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between border-b pb-4 text-left">
-            <h2 className="text-xl font-black uppercase italic text-slate-900">
-              <Target className="h-6 w-6 text-indigo-600 inline mr-2" /> Matches de Elite
-            </h2>
-            <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-              {matchCount} Vagas
-            </Badge>
+            <div>
+              <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-2">
+                <Target className="h-6 w-6 text-indigo-600" /> Fila de Matches
+              </h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Vagas compatíveis com seu perfil
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
+                <RefreshCcw className="h-4 w-4" />
+              </Button>
+              <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
+                {matchCount} Vagas
+              </Badge>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
@@ -464,10 +567,10 @@ export default function Radar() {
                     key={match.id}
                     className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm bg-white overflow-hidden"
                   >
-                    <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex-1 text-left space-y-1.5">
+                    <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
+                      <div className="p-4 flex-1 text-left space-y-2">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black px-2">
+                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black">
                             {job.visa_type}
                           </Badge>
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono">
@@ -484,31 +587,36 @@ export default function Radar() {
                             {job.company || "Empresa"}
                           </p>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-500 truncate mt-1 italic">{job.job_title}</p>
-                      </div>
-                      <div className="flex items-center gap-2 md:border-l md:pl-4 min-w-[150px]">
-                        <div className="flex flex-col gap-2 w-full">
-                          <Button
-                            onClick={() => handleSendApplication(match.id, job.id)}
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95"
-                          >
-                            <Send className="h-3 w-3 mr-1" /> ENVIAR
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
-                            className="text-[9px] font-black h-8 w-full border-slate-300 hover:bg-white flex items-center gap-2"
-                          >
-                            <Eye className="h-3 w-3" /> VER NO HUB
-                          </Button>
+                        <div className="flex items-center gap-4 pt-1">
+                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/h
+                          </span>
+                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            <Briefcase className="h-3.5 w-3.5 text-indigo-600" /> {job.experience_months || 0}m exp
+                          </span>
                         </div>
+                      </div>
+                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-100 min-w-[150px]">
+                        <Button
+                          onClick={() => handleSendApplication(match.id, job.id)}
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95"
+                        >
+                          <Send className="h-3 w-3 mr-1" /> ENVIAR
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
+                          className="text-[9px] font-black h-8 w-full border-slate-300 hover:bg-white flex items-center gap-2"
+                        >
+                          <Eye className="h-3 w-3" /> VER NO HUB
+                        </Button>
                         <Button
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-300 hover:text-red-600"
+                          className="h-8 w-8 p-0 text-slate-300 hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
