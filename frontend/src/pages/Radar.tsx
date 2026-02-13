@@ -42,7 +42,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO LÓGICO ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
   "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
   "Maquinário Agrícola": ["Agricultural Equipment", "Tractor"],
@@ -134,7 +133,6 @@ export default function Radar() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // 1. ESTADOS
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [batchSending, setBatchSending] = useState(false);
@@ -156,9 +154,8 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // 2. MEMOS (ORDE CORRETA)
+  // --- LOGICA DE MEMOIZAÇÃO (ORDE CORRETA) ---
   const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
-
   const leftSectorsMemo = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
   const rightSectorsMemo = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
 
@@ -191,7 +188,7 @@ export default function Radar() {
     radarProfile,
   ]);
 
-  // 3. FUNÇÕES
+  // --- FUNÇÕES DE INTERAÇÃO ---
   const getGroupStyles = (group: string) => {
     switch (group?.toUpperCase()) {
       case "A":
@@ -273,6 +270,7 @@ export default function Radar() {
           .update(payload)
           .eq("user_id", profile.id)
       : await supabase.from("radar_profiles" as any).insert(payload);
+
     if (!error) {
       setRadarProfile({ ...radarProfile, ...payload });
       if (payload.is_active) {
@@ -300,7 +298,7 @@ export default function Radar() {
       setMatchedJobs([]);
       setMatchCount(0);
     } catch (err) {
-      toast({ title: "Erro", variant: "destructive" });
+      toast({ title: "Erro no envio", variant: "destructive" });
     } finally {
       setBatchSending(false);
     }
@@ -329,12 +327,12 @@ export default function Radar() {
     }
   };
 
-  // 4. EFEITOS
+  // --- EFEITOS ---
   useEffect(() => {
-    const hasSeen = localStorage.getItem("h2_radar_instructions_final");
+    const hasSeen = localStorage.getItem("h2_radar_instructions_v5");
     if (!hasSeen && !loading) {
       setShowInstructions(true);
-      localStorage.setItem("h2_radar_instructions_final", "true");
+      localStorage.setItem("h2_radar_instructions_v5", "true");
     }
   }, [loading]);
 
@@ -368,7 +366,6 @@ export default function Radar() {
     loadProfile();
   }, [profile?.id]);
 
-  // 5. RENDERIZAÇÕES
   if (!isPremium)
     return (
       <div className="p-20 text-center">
@@ -387,7 +384,6 @@ export default function Radar() {
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
-      {/* MANUAL DE OPERAÇÕES */}
       <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
         <DialogContent className="max-w-4xl bg-white border-none shadow-2xl rounded-[2.5rem] overflow-hidden p-0">
           <div className="grid grid-cols-1 md:grid-cols-5 h-full">
@@ -400,7 +396,7 @@ export default function Radar() {
                   Radar Signal
                 </h2>
                 <p className="text-indigo-100 text-sm font-medium opacity-90 leading-relaxed">
-                  A tecnologia que trabalha enquanto você foca no que importa.
+                  O fim da busca manual. Deixe que nossa tecnologia trabalhe enquanto você vive.
                 </p>
               </div>
               <Bot className="absolute -bottom-10 -left-10 h-64 w-64 text-white/10" />
@@ -412,8 +408,8 @@ export default function Radar() {
                   O que é o Radar Signal?
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed">
-                  É o seu robô assistente. Ele monitora o banco H2 Linker 24h por dia, detectando oportunidades em
-                  milissegundos.
+                  É o seu <strong>robô assistente</strong>. Ele monitora o banco H2 Linker 24h por dia. O que antes
+                  levava horas de "refresh" na página, agora acontece em milissegundos nos nossos servidores.
                 </p>
               </section>
 
@@ -424,45 +420,50 @@ export default function Radar() {
                     Modo Piloto Automático
                   </h3>
                 </div>
-                <p className="text-sm text-indigo-700 mb-4">
-                  Ative o <strong>Auto-Enviar</strong> e o robô assume o controle total, enviando sua aplicação
-                  instantaneamente assim que um sinal for detectado.
+                <p className="text-sm text-indigo-700 leading-relaxed mb-4">
+                  Ao ativar o <strong>Auto-Enviar</strong>, você transforma o Radar em um robô de aplicação total. Ele
+                  vê a vaga perfeita e já manda o e-mail por você.
                 </p>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-[10px] font-bold text-indigo-900 uppercase">
-                    <CheckCircle2 className="h-4 w-4" /> Busca 24/7 Ativa
+                  <li className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase">
+                    <CheckCircle2 className="h-4 w-4" /> Trabalha enquanto você trabalha
                   </li>
-                  <li className="flex items-center gap-2 text-[10px] font-bold text-indigo-900 uppercase">
-                    <CheckCircle2 className="h-4 w-4" /> Envio Instantâneo
+                  <li className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase">
+                    <CheckCircle2 className="h-4 w-4" /> Aplica enquanto você dorme
                   </li>
                 </ul>
               </section>
 
-              <section className="space-y-4 text-left">
+              <section className="space-y-4">
                 <h3 className="text-lg font-black uppercase italic tracking-tight text-slate-900">
-                  Configuração Rápida
+                  Operação: Passo a Passo
                 </h3>
                 <div className="space-y-4">
-                  <div className="flex gap-4 items-start text-left">
+                  <div className="flex gap-4 items-start">
                     <span className="h-6 w-6 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black flex items-center justify-center shrink-0">
                       01
                     </span>
-                    <p className="text-sm text-slate-600">Ajuste seus filtros de Visto, Grupo e Estado.</p>
+                    <p className="text-sm text-slate-600">
+                      <strong>Ajuste a Mira:</strong> Configure Visto, Estado e Grupo. Os contadores mostram a demanda
+                      real.
+                    </p>
                   </div>
-                  <div className="flex gap-4 items-start text-left">
+                  <div className="flex gap-4 items-start">
                     <span className="h-6 w-6 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black flex items-center justify-center shrink-0">
                       02
                     </span>
-                    <p className="text-sm text-slate-600">Selecione os setores de interesse e ative o monitoramento.</p>
+                    <p className="text-sm text-slate-600">
+                      <strong>Ligue os Sensores:</strong> Selecione os setores e ative o "Monitoramento em Tempo Real".
+                    </p>
                   </div>
                 </div>
               </section>
 
               <Button
                 onClick={() => setShowInstructions(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-7 rounded-2xl shadow-lg border-b-4 border-indigo-800 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-7 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
               >
-                Entendido, Iniciar Automação <ArrowRight className="h-4 w-4" />
+                Iniciar Operação <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -470,7 +471,6 @@ export default function Radar() {
       </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ESQUERDA */}
         <div className="lg:col-span-6 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
             <button
@@ -479,14 +479,13 @@ export default function Radar() {
             >
               <HelpCircle className="h-4 w-4" />
             </button>
-
             <div className="flex items-center justify-between pr-8">
               <div className="flex items-center gap-4 text-left">
                 <div
                   className={cn(
                     "p-4 rounded-xl border transition-all shadow-inner",
                     isActive
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-600"
                       : "bg-slate-50 border-slate-200 text-slate-400",
                   )}
                 >
@@ -500,13 +499,11 @@ export default function Radar() {
                     {isActive ? (
                       <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
                         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
-                          LIVE
-                        </span>
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">LIVE</span>
                       </div>
                     ) : (
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 leading-none">
-                        SYSTEM OFFLINE
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
+                        OFFLINE
                       </span>
                     )}
                   </div>
@@ -525,7 +522,7 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all active:translate-y-0.5 active:border-b-0 uppercase tracking-widest text-[10px]"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all uppercase tracking-widest text-[10px]"
               >
                 SALVAR PROTOCOLOS
               </Button>
@@ -533,7 +530,7 @@ export default function Radar() {
           </div>
 
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
-            <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row text-left">
+            <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
                 <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência e Filtros
               </CardTitle>
@@ -548,7 +545,7 @@ export default function Radar() {
                 />
               </div>
             </CardHeader>
-            <CardContent className="p-5 text-left">
+            <CardContent className="p-5">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="space-y-1.5 text-left">
                   <Label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Visto</Label>
@@ -629,9 +626,9 @@ export default function Radar() {
               </div>
             </CardHeader>
             <CardContent className="p-4 bg-slate-50/20 text-left">
-              <div className="grid grid-cols-2 gap-4 text-left">
+              <div className="grid grid-cols-2 gap-4">
                 {[leftSectorsMemo, rightSectorsMemo].map((column, colIdx) => (
-                  <div key={colIdx} className="space-y-2 text-left">
+                  <div key={colIdx} className="space-y-2">
                     {column.map(([segment, data]) => {
                       const selectedInSector = data.items.filter((i) =>
                         selectedCategories.includes(i.raw_category),
@@ -641,12 +638,12 @@ export default function Radar() {
                         <div
                           key={segment}
                           className={cn(
-                            "border bg-white rounded-xl overflow-hidden shadow-sm transition-all text-left",
+                            "border bg-white rounded-xl overflow-hidden shadow-sm transition-all",
                             selectedInSector > 0 ? "border-indigo-400 ring-1 ring-indigo-100" : "border-slate-200",
                           )}
                         >
                           <div
-                            className="p-2.5 cursor-pointer flex items-center justify-between group text-left"
+                            className="p-2.5 cursor-pointer flex items-center justify-between group"
                             onClick={() =>
                               setExpandedSegments((p) =>
                                 p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -654,8 +651,8 @@ export default function Radar() {
                             }
                           >
                             <div className="flex flex-col text-left">
-                              <div className="flex items-center gap-2 text-left">
-                                <span className="text-[10px] font-black text-slate-700 uppercase leading-none text-left">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-slate-700 uppercase leading-none">
                                   {segment}
                                 </span>
                                 {allSelected ? (
@@ -668,7 +665,7 @@ export default function Radar() {
                                   )
                                 )}
                               </div>
-                              <span className="text-[8px] font-bold text-slate-400 uppercase mt-1 text-left">
+                              <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">
                                 {data.totalJobs} Postagens
                               </span>
                             </div>
@@ -688,7 +685,7 @@ export default function Radar() {
                             </Button>
                           </div>
                           {expandedSegments.includes(segment) && (
-                            <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1 text-left">
+                            <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1">
                               {data.items.map((cat) => (
                                 <button
                                   key={cat.raw_category}
@@ -725,10 +722,10 @@ export default function Radar() {
         <div className="lg:col-span-6 space-y-4 text-left">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4 text-left">
             <div className="text-left">
-              <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-3 text-left">
+              <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-3">
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 text-left">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
                 Real-time database sync protocol
               </p>
             </div>
@@ -739,7 +736,6 @@ export default function Radar() {
               <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 shadow-lg">{matchCount} Matches</Badge>
             </div>
           </div>
-
           {matchedJobs.length > 0 && (
             <Button
               onClick={handleSendAll}
@@ -749,7 +745,6 @@ export default function Radar() {
               <Zap className="h-5 w-5 fill-white" /> ENVIAR TODOS PARA A FILA ({matchCount})
             </Button>
           )}
-
           <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[75vh] pr-2 custom-scrollbar text-left">
             {matchedJobs.length > 0 ? (
               matchedJobs.map((match) => {
@@ -776,14 +771,14 @@ export default function Radar() {
                               <Layers className="h-2.5 w-2.5" /> GRUPO {job.randomization_group}
                             </Badge>
                           )}
-                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 border-l border-slate-100 pl-2 font-mono text-left">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 border-l border-slate-100 pl-2 font-mono">
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight text-left">
+                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
                           {job.category}
                         </h3>
-                        <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-50/50 text-left">
+                        <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-50/50">
                           <Building2 className="h-3.5 w-3.5 text-slate-400" />
                           <p className="text-[11px] font-black text-indigo-900 uppercase italic leading-none">
                             {job.company || "Empresa"}
@@ -802,7 +797,7 @@ export default function Radar() {
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full active:translate-y-0.5 border-b-2 border-emerald-900 uppercase tracking-widest"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full active:translate-y-0.5 border-b-2 border-emerald-900 uppercase"
                         >
                           ENVIAR
                         </Button>
@@ -812,13 +807,13 @@ export default function Radar() {
                           onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
                           className="text-[9px] font-black h-8 w-full border-slate-300 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2 uppercase tracking-widest"
                         >
-                          VER HUB
+                          HUB
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 transition-colors"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -832,7 +827,7 @@ export default function Radar() {
                 <Radio className="h-14 w-14 text-slate-200 animate-pulse" />
                 <div className="space-y-1 text-center">
                   <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Aguardando Sinais...</p>
-                  <p className="text-[10px] text-slate-400 text-center">Ative o Radar para recalibrar a varredura.</p>
+                  <p className="text-[10px] text-slate-400">Ative o Radar para recalibrar a varredura.</p>
                 </div>
               </div>
             )}
