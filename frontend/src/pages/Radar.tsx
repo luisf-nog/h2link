@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import {
+  ChevronDown,
+  ChevronRight,
   Radar as RadarIcon,
   Zap,
   ShieldCheck,
@@ -19,11 +21,9 @@ import {
   Save,
   Target,
   TrendingUp,
-  MapPin,
   History,
   Lock,
   Rocket,
-  SearchCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,10 +88,11 @@ export default function Radar() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
-  const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
+  const [groupedCategories, setGroupedCategories] = useState<Record<string, any[]>>({});
+  const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
-  // Form states
+  // States do Formulário
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -100,16 +101,21 @@ export default function Radar() {
   const [visaType, setVisaType] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
 
-  const planTier = profile?.plan_tier || "free";
-  const isPremium = planTier === "diamond" || planTier === "black";
+  const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        // Puxa as categorias já normalizadas pelo SQL
         const { data: catData }: any = await supabase.rpc("get_category_stats_cached" as any);
-        if (catData) setCategories(catData.map((c: any) => ({ name: c.category_name, count: parseInt(c.job_count) })));
+        if (catData) {
+          const grouped = catData.reduce((acc: any, curr: any) => {
+            if (!acc[curr.segment_name]) acc[curr.segment_name] = [];
+            acc[curr.segment_name].push(curr);
+            return acc;
+          }, {});
+          setGroupedCategories(grouped);
+        }
 
         if (profile?.id) {
           const { data: prof } = await supabase
@@ -140,10 +146,27 @@ export default function Radar() {
     loadData();
   }, [profile?.id]);
 
+  const toggleSegment = (segment: string) => {
+    setExpandedSegments((prev) => (prev.includes(segment) ? prev.filter((s) => s !== segment) : [...prev, segment]));
+  };
+
+  const handleSelectCategory = (catName: string) => {
+    setSelectedCategories((prev) => (prev.includes(catName) ? prev.filter((c) => c !== catName) : [...prev, catName]));
+  };
+
+  const selectFullSegment = (segment: string) => {
+    const subCats = groupedCategories[segment].map((c) => c.raw_category);
+    const allSelected = subCats.every((c) => selectedCategories.includes(c));
+    if (allSelected) {
+      setSelectedCategories((prev) => prev.filter((c) => !subCats.includes(c)));
+    } else {
+      setSelectedCategories((prev) => [...new Set([...prev, ...subCats])]);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile?.id) return;
     setSaving(true);
-
     const payload = {
       user_id: profile.id,
       is_active: isActive,
@@ -154,142 +177,81 @@ export default function Radar() {
       visa_type: visaType === "all" ? null : visaType,
       state: stateFilter === "all" ? null : stateFilter,
     };
-
     const { error } = radarProfile
       ? await supabase.from("radar_profiles").update(payload).eq("user_id", profile.id)
       : await supabase.from("radar_profiles").insert(payload);
 
     if (!error) {
       toast({
-        title: "Bot Ativado!",
-        description: "Iniciando varredura instantânea por vagas compatíveis...",
-        className: "bg-emerald-600 text-white border-none shadow-2xl",
+        title: "Radar Armado!",
+        description: "Iniciando varredura instantânea...",
+        className: "bg-indigo-600 text-white",
       });
       setRadarProfile(payload);
-
-      // TRIGGER INSTANTÂNEO: Simulamos ou chamamos o radar agora
-      setTimeout(() => {
-        // Aqui você poderia chamar uma Edge Function do radar só para este usuário
-        setMatchCount((prev) => prev + Math.floor(Math.random() * 5)); // Efeito visual imediato
-      }, 2000);
     }
     setSaving(false);
   };
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories((p) => (p.includes(cat) ? p.filter((c) => c !== cat) : [...p, cat]));
-  };
-
-  if (!isPremium) {
+  if (!isPremium)
     return (
-      <div className="flex flex-col items-center justify-center min-h-[75vh] text-center px-6 gap-6">
-        <div className="p-8 bg-white rounded-[3rem] shadow-2xl border border-slate-100 relative">
-          <RadarIcon className="h-24 w-24 text-indigo-600 animate-pulse" />
-          <Lock className="absolute bottom-6 right-6 h-8 w-8 text-amber-500 bg-white rounded-full p-1 shadow-md" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-4xl font-black tracking-tighter uppercase italic">Radar H2 Pro</h1>
-          <p className="text-slate-500 max-w-sm font-medium">
-            Automatize suas aplicações. Deixe nosso bot caçar e enviar e-mails por você 24/7.
-          </p>
-        </div>
-        <Button
-          onClick={() => navigate("/plans")}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black h-14 px-12 rounded-2xl shadow-xl text-lg group"
-        >
-          <Rocket className="mr-2 h-6 w-6 group-hover:-translate-y-1 transition-transform" />
-          DESBLOQUEAR INTELIGÊNCIA
-        </Button>
+      <div className="p-20 text-center">
+        <h1>Conteúdo Exclusivo Premium</h1>
+        <Button onClick={() => navigate("/plans")}>Ver Planos</Button>
       </div>
     );
-  }
-
   if (loading)
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600/30" />
+      <div className="p-20 text-center text-indigo-600">
+        <Loader2 className="animate-spin h-10 w-10 mx-auto" />
       </div>
     );
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-24 px-4 sm:px-6 text-left">
-      {/* STATUS & HEADER */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-6 rounded-3xl border shadow-xl shadow-indigo-100/20">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 px-4">
+      {/* HEADER */}
+      <div className="bg-white p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-4">
-          <div
-            className={cn(
-              "p-4 rounded-2xl shadow-inner",
-              isActive ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400",
-            )}
-          >
-            <RadarIcon className={cn("h-8 w-8", isActive && "animate-[spin_4s_linear_infinite]")} />
+          <div className={cn("p-3 rounded-2xl", isActive ? "bg-emerald-500 text-white" : "bg-slate-100")}>
+            <RadarIcon />
           </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase italic">Radar System</h1>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn("h-2 w-2 rounded-full", isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-300")}
-              />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {isActive ? "Monitorando Base Global" : "Sistema em Standby"}
-              </span>
-            </div>
+          <div className="text-left">
+            <h1 className="text-2xl font-black uppercase italic">Radar Inteligente</h1>
+            <p className="text-xs font-bold text-slate-400">STATUS: {isActive ? "MONITORANDO" : "OFFLINE"}</p>
           </div>
         </div>
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 font-black h-14 px-10 rounded-2xl shadow-lg transition-all active:scale-95"
+          className="h-14 px-10 bg-indigo-600 font-bold rounded-2xl w-full md:w-auto"
         >
-          {saving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
-          ARMAR BOT AGORA
+          {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} SALVAR CONFIGURAÇÃO
         </Button>
       </div>
 
-      {/* DASHBOARD RÁPIDO */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-indigo-600 p-5 rounded-3xl text-white shadow-lg">
-          <Target className="h-5 w-5 mb-1 opacity-60" />
-          <p className="text-3xl font-black">{matchCount}</p>
-          <p className="text-[10px] font-bold uppercase opacity-80">Matches</p>
-        </div>
-        <div className="bg-white p-5 rounded-3xl border shadow-sm">
-          <Zap className={cn("h-5 w-5 mb-1", autoSend ? "text-emerald-500" : "text-slate-300")} />
-          <p className="text-3xl font-black text-slate-900">{autoSend ? "ON" : "OFF"}</p>
-          <p className="text-[10px] font-bold text-slate-500 uppercase">Auto-Envio</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* PARÂMETROS DO BOT */}
-        <div className="lg:col-span-5 space-y-6">
-          <Card className="border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
-            <CardHeader className="bg-slate-50/50 border-b py-4">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-[0.2em] flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" /> Parâmetros de Busca
-              </CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* PARÂMETROS ESQUERDA */}
+        <div className="lg:col-span-4 space-y-4">
+          <Card className="rounded-3xl shadow-sm border-slate-200">
+            <CardHeader className="bg-slate-50 border-b py-3">
+              <CardTitle className="text-xs uppercase font-black text-slate-500">Parâmetros do Bot</CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <Label className="text-xs font-bold">Radar Online</Label>
-                  <Switch checked={isActive} onCheckedChange={setIsActive} />
-                </div>
-                <div className="space-y-2 p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100">
-                  <Label className="text-xs font-bold text-indigo-700">Auto-Enviar</Label>
-                  <Switch checked={autoSend} onCheckedChange={setAutoSend} />
-                </div>
+            <CardContent className="p-5 space-y-6">
+              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                <Label className="text-sm font-bold">Ativar Radar</Label>
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
               </div>
-
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Visto</Label>
+              <div className="flex justify-between items-center p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl">
+                <Label className="text-sm font-bold text-indigo-700">Auto-Enviar</Label>
+                <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+              </div>
+              <div className="space-y-4 text-left">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="h-12 rounded-2xl">
+                    <SelectTrigger className="rounded-xl h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Qualquer Visto</SelectItem>
                       {VISA_TYPE_OPTIONS.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
@@ -298,14 +260,14 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado (EUA)</Label>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Estado</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="h-12 rounded-2xl">
+                    <SelectTrigger className="rounded-xl h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos os Estados</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -314,23 +276,23 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Salário Min ($/h)</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Salário Min</Label>
                     <Input
                       type="number"
                       value={minWage}
                       onChange={(e) => setMinWage(e.target.value)}
-                      className="h-12 rounded-2xl font-bold"
+                      className="rounded-xl h-11"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Exp. Max (mês)</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exp Max (meses)</Label>
                     <Input
                       type="number"
                       value={maxExperience}
                       onChange={(e) => setMaxExperience(e.target.value)}
-                      className="h-12 rounded-2xl font-bold"
+                      className="rounded-xl h-11"
                     />
                   </div>
                 </div>
@@ -339,62 +301,81 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* SEGMENTOS NORMALIZADOS */}
-        <div className="lg:col-span-7">
-          <Card className="border-slate-200 rounded-[2rem] shadow-sm h-full">
-            <CardHeader className="bg-slate-50/50 border-b flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">
-                Segmentos Monitorados
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedCategories([])}
-                className="text-[10px] font-bold text-indigo-600"
-              >
-                LIMPAR
-              </Button>
+        {/* CATEGORIAS DIREITA - AGRUPADO POR SEGMENTO */}
+        <div className="lg:col-span-8">
+          <Card className="rounded-3xl shadow-sm border-slate-200 h-full">
+            <CardHeader className="bg-slate-50 border-b py-3 flex flex-row justify-between items-center">
+              <CardTitle className="text-xs uppercase font-black text-slate-500">Segmentos e Especialidades</CardTitle>
+              <Badge variant="outline" className="text-[10px] font-bold">
+                {selectedCategories.length} selecionadas
+              </Badge>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.name}
-                    onClick={() => toggleCategory(cat.name)}
-                    className={cn(
-                      "flex items-center justify-between px-4 py-3 rounded-2xl border text-sm font-bold transition-all active:scale-95",
-                      selectedCategories.includes(cat.name)
-                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
-                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50",
-                    )}
-                  >
-                    <span translate="no">{cat.name}</span>
-                    <Badge
-                      variant="secondary"
+            <CardContent className="p-4 space-y-2">
+              {Object.entries(groupedCategories).map(([segment, items]) => {
+                const isExpanded = expandedSegments.includes(segment);
+                const selectedInSegment = items.filter((i) => selectedCategories.includes(i.raw_category)).length;
+                const totalInSegment = items.reduce((acc, curr) => acc + curr.job_count, 0);
+
+                return (
+                  <div key={segment} className="border rounded-2xl overflow-hidden transition-all duration-200">
+                    <div
                       className={cn(
-                        "text-[10px] border-none",
-                        selectedCategories.includes(cat.name)
-                          ? "bg-white/20 text-white"
-                          : "bg-indigo-50 text-indigo-600",
+                        "flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50",
+                        isExpanded && "bg-slate-50 border-b",
                       )}
                     >
-                      {cat.count}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
+                      <div className="flex items-center gap-3 flex-1" onClick={() => toggleSegment(segment)}>
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        )}
+                        <div className="text-left">
+                          <p className="text-sm font-black text-slate-800">{segment}</p>
+                          <p className="text-[10px] text-indigo-600 font-bold">{totalInSegment} vagas ativas</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant={selectedInSegment === items.length ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => selectFullSegment(segment)}
+                        className="text-[10px] h-7 font-bold"
+                      >
+                        {selectedInSegment === items.length ? "REMOVER TUDO" : `SELECIONAR ${items.length}`}
+                      </Button>
+                    </div>
 
-              <div className="mt-8 p-5 bg-indigo-50/50 rounded-3xl border border-dashed border-indigo-200 flex gap-4 items-center">
-                <SearchCheck className="h-6 w-6 text-indigo-600 shrink-0" />
-                <div className="text-left">
-                  <p className="text-[11px] text-indigo-900 font-black uppercase">Como o bot decide o match?</p>
-                  <p className="text-[10px] text-indigo-800 leading-tight">
-                    O sistema agrupa as {categories.reduce((a, b) => a + b.count, 0)} vagas do banco em segmentos
-                    mestres. Ele ignora exigências de experiência superiores ao seu limite e prioriza estados
-                    selecionados.
-                  </p>
-                </div>
-              </div>
+                    {isExpanded && (
+                      <div className="p-4 bg-white grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {items.map((cat) => (
+                          <div
+                            key={cat.raw_category}
+                            onClick={() => handleSelectCategory(cat.raw_category)}
+                            className={cn(
+                              "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
+                              selectedCategories.includes(cat.raw_category)
+                                ? "bg-indigo-600 border-indigo-600 text-white"
+                                : "bg-white hover:border-indigo-200",
+                            )}
+                          >
+                            <span className="text-xs font-bold text-left" translate="no">
+                              {cat.raw_category}
+                            </span>
+                            <Badge
+                              className={cn(
+                                "text-[9px]",
+                                selectedCategories.includes(cat.raw_category) ? "bg-white/20" : "bg-slate-100",
+                              )}
+                            >
+                              {cat.job_count}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </div>
