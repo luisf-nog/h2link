@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronRight,
   Rocket,
+  SearchCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,7 +103,6 @@ export default function Radar() {
   const planTier = profile?.plan_tier || "free";
   const isPremium = planTier === "diamond" || planTier === "black";
 
-  // Lógica de seleção
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   };
@@ -151,12 +151,12 @@ export default function Radar() {
             setAutoSend(prof.auto_send);
             setSelectedCategories(prof.categories || []);
             setMinWage(prof.min_wage?.toString() || "");
-            setMaxExperience((prof as any).max_experience?.toString() || "");
+            setMaxExperience(prof.max_experience?.toString() || "");
             setVisaType(prof.visa_type || "all");
             setStateFilter(prof.state || "all");
           }
 
-          // 3. Matches
+          // 3. Contagem de Matches
           const { count } = await supabase
             .from("radar_matched_jobs")
             .select("*", { count: "exact", head: true })
@@ -192,7 +192,11 @@ export default function Radar() {
       : await supabase.from("radar_profiles").insert(payload);
 
     if (!error) {
-      toast({ title: "Radar Configurado!", className: "bg-indigo-600 text-white" });
+      toast({
+        title: "Radar Armado!",
+        description: "Buscando vagas compatíveis no Hub...",
+        className: "bg-indigo-600 text-white",
+      });
       setRadarProfile(payload);
     } else {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -226,7 +230,7 @@ export default function Radar() {
     );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24 px-4 sm:px-6">
+    <div className="space-y-6 max-w-6xl mx-auto pb-24 px-4 sm:px-6 text-left">
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-white p-5 rounded-2xl border shadow-sm">
         <div className="flex items-center gap-3">
@@ -283,11 +287,11 @@ export default function Radar() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-5">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <Label className="text-sm font-bold">Ativar Radar</Label>
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <Label className="text-sm font-bold">Auto-Enviar</Label>
                 <Switch checked={autoSend} onCheckedChange={setAutoSend} />
               </div>
@@ -370,7 +374,7 @@ export default function Radar() {
                 onClick={() => setSelectedCategories([])}
                 className="text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"
               >
-                LIMPAR SELEÇÃO
+                LIMPAR
               </Button>
             </CardHeader>
             <CardContent className="p-4 flex-1 space-y-2">
@@ -394,7 +398,9 @@ export default function Radar() {
                           <ChevronRight className="h-4 w-4 text-slate-400" />
                         )}
                         <div className="text-left">
-                          <p className="text-xs font-black text-slate-800">{segment}</p>
+                          <p className="text-xs font-black text-slate-800 uppercase italic tracking-tighter">
+                            {segment}
+                          </p>
                           <p className="text-[9px] text-indigo-600 font-bold uppercase">
                             {totalInSegment} vagas ativas
                           </p>
@@ -403,7 +409,10 @@ export default function Radar() {
                       <Button
                         variant={selectedInSegment === items.length ? "default" : "outline"}
                         size="sm"
-                        onClick={() => selectFullSegment(segment)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectFullSegment(segment);
+                        }}
                         className="text-[9px] h-7 font-bold uppercase"
                       >
                         {selectedInSegment === items.length ? "Remover" : `Add Segmento`}
@@ -442,17 +451,41 @@ export default function Radar() {
                   </div>
                 );
               })}
-
-              <div className="mt-8 p-4 bg-indigo-50/50 rounded-2xl border border-dashed border-indigo-200 flex gap-3 items-center text-left">
-                <TrendingUp className="h-5 w-5 text-indigo-600 shrink-0" />
-                <p className="text-[10px] text-indigo-800 font-medium leading-tight italic">
-                  O Radar agrupa categorias para facilitar a navegação. Se você escolher o segmento todo, o bot monitora
-                  todas as subcategorias vinculadas.
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* RESULTADOS DO RADAR SECTION */}
+      <div className="pt-10 space-y-4">
+        <div className="flex items-center justify-between border-b pb-4">
+          <div className="text-left">
+            <h2 className="text-xl font-black flex items-center gap-2 tracking-tight">
+              <SearchCheck className="h-5 w-5 text-indigo-600" /> Vagas Detectadas
+            </h2>
+            <p className="text-xs text-slate-500 font-bold uppercase">Últimos matches retroativos do Hub</p>
+          </div>
+        </div>
+
+        {matchCount === 0 ? (
+          <div className="py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-3">
+            <RadarIcon className="h-10 w-10 text-slate-300" />
+            <p className="text-sm text-slate-400 font-medium italic">
+              Ative o Radar e salve seus filtros para ver os matches aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardContent className="p-4">
+                <p className="text-[10px] font-black text-indigo-600 uppercase">Match Identificado</p>
+                <p className="text-sm font-bold text-slate-500">
+                  As vagas compatíveis estão sendo processadas na sua fila de envios.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
