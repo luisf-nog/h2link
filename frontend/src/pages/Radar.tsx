@@ -20,6 +20,7 @@ import {
   Target,
   ChevronDown,
   ChevronRight,
+  Rocket,
   Trash2,
   Send,
   MapPin,
@@ -83,6 +84,20 @@ const US_STATES = [
   "WY",
 ];
 
+// Interface para evitar erros de Build
+interface RadarProfile {
+  id: string;
+  user_id: string;
+  is_active: boolean;
+  auto_send: boolean;
+  categories: string[];
+  min_wage: number | null;
+  max_experience: number | null;
+  visa_type: string | null;
+  state: string | null;
+  last_scan_at?: string;
+}
+
 export default function Radar() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -94,9 +109,9 @@ export default function Radar() {
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
   const [groupedCategories, setGroupedCategories] = useState<Record<string, any[]>>({});
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
-  const [radarProfile, setRadarProfile] = useState<any>(null);
+  const [radarProfile, setRadarProfile] = useState<RadarProfile | null>(null);
 
-  // Estados locais do formulário
+  // Estados Locais do Form
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -107,7 +122,7 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // --- DETECÇÃO DE MUDANÇAS ---
+  // --- LÓGICA DE DETECÇÃO DE ALTERAÇÕES ---
   const hasChanges = useMemo(() => {
     if (!radarProfile) return false;
     const dbCats = radarProfile.categories || [];
@@ -124,7 +139,7 @@ export default function Radar() {
     );
   }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, radarProfile]);
 
-  // --- BUSCA DE MATCHES (COM JOIN EXPLÍCITO) ---
+  // --- BUSCA OS MATCHES (COLUNA DIREITA) ---
   const fetchMatches = async () => {
     if (!profile?.id) return;
     try {
@@ -153,6 +168,7 @@ export default function Radar() {
       if (!profile?.id) return;
       try {
         setLoading(true);
+        // Categorias Agrupadas
         const { data: catData } = await supabase.rpc("get_category_stats_cached" as any);
         if (catData) {
           const grouped = catData.reduce((acc: any, curr: any) => {
@@ -163,13 +179,14 @@ export default function Radar() {
           setGroupedCategories(grouped);
         }
 
+        // Perfil
         const { data: prof } = await supabase
           .from("radar_profiles")
           .select("*")
           .eq("user_id", profile.id)
           .maybeSingle();
         if (prof) {
-          setRadarProfile(prof);
+          setRadarProfile(prof as RadarProfile);
           setIsActive(prof.is_active);
           setAutoSend(prof.auto_send);
           setSelectedCategories(prof.categories || []);
@@ -186,7 +203,7 @@ export default function Radar() {
     loadData();
   }, [profile?.id]);
 
-  // --- SALVAMENTO E TRIGGER ---
+  // --- FUNÇÃO DE SALVAMENTO ---
   const performSave = async (overrides = {}) => {
     if (!profile?.id) return;
     setSaving(true);
@@ -210,27 +227,21 @@ export default function Radar() {
 
       if (error) throw error;
 
-      setRadarProfile(payload);
+      setRadarProfile({ ...radarProfile, ...payload } as RadarProfile);
 
       if (payload.is_active) {
-        const { data: triggerCount } = await supabase.rpc("trigger_immediate_radar" as any, {
-          target_user_id: profile.id,
-        });
+        // Gatilho Manual
+        await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
-        toast({ title: "Radar Ativo!", description: `Encontramos ${triggerCount || 0} vagas agora.` });
+        toast({ title: "Radar Armado!", description: "Buscando histórico de vagas compatíveis..." });
       } else {
-        toast({ title: "Configurações Salvas!" });
+        toast({ title: "Radar Atualizado!" });
       }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleToggleActive = (checked: boolean) => {
-    setIsActive(checked);
-    performSave({ is_active: checked });
   };
 
   const selectFullSegment = (segment: string) => {
@@ -246,7 +257,7 @@ export default function Radar() {
       <div className="p-20 text-center">
         <RadarIcon className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
         <Button onClick={() => navigate("/plans")} className="mt-6">
-          Ver Planos Premium
+          Upgrade to Premium
         </Button>
       </div>
     );
@@ -260,7 +271,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* CONFIGURAÇÃO (ESQUERDA) */}
+        {/* ESQUERDA: CONTROLES */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
@@ -274,13 +285,20 @@ export default function Radar() {
                   <RadarIcon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black uppercase italic leading-none">Radar Pro</h1>
+                  <h1 className="text-xl font-black uppercase italic leading-none">Radar H2 Linker</h1>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {isActive ? "Varredura Habilitada" : "Radar Desligado"}
                   </span>
                 </div>
               </div>
-              <Switch checked={isActive} onCheckedChange={handleToggleActive} disabled={saving} />
+              <Switch
+                checked={isActive}
+                onCheckedChange={(val) => {
+                  setIsActive(val);
+                  performSave({ is_active: val });
+                }}
+                disabled={saving}
+              />
             </div>
             {hasChanges && (
               <Button
@@ -303,8 +321,10 @@ export default function Radar() {
             <CardContent className="p-5 space-y-5">
               <div className="flex justify-between items-center p-4 bg-indigo-50/30 rounded-xl border border-indigo-100">
                 <div className="text-left">
-                  <Label className="text-sm font-bold text-indigo-700">Auto-Enviar</Label>
-                  <p className="text-[10px] text-slate-500 italic text-left">Candidatura automática no Match.</p>
+                  <Label className="text-sm font-bold text-indigo-700 flex items-center gap-2">
+                    <Zap className="h-4 w-4" /> Envio Automático
+                  </Label>
+                  <p className="text-[10px] text-slate-500">O robô aplicará no momento do match.</p>
                 </div>
                 <Switch checked={autoSend} onCheckedChange={setAutoSend} />
               </div>
@@ -332,7 +352,7 @@ export default function Radar() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Qualquer</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -342,7 +362,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín ($/h)</Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -351,7 +371,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Exp. Máxima</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase">Sua Exp Max (Meses)</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -364,8 +384,8 @@ export default function Radar() {
           </Card>
 
           <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="p-5 border-b bg-slate-50/30">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Categorias</CardTitle>
+            <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center">
+              <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Áreas Alvo</CardTitle>
             </CardHeader>
             <CardContent className="p-3 space-y-1 max-h-[400px] overflow-y-auto">
               {Object.entries(groupedCategories).map(([segment, items]) => (
@@ -426,29 +446,37 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* FILA DE MATCHES (DIREITA) */}
+        {/* DIREITA: MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
-              <h2 className="text-xl font-black flex items-center gap-2 uppercase italic">
-                <Target className="h-6 w-6 text-indigo-600" /> Fila de Matches
+              <h2 className="text-xl font-black flex items-center gap-2 uppercase italic text-slate-900">
+                <Target className="h-6 w-6 text-indigo-600" /> Matches Detectados
               </h2>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest italic">
-                Vagas compatíveis detectadas agora
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider italic">
+                O robô encontrou {matchCount} vagas para você
               </p>
             </div>
-            <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-              {matchCount} Vagas
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
+                <RefreshCcw className="h-4 w-4" />
+              </Button>
+              <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
+                {matchCount} Vagas
+              </Badge>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[85vh] pr-2">
+          <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
             {matchedJobs.length > 0 ? (
               matchedJobs.map((match) => {
                 const job = match.public_jobs;
                 if (!job) return null;
                 return (
-                  <Card key={match.id} className="border-slate-200 shadow-sm bg-white overflow-hidden">
+                  <Card
+                    key={match.id}
+                    className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm bg-white overflow-hidden"
+                  >
                     <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
                       <div className="p-4 flex-1 text-left space-y-2">
                         <div className="flex items-center gap-2">
@@ -459,13 +487,13 @@ export default function Radar() {
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase">{job.category}</h3>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">{job.category}</h3>
                         <p className="text-[10px] font-bold text-slate-500 italic truncate">{job.job_title}</p>
                         <div className="flex items-center gap-4 pt-1">
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border">
+                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
                             <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/h
                           </span>
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border">
+                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
                             <Briefcase className="h-3.5 w-3.5 text-indigo-600" /> {job.experience_months || 0}m exp
                           </span>
                         </div>
@@ -500,7 +528,7 @@ export default function Radar() {
               <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed flex flex-col items-center gap-4 text-center">
                 <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
                 <p className="text-sm font-black text-slate-400 uppercase italic">Aguardando Sinais...</p>
-                <p className="text-[10px] text-slate-400">Ative o radar para carregar as vagas compatíveis.</p>
+                <p className="text-[10px] text-slate-400">Ative o radar para povoar sua fila de matches.</p>
               </div>
             )}
           </div>
