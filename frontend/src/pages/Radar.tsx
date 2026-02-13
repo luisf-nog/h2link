@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge"; // Corrigido erro de importação
+import { Badge } from "@/components/ui/badge"; // Importação garantida
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import {
@@ -79,6 +79,19 @@ const US_STATES = [
   "WY",
 ];
 
+interface RadarProfile {
+  id: string;
+  user_id: string;
+  is_active: boolean;
+  auto_send: boolean;
+  categories: string[];
+  min_wage: number | null;
+  max_experience: number | null;
+  visa_type: string | null;
+  state: string | null;
+  last_scan_at: string | null;
+}
+
 export default function Radar() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -102,7 +115,6 @@ export default function Radar() {
   const planTier = profile?.plan_tier || "free";
   const isPremium = planTier === "diamond" || planTier === "black";
 
-  // Função interna para gerenciar categorias (Corrigido erro TS2304)
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   };
@@ -112,13 +124,18 @@ export default function Radar() {
       try {
         setLoading(true);
 
-        // 1. Busca Categorias do Cache (Usando as any para evitar erro TS2345)
+        // 1. Busca Categorias do Cache via RPC
         const { data: catData }: any = await supabase.rpc("get_category_stats_cached" as any);
         if (catData && Array.isArray(catData)) {
-          setCategories(catData.map((c: any) => ({ name: c.category_name, count: parseInt(c.job_count) })));
+          setCategories(
+            catData.map((c: any) => ({
+              name: c.category_name,
+              count: parseInt(c.job_count),
+            })),
+          );
         }
 
-        // 2. Busca Perfil
+        // 2. Busca Perfil do Usuário
         if (profile?.id) {
           const { data: prof }: any = await supabase
             .from("radar_profiles")
@@ -132,13 +149,12 @@ export default function Radar() {
             setAutoSend(prof.auto_send);
             setSelectedCategories(prof.categories || []);
             setMinWage(prof.min_wage?.toString() || "");
-            // Usando cast para acessar max_experience com segurança (Corrigido erro TS2339)
-            const exp = (prof as any).max_experience;
-            setMaxExperience(exp?.toString() || "");
+            setMaxExperience(prof.max_experience?.toString() || "");
             setVisaType(prof.visa_type || "all");
             setStateFilter(prof.state || "all");
           }
 
+          // 3. Contagem de Matches
           const { count } = await supabase
             .from("radar_matched_jobs")
             .select("*", { count: "exact", head: true })
@@ -209,6 +225,7 @@ export default function Radar() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-24 px-4 sm:px-6">
+      {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-white p-5 rounded-2xl border shadow-sm">
         <div className="flex items-center gap-3">
           <div
@@ -236,6 +253,7 @@ export default function Radar() {
         </Button>
       </div>
 
+      {/* STATS ROW */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border-none shadow-sm bg-indigo-600 text-white">
           <CardContent className="p-4 text-left">
@@ -247,13 +265,14 @@ export default function Radar() {
         <Card className="border-none shadow-sm bg-white">
           <CardContent className="p-4 text-left">
             <Zap className={cn("h-4 w-4 mb-1", autoSend ? "text-emerald-500" : "text-slate-300")} />
-            <p className="text-2xl font-black text-slate-900">{autoSend ? "Ativo" : "Off"}</p>
+            <p className="text-2xl font-black text-slate-900">{autoSend ? "Auto" : "Off"}</p>
             <p className="text-[9px] font-bold text-slate-500 uppercase">Auto-Envio</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* FILTERS PANEL */}
         <div className="lg:col-span-4 space-y-4">
           <Card className="border-slate-200 rounded-2xl shadow-sm">
             <CardHeader className="p-5 border-b bg-slate-50/50 text-left">
@@ -275,7 +294,7 @@ export default function Radar() {
                 <div className="space-y-1.5 text-left">
                   <Label className="text-[10px] font-black text-slate-400 uppercase">Tipo de Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="h-11 rounded-xl font-medium">
+                    <SelectTrigger className="h-11 rounded-xl font-medium text-left">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -291,7 +310,7 @@ export default function Radar() {
                 <div className="space-y-1.5 text-left">
                   <Label className="text-[10px] font-black text-slate-400 uppercase">Estado (EUA)</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="h-11 rounded-xl font-medium">
+                    <SelectTrigger className="h-11 rounded-xl font-medium text-left">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -331,15 +350,16 @@ export default function Radar() {
           </Card>
         </div>
 
+        {/* CATEGORIES PANEL */}
         <div className="lg:col-span-8">
-          <Card className="border-slate-200 rounded-2xl shadow-sm h-full">
+          <Card className="border-slate-200 rounded-2xl shadow-sm h-full flex flex-col">
             <CardHeader className="p-5 border-b flex flex-row items-center justify-between">
               <div className="text-left">
                 <CardTitle className="text-sm font-black uppercase text-slate-500 tracking-widest">
                   Segmentos de Interesse
                 </CardTitle>
                 <CardDescription className="text-[10px]">
-                  As candidaturas serão focadas nos itens abaixo.
+                  Toque para selecionar as categorias desejadas.
                 </CardDescription>
               </div>
               <Button
@@ -351,33 +371,40 @@ export default function Radar() {
                 LIMPAR
               </Button>
             </CardHeader>
-            <CardContent className="p-5">
+            <CardContent className="p-5 flex-1">
               <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.name}
-                    onClick={() => toggleCategory(cat.name)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all active:scale-95",
-                      selectedCategories.includes(cat.name)
-                        ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50/50",
-                    )}
-                  >
-                    <span translate="no">{cat.name}</span>
-                    <Badge
-                      variant="secondary"
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <button
+                      key={cat.name}
+                      onClick={() => toggleCategory(cat.name)}
                       className={cn(
-                        "text-[9px] px-1 h-4",
+                        "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all active:scale-95",
                         selectedCategories.includes(cat.name)
-                          ? "bg-white/20 text-white border-none"
-                          : "bg-slate-100 text-slate-500",
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50/50",
                       )}
                     >
-                      {cat.count}
-                    </Badge>
-                  </button>
-                ))}
+                      <span translate="no">{cat.name}</span>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[9px] px-1 h-4 border-none",
+                          selectedCategories.includes(cat.name)
+                            ? "bg-white/20 text-white"
+                            : "bg-slate-100 text-slate-500",
+                        )}
+                      >
+                        {cat.count}
+                      </Badge>
+                    </button>
+                  ))
+                ) : (
+                  <div className="w-full py-12 flex items-center justify-center gap-2 text-slate-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-xs font-medium">Buscando categorias...</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-8 p-4 bg-indigo-50/50 rounded-2xl border border-dashed border-indigo-200 flex gap-3 items-center text-left">
