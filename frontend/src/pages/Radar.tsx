@@ -29,15 +29,13 @@ import {
   Building2,
   RefreshCcw,
   Eye,
-  Cpu,
-  Database,
   Activity,
   LayoutGrid,
   Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO LÓGICO (VINCULADO AO SEU CSV) ---
+// --- MAPEAMENTO LÓGICO PARA CONTADOR (VINCULADO AO SEU CSV) ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
   "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural"],
   "Maquinário Agrícola": ["Equipment Operators", "Tractor", "Agricultural Equipment"],
@@ -127,6 +125,7 @@ export default function Radar() {
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
+  // Estados dos Filtros
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -136,6 +135,22 @@ export default function Radar() {
   const [stateFilter, setStateFilter] = useState("all");
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
+
+  // LOGICA DE MUDANÇAS (CORREÇÃO DO ERRO)
+  const hasChanges = useMemo(() => {
+    if (!radarProfile) return false;
+    const dbCats = radarProfile.categories || [];
+    const catsChanged = JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...dbCats].sort());
+    return (
+      isActive !== (radarProfile.is_active ?? false) ||
+      autoSend !== (radarProfile.auto_send ?? false) ||
+      catsChanged ||
+      minWage !== (radarProfile.min_wage?.toString() || "") ||
+      maxExperience !== (radarProfile.max_experience?.toString() || "") ||
+      visaType !== (radarProfile.visa_type || "all") ||
+      stateFilter !== (radarProfile.state || "all")
+    );
+  }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, radarProfile]);
 
   const fetchMatches = async () => {
     if (!profile?.id) return;
@@ -158,7 +173,7 @@ export default function Radar() {
         if (catData) {
           const grouped = (catData as any[]).reduce((acc: any, curr: any) => {
             const raw = curr.raw_category || "";
-            let segment = "Serviços Gerais";
+            let segment = "Outros Serviços Gerais";
             for (const [sector, keywords] of Object.entries(SECTOR_KEYWORDS)) {
               if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
                 segment = sector;
@@ -224,7 +239,7 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Synced", className: "bg-indigo-600 text-white" });
+      toast({ title: "Radar Sincronizado", className: "bg-indigo-600 text-white" });
     }
     setSaving(false);
   };
@@ -238,9 +253,9 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Signal Captured!", className: "bg-indigo-600 text-white" });
+      toast({ title: "Vaga Enviada!", className: "bg-emerald-600 text-white" });
     } catch (err) {
-      toast({ title: "Routing Fail", variant: "destructive" });
+      toast({ title: "Erro no roteamento", variant: "destructive" });
     }
   };
 
@@ -264,7 +279,7 @@ export default function Radar() {
       <div className="p-20 text-center">
         <Radio className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
         <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600">
-          Activate Radar Signal
+          Ativar Tecnologia Radar
         </Button>
       </div>
     );
@@ -278,9 +293,8 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUNA ESQUERDA: RADAR INTERFACE */}
+        {/* LADO ESQUERDO: CONFIGURAÇÕES */}
         <div className="lg:col-span-6 space-y-6">
-          {/* CONTROL PANEL HEADER */}
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -302,13 +316,13 @@ export default function Radar() {
                     {isActive ? (
                       <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
                           LIVE TRACKING
                         </span>
                       </div>
                     ) : (
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                        SYSTEM OFFLINE
+                        SISTEMA OFFLINE
                       </span>
                     )}
                   </div>
@@ -335,11 +349,10 @@ export default function Radar() {
             )}
           </div>
 
-          {/* AUTOMATION FILTERS */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência e Filtros
+                <ShieldCheck className="h-4 w-4 text-indigo-600" /> Inteligência do Robô
               </CardTitle>
               <div className="flex items-center gap-3 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
                 <Label className="text-[10px] font-black text-indigo-700 cursor-pointer uppercase">Auto-Enviar</Label>
@@ -405,16 +418,14 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          {/* SECTOR GRID (2 COLUMNS) */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <LayoutGrid className="h-4 w-4 text-indigo-600" /> 20 Divisões de Trabalho
+                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 bg-slate-50/20">
               <div className="grid grid-cols-2 gap-4">
-                {/* LADO A */}
                 <div className="space-y-2">
                   {leftSectors.map(([segment, data]) => (
                     <div
@@ -470,7 +481,6 @@ export default function Radar() {
                     </div>
                   ))}
                 </div>
-                {/* LADO B */}
                 <div className="space-y-2">
                   {rightSectors.map(([segment, data]) => (
                     <div
@@ -531,7 +541,7 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: LIVE MATCHES */}
+        {/* LADO DIREITO: MATCHES */}
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4 text-left">
             <div>
@@ -539,7 +549,7 @@ export default function Radar() {
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Sincronização em tempo real h2-linker protocol
+                Sincronização Database h2-linker
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -547,7 +557,7 @@ export default function Radar() {
                 <RefreshCcw className="h-4 w-4" />
               </Button>
               <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-                {matchCount} Vagas
+                {matchCount} Matches
               </Badge>
             </div>
           </div>
@@ -569,10 +579,10 @@ export default function Radar() {
                             {job.visa_type}
                           </Badge>
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono border-l border-slate-100 pl-2">
-                            <MapPin className="h-3 w-3 text-slate-400" /> {job.state}
+                            <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                           <span className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1 border-l border-slate-100 pl-2">
-                            <Users className="h-3 w-3 text-indigo-400" /> {job.openings || 1} Vagas
+                            <Users className="h-3 w-3" /> {job.openings || 1} Vagas
                           </span>
                         </div>
                         <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
@@ -597,7 +607,7 @@ export default function Radar() {
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95 border-b-2 border-indigo-900"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95 border-b-2 border-emerald-900"
                         >
                           <Send className="h-3.5 w-3.5 mr-1.5" /> ENVIAR
                         </Button>
@@ -627,7 +637,7 @@ export default function Radar() {
                 <Radio className="h-14 w-14 text-slate-200 animate-pulse" />
                 <div className="space-y-1">
                   <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Aguardando Sinais...</p>
-                  <p className="text-[10px] text-slate-400">Ative o Radar para iniciar a varredura global.</p>
+                  <p className="text-[10px] text-slate-400">Ative o Radar para capturar novas oportunidades.</p>
                 </div>
               </div>
             )}
