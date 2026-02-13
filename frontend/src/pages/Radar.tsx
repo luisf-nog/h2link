@@ -29,6 +29,7 @@ import {
   Building2,
   RefreshCcw,
   Eye,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -138,9 +139,6 @@ export default function Radar() {
   const fetchMatches = async () => {
     if (!profile?.id) return;
     try {
-      // Forçamos a chamada do trigger antes de buscar para limpar os "fantasmas"
-      await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
-
       const { data, error } = await supabase
         .from("radar_matched_jobs" as any)
         .select(
@@ -148,15 +146,7 @@ export default function Radar() {
           id, 
           job_id, 
           public_jobs!fk_radar_job (
-            id,
-            job_title,
-            category,
-            state,
-            salary,
-            visa_type,
-            experience_months,
-            company,
-            openings
+            id, job_title, category, state, salary, visa_type, experience_months, company, openings
           )
         `,
         )
@@ -233,12 +223,10 @@ export default function Radar() {
 
       if (error) throw error;
       setRadarProfile({ ...radarProfile, ...payload });
-
       if (payload.is_active) {
+        await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
-        toast({ title: "Radar Sincronizado!" });
-      } else {
-        toast({ title: "Configurações Salvas!" });
+        toast({ title: "Radar Armado!" });
       }
     } catch (err) {
       toast({ title: "Erro ao salvar", variant: "destructive" });
@@ -254,17 +242,13 @@ export default function Radar() {
         .insert([{ user_id: profile?.id, job_id: jobId, status: "pending" }]);
 
       if (sendError) throw sendError;
-
-      // Deletamos do match para sumir da tela
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
         .eq("id", matchId);
-
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-
-      toast({ title: "Enviado com Sucesso!", className: "bg-emerald-600 text-white" });
+      toast({ title: "Enviado!", className: "bg-emerald-600 text-white shadow-lg" });
     } catch (err: any) {
       toast({ title: "Erro no envio", variant: "destructive" });
     }
@@ -308,14 +292,14 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* CONFIG */}
+        {/* COLUNA ESQUERDA: CONFIG */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "p-3 rounded-2xl",
+                    "p-3 rounded-2xl transition-all",
                     isActive ? "bg-emerald-500 text-white shadow-lg animate-pulse" : "bg-slate-100 text-slate-400",
                   )}
                 >
@@ -324,7 +308,7 @@ export default function Radar() {
                 <div>
                   <h1 className="text-xl font-black uppercase italic leading-none text-slate-900">Radar H2 Linker</h1>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {isActive ? "Varredura Ativa" : "Sistema Offline"}
+                    {isActive ? "Monitoramento Ativo" : "Sistema Offline"}
                   </span>
                 </div>
               </div>
@@ -341,7 +325,7 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-md"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl transition-all active:scale-95 shadow-md"
               >
                 <Save className="h-4 w-4 mr-2" /> APLICAR ALTERAÇÕES
               </Button>
@@ -385,7 +369,7 @@ export default function Radar() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="all">Todos os Estados</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -415,13 +399,85 @@ export default function Radar() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center">
+              <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2 italic">
+                <LayoutGrid className="h-4 w-4" /> Segmentos de Atuação
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar bg-slate-50/20">
+              {Object.entries(groupedCategories).map(([segment, items]) => {
+                const isExpanded = expandedSegments.includes(segment);
+                const subCats = items.map((c) => c.raw_category);
+                const allSelected = subCats.every((c) => selectedCategories.includes(c));
+                return (
+                  <div key={segment} className="border bg-white rounded-xl overflow-hidden shadow-sm">
+                    <div
+                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                      onClick={() =>
+                        setExpandedSegments((p) =>
+                          p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
+                        )
+                      }
+                    >
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-indigo-600" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        )}
+                        <span className="text-[11px] font-black text-slate-700 uppercase italic">{segment}</span>
+                      </div>
+                      <Button
+                        variant={allSelected ? "default" : "outline"}
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectFullSegment(segment);
+                        }}
+                        className="h-6 text-[8px] font-black px-2 rounded-lg"
+                      >
+                        {allSelected ? "REMOVER TUDO" : "ADD TUDO"}
+                      </Button>
+                    </div>
+                    {isExpanded && (
+                      <div className="p-3 bg-slate-50/50 border-t grid grid-cols-2 gap-2">
+                        {items.map((cat) => (
+                          <button
+                            key={cat.raw_category}
+                            onClick={() =>
+                              setSelectedCategories((p) =>
+                                p.includes(cat.raw_category)
+                                  ? p.filter((c) => c !== cat.raw_category)
+                                  : [...p, cat.raw_category],
+                              )
+                            }
+                            className={cn(
+                              "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all",
+                              selectedCategories.includes(cat.raw_category)
+                                ? "bg-indigo-600 border-indigo-600 text-white shadow-md scale-[1.02]"
+                                : "bg-white text-slate-600 hover:border-indigo-300 hover:shadow-sm",
+                            )}
+                          >
+                            {cat.raw_category}
+                            <div className="text-[8px] opacity-60 mt-0.5">{cat.count || 0} vagas</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* MATCHES */}
+        {/* COLUNA DIREITA: MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
-              <h2 className="text-xl font-black flex items-center gap-2 uppercase italic text-slate-900">
+              <h2 className="text-xl font-black uppercase italic text-slate-900">
                 <Target className="h-6 w-6 text-indigo-600 inline mr-2" /> Fila de Matches
               </h2>
             </div>
@@ -440,7 +496,6 @@ export default function Radar() {
               matchedJobs.map((match) => {
                 const job = match.public_jobs;
                 if (!job) return null;
-
                 return (
                   <Card
                     key={match.id}
@@ -449,7 +504,7 @@ export default function Radar() {
                     <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
                       <div className="p-4 flex-1 text-left space-y-2">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black px-2">
+                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black">
                             {job.visa_type}
                           </Badge>
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono">
@@ -482,8 +537,8 @@ export default function Radar() {
                       </div>
                       <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-100 min-w-[150px]">
                         <Button
-                          size="sm"
                           onClick={() => handleSendApplication(match.id, job.id)}
+                          size="sm"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95"
                         >
                           <Send className="h-3 w-3 mr-1" /> ENVIAR
@@ -494,13 +549,13 @@ export default function Radar() {
                           onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
                           className="text-[9px] font-black h-8 w-full border-slate-300 hover:bg-white flex items-center gap-2"
                         >
-                          <Eye className="h-3 w-3" /> VER HUB
+                          <Eye className="h-3 w-3" /> VER NO HUB
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-9 w-9 p-0 text-slate-300 hover:text-red-600 transition-colors"
+                          className="h-8 w-8 p-0 text-slate-300 hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -512,7 +567,7 @@ export default function Radar() {
             ) : (
               <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
                 <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
-                <p className="text-sm font-black text-slate-400 uppercase italic">Nada novo por aqui.</p>
+                <p className="text-sm font-black text-slate-400 uppercase italic">Tudo limpo por aqui!</p>
               </div>
             )}
           </div>
