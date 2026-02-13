@@ -20,7 +20,6 @@ import {
   Target,
   ChevronDown,
   ChevronRight,
-  Rocket,
   Trash2,
   Send,
   MapPin,
@@ -109,7 +108,6 @@ export default function Radar() {
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<RadarProfile | null>(null);
 
-  // Form states
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -221,8 +219,8 @@ export default function Radar() {
 
   const handleSendApplication = async (matchId: string, jobId: string) => {
     try {
-      // 1. Inserir na tabela sent_jobs usando cast de string literal para evitar erro de cache de schema
-      const { error: sendError } = await supabase.from("sent_jobs" as any).insert([
+      // USANDO A TABELA CORRETA: my_queue
+      const { error: sendError } = await supabase.from("my_queue" as any).insert([
         {
           user_id: profile?.id,
           job_id: jobId,
@@ -232,7 +230,7 @@ export default function Radar() {
 
       if (sendError) throw sendError;
 
-      // 2. Remover da fila de matches
+      // Remove do Radar
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
@@ -240,14 +238,14 @@ export default function Radar() {
 
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => prev - 1);
-      toast({ title: "Sucesso!", description: "Vaga enviada para a fila principal." });
+      toast({
+        title: "Enviado!",
+        description: "Vaga adicionada à sua My Queue.",
+        className: "bg-emerald-600 text-white",
+      });
     } catch (err: any) {
       console.error("Erro no envio:", err);
-      toast({
-        title: "Erro ao enviar",
-        description: "O cache do banco falhou. Tente novamente em instantes.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
     }
   };
 
@@ -294,7 +292,7 @@ export default function Radar() {
                   <RadarIcon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black uppercase italic leading-none">Radar Pro</h1>
+                  <h1 className="text-xl font-black uppercase italic leading-none">Radar H2 Linker</h1>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {isActive ? "Monitorando" : "Standby"}
                   </span>
@@ -323,7 +321,7 @@ export default function Radar() {
           <Card className="border-slate-200 rounded-2xl shadow-sm">
             <CardHeader className="p-5 border-b bg-slate-50/30">
               <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" /> Filtros
+                <ShieldCheck className="h-4 w-4" /> Inteligência
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
@@ -397,7 +395,7 @@ export default function Radar() {
                 return (
                   <Card
                     key={match.id}
-                    className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm bg-white overflow-hidden"
+                    className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm bg-white"
                   >
                     <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1 text-left space-y-1">
@@ -409,10 +407,10 @@ export default function Radar() {
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase">{job.category}</h3>
+                        <h3 className="text-sm font-black text-slate-900 uppercase leading-tight">{job.category}</h3>
                         <p className="text-[10px] font-bold text-slate-500 italic truncate">{job.job_title}</p>
                       </div>
-                      <div className="flex items-center gap-2 border-l pl-4">
+                      <div className="flex items-center gap-2 md:border-l md:pl-4">
                         <Button
                           size="sm"
                           onClick={() => handleSendApplication(match.id, job.id)}
@@ -436,7 +434,9 @@ export default function Radar() {
             ) : (
               <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
                 <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
-                <p className="text-sm font-black text-slate-400 uppercase italic">Nenhum Match Encontrado</p>
+                <p className="text-sm font-black text-slate-400 uppercase italic text-slate-500">
+                  Aguardando Novos Sinais...
+                </p>
               </div>
             )}
           </div>
