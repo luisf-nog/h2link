@@ -138,6 +138,9 @@ export default function Radar() {
   const fetchMatches = async () => {
     if (!profile?.id) return;
     try {
+      // Forçamos a chamada do trigger antes de buscar para limpar os "fantasmas"
+      await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
+
       const { data, error } = await supabase
         .from("radar_matched_jobs" as any)
         .select(
@@ -230,11 +233,13 @@ export default function Radar() {
 
       if (error) throw error;
       setRadarProfile({ ...radarProfile, ...payload });
+
       if (payload.is_active) {
-        await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
+        toast({ title: "Radar Sincronizado!" });
+      } else {
+        toast({ title: "Configurações Salvas!" });
       }
-      toast({ title: "Radar Atualizado!" });
     } catch (err) {
       toast({ title: "Erro ao salvar", variant: "destructive" });
     } finally {
@@ -250,20 +255,18 @@ export default function Radar() {
 
       if (sendError) throw sendError;
 
+      // Deletamos do match para sumir da tela
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
         .eq("id", matchId);
+
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
 
-      toast({
-        title: "Enviado!",
-        description: "Vaga adicionada à sua My Queue.",
-        className: "bg-emerald-600 text-white",
-      });
+      toast({ title: "Enviado com Sucesso!", className: "bg-emerald-600 text-white" });
     } catch (err: any) {
-      toast({ title: "Erro ao enviar", variant: "destructive" });
+      toast({ title: "Erro no envio", variant: "destructive" });
     }
   };
 
@@ -305,23 +308,23 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ESQUERDA: CONFIG */}
+        {/* CONFIG */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "p-3 rounded-2xl transition-all",
+                    "p-3 rounded-2xl",
                     isActive ? "bg-emerald-500 text-white shadow-lg animate-pulse" : "bg-slate-100 text-slate-400",
                   )}
                 >
                   <RadarIcon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black uppercase italic leading-none text-slate-900">Radar Pro</h1>
+                  <h1 className="text-xl font-black uppercase italic leading-none text-slate-900">Radar H2 Linker</h1>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {isActive ? "Monitoramento Ativo" : "Sistema Offline"}
+                    {isActive ? "Varredura Ativa" : "Sistema Offline"}
                   </span>
                 </div>
               </div>
@@ -338,7 +341,7 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-md"
               >
                 <Save className="h-4 w-4 mr-2" /> APLICAR ALTERAÇÕES
               </Button>
@@ -348,7 +351,7 @@ export default function Radar() {
           <Card className="border-slate-200 rounded-2xl shadow-sm">
             <CardHeader className="p-5 border-b bg-slate-50/30">
               <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" /> Filtros
+                <ShieldCheck className="h-4 w-4" /> Inteligência
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
@@ -358,7 +361,7 @@ export default function Radar() {
                 </Label>
                 <Switch checked={autoSend} onCheckedChange={setAutoSend} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
@@ -382,7 +385,7 @@ export default function Radar() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">EUA Inteiro</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -401,7 +404,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Sua Exp Máx.</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Exp Máx. (Meses)</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -414,16 +417,13 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* DIREITA: MATCHES */}
+        {/* MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
               <h2 className="text-xl font-black flex items-center gap-2 uppercase italic text-slate-900">
-                <Target className="h-6 w-6 text-indigo-600 inline mr-2" /> Matches Detectados
+                <Target className="h-6 w-6 text-indigo-600 inline mr-2" /> Fila de Matches
               </h2>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider italic">
-                Vagas compatíveis com seus critérios
-              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
@@ -461,15 +461,15 @@ export default function Radar() {
                         </div>
                         <div>
                           <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
-                            {job.category || "Categoria"}
+                            {job.category}
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Building2 className="h-3.5 w-3.5 text-slate-400" />
                             <p className="text-[11px] font-black text-slate-700 uppercase italic leading-none">
-                              {job.company || "Empresa Confidencial"}
+                              {job.company || "Empresa"}
                             </p>
                           </div>
-                          <p className="text-[10px] font-bold text-slate-500 truncate mt-1.5 italic">{job.job_title}</p>
+                          <p className="text-[10px] font-bold text-slate-500 truncate mt-1 italic">{job.job_title}</p>
                         </div>
                         <div className="flex items-center gap-4 pt-1">
                           <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
@@ -494,13 +494,13 @@ export default function Radar() {
                           onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
                           className="text-[9px] font-black h-8 w-full border-slate-300 hover:bg-white flex items-center gap-2"
                         >
-                          <Eye className="h-3 w-3" /> VER NO HUB
+                          <Eye className="h-3 w-3" /> VER HUB
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-300 hover:text-red-600 transition-colors"
+                          className="h-9 w-9 p-0 text-slate-300 hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -512,7 +512,7 @@ export default function Radar() {
             ) : (
               <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
                 <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
-                <p className="text-sm font-black text-slate-400 uppercase italic">Tudo limpo por aqui!</p>
+                <p className="text-sm font-black text-slate-400 uppercase italic">Nada novo por aqui.</p>
               </div>
             )}
           </div>
