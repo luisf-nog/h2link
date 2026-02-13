@@ -680,6 +680,7 @@ export type Database = {
       radar_matched_jobs: {
         Row: {
           auto_queued: boolean
+          created_at: string | null
           id: string
           job_id: string
           matched_at: string
@@ -687,6 +688,7 @@ export type Database = {
         }
         Insert: {
           auto_queued?: boolean
+          created_at?: string | null
           id?: string
           job_id: string
           matched_at?: string
@@ -694,12 +696,20 @@ export type Database = {
         }
         Update: {
           auto_queued?: boolean
+          created_at?: string | null
           id?: string
           job_id?: string
           matched_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_radar_job"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "public_jobs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "radar_matched_jobs_job_id_fkey"
             columns: ["job_id"]
@@ -717,7 +727,9 @@ export type Database = {
           id: string
           is_active: boolean
           last_scan_at: string | null
+          max_experience: number | null
           min_wage: number | null
+          randomization_group: string | null
           state: string | null
           updated_at: string
           user_id: string
@@ -730,7 +742,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_scan_at?: string | null
+          max_experience?: number | null
           min_wage?: number | null
+          randomization_group?: string | null
           state?: string | null
           updated_at?: string
           user_id: string
@@ -743,7 +757,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_scan_at?: string | null
+          max_experience?: number | null
           min_wage?: number | null
+          randomization_group?: string | null
           state?: string | null
           updated_at?: string
           user_id?: string
@@ -908,6 +924,14 @@ export type Database = {
           },
         ]
       }
+      radar_category_stats: {
+        Row: {
+          job_count: number | null
+          raw_category: string | null
+          segment_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_warmup_limit: {
@@ -921,9 +945,64 @@ export type Database = {
       }
       downgrade_smtp_warmup: { Args: { p_user_id: string }; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
+      get_category_stats_cached: {
+        Args: never
+        Returns: {
+          job_count: number
+          raw_category: string
+          segment_name: string
+        }[]
+      }
       get_effective_daily_limit: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      get_normalized_category: { Args: { raw_cat: string }; Returns: string }
+      get_radar_stats:
+        | {
+            Args: {
+              p_group?: string
+              p_max_exp?: number
+              p_min_wage?: number
+              p_state?: string
+              p_user_id: string
+              p_visa_type?: string
+            }
+            Returns: {
+              count: number
+              raw_category: string
+            }[]
+          }
+        | {
+            Args: {
+              p_max_exp?: number
+              p_min_wage?: number
+              p_state?: string
+              p_visa_type?: string
+            }
+            Returns: {
+              count: number
+              raw_category: string
+            }[]
+          }
+        | {
+            Args: {
+              p_group?: string
+              p_max_exp?: number
+              p_min_wage?: number
+              p_state?: string
+              p_visa_type?: string
+            }
+            Returns: {
+              count: number
+              raw_category: string
+            }[]
+          }
+      get_unique_categories: {
+        Args: never
+        Returns: {
+          category_name: string
+        }[]
       }
       has_role: {
         Args: {
@@ -953,6 +1032,10 @@ export type Database = {
         }[]
       }
       track_whatsapp_click: { Args: { p_token: string }; Returns: undefined }
+      trigger_immediate_radar: {
+        Args: { target_user_id: string }
+        Returns: number
+      }
       update_smtp_warmup_limit: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
