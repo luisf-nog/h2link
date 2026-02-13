@@ -30,13 +30,13 @@ import {
   Eye,
   Radio,
   LayoutGrid,
-  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// --- MAPEAMENTO LÓGICO (VINCULADO ÀS CATEGORIAS DO SEU CSV) ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
-  "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest"],
-  "Maquinário Agrícola": ["Agricultural Equipment", "Packers and Packagers, Agricultural", "Tractor"],
+  "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
+  "Maquinário Agrícola": ["Agricultural Equipment", "Tractor"],
   "Construção Civil": [
     "Construction",
     "Laborers",
@@ -50,16 +50,10 @@ const SECTOR_KEYWORDS: Record<string, string[]> = {
   ],
   "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
   "Instalações e Manutenção": ["Electricians", "Plumbers", "Installation", "Pipelayers", "Septic", "Repair Workers"],
-  "Mecânica e Reparos": [
-    "Farm Equipment Mechanics",
-    "Service Technicians",
-    "Automotive",
-    "Diesel",
-    "Machinery Mechanics",
-  ],
+  "Mecânica e Reparos": ["Mechanics", "Service Technicians", "Automotive", "Diesel"],
   "Limpeza e Governança": ["Maids", "Housekeeping", "Janitors", "Cleaners"],
-  "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Chefs"],
-  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Fast Food", "Dishwashers"],
+  "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Kitchen"],
+  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Hostess", "Dishwashers"],
   "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage"],
   "Bar e Cafeteria": ["Baristas", "Bartenders"],
   "Logística e Carga": ["Laborers and Freight", "Stockers", "Packers", "Material Movers", "Order Fillers"],
@@ -68,7 +62,7 @@ const SECTOR_KEYWORDS: Record<string, string[]> = {
   "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers", "Brazers"],
   "Indústria da Madeira": ["Woodworking", "Sawing Machine"],
   "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing"],
-  "Setor de Carnes": ["Meat, Poultry", "Butchers", "Slaughterers"],
+  "Setor de Carnes": ["Meat", "Poultry", "Butchers", "Slaughterers"],
   "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers"],
   "Vendas e Comércio": ["Salespersons", "Counter", "Cashiers", "Retail"],
 };
@@ -131,7 +125,6 @@ export default function Radar() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Estados principais
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
@@ -140,7 +133,7 @@ export default function Radar() {
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
-  // Filtros
+  // Estados dos Filtros
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -151,27 +144,7 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // Hooks de Memoização (Sempre no topo, fora de IFs)
-  const hasChanges = useMemo(() => {
-    if (!radarProfile) return false;
-    const dbCats = radarProfile.categories || [];
-    const catsChanged = JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...dbCats].sort());
-    return (
-      isActive !== (radarProfile.is_active ?? false) ||
-      autoSend !== (radarProfile.auto_send ?? false) ||
-      catsChanged ||
-      minWage !== (radarProfile.min_wage?.toString() || "") ||
-      maxExperience !== (radarProfile.max_experience?.toString() || "") ||
-      visaType !== (radarProfile.visa_type || "all") ||
-      stateFilter !== (radarProfile.state || "all")
-    );
-  }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, radarProfile]);
-
-  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
-  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
-  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
-
-  // Funções de dados
+  // ATUALIZA CATEGORIAS E CONTADORES (RESPONSIVO AOS FILTROS)
   const updateStats = async () => {
     try {
       const { data } = await supabase.rpc("get_radar_stats", {
@@ -197,6 +170,7 @@ export default function Radar() {
           return acc;
         }, {});
 
+        // Garante as 20 divisões
         Object.keys(SECTOR_KEYWORDS).forEach((s) => {
           if (!grouped[s]) grouped[s] = { items: [], totalJobs: 0 };
         });
@@ -206,6 +180,23 @@ export default function Radar() {
       console.error(e);
     }
   };
+
+  useEffect(() => {
+    updateStats();
+  }, [visaType, stateFilter, minWage, maxExperience]);
+
+  const hasChanges = useMemo(() => {
+    if (!radarProfile) return false;
+    return (
+      isActive !== (radarProfile.is_active ?? false) ||
+      autoSend !== (radarProfile.auto_send ?? false) ||
+      JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...(radarProfile.categories || [])].sort()) ||
+      minWage !== (radarProfile.min_wage?.toString() || "") ||
+      maxExperience !== (radarProfile.max_experience?.toString() || "") ||
+      visaType !== (radarProfile.visa_type || "all") ||
+      stateFilter !== (radarProfile.state || "all")
+    );
+  }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, radarProfile]);
 
   const fetchMatches = async () => {
     if (!profile?.id) return;
@@ -218,6 +209,31 @@ export default function Radar() {
       setMatchCount(data.length);
     }
   };
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!profile?.id) return;
+      setLoading(true);
+      const { data: prof }: any = await supabase
+        .from("radar_profiles" as any)
+        .select("*")
+        .eq("user_id", profile.id)
+        .maybeSingle();
+      if (prof) {
+        setRadarProfile(prof);
+        setIsActive(prof.is_active);
+        setAutoSend(prof.auto_send);
+        setSelectedCategories(prof.categories || []);
+        setMinWage(prof.min_wage?.toString() || "");
+        setMaxExperience(prof.max_experience?.toString() || "");
+        setVisaType(prof.visa_type || "all");
+        setStateFilter(prof.state || "all");
+      }
+      await fetchMatches();
+      setLoading(false);
+    };
+    loadProfile();
+  }, [profile?.id]);
 
   const performSave = async (overrides = {}) => {
     if (!profile?.id) return;
@@ -250,6 +266,16 @@ export default function Radar() {
     setSaving(false);
   };
 
+  const toggleSector = (sectorName: string) => {
+    const sectorSubcats = groupedCategories[sectorName].items.map((i) => i.raw_category);
+    const allSelected = sectorSubcats.length > 0 && sectorSubcats.every((cat) => selectedCategories.includes(cat));
+    if (allSelected) {
+      setSelectedCategories((prev) => prev.filter((cat) => !sectorSubcats.includes(cat)));
+    } else {
+      setSelectedCategories((prev) => [...new Set([...prev, ...sectorSubcats])]);
+    }
+  };
+
   const handleSendApplication = async (matchId: string, jobId: string) => {
     try {
       await supabase.from("my_queue" as any).insert([{ user_id: profile?.id, job_id: jobId, status: "pending" }]);
@@ -259,59 +285,22 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Vaga Enviada!", className: "bg-emerald-600 text-white" });
+      toast({ title: "Signal Captured!", className: "bg-emerald-600 text-white" });
     } catch (err) {
-      toast({ title: "Erro", variant: "destructive" });
+      toast({ title: "Routing Error", variant: "destructive" });
     }
   };
 
-  const toggleSector = (sectorName: string) => {
-    const sectorSubcats = groupedCategories[sectorName].items.map((i) => i.raw_category);
-    const allSelected = sectorSubcats.every((cat) => selectedCategories.includes(cat));
-    if (allSelected) {
-      setSelectedCategories((prev) => prev.filter((cat) => !sectorSubcats.includes(cat)));
-    } else {
-      setSelectedCategories((prev) => [...new Set([...prev, ...sectorSubcats])]);
-    }
-  };
+  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
+  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
+  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
 
-  // Efeitos
-  useEffect(() => {
-    updateStats();
-  }, [visaType, stateFilter, minWage, maxExperience]);
-
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!profile?.id) return;
-      setLoading(true);
-      const { data: prof }: any = await supabase
-        .from("radar_profiles" as any)
-        .select("*")
-        .eq("user_id", profile.id)
-        .maybeSingle();
-      if (prof) {
-        setRadarProfile(prof);
-        setIsActive(prof.is_active);
-        setAutoSend(prof.auto_send);
-        setSelectedCategories(prof.categories || []);
-        setMinWage(prof.min_wage?.toString() || "");
-        setMaxExperience(prof.max_experience?.toString() || "");
-        setVisaType(prof.visa_type || "all");
-        setStateFilter(prof.state || "all");
-      }
-      await fetchMatches();
-      setLoading(false);
-    };
-    loadProfile();
-  }, [profile?.id]);
-
-  // Renderizações Condicionais (Sempre abaixo dos hooks)
   if (!isPremium)
     return (
       <div className="p-20 text-center">
         <Radio className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
         <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600">
-          Ativar Tecnologia Radar
+          Activate Radar Signal
         </Button>
       </div>
     );
@@ -325,8 +314,9 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LADO ESQUERDO */}
+        {/* COLUNA ESQUERDA: SYSTEM CONFIG */}
         <div className="lg:col-span-6 space-y-6">
+          {/* HEADER PRINCIPAL */}
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -342,14 +332,14 @@ export default function Radar() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">
-                    H2 Linker Radar Signal
+                    H2 Linker Radar <span className="text-indigo-600 font-normal">Signal</span>
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
                     {isActive ? (
                       <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 shadow-sm">
                         <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
-                          LIVE
+                          LIVE TRACKING
                         </span>
                       </div>
                     ) : (
@@ -381,6 +371,7 @@ export default function Radar() {
             )}
           </div>
 
+          {/* FILTROS RESPONSIVOS */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
@@ -450,6 +441,7 @@ export default function Radar() {
             </CardContent>
           </Card>
 
+          {/* DIVISÕES RESPONSIVAS (2 COLUNAS) */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
@@ -477,11 +469,11 @@ export default function Radar() {
                             }
                           >
                             <div className="flex flex-col text-left">
-                              <span className="text-[10px] font-black text-slate-700 uppercase leading-none">
+                              <span className="text-[10px] font-black text-slate-700 uppercase leading-none tracking-tight">
                                 {segment}
                               </span>
                               <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
-                                {data.totalJobs} Vagas Disponíveis
+                                {data.totalJobs} {data.totalJobs === 1 ? "Vaga Encontrada" : "Vagas Encontradas"}
                               </span>
                             </div>
                             <Button
@@ -500,7 +492,7 @@ export default function Radar() {
                             </Button>
                           </div>
                           {expandedSegments.includes(segment) && (
-                            <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1">
+                            <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
                               {data.items.map((cat) => (
                                 <button
                                   key={cat.raw_category}
@@ -512,13 +504,14 @@ export default function Radar() {
                                     )
                                   }
                                   className={cn(
-                                    "p-1.5 rounded-lg border text-left text-[9px] font-bold transition-all flex justify-between items-center",
+                                    "p-2 rounded-lg border text-left text-[9px] font-bold transition-all flex justify-between items-center",
                                     selectedCategories.includes(cat.raw_category)
                                       ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
                                       : "bg-white text-slate-500 hover:border-indigo-200",
                                   )}
                                 >
-                                  {cat.raw_category} <span className="text-[8px] opacity-60">({cat.count})</span>
+                                  {cat.raw_category}
+                                  <span className="text-[8px] opacity-60">({cat.count})</span>
                                 </button>
                               ))}
                             </div>
@@ -533,15 +526,15 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* LADO DIREITO: MATCHES */}
+        {/* COLUNA DIREITA: MATCH DETECTION */}
         <div className="lg:col-span-6 space-y-4 text-left">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div>
               <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-3">
-                <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
+                <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matchs
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Sincronização Database h2-linker
+                Real-time database sync h2-linker protocol
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -565,7 +558,7 @@ export default function Radar() {
                     <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
                       <div className="p-4 flex-1 space-y-2.5">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-indigo-50 text-indigo-600 text-[9px] border-indigo-100 uppercase font-black px-2">
+                          <Badge className="bg-indigo-50 text-indigo-600 text-[9px] border-indigo-100 font-black px-2">
                             {job.visa_type}
                           </Badge>
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono border-l border-slate-100 pl-2">
@@ -575,11 +568,13 @@ export default function Radar() {
                             <Users className="h-3 w-3" /> {job.openings || 1} Vagas
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase">{job.category}</h3>
+                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
+                          {job.category}
+                        </h3>
                         <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-50/50">
                           <Building2 className="h-3.5 w-3.5 text-slate-400" />
                           <p className="text-[11px] font-black text-indigo-900 uppercase italic leading-none">
-                            {job.company || "Empresa"}
+                            {job.company || "Empresa Identificada"}
                           </p>
                         </div>
                         <div className="flex items-center gap-4 pt-2">
@@ -595,7 +590,7 @@ export default function Radar() {
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full active:translate-y-0.5 border-b-2 border-emerald-900"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all border-b-2 border-emerald-900"
                         >
                           <Send className="h-3.5 w-3.5 mr-1.5" /> ENVIAR
                         </Button>
@@ -611,7 +606,7 @@ export default function Radar() {
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
