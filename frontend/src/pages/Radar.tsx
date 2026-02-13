@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +29,7 @@ import {
   Briefcase,
   Check,
   RefreshCcw,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +99,7 @@ export default function Radar() {
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
-  // Form states (Local)
+  // Form states
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -108,18 +110,16 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // --- LÓGICA DE DETECÇÃO DE ALTERAÇÕES (Sócio, aqui estava o erro de comparação string vs number) ---
+  // --- DETECÇÃO DE MUDANÇAS (BOTÃO SALVAR) ---
   const hasChanges = useMemo(() => {
     if (!radarProfile) return false;
-
-    const dbCategories = radarProfile.categories || [];
-    const categoriesChanged =
-      JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...dbCategories].sort());
+    const dbCats = radarProfile.categories || [];
+    const catsChanged = JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...dbCats].sort());
 
     return (
       isActive !== (radarProfile.is_active ?? false) ||
       autoSend !== (radarProfile.auto_send ?? false) ||
-      categoriesChanged ||
+      catsChanged ||
       minWage !== (radarProfile.min_wage?.toString() || "") ||
       maxExperience !== (radarProfile.max_experience?.toString() || "") ||
       visaType !== (radarProfile.visa_type || "all") ||
@@ -127,25 +127,41 @@ export default function Radar() {
     );
   }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, radarProfile]);
 
-  // --- BUSCA DE DADOS ---
+  // --- BUSCA OS MATCHES (O QUE APARECE À DIREITA) ---
   const fetchMatches = async () => {
     if (!profile?.id) return;
-    const { data, count } = await supabase
+    console.log("Puxando matches do banco...");
+
+    const { data, error, count } = await supabase
       .from("radar_matched_jobs")
-      .select(`id, job_id, public_jobs (*)`)
+      .select(
+        `
+        id,
+        job_id,
+        public_jobs (*)
+      `,
+      )
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
-    if (data) setMatchedJobs(data);
-    if (count !== null) setMatchCount(count);
+    if (error) {
+      console.error("Erro ao buscar matches:", error);
+      return;
+    }
+
+    console.log("Matches encontrados:", data?.length);
+    setMatchedJobs(data || []);
+    setMatchCount(count || data?.length || 0);
   };
 
   useEffect(() => {
     const loadData = async () => {
+      if (!profile?.id) return;
       try {
         setLoading(true);
-        const { data: catData }: any = await supabase.rpc("get_category_stats_cached" as any);
-        if (catData && Array.isArray(catData)) {
+        // Categorias do Cache
+        const { data: catData } = await supabase.rpc("get_category_stats_cached" as any);
+        if (catData) {
           const grouped = catData.reduce((acc: any, curr: any) => {
             if (!acc[curr.segment_name]) acc[curr.segment_name] = [];
             acc[curr.segment_name].push(curr);
@@ -154,24 +170,25 @@ export default function Radar() {
           setGroupedCategories(grouped);
         }
 
-        if (profile?.id) {
-          const { data: prof }: any = await supabase
-            .from("radar_profiles")
-            .select("*")
-            .eq("user_id", profile.id)
-            .maybeSingle();
-          if (prof) {
-            setRadarProfile(prof);
-            setIsActive(prof.is_active);
-            setAutoSend(prof.auto_send);
-            setSelectedCategories(prof.categories || []);
-            setMinWage(prof.min_wage?.toString() || "");
-            setMaxExperience(prof.max_experience?.toString() || "");
-            setVisaType(prof.visa_type || "all");
-            setStateFilter(prof.state || "all");
-          }
-          await fetchMatches();
+        // Perfil do Usuário
+        const { data: prof } = await supabase
+          .from("radar_profiles")
+          .select("*")
+          .eq("user_id", profile.id)
+          .maybeSingle();
+        if (prof) {
+          setRadarProfile(prof);
+          setIsActive(prof.is_active);
+          setAutoSend(prof.auto_send);
+          setSelectedCategories(prof.categories || []);
+          setMinWage(prof.min_wage?.toString() || "");
+          setMaxExperience(prof.max_experience?.toString() || "");
+          setVisaType(prof.visa_type || "all");
+          setStateFilter(prof.state || "all");
         }
+        await fetchMatches();
+      } catch (err) {
+        console.error("Falha no carregamento inicial:", err);
       } finally {
         setLoading(false);
       }
@@ -179,62 +196,58 @@ export default function Radar() {
     loadData();
   }, [profile?.id]);
 
-  // --- FUNÇÃO CORE DE SALVAMENTO ---
+  // --- FUNÇÃO DE SALVAMENTO E TRIGGER ---
   const performSave = async (overrides = {}) => {
-    if (!profile?.id) return false;
+    if (!profile?.id) return;
     setSaving(true);
+    console.log("Salvando perfil...");
 
     const payload = {
       user_id: profile.id,
       is_active: isActive,
       auto_send: autoSend,
       categories: selectedCategories,
-      min_wage: minWage !== "" ? Number(minWage) : null,
+      min_wage: minWage ? Number(minWage) : null,
       max_experience: maxExperience !== "" ? Number(maxExperience) : null,
       visa_type: visaType === "all" ? null : visaType,
       state: stateFilter === "all" ? null : stateFilter,
       ...overrides,
     };
 
-    const { error } = radarProfile
-      ? await supabase.from("radar_profiles").update(payload).eq("user_id", profile.id)
-      : await supabase.from("radar_profiles").insert(payload);
+    try {
+      const { error } = radarProfile
+        ? await supabase.from("radar_profiles").update(payload).eq("user_id", profile.id)
+        : await supabase.from("radar_profiles").insert(payload);
 
-    if (!error) {
+      if (error) throw error;
+
+      console.log("Perfil salvo! Disparando busca retroativa...");
       setRadarProfile(payload);
-      // Se estiver ligando o radar, dispara o match imediato
+
       if (payload.is_active) {
-        await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
+        // Dispara o SQL de match imediato
+        const { data: triggerCount, error: rpcError } = await supabase.rpc("trigger_immediate_radar" as any, {
+          target_user_id: profile.id,
+        });
+        if (rpcError) console.error("RPC Error:", rpcError);
+        console.log("Busca concluída. Vagas processadas:", triggerCount);
+
         await fetchMatches();
+        toast({ title: "Radar Sincronizado!", description: `Encontramos ${triggerCount || "novas"} vagas para você.` });
+      } else {
+        toast({ title: "Configurações Salvas!" });
       }
-      return true;
-    } else {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-      return false;
+    } catch (err: any) {
+      console.error("Erro no processo de salvamento:", err);
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleToggleActive = async (checked: boolean) => {
+  const handleToggleActive = (checked: boolean) => {
     setIsActive(checked);
-    const success = await performSave({ is_active: checked });
-    if (success) {
-      toast({
-        title: checked ? "Radar Ativado!" : "Radar Desativado",
-        description: checked ? "Buscando todas as vagas compatíveis agora..." : "O robô parou de monitorar.",
-        className: checked ? "bg-emerald-600 text-white" : "",
-      });
-    }
-    setSaving(false);
-  };
-
-  const selectFullSegment = (segment: string) => {
-    const subCats = groupedCategories[segment].map((c) => c.raw_category);
-    const allSelected = subCats.every((c) => selectedCategories.includes(c));
-    if (allSelected) {
-      setSelectedCategories((prev) => prev.filter((c) => !subCats.includes(c)));
-    } else {
-      setSelectedCategories((prev) => [...new Set([...prev, ...subCats])]);
-    }
+    performSave({ is_active: checked });
   };
 
   const removeMatch = async (matchId: string) => {
@@ -245,12 +258,20 @@ export default function Radar() {
     }
   };
 
+  const selectFullSegment = (segment: string) => {
+    const subCats = groupedCategories[segment].map((c) => c.raw_category);
+    const allSelected = subCats.every((c) => selectedCategories.includes(c));
+    setSelectedCategories((prev) =>
+      allSelected ? prev.filter((c) => !subCats.includes(c)) : [...new Set([...prev, ...subCats])],
+    );
+  };
+
   if (!isPremium)
     return (
       <div className="p-20 text-center">
         <RadarIcon className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
         <Button onClick={() => navigate("/plans")} className="mt-6">
-          Upgrade to Premium
+          Ver Planos Premium
         </Button>
       </div>
     );
@@ -264,7 +285,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUNA ESQUERDA: CONFIGURAÇÕES */}
+        {/* ESQUERDA: CONFIG */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
@@ -291,7 +312,7 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl animate-in fade-in slide-in-from-top-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} APLICAR
                 ALTERAÇÕES
@@ -313,17 +334,22 @@ export default function Radar() {
                   </Label>
                   <p className="text-[10px] text-slate-500">O robô aplicará no momento do match.</p>
                 </div>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+                <Switch
+                  checked={autoSend}
+                  onCheckedChange={(val) => {
+                    setAutoSend(val);
+                  }}
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Visto</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Visto</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Qualquer Visto</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       {VISA_TYPE_OPTIONS.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
@@ -333,7 +359,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Estado</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado</Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
@@ -349,7 +375,7 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín ($/h)</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Salário Mín ($/h)</Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -358,7 +384,7 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Exp. Máxima (mês)</Label>
+                  <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Sua Exp. Max (Meses)</Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -370,22 +396,24 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          {/* SELEÇÃO DE CATEGORIAS DRILL DOWN */}
           <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="p-5 border-b bg-slate-50/30">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Segmentos de Atuação</CardTitle>
+            <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center">
+              <CardTitle className="text-xs font-black uppercase text-slate-500 italic">Áreas de Atuação</CardTitle>
             </CardHeader>
             <CardContent className="p-3 space-y-1 max-h-[400px] overflow-y-auto custom-scrollbar">
               {Object.entries(groupedCategories).map(([segment, items]) => {
                 const isExpanded = expandedSegments.includes(segment);
                 const subCats = items.map((c) => c.raw_category);
                 const allSelected = subCats.every((c) => selectedCategories.includes(c));
-
                 return (
                   <div key={segment} className="border rounded-xl overflow-hidden mb-1">
                     <div
                       className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50"
-                      onClick={() => toggleSegment(segment)}
+                      onClick={() => {
+                        setExpandedSegments((p) =>
+                          p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
+                        );
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded ? (
@@ -393,7 +421,9 @@ export default function Radar() {
                         ) : (
                           <ChevronRight className="h-4 w-4 text-slate-400" />
                         )}
-                        <span className="text-[11px] font-black text-slate-700 uppercase italic">{segment}</span>
+                        <span className="text-[11px] font-black text-slate-700 uppercase italic tracking-tighter">
+                          {segment}
+                        </span>
                       </div>
                       <Button
                         variant={allSelected ? "default" : "outline"}
@@ -412,12 +442,18 @@ export default function Radar() {
                         {items.map((cat) => (
                           <button
                             key={cat.raw_category}
-                            onClick={() => toggleCategory(cat.raw_category)}
+                            onClick={() =>
+                              setSelectedCategories((p) =>
+                                p.includes(cat.raw_category)
+                                  ? p.filter((c) => c !== cat.raw_category)
+                                  : [...p, cat.raw_category],
+                              )
+                            }
                             className={cn(
                               "px-2 py-1 rounded-lg border text-[10px] font-bold transition-all",
                               selectedCategories.includes(cat.raw_category)
                                 ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
-                                : "bg-white text-slate-600 hover:border-indigo-300",
+                                : "bg-white text-slate-600",
                             )}
                           >
                             {cat.raw_category}
@@ -432,7 +468,7 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: FILA DE MATCHES */}
+        {/* DIREITA: MATCHES */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="text-left">
@@ -457,6 +493,7 @@ export default function Radar() {
             {matchedJobs.length > 0 ? (
               matchedJobs.map((match) => {
                 const job = match.public_jobs;
+                if (!job) return null;
                 return (
                   <Card
                     key={match.id}
@@ -472,11 +509,17 @@ export default function Radar() {
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase">{job.category}</h3>
-                        <p className="text-[10px] font-bold text-slate-500 truncate italic">{job.job_title}</p>
+                        <div>
+                          <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
+                            {job.category}
+                          </h3>
+                          <p className="text-[10px] font-bold text-slate-500 truncate max-w-lg italic">
+                            {job.job_title}
+                          </p>
+                        </div>
                         <div className="flex items-center gap-4 pt-1">
                           <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/h
+                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/hr
                           </span>
                           <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
                             <Briefcase className="h-3.5 w-3.5 text-indigo-600" /> {job.experience_months || 0}m exp
@@ -504,14 +547,14 @@ export default function Radar() {
                 );
               })
             ) : (
-              <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4">
+              <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
                 <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-tighter italic">
-                    Nenhum Match Encontrado
-                  </p>
-                  <p className="text-[10px] text-slate-400">Ative o Radar e salve seus filtros para caçar vagas.</p>
-                </div>
+                <p className="text-sm font-black text-slate-400 uppercase tracking-tighter italic">
+                  Silêncio no Horizonte...
+                </p>
+                <p className="text-[10px] text-slate-400 px-10">
+                  Ative o radar e salve seus filtros para povoar sua fila de envios.
+                </p>
               </div>
             )}
           </div>
