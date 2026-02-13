@@ -1,22 +1,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database } from "lucide-react";
+import { Loader2, RefreshCw, Database, FileJson, CheckCircle2 } from "lucide-react";
 import JSZip from "jszip";
 
 export function MultiJsonImporter() {
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [stats, setStats] = useState({ total: 0, files: 0 });
   const { toast } = useToast();
 
   const getTodayDate = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    return now.toISOString().split("T")[0];
   };
 
   const calculateFinalWage = (rawVal: any, hours: any) => {
@@ -36,7 +34,7 @@ export function MultiJsonImporter() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-      return d.toLocaleDateString("en-CA");
+      return d.toISOString().split("T")[0];
     } catch {
       return null;
     }
@@ -54,7 +52,7 @@ export function MultiJsonImporter() {
   const getVal = (obj: any, keys: string[]) => {
     if (!obj) return null;
     for (const key of keys) {
-      const val = obj[key] || obj[key.toLowerCase()];
+      const val = obj[key] ?? obj[key?.toLowerCase()];
       if (val !== undefined && val !== null) return String(val).trim();
     }
     return null;
@@ -64,10 +62,9 @@ export function MultiJsonImporter() {
     if (files.length === 0) return;
     setProcessing(true);
     const today = getTodayDate();
+    const rawJobsMap = new Map();
 
     try {
-      const rawJobsMap = new Map();
-
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents: { filename: string; content: string }[] = [];
@@ -91,7 +88,12 @@ export function MultiJsonImporter() {
               : "H-2A";
 
           list.forEach((item: any) => {
-            const flat = { ...item, ...(item.clearanceOrder || {}), ...(item.jobRequirements?.qualification || {}) };
+            const flat = {
+              ...item,
+              ...(item.clearanceOrder || {}),
+              ...(item.jobRequirements?.qualification || {}),
+            };
+
             const rawJobId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
             if (!rawJobId) return;
 
@@ -102,6 +104,7 @@ export function MultiJsonImporter() {
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const posted = formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE"]));
 
+            // O uso do Map aqui já mata duplicatas dentro do mesmo lote de arquivos
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
               job_id: rawJobId.split("-GHOST")[0].trim(),
@@ -109,11 +112,11 @@ export function MultiJsonImporter() {
               fingerprint: fingerprint,
               job_title: getVal(flat, ["jobTitle", "tempneedJobtitle", "title"]),
               company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
-              email: email,
+              email: email.toLowerCase(),
               phone: getVal(flat, ["recApplyPhone", "empPhone"]),
               city: getVal(flat, ["jobCity", "city"]),
               state: getVal(flat, ["jobState", "state"]),
-              zip: getVal(flat, ["jobPostcode", "empPostalCode"]), // MUDANÇA AQUI: de zip_code para zip
+              zip: getVal(flat, ["jobPostcode", "empPostalCode"]),
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), weeklyHours),
               start_date: formatToISODate(getVal(flat, ["jobBeginDate", "tempneedStart"])),
               posted_date: posted || today,
@@ -126,51 +129,109 @@ export function MultiJsonImporter() {
               ),
               education_required: getVal(flat, ["educationLevel", "jobMinedu"]),
               is_active: true,
-              was_early_access: false,
+              was_early_access: filename.toLowerCase().includes("jo"),
             });
           });
         }
       }
 
       const allJobs = Array.from(rawJobsMap.values());
-      const BATCH_SIZE = 1500;
+      setStats({ total: allJobs.length, files: files.length });
+
+      // Envio em lotes para não estourar a memória da Edge Function
+      const BATCH_SIZE = 1000;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
+        const batch = allJobs.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
         if (error) throw error;
       }
 
       toast({
-        title: "Sincronização V62 Concluída!",
-        description: `${allJobs.length} vagas processadas com sucesso.`,
+        title: "Sincronização Turbo V62 Concluída!",
+        description: `${allJobs.length} vagas únicas foram processadas.`,
+        className: "bg-indigo-600 text-white font-bold",
       });
+      setFiles([]);
     } catch (err: any) {
-      toast({ title: "Erro de Importação", description: err.message, variant: "destructive" });
+      console.error("Erro na importação:", err);
+      toast({
+        title: "Erro na Importação",
+        description: err.message || "Erro desconhecido ao processar lotes.",
+        variant: "destructive",
+      });
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <Card className="border-4 border-indigo-700 shadow-2xl">
-      <CardHeader className="bg-indigo-50">
-        <CardTitle className="flex items-center gap-2 text-indigo-900">
-          <Database className="h-6 w-6" /> H2 Linker Sync V62 (Turbo Mode)
-        </CardTitle>
+    <Card className="border-4 border-indigo-700 shadow-2xl overflow-hidden">
+      <CardHeader className="bg-indigo-700 text-white p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
+              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Sync V62
+            </CardTitle>
+            <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
+              Production Batch Importer • Turbo Mode
+            </CardDescription>
+          </div>
+          {files.length > 0 && (
+            <Badge variant="secondary" className="bg-white text-indigo-700 font-black">
+              {files.length} ARQUIVOS
+            </Badge>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="pt-6 space-y-4">
-        <input
-          type="file"
-          multiple
-          onChange={(e) => setFiles(Array.from(e.target.files || []))}
-          className="w-full text-sm"
-        />
+      <CardContent className="p-8 space-y-6 bg-white text-left">
+        <div className="grid w-full items-center gap-4">
+          <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">
+            Selecione arquivos JSON ou ZIP
+          </Label>
+          <div className="flex items-center justify-center w-full">
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <FileJson className="w-10 h-10 mb-3 text-slate-400" />
+                <p className="mb-2 text-sm text-slate-500 font-bold">
+                  {files.length > 0 ? `${files.length} selecionados` : "Clique para upload"}
+                </p>
+              </div>
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                accept=".json,.zip"
+              />
+            </label>
+          </div>
+        </div>
+
+        {stats.total > 0 && !processing && (
+          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <span className="text-xs font-bold text-emerald-800 uppercase">
+              Último lote: {stats.total} vagas de {stats.files} arquivos.
+            </span>
+          </div>
+        )}
+
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-14 bg-indigo-700 hover:bg-indigo-900 text-white font-black text-lg"
+          className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg border-b-4 border-indigo-900 transition-all active:translate-y-1 active:border-b-0"
         >
-          {processing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-          Sincronizar Produção V62
+          {processing ? (
+            <>
+              <Loader2 className="animate-spin mr-3 h-6 w-6" />
+              SINCROZINANDO...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-3 h-6 w-6" />
+              SINCROZINAR PRODUÇÃO V62
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>
