@@ -29,65 +29,69 @@ import {
   Building2,
   RefreshCcw,
   Eye,
-  LayoutGrid,
-  Columns,
+  Cpu,
+  Database,
+  Activity,
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO DOS 20 SETORES ESTRATÉGICOS ---
+// --- MAPEAMENTO TÉCNICO (TRADUZ INGLÊS -> SETOR PT) ---
 const SECTOR_MAPPING: Record<string, string> = {
-  "Construction Laborers": "Construção e Alvenaria",
-  Stonemasons: "Construção e Alvenaria",
-  "Painters, Construction and Maintenance": "Construção e Alvenaria",
-  "Plasterers and Stucco Masons": "Construção e Alvenaria",
-  "Cement Masons and Concrete Finishers": "Construção e Alvenaria",
+  "Construction Laborers": "Construção Civil",
+  "Cement Masons": "Construção Civil",
+  Painters: "Construção Civil",
   Carpenters: "Carpintaria e Estruturas",
   Roofers: "Carpintaria e Estruturas",
-  "Structural Iron and Steel Workers": "Carpintaria e Estruturas",
-  "Cabinetmakers and Bench Carpenters": "Carpintaria e Estruturas",
+  "Structural Iron": "Carpintaria e Estruturas",
   Electricians: "Instalações e Elétrica",
-  "Plumbers, Pipefitters, and Steamfitters": "Instalações e Elétrica",
-  "Solar Photovoltaic Installers": "Instalações e Elétrica",
-  "Farmworkers and Laborers, Crop, Nursery, and Greenhouse": "Agricultura e Colheita",
-  "Graders and Sorters, Agricultural Products": "Agricultura e Colheita",
-  "Agricultural Equipment Operators": "Maquinário Agrícola",
+  Plumbers: "Instalações e Elétrica",
+  "Solar Photovoltaic": "Instalações e Elétrica",
+  Farmworkers: "Agricultura e Colheita",
+  "Graders and Sorters": "Agricultura e Colheita",
+  "Agricultural Equipment": "Maquinário Agrícola",
   "Packers and Packagers, Agricultural": "Maquinário Agrícola",
-  "Hotel, Motel, and Resort Desk Clerks": "Hotelaria e Recepção",
+  "Hotel, Motel": "Hotelaria e Recepção",
   Concierges: "Hotelaria e Recepção",
-  "Maids and Housekeeping Cleaners": "Limpeza e Governança",
+  "Baggage Porters": "Hotelaria e Recepção",
+  "Maids and Housekeeping": "Limpeza e Governança",
   "Janitors and Cleaners": "Limpeza e Governança",
-  "Cooks, Restaurant": "Cozinha e Gastronomia",
-  "Cooks, Fast Food": "Cozinha e Gastronomia",
+  Cooks: "Cozinha e Gastronomia",
   Bakers: "Cozinha e Gastronomia",
+  "Food Preparation": "Cozinha e Gastronomia",
   Baristas: "Bar e Cafeteria",
   Bartenders: "Bar e Cafeteria",
   "Waiters and Waitresses": "Atendimento de Salão",
-  "Fast Food and Counter Workers": "Atendimento de Salão",
+  "Fast Food and Counter": "Atendimento de Salão",
   Dishwashers: "Atendimento de Salão",
-  "Laborers and Freight, Stock, and Material Movers, Hand": "Logística e Carga",
+  "Laborers and Freight": "Logística e Carga",
   "Packers and Packagers, Hand": "Logística e Carga",
+  "Stockers and Order Fillers": "Logística e Carga",
   "Heavy and Tractor-Trailer Truck Drivers": "Transporte de Carga",
-  "Light Truck or Delivery Services Drivers": "Transporte de Carga",
+  "Light Truck": "Transporte de Carga",
+  "Shuttle Drivers": "Transporte de Carga",
   "Team Assemblers": "Manufatura e Produção",
-  "Assemblers and Fabricators, All Other": "Manufatura e Produção",
-  "Welders, Cutters, Solderers, and Brazers": "Soldagem e Metalurgia",
-  "Woodworking Machine Setters, Operators, and Tenders": "Indústria da Madeira",
-  "Sawing Machine Setters, Operators, and Tenders, Wood": "Indústria da Madeira",
-  "Textile Winding, Twisting, and Drawing Out Machine Setters": "Têxtil e Lavanderia",
-  "Laundry and Dry-Cleaning Workers": "Têxtil e Lavanderia",
-  "Meat, Poultry, and Fish Cutters and Trimmers": "Setor de Carnes",
-  "Butchers and Meat Cutters": "Setor de Carnes",
-  "Landscaping and Groundskeeping Workers": "Paisagismo e Jardinagem",
-  "Tree Trimmers and Pruners": "Paisagismo e Jardinagem",
+  "Assemblers and Fabricators": "Manufatura e Produção",
+  "Production Workers": "Manufatura e Produção",
+  "Welders, Cutters": "Soldagem e Metalurgia",
+  Woodworking: "Indústria da Madeira",
+  "Sawing Machine": "Indústria da Madeira",
+  Textile: "Têxtil e Lavanderia",
+  Laundry: "Têxtil e Lavanderia",
+  "Meat, Poultry": "Setor de Carnes",
+  Butchers: "Setor de Carnes",
+  Slaughterers: "Setor de Carnes",
+  Landscaping: "Paisagismo e Jardinagem",
+  "Tree Trimmers": "Paisagismo e Jardinagem",
   "Retail Salespersons": "Vendas e Comércio",
-  "Counter and Rental Clerks": "Vendas e Comércio",
-  "Farm Equipment Mechanics and Service Technicians": "Mecânica e Manutenção",
+  "Counter and Rental": "Vendas e Comércio",
+  "Farm Equipment Mechanics": "Mecânica e Manutenção",
   "Industrial Machinery Mechanics": "Mecânica e Manutenção",
-  "Amusement and Recreation Attendants": "Recreação e Lazer",
+  "Maintenance and Repair": "Mecânica e Manutenção",
+  "Amusement and Recreation": "Recreação e Lazer",
   "Animal Trainers": "Recreação e Lazer",
-  "First-Line Supervisors of Construction Trades": "Supervisão e Liderança",
-  "First-Line Supervisors of Farming": "Supervisão e Liderança",
+  "Animal Caretakers": "Cuidado Animal",
+  "First-Line Supervisors": "Supervisão e Liderança",
 };
 
 const US_STATES = [
@@ -201,7 +205,11 @@ export default function Radar() {
         const { data: catData } = await supabase.rpc("get_category_stats_cached" as any);
         if (catData) {
           const grouped = (catData as any[]).reduce((acc: any, curr: any) => {
-            const segment = SECTOR_MAPPING[curr.raw_category] || "Outros Serviços Gerais";
+            const raw = curr.raw_category || "";
+            // Tenta encontrar o setor mapeado usando includes para maior abrangência
+            const entry = Object.entries(SECTOR_MAPPING).find(([key]) => raw.includes(key));
+            const segment = entry ? entry[1] : "Serviços Gerais";
+
             if (!acc[segment]) acc[segment] = { items: [], totalJobs: 0 };
             acc[segment].items.push(curr);
             acc[segment].totalJobs += curr.count || 0;
@@ -261,7 +269,7 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Atualizado!" });
+      toast({ title: "Radar System Updated", className: "bg-indigo-600 text-white" });
     }
     setSaving(false);
   };
@@ -275,22 +283,33 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Enviado!", className: "bg-emerald-600 text-white" });
+      toast({ title: "Task Routed to Queue", className: "bg-emerald-600 text-white" });
     } catch (err) {
-      toast({ title: "Erro", variant: "destructive" });
+      toast({ title: "Routing Error", variant: "destructive" });
     }
   };
 
-  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
-  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
-  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
+  const removeMatch = async (matchId: string) => {
+    const { error } = await supabase
+      .from("radar_matched_jobs" as any)
+      .delete()
+      .eq("id", matchId);
+    if (!error) {
+      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
+      setMatchCount((prev) => Math.max(0, prev - 1));
+    }
+  };
+
+  const sortedSectors = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
+  const leftSectors = useMemo(() => sortedSectors.slice(0, 10), [sortedSectors]);
+  const rightSectors = useMemo(() => sortedSectors.slice(10, 20), [sortedSectors]);
 
   if (!isPremium)
     return (
       <div className="p-20 text-center">
-        <RadarIcon className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
+        <Cpu className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
         <Button onClick={() => navigate("/plans")} className="mt-6">
-          Upgrade to Diamond
+          Unlock Pro Technology
         </Button>
       </div>
     );
@@ -302,27 +321,34 @@ export default function Radar() {
     );
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left font-mono">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUNA ESQUERDA: CONFIGURAÇÕES E CATEGORIAS */}
+        {/* COLUNA ESQUERDA: SYSTEM CONTROL & CATEGORIES */}
         <div className="lg:col-span-6 space-y-6">
-          {/* HEADER E AÇÃO */}
-          <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border shadow-sm">
+          {/* SYSTEM STATUS HEADER */}
+          <div className="flex flex-col gap-4 bg-slate-900 p-6 rounded-2xl border border-slate-700 shadow-2xl">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div
                   className={cn(
-                    "p-3 rounded-2xl transition-all",
-                    isActive ? "bg-emerald-500 text-white shadow-lg animate-pulse" : "bg-slate-100 text-slate-400",
+                    "p-4 rounded-xl transition-all border",
+                    isActive
+                      ? "bg-emerald-500/10 border-emerald-500 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse"
+                      : "bg-slate-800 border-slate-700 text-slate-500",
                   )}
                 >
-                  <RadarIcon className="h-6 w-6" />
+                  <RadarIcon className="h-7 w-7" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black uppercase italic leading-none text-slate-900">Radar Diamond</h1>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {isActive ? "Monitoramento Ativo" : "Sistema em Standby"}
-                  </span>
+                  <h1 className="text-2xl font-black uppercase tracking-tighter text-white">
+                    H2 Linker Radar <span className="text-indigo-500 font-normal">v2.0</span>
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Activity className={cn("h-3 w-3", isActive ? "text-emerald-500" : "text-slate-600")} />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      {isActive ? "System Live / Scanning" : "System Standby"}
+                    </span>
+                  </div>
                 </div>
               </div>
               <Switch
@@ -332,40 +358,45 @@ export default function Radar() {
                   performSave({ is_active: val });
                 }}
                 disabled={saving}
+                className="data-[state=checked]:bg-emerald-500"
               />
             </div>
             {hasChanges && (
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-md transition-all active:scale-95"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl shadow-lg border border-indigo-400/30"
               >
-                <Save className="h-4 w-4 mr-2" /> APLICAR ALTERAÇÕES
+                <Database className="h-4 w-4 mr-2" /> OVERWRITE SYSTEM CONFIG
               </Button>
             )}
           </div>
 
-          {/* PAINEL DE INTELIGÊNCIA (FILTROS) */}
-          <Card className="border-slate-200 rounded-2xl shadow-sm">
-            <CardHeader className="p-5 border-b bg-slate-50/30 flex justify-between items-center flex-row">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2 italic">
-                <ShieldCheck className="h-4 w-4" /> Inteligência e Filtros
+          {/* INTEL FILTERS */}
+          <Card className="border-slate-800 bg-slate-900 rounded-2xl shadow-sm overflow-hidden">
+            <CardHeader className="p-5 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center flex-row">
+              <CardTitle className="text-[11px] font-black uppercase text-indigo-400 flex items-center gap-2 tracking-[0.2em]">
+                <ShieldCheck className="h-4 w-4" /> Intelligence Filters
               </CardTitle>
-              <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                <Label className="text-[10px] font-bold text-indigo-700 cursor-pointer">Auto-Enviar</Label>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} className="scale-75" />
+              <div className="flex items-center gap-3 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
+                <Label className="text-[10px] font-bold text-slate-300 cursor-pointer uppercase">Auto-Route</Label>
+                <Switch
+                  checked={autoSend}
+                  onCheckedChange={setAutoSend}
+                  className="scale-75 data-[state=checked]:bg-indigo-500"
+                />
               </div>
             </CardHeader>
             <CardContent className="p-5">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Visto</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Visa Type</Label>
                   <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="h-9 rounded-lg">
+                    <SelectTrigger className="h-9 bg-slate-800 border-slate-700 text-slate-200 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Qualquer</SelectItem>
+                    <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectItem value="all">All Protocols</SelectItem>
                       {VISA_TYPE_OPTIONS.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
@@ -374,14 +405,16 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Estado</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+                    Geographic Zone
+                  </Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="h-9 rounded-lg">
+                    <SelectTrigger className="h-9 bg-slate-800 border-slate-700 text-slate-200 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">EUA Inteiro</SelectItem>
+                    <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectItem value="all">Full USA</SelectItem>
                       {US_STATES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
@@ -390,48 +423,50 @@ export default function Radar() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Salário Mín.</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+                    Min Wage ($/h)
+                  </Label>
                   <Input
                     type="number"
                     value={minWage}
                     onChange={(e) => setMinWage(e.target.value)}
-                    className="h-9 rounded-lg font-bold"
-                    placeholder="$"
+                    className="h-9 bg-slate-800 border-slate-700 text-white font-bold text-xs"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase">Exp Máx.</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+                    Max Exp (Months)
+                  </Label>
                   <Input
                     type="number"
                     value={maxExperience}
                     onChange={(e) => setMaxExperience(e.target.value)}
-                    className="h-9 rounded-lg font-bold"
-                    placeholder="Meses"
+                    className="h-9 bg-slate-800 border-slate-700 text-white font-bold text-xs"
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* SELETOR DE CATEGORIAS (2 COLUNAS) */}
-          <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="p-5 border-b bg-slate-50/30">
-              <CardTitle className="text-xs font-black uppercase text-slate-500 flex items-center gap-2 italic">
-                <LayoutGrid className="h-4 w-4" /> 20 Divisões Diamond
+          {/* 20 SECTOR CONTROL (2 COLUMNS) */}
+          <Card className="border-slate-800 bg-slate-900 rounded-2xl shadow-sm overflow-hidden">
+            <CardHeader className="p-5 border-b border-slate-800 bg-slate-950/50">
+              <CardTitle className="text-[11px] font-black uppercase text-indigo-400 flex items-center gap-2 tracking-[0.2em]">
+                <Settings2 className="h-4 w-4" /> Sector Core Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3 bg-slate-50/20">
-              <div className="grid grid-cols-2 gap-3">
-                {/* COLUNA 1 */}
+            <CardContent className="p-4 bg-slate-900/50">
+              <div className="grid grid-cols-2 gap-4">
+                {/* COLUMN 1 */}
                 <div className="space-y-2">
                   {leftSectors.map(([segment, data]) => (
                     <div
                       key={segment}
-                      className="border bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-200 transition-colors"
+                      className="border border-slate-800 bg-slate-950 rounded-xl overflow-hidden group hover:border-indigo-500/50 transition-all"
                     >
                       <div
-                        className="p-2 cursor-pointer flex items-center justify-between"
+                        className="p-2.5 cursor-pointer flex items-center justify-between"
                         onClick={() =>
                           setExpandedSegments((p) =>
                             p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -439,19 +474,21 @@ export default function Radar() {
                         }
                       >
                         <div className="flex flex-col text-left">
-                          <span className="text-[9px] font-black text-slate-700 uppercase leading-none">{segment}</span>
-                          <span className="text-[7px] font-bold text-indigo-600 uppercase mt-1">
-                            {data.totalJobs} Vagas Totais
+                          <span className="text-[10px] font-black text-slate-200 uppercase tracking-tight">
+                            {segment}
+                          </span>
+                          <span className="text-[8px] font-bold text-indigo-500 uppercase">
+                            {data.totalJobs} Entries Found
                           </span>
                         </div>
                         {expandedSegments.includes(segment) ? (
-                          <ChevronDown className="h-3 w-3 text-indigo-600" />
+                          <ChevronDown className="h-3 w-3 text-indigo-500" />
                         ) : (
-                          <ChevronRight className="h-3 w-3 text-slate-300" />
+                          <ChevronRight className="h-3 w-3 text-slate-700" />
                         )}
                       </div>
                       {expandedSegments.includes(segment) && (
-                        <div className="p-2 bg-slate-50/50 border-t flex flex-col gap-1">
+                        <div className="p-2 bg-slate-900/80 border-t border-slate-800 flex flex-col gap-1.5">
                           {data.items.map((cat) => (
                             <button
                               key={cat.raw_category}
@@ -463,10 +500,10 @@ export default function Radar() {
                                 )
                               }
                               className={cn(
-                                "p-1.5 rounded-lg border text-left text-[8px] font-bold transition-all",
+                                "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all",
                                 selectedCategories.includes(cat.raw_category)
-                                  ? "bg-indigo-600 border-indigo-600 text-white"
-                                  : "bg-white text-slate-500",
+                                  ? "bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_rgba(79,70,229,0.4)]"
+                                  : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200",
                               )}
                             >
                               {cat.raw_category}
@@ -477,15 +514,15 @@ export default function Radar() {
                     </div>
                   ))}
                 </div>
-                {/* COLUNA 2 */}
+                {/* COLUMN 2 */}
                 <div className="space-y-2">
                   {rightSectors.map(([segment, data]) => (
                     <div
                       key={segment}
-                      className="border bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-200 transition-colors"
+                      className="border border-slate-800 bg-slate-950 rounded-xl overflow-hidden group hover:border-indigo-500/50 transition-all"
                     >
                       <div
-                        className="p-2 cursor-pointer flex items-center justify-between"
+                        className="p-2.5 cursor-pointer flex items-center justify-between"
                         onClick={() =>
                           setExpandedSegments((p) =>
                             p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -493,19 +530,21 @@ export default function Radar() {
                         }
                       >
                         <div className="flex flex-col text-left">
-                          <span className="text-[9px] font-black text-slate-700 uppercase leading-none">{segment}</span>
-                          <span className="text-[7px] font-bold text-indigo-600 uppercase mt-1">
-                            {data.totalJobs} Vagas Totais
+                          <span className="text-[10px] font-black text-slate-200 uppercase tracking-tight">
+                            {segment}
+                          </span>
+                          <span className="text-[8px] font-bold text-indigo-500 uppercase">
+                            {data.totalJobs} Entries Found
                           </span>
                         </div>
                         {expandedSegments.includes(segment) ? (
-                          <ChevronDown className="h-3 w-3 text-indigo-600" />
+                          <ChevronDown className="h-3 w-3 text-indigo-500" />
                         ) : (
-                          <ChevronRight className="h-3 w-3 text-slate-300" />
+                          <ChevronRight className="h-3 w-3 text-slate-700" />
                         )}
                       </div>
                       {expandedSegments.includes(segment) && (
-                        <div className="p-2 bg-slate-50/50 border-t flex flex-col gap-1">
+                        <div className="p-2 bg-slate-900/80 border-t border-slate-800 flex flex-col gap-1.5">
                           {data.items.map((cat) => (
                             <button
                               key={cat.raw_category}
@@ -517,10 +556,10 @@ export default function Radar() {
                                 )
                               }
                               className={cn(
-                                "p-1.5 rounded-lg border text-left text-[8px] font-bold transition-all",
+                                "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all",
                                 selectedCategories.includes(cat.raw_category)
-                                  ? "bg-indigo-600 border-indigo-600 text-white"
-                                  : "bg-white text-slate-500",
+                                  ? "bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_rgba(79,70,229,0.4)]"
+                                  : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200",
                               )}
                             >
                               {cat.raw_category}
@@ -536,28 +575,33 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: FILA DE MATCHES */}
+        {/* COLUNA DIREITA: LIVE MATCH STREAM */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="flex items-center justify-between border-b pb-4 text-left">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4 text-left">
             <div>
-              <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-2">
-                <Target className="h-6 w-6 text-indigo-600" /> Fila de Matches
+              <h2 className="text-xl font-black uppercase italic text-white flex items-center gap-3">
+                <Target className="h-6 w-6 text-indigo-500" /> Match Detection Stream
               </h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Vagas compatíveis com seu perfil
+              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+                Real-time database sync for h2-linker protocol
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchMatches}
+                className="text-slate-500 hover:text-indigo-400 hover:bg-slate-800"
+              >
                 <RefreshCcw className="h-4 w-4" />
               </Button>
-              <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-                {matchCount} Vagas
+              <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.4)]">
+                {matchCount} Signal(s)
               </Badge>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
             {matchedJobs.length > 0 ? (
               matchedJobs.map((match) => {
                 const job = match.public_jobs;
@@ -565,58 +609,60 @@ export default function Radar() {
                 return (
                   <Card
                     key={match.id}
-                    className="group border-slate-200 hover:border-indigo-300 transition-all shadow-sm bg-white overflow-hidden"
+                    className="group border-slate-800 bg-slate-900/50 hover:bg-slate-900 hover:border-indigo-500/50 transition-all shadow-sm overflow-hidden"
                   >
                     <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
-                      <div className="p-4 flex-1 text-left space-y-2">
+                      <div className="p-4 flex-1 text-left space-y-2.5">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 uppercase font-black">
+                          <Badge className="bg-emerald-500/10 text-emerald-500 text-[9px] border-emerald-500/20 uppercase font-black px-2">
                             {job.visa_type}
                           </Badge>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono">
-                            <MapPin className="h-3 w-3" /> {job.state}
+                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono border-l border-slate-800 pl-2">
+                            <MapPin className="h-3 w-3 text-slate-500" /> {job.state}
                           </span>
-                          <span className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-indigo-400 uppercase flex items-center gap-1 border-l border-slate-800 pl-2">
                             <Users className="h-3 w-3" /> {job.openings || 1} Vagas
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase">{job.category}</h3>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                          <p className="text-[11px] font-black text-slate-700 uppercase italic leading-none">
-                            {job.company || "Empresa"}
+                        <h3 className="text-sm font-black text-slate-100 leading-tight uppercase tracking-tight">
+                          {job.category}
+                        </h3>
+                        <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-950/40">
+                          <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                          <p className="text-[11px] font-black text-indigo-300 uppercase italic leading-none">
+                            {job.company || "System identified"}
                           </p>
                         </div>
-                        <div className="flex items-center gap-4 pt-1">
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/h
+                        <div className="flex items-center gap-4 pt-2">
+                          <span className="text-[11px] font-black text-white flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-500" /> ${job.salary || "N/A"}/h
                           </span>
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            <Briefcase className="h-3.5 w-3.5 text-indigo-600" /> {job.experience_months || 0}m exp
+                          <span className="text-[11px] font-black text-white flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-100/10">
+                            <Briefcase className="h-3.5 w-3.5 text-indigo-500" /> {job.experience_months || 0}m exp
                           </span>
                         </div>
                       </div>
-                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-100 min-w-[150px]">
+                      <div className="bg-slate-950/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-800 min-w-[160px]">
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95 border border-emerald-400/30"
                         >
-                          <Send className="h-3 w-3 mr-1" /> ENVIAR
+                          <Send className="h-3.5 w-3.5 mr-1.5" /> ROUTE TASK
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
-                          className="text-[9px] font-black h-8 w-full border-slate-300 hover:bg-white flex items-center gap-2"
+                          className="text-[9px] font-black h-8 w-full border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-2"
                         >
-                          <Eye className="h-3 w-3" /> VER NO HUB
+                          <Eye className="h-3.5 w-3.5" /> HUB PREVIEW
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-300 hover:text-red-600 transition-colors"
+                          className="h-8 w-8 p-0 text-slate-600 hover:text-red-500 transition-colors mt-1"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -626,9 +672,12 @@ export default function Radar() {
                 );
               })
             ) : (
-              <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-4 text-center">
-                <RadarIcon className="h-12 w-12 text-slate-200 animate-pulse" />
-                <p className="text-sm font-black text-slate-400 uppercase italic">Aguardando Varredura...</p>
+              <div className="py-32 bg-slate-950/30 rounded-[3rem] border-2 border-dashed border-slate-800 flex flex-col items-center gap-5 text-center">
+                <Cpu className="h-14 w-14 text-slate-800 animate-pulse" />
+                <div className="space-y-1">
+                  <p className="text-sm font-black text-slate-600 uppercase tracking-[0.3em]">Scanning Database...</p>
+                  <p className="text-[10px] text-slate-700">No new matching protocols detected in current cycle.</p>
+                </div>
               </div>
             )}
           </div>
