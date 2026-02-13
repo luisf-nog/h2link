@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import {
   Radar as RadarIcon,
-  Zap,
   ShieldCheck,
   Loader2,
   Save,
@@ -31,69 +30,48 @@ import {
   Eye,
   Radio,
   LayoutGrid,
-  CheckCircle2,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO LÓGICO POR PALAVRAS-CHAVE ---
+// --- MAPEAMENTO DE PALAVRAS-CHAVE ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
-  "Agricultura e Colheita": [
-    "Farmworkers",
-    "Crop",
-    "Nursery",
-    "Harvest",
-    "Agricultural Products",
-    "Agriculture",
-    "Forest",
-  ],
-  "Maquinário Agrícola": ["Agricultural Equipment Operators", "Packers and Packagers, Agricultural", "Tractor"],
+  "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest"],
+  "Maquinário Agrícola": ["Agricultural Equipment", "Packers and Packagers, Agricultural", "Tractor"],
   "Construção Civil": [
-    "Construction Laborers",
-    "Cement Masons",
+    "Construction",
+    "Laborers",
+    "Cement",
+    "Masons",
     "Concrete",
     "Fence",
-    "Masons",
     "Brickmasons",
-    "Iron and Rebar",
+    "Iron",
     "Paving",
-    "Operating Engineers",
   ],
   "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
-  "Instalações e Manutenção": [
-    "Electricians",
-    "Plumbers",
-    "Installation",
-    "Pipelayers",
-    "Septic",
-    "Maintenance and Repair Workers",
-  ],
+  "Instalações e Manutenção": ["Electricians", "Plumbers", "Installation", "Pipelayers", "Septic", "Repair Workers"],
   "Mecânica e Reparos": [
     "Farm Equipment Mechanics",
     "Service Technicians",
     "Automotive",
     "Diesel",
-    "Industrial Machinery Mechanics",
+    "Machinery Mechanics",
   ],
   "Limpeza e Governança": ["Maids", "Housekeeping", "Janitors", "Cleaners"],
   "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Chefs"],
-  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Fast Food and Counter", "Dishwashers"],
-  "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage", "Porters"],
+  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Fast Food", "Dishwashers"],
+  "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage"],
   "Bar e Cafeteria": ["Baristas", "Bartenders"],
-  "Logística e Carga": [
-    "Laborers and Freight",
-    "Stockers",
-    "Packers and Packagers, Hand",
-    "Industrial Truck and Tractor Operators",
-    "Order Fillers",
-  ],
-  "Transporte de Carga": ["Truck Drivers", "Shuttle", "Chauffeurs", "Delivery", "Taxi"],
+  "Logística e Carga": ["Laborers and Freight", "Stockers", "Packers", "Material Movers", "Order Fillers"],
+  "Transporte de Carga": ["Truck Drivers", "Shuttle", "Chauffeurs", "Delivery"],
   "Manufatura e Produção": ["Assemblers", "Fabricators", "Production Workers", "Machine Feeders"],
-  "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers", "Brazers", "Forging"],
-  "Indústria da Madeira": ["Woodworking", "Sawing Machine Setters"],
-  "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing", "Upholsterers"],
+  "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers", "Brazers"],
+  "Indústria da Madeira": ["Woodworking", "Sawing Machine"],
+  "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing"],
   "Setor de Carnes": ["Meat, Poultry", "Butchers", "Slaughterers"],
-  "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers", "Pesticide"],
-  "Vendas e Comércio": ["Salespersons", "Counter and Rental", "Cashiers", "Retail"],
+  "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers"],
+  "Vendas e Comércio": ["Salespersons", "Counter", "Cashiers", "Retail"],
 };
 
 const US_STATES = [
@@ -173,14 +151,52 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
+  // Sincroniza estatísticas quando os filtros mudam
+  const updateStats = async () => {
+    try {
+      const { data } = await supabase.rpc("get_radar_stats", {
+        p_visa_type: visaType,
+        p_state: stateFilter,
+        p_min_wage: minWage !== "" ? Number(minWage) : 0,
+        p_max_exp: maxExperience !== "" ? Number(maxExperience) : 999,
+      });
+
+      if (data) {
+        const grouped = (data as any[]).reduce((acc: any, curr: any) => {
+          const raw = curr.raw_category || "";
+          let segment = "Serviços Gerais";
+          for (const [sector, keywords] of Object.entries(SECTOR_KEYWORDS)) {
+            if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
+              segment = sector;
+              break;
+            }
+          }
+          if (!acc[segment]) acc[segment] = { items: [], totalJobs: 0 };
+          acc[segment].items.push(curr);
+          acc[segment].totalJobs += curr.count || 0;
+          return acc;
+        }, {});
+
+        Object.keys(SECTOR_KEYWORDS).forEach((s) => {
+          if (!grouped[s]) grouped[s] = { items: [], totalJobs: 0 };
+        });
+        setGroupedCategories(grouped);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    updateStats();
+  }, [visaType, stateFilter, minWage, maxExperience]);
+
   const hasChanges = useMemo(() => {
     if (!radarProfile) return false;
-    const dbCats = radarProfile.categories || [];
-    const catsChanged = JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...dbCats].sort());
     return (
       isActive !== (radarProfile.is_active ?? false) ||
       autoSend !== (radarProfile.auto_send ?? false) ||
-      catsChanged ||
+      JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...(radarProfile.categories || [])].sort()) ||
       minWage !== (radarProfile.min_wage?.toString() || "") ||
       maxExperience !== (radarProfile.max_experience?.toString() || "") ||
       visaType !== (radarProfile.visa_type || "all") ||
@@ -190,66 +206,39 @@ export default function Radar() {
 
   const fetchMatches = async () => {
     if (!profile?.id) return;
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("radar_matched_jobs" as any)
       .select(`id, job_id, public_jobs!fk_radar_job (*)`)
       .eq("user_id", profile.id);
-    if (!error && data) {
+    if (data) {
       setMatchedJobs(data);
       setMatchCount(data.length);
     }
   };
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadProfile = async () => {
       if (!profile?.id) return;
-      try {
-        setLoading(true);
-        const { data: catData } = await supabase.rpc("get_category_stats_cached" as any);
-        if (catData) {
-          const grouped = (catData as any[]).reduce((acc: any, curr: any) => {
-            const raw = curr.raw_category || "";
-            let segment = "Outros Serviços Gerais";
-            for (const [sector, keywords] of Object.entries(SECTOR_KEYWORDS)) {
-              if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
-                segment = sector;
-                break;
-              }
-            }
-            if (!acc[segment]) acc[segment] = { items: [], totalJobs: 0 };
-            acc[segment].items.push(curr);
-            acc[segment].totalJobs += curr.count || 0;
-            return acc;
-          }, {});
-
-          // Garante que todos os 20 setores apareçam mesmo com 0
-          Object.keys(SECTOR_KEYWORDS).forEach((s) => {
-            if (!grouped[s]) grouped[s] = { items: [], totalJobs: 0 };
-          });
-          setGroupedCategories(grouped);
-        }
-
-        const { data: prof }: any = await supabase
-          .from("radar_profiles" as any)
-          .select("*")
-          .eq("user_id", profile.id)
-          .maybeSingle();
-        if (prof) {
-          setRadarProfile(prof);
-          setIsActive(prof.is_active);
-          setAutoSend(prof.auto_send);
-          setSelectedCategories(prof.categories || []);
-          setMinWage(prof.min_wage?.toString() || "");
-          setMaxExperience(prof.max_experience?.toString() || "");
-          setVisaType(prof.visa_type || "all");
-          setStateFilter(prof.state || "all");
-        }
-        await fetchMatches();
-      } finally {
-        setLoading(false);
+      setLoading(true);
+      const { data: prof }: any = await supabase
+        .from("radar_profiles" as any)
+        .select("*")
+        .eq("user_id", profile.id)
+        .maybeSingle();
+      if (prof) {
+        setRadarProfile(prof);
+        setIsActive(prof.is_active);
+        setAutoSend(prof.auto_send);
+        setSelectedCategories(prof.categories || []);
+        setMinWage(prof.min_wage?.toString() || "");
+        setMaxExperience(prof.max_experience?.toString() || "");
+        setVisaType(prof.visa_type || "all");
+        setStateFilter(prof.state || "all");
       }
+      await fetchMatches();
+      setLoading(false);
     };
-    loadData();
+    loadProfile();
   }, [profile?.id]);
 
   const performSave = async (overrides = {}) => {
@@ -272,52 +261,15 @@ export default function Radar() {
           .update(payload)
           .eq("user_id", profile.id)
       : await supabase.from("radar_profiles" as any).insert(payload);
-
     if (!error) {
       setRadarProfile({ ...radarProfile, ...payload });
       if (payload.is_active) {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Armado", className: "bg-indigo-600 text-white" });
+      toast({ title: "Radar Signal Synced", className: "bg-indigo-600 text-white" });
     }
     setSaving(false);
-  };
-
-  const toggleSector = (sectorName: string) => {
-    const sectorSubcats = groupedCategories[sectorName].items.map((i) => i.raw_category);
-    const allSelected = sectorSubcats.every((cat) => selectedCategories.includes(cat));
-    if (allSelected) {
-      setSelectedCategories((prev) => prev.filter((cat) => !sectorSubcats.includes(cat)));
-    } else {
-      setSelectedCategories((prev) => [...new Set([...prev, ...sectorSubcats])]);
-    }
-  };
-
-  const handleSendApplication = async (matchId: string, jobId: string) => {
-    try {
-      await supabase.from("my_queue" as any).insert([{ user_id: profile?.id, job_id: jobId, status: "pending" }]);
-      await supabase
-        .from("radar_matched_jobs" as any)
-        .delete()
-        .eq("id", matchId);
-      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
-      setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Signal Detected!", className: "bg-emerald-600 text-white" });
-    } catch (err) {
-      toast({ title: "Routing Fail", variant: "destructive" });
-    }
-  };
-
-  const removeMatch = async (matchId: string) => {
-    const { error } = await supabase
-      .from("radar_matched_jobs" as any)
-      .delete()
-      .eq("id", matchId);
-    if (!error) {
-      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
-      setMatchCount((prev) => Math.max(0, prev - 1));
-    }
   };
 
   const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
@@ -343,9 +295,8 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUNA ESQUERDA: SYSTEM CONFIG */}
+        {/* LADO ESQUERDO: CONFIG */}
         <div className="lg:col-span-6 space-y-6">
-          {/* HEADER STATUS */}
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -365,7 +316,7 @@ export default function Radar() {
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
                     {isActive ? (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
                           LIVE TRACKING
@@ -393,14 +344,14 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-xl shadow-lg transition-all active:scale-95 border-b-4 border-indigo-800"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all active:translate-y-1 active:border-b-0"
               >
                 <Save className="h-4 w-4 mr-2" /> SALVAR PROTOCOLOS
               </Button>
             )}
           </div>
 
-          {/* FILTROS DE INTELIGÊNCIA */}
+          {/* FILTROS RESPONSIVOS */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
@@ -449,200 +400,124 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Salário Mín ($/h)</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase">Salário Mín</Label>
                   <Input
                     type="number"
                     value={minWage}
                     onChange={(e) => setMinWage(e.target.value)}
-                    className="h-9 border-slate-200 text-slate-900 font-black text-xs"
+                    className="h-9 font-black text-xs"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase">Exp Máx (Meses)</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase">Exp Máx</Label>
                   <Input
                     type="number"
                     value={maxExperience}
                     onChange={(e) => setMaxExperience(e.target.value)}
-                    className="h-9 border-slate-200 text-slate-900 font-black text-xs"
+                    className="h-9 font-black text-xs"
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* DIVISÕES DE TRABALHO EM 2 COLUNAS */}
+          {/* CATEGORIAS EM 2 COLUNAS */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas (Setores)
+                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 bg-slate-50/20">
               <div className="grid grid-cols-2 gap-4">
-                {/* LADO ESQUERDO (10 SETORES) */}
-                <div className="space-y-2">
-                  {leftSectors.map(([segment, data]) => {
-                    const allSelected =
-                      data.items.length > 0 && data.items.every((i) => selectedCategories.includes(i.raw_category));
-                    return (
-                      <div
-                        key={segment}
-                        className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-400 transition-all"
-                      >
+                {[leftSectors, rightSectors].map((column, colIdx) => (
+                  <div key={colIdx} className="space-y-2">
+                    {column.map(([segment, data]) => {
+                      const allSelected =
+                        data.items.length > 0 && data.items.every((i) => selectedCategories.includes(i.raw_category));
+                      return (
                         <div
-                          className="p-2.5 cursor-pointer flex items-center justify-between group"
-                          onClick={() =>
-                            setExpandedSegments((p) =>
-                              p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
-                            )
-                          }
+                          key={segment}
+                          className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-400 transition-all"
                         >
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] font-black text-slate-700 uppercase leading-none tracking-tight">
-                              {segment}
-                            </span>
-                            <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
-                              {data.totalJobs} Vagas Disponíveis
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSector(segment);
-                              }}
-                              className={cn(
-                                "h-6 text-[7px] font-black px-1.5 rounded-lg border",
-                                allSelected
-                                  ? "bg-indigo-600 text-white"
-                                  : "hover:bg-indigo-50 text-indigo-600 border-indigo-100",
-                              )}
-                            >
-                              {allSelected ? "REMOVER" : "ADD SETOR"}
-                            </Button>
-                            {expandedSegments.includes(segment) ? (
-                              <ChevronDown className="h-4 w-4 text-indigo-600" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-slate-300" />
-                            )}
-                          </div>
-                        </div>
-                        {expandedSegments.includes(segment) && (
-                          <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
-                            {data.items.map((cat) => (
-                              <button
-                                key={cat.raw_category}
-                                onClick={() =>
-                                  setSelectedCategories((p) =>
-                                    p.includes(cat.raw_category)
-                                      ? p.filter((c) => c !== cat.raw_category)
-                                      : [...p, cat.raw_category],
-                                  )
-                                }
+                          <div
+                            className="p-2.5 cursor-pointer flex items-center justify-between group"
+                            onClick={() =>
+                              setExpandedSegments((p) =>
+                                p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
+                              )
+                            }
+                          >
+                            <div className="flex flex-col text-left">
+                              <span className="text-[10px] font-black text-slate-700 uppercase leading-none">
+                                {segment}
+                              </span>
+                              <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
+                                {data.totalJobs} Vagas Disponíveis
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const sectorCats = data.items.map((i) => i.raw_category);
+                                  setSelectedCategories((prev) =>
+                                    allSelected
+                                      ? prev.filter((c) => !sectorCats.includes(c))
+                                      : [...new Set([...prev, ...sectorCats])],
+                                  );
+                                }}
                                 className={cn(
-                                  "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all flex justify-between items-center",
-                                  selectedCategories.includes(cat.raw_category)
-                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                                    : "bg-white text-slate-500 hover:border-indigo-200",
+                                  "h-6 text-[7px] font-black px-1.5 rounded-lg border",
+                                  allSelected ? "bg-indigo-600 text-white" : "text-indigo-600 border-indigo-100",
                                 )}
                               >
-                                {cat.raw_category}
-                                <span className="text-[8px] opacity-60">({cat.count})</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* LADO DIREITO (10 SETORES) */}
-                <div className="space-y-2">
-                  {rightSectors.map(([segment, data]) => {
-                    const allSelected =
-                      data.items.length > 0 && data.items.every((i) => selectedCategories.includes(i.raw_category));
-                    return (
-                      <div
-                        key={segment}
-                        className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-sm hover:border-indigo-400 transition-all"
-                      >
-                        <div
-                          className="p-2.5 cursor-pointer flex items-center justify-between group"
-                          onClick={() =>
-                            setExpandedSegments((p) =>
-                              p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
-                            )
-                          }
-                        >
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] font-black text-slate-700 uppercase leading-none tracking-tight">
-                              {segment}
-                            </span>
-                            <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1.5">
-                              {data.totalJobs} Vagas Disponíveis
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSector(segment);
-                              }}
-                              className={cn(
-                                "h-6 text-[7px] font-black px-1.5 rounded-lg border",
-                                allSelected
-                                  ? "bg-indigo-600 text-white"
-                                  : "hover:bg-indigo-50 text-indigo-600 border-indigo-100",
+                                {allSelected ? "REMOVER" : "ADD SETOR"}
+                              </Button>
+                              {expandedSegments.includes(segment) ? (
+                                <ChevronDown className="h-4 w-4 text-indigo-600" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-slate-300" />
                               )}
-                            >
-                              {allSelected ? "REMOVER" : "ADD SETOR"}
-                            </Button>
-                            {expandedSegments.includes(segment) ? (
-                              <ChevronDown className="h-4 w-4 text-indigo-600" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-slate-300" />
-                            )}
+                            </div>
                           </div>
+                          {expandedSegments.includes(segment) && (
+                            <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
+                              {data.items.map((cat) => (
+                                <button
+                                  key={cat.raw_category}
+                                  onClick={() =>
+                                    setSelectedCategories((p) =>
+                                      p.includes(cat.raw_category)
+                                        ? p.filter((c) => c !== cat.raw_category)
+                                        : [...p, cat.raw_category],
+                                    )
+                                  }
+                                  className={cn(
+                                    "p-2 rounded-lg border text-left text-[9px] font-bold transition-all flex justify-between items-center",
+                                    selectedCategories.includes(cat.raw_category)
+                                      ? "bg-indigo-600 border-indigo-600 text-white"
+                                      : "bg-white text-slate-500 hover:border-indigo-200",
+                                  )}
+                                >
+                                  {cat.raw_category} <span className="text-[8px] opacity-60">({cat.count})</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        {expandedSegments.includes(segment) && (
-                          <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
-                            {data.items.map((cat) => (
-                              <button
-                                key={cat.raw_category}
-                                onClick={() =>
-                                  setSelectedCategories((p) =>
-                                    p.includes(cat.raw_category)
-                                      ? p.filter((c) => c !== cat.raw_category)
-                                      : [...p, cat.raw_category],
-                                  )
-                                }
-                                className={cn(
-                                  "p-2 rounded-lg border text-left text-[9px] font-bold leading-tight transition-all flex justify-between items-center",
-                                  selectedCategories.includes(cat.raw_category)
-                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                                    : "bg-white text-slate-500 hover:border-indigo-200",
-                                )}
-                              >
-                                {cat.raw_category}
-                                <span className="text-[8px] opacity-60">({cat.count})</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: LIVE MATCH DETECTION */}
+        {/* LADO DIREITO: MATCHES */}
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4 text-left">
             <div>
@@ -650,7 +525,7 @@ export default function Radar() {
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Real-time signal sync h2-linker protocol
+                Real-time database sync h2-linker protocol
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -658,7 +533,7 @@ export default function Radar() {
                 <RefreshCcw className="h-4 w-4" />
               </Button>
               <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 rounded-full shadow-lg">
-                {matchCount} Signals Detected
+                {matchCount} Matches
               </Badge>
             </div>
           </div>
@@ -671,7 +546,7 @@ export default function Radar() {
                 return (
                   <Card
                     key={match.id}
-                    className="group border-slate-200 bg-white hover:border-indigo-400 transition-all shadow-sm overflow-hidden"
+                    className="group border-slate-200 bg-white hover:border-indigo-400 transition-all shadow-sm overflow-hidden text-left"
                   >
                     <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
                       <div className="p-4 flex-1 text-left space-y-2.5">
@@ -680,10 +555,10 @@ export default function Radar() {
                             {job.visa_type}
                           </Badge>
                           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 font-mono border-l border-slate-100 pl-2">
-                            <MapPin className="h-3 w-3 text-slate-400" /> {job.state}
+                            <MapPin className="h-3 w-3" /> {job.state}
                           </span>
-                          <span className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1 border-l border-slate-100 pl-2">
-                            <Users className="h-3 w-3 text-indigo-400" /> {job.openings || 1} Vagas
+                          <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 border-l border-slate-100 pl-2">
+                            <Users className="h-3 w-3" /> {job.openings || 1} Vagas
                           </span>
                         </div>
                         <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
@@ -708,7 +583,7 @@ export default function Radar() {
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:scale-95 border-b-2 border-emerald-900"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:translate-y-0.5 border-b-2 border-emerald-900"
                         >
                           <Send className="h-3.5 w-3.5 mr-1.5" /> ENVIAR
                         </Button>
@@ -724,7 +599,7 @@ export default function Radar() {
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 transition-colors mt-1"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -738,7 +613,7 @@ export default function Radar() {
                 <Radio className="h-14 w-14 text-slate-200 animate-pulse" />
                 <div className="space-y-1">
                   <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Aguardando Sinais...</p>
-                  <p className="text-[10px] text-slate-400">Ative o Radar para iniciar a sincronização.</p>
+                  <p className="text-[10px] text-slate-400">Ative o Radar para iniciar a varredura.</p>
                 </div>
               </div>
             )}
