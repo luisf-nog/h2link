@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- MAPEAMENTO DE PALAVRAS-CHAVE ---
+// --- MAPEAMENTO LÓGICO ---
 const SECTOR_KEYWORDS: Record<string, string[]> = {
   "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
   "Maquinário Agrícola": ["Agricultural Equipment", "Tractor"],
@@ -53,13 +53,7 @@ const SECTOR_KEYWORDS: Record<string, string[]> = {
   ],
   "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
   "Instalações e Manutenção": ["Electricians", "Plumbers", "Installation", "Pipelayers", "Septic", "Repair Workers"],
-  "Mecânica e Reparos": [
-    "Farm Equipment Mechanics",
-    "Service Technicians",
-    "Automotive",
-    "Diesel",
-    "Machinery Mechanics",
-  ],
+  "Mecânica e Reparos": ["Farm Equipment Mechanics", "Service Technicians", "Automotive", "Diesel"],
   "Limpeza e Governança": ["Maids", "Housekeeping", "Janitors", "Cleaners"],
   "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Kitchen"],
   "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Hostess", "Dishwashers"],
@@ -153,6 +147,20 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
+  // Lógica de cores por Grupo
+  const getGroupStyles = (group: string) => {
+    switch (group?.toUpperCase()) {
+      case "A":
+        return "bg-indigo-600 text-white border-indigo-700 shadow-sm";
+      case "B":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "C":
+        return "bg-slate-100 text-slate-600 border-slate-200";
+      default:
+        return "bg-slate-50 text-slate-400 border-slate-100";
+    }
+  };
+
   const updateStats = async () => {
     try {
       const { data } = await supabase.rpc("get_radar_stats", {
@@ -232,32 +240,25 @@ export default function Radar() {
 
   const handleSendAll = async () => {
     if (matchedJobs.length === 0 || !profile?.id) return;
-    if (!confirm(`Deseja enviar todos os ${matchCount} matches para sua fila de uma vez?`)) return;
-
+    if (!confirm(`Deseja enviar todos os ${matchCount} matches para sua fila?`)) return;
     setBatchSending(true);
     try {
-      const applications = matchedJobs.map((m) => ({
-        user_id: profile.id,
-        job_id: m.job_id,
-        status: "pending",
-      }));
-
+      const applications = matchedJobs.map((m) => ({ user_id: profile.id, job_id: m.job_id, status: "pending" }));
       await supabase.from("my_queue" as any).insert(applications);
       const matchIds = matchedJobs.map((m) => m.id);
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
         .in("id", matchIds);
-
       toast({
         title: "Envio em Massa Concluído",
-        description: `${matchCount} vagas roteadas.`,
+        description: `${matchCount} vagas enviadas.`,
         className: "bg-emerald-600 text-white",
       });
       setMatchedJobs([]);
       setMatchCount(0);
     } catch (err) {
-      toast({ title: "Erro no processamento", variant: "destructive" });
+      toast({ title: "Erro", variant: "destructive" });
     } finally {
       setBatchSending(false);
     }
@@ -272,7 +273,7 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Sinal Capturado!", className: "bg-emerald-600 text-white shadow-sm" });
+      toast({ title: "Sinal Capturado!", className: "bg-emerald-600 text-white" });
     } catch (err) {
       toast({ title: "Erro", variant: "destructive" });
     }
@@ -347,7 +348,7 @@ export default function Radar() {
     return (
       <div className="p-20 text-center">
         <Radio className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
-        <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600">
+        <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600 shadow-lg">
           Upgrade to Diamond
         </Button>
       </div>
@@ -362,7 +363,7 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ESQUERDA */}
+        {/* ESQUERDA: CONFIG */}
         <div className="lg:col-span-6 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
@@ -371,7 +372,7 @@ export default function Radar() {
                   className={cn(
                     "p-4 rounded-xl border transition-all",
                     isActive
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-600"
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm"
                       : "bg-slate-50 border-slate-200 text-slate-400",
                   )}
                 >
@@ -383,8 +384,8 @@ export default function Radar() {
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
                     {isActive ? (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 shadow-sm">
-                        <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
                           LIVE TRACKING
                         </span>
@@ -411,7 +412,7 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg transition-all active:translate-y-1 active:border-b-0 border-b-4 border-indigo-800"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all active:translate-y-1 active:border-b-0"
               >
                 <Save className="h-4 w-4 mr-2" /> SALVAR PROTOCOLOS
               </Button>
@@ -488,8 +489,8 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          {/* CATEGORIAS */}
-          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
+          {/* DIVISÕES */}
+          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
             <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
                 <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
@@ -513,7 +514,7 @@ export default function Radar() {
                           )}
                         >
                           <div
-                            className="p-2.5 cursor-pointer flex items-center justify-between"
+                            className="p-2.5 cursor-pointer flex items-center justify-between group"
                             onClick={() =>
                               setExpandedSegments((p) =>
                                 p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
@@ -546,7 +547,9 @@ export default function Radar() {
                               }}
                               className={cn(
                                 "h-6 text-[7px] font-black px-1.5 border",
-                                allSelected ? "bg-indigo-600 text-white" : "text-indigo-600 border-indigo-100",
+                                allSelected
+                                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                  : "text-indigo-600 border-indigo-100 hover:bg-indigo-50",
                               )}
                             >
                               {allSelected ? "REMOVER" : "ADD SETOR"}
@@ -586,12 +589,12 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* DIREITA */}
+        {/* DIREITA: LIVE MATCHES */}
         <div className="lg:col-span-6 space-y-4 text-left">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div>
               <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-3">
-                <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
+                <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matchs
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
                 Real-time database sync h2-linker protocol
@@ -631,10 +634,13 @@ export default function Radar() {
                           <Badge className="bg-indigo-50 text-indigo-600 text-[9px] border-indigo-100 font-black px-2">
                             {job.visa_type}
                           </Badge>
+                          {/* DESTAQUE DO GRUPO (A, B, C) */}
                           {job.randomization_group && (
                             <Badge
-                              variant="outline"
-                              className="text-[9px] font-black border-slate-200 uppercase text-slate-400 flex items-center gap-1"
+                              className={cn(
+                                "text-[9px] font-black uppercase px-2 py-0.5 border flex items-center gap-1",
+                                getGroupStyles(job.randomization_group),
+                              )}
                             >
                               <Layers className="h-2.5 w-2.5" /> Grupo {job.randomization_group}
                             </Badge>
@@ -643,11 +649,13 @@ export default function Radar() {
                             <MapPin className="h-3 w-3" /> {job.state}
                           </span>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase">{job.category}</h3>
+                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">
+                          {job.category}
+                        </h3>
                         <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-50/50">
                           <Building2 className="h-3.5 w-3.5 text-slate-400" />
                           <p className="text-[11px] font-black text-indigo-900 uppercase italic leading-none">
-                            {job.company || "Empresa Identificada"}
+                            {job.company || "Empresa"}
                           </p>
                         </div>
                         <div className="flex items-center gap-4 pt-2">
