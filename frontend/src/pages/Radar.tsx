@@ -128,6 +128,7 @@ export default function Radar() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Hooks de Estado (Sempre no topo)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [batchSending, setBatchSending] = useState(false);
@@ -137,6 +138,7 @@ export default function Radar() {
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [radarProfile, setRadarProfile] = useState<any>(null);
 
+  // Estados dos Filtros
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -148,7 +150,17 @@ export default function Radar() {
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  // Lógica de cores por Grupo
+  // Cálculos de Memoização
+  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
+  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
+  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
+
+  // SOMA TOTAL DE VAGAS PARA O HEADER (SEU PEDIDO)
+  const totalSinaisGeral = useMemo(
+    () => Object.values(groupedCategories).reduce((acc, curr) => acc + curr.totalJobs, 0),
+    [groupedCategories],
+  );
+
   const getGroupStyles = (group: string) => {
     switch (group?.toUpperCase()) {
       case "A":
@@ -162,6 +174,7 @@ export default function Radar() {
     }
   };
 
+  // Funções de Dados
   const updateStats = async () => {
     try {
       const { data } = await supabase.rpc("get_radar_stats", {
@@ -236,32 +249,30 @@ export default function Radar() {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
       }
-      toast({ title: "Radar Sincronizado", className: "bg-indigo-600 text-white shadow-xl" });
+      toast({ title: "Radar Sincronizado", className: "bg-indigo-600 text-white" });
     }
     setSaving(false);
   };
 
   const handleSendAll = async () => {
     if (matchedJobs.length === 0 || !profile?.id) return;
-    if (!confirm(`Deseja enviar todos os ${matchCount} matches detectados?`)) return;
+    if (!confirm(`Deseja enviar todos os ${matchCount} matches para sua fila?`)) return;
     setBatchSending(true);
     try {
-      const applications = matchedJobs.map((m) => ({ user_id: profile.id, job_id: m.job_id, status: "pending" }));
-      await supabase.from("my_queue" as any).insert(applications);
-      const matchIds = matchedJobs.map((m) => m.id);
+      const apps = matchedJobs.map((m) => ({ user_id: profile.id, job_id: m.job_id, status: "pending" }));
+      await supabase.from("my_queue" as any).insert(apps);
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
-        .in("id", matchIds);
-      toast({
-        title: "Envio Concluído",
-        description: `${matchCount} vagas na fila.`,
-        className: "bg-emerald-600 text-white",
-      });
+        .in(
+          "id",
+          matchedJobs.map((m) => m.id),
+        );
+      toast({ title: "Envio em Massa Concluído", className: "bg-emerald-600 text-white" });
       setMatchedJobs([]);
       setMatchCount(0);
     } catch (err) {
-      toast({ title: "Erro no lote", variant: "destructive" });
+      toast({ title: "Erro no processamento", variant: "destructive" });
     } finally {
       setBatchSending(false);
     }
@@ -276,7 +287,7 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: "Signal Capturado!", className: "bg-emerald-600 text-white shadow-sm" });
+      toast({ title: "Sinal Capturado!", className: "bg-emerald-600 text-white shadow-sm" });
     } catch (err) {
       toast({ title: "Erro", variant: "destructive" });
     }
@@ -290,6 +301,7 @@ export default function Radar() {
     );
   };
 
+  // Efeitos (Dependências de filtros)
   useEffect(() => {
     updateStats();
   }, [visaType, stateFilter, minWage, maxExperience, groupFilter]);
@@ -344,10 +356,6 @@ export default function Radar() {
     radarProfile,
   ]);
 
-  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
-  const leftSectors = useMemo(() => sectorEntries.slice(0, 10), [sectorEntries]);
-  const rightSectors = useMemo(() => sectorEntries.slice(10, 20), [sectorEntries]);
-
   if (!isPremium)
     return (
       <div className="p-20 text-center">
@@ -367,14 +375,14 @@ export default function Radar() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ESQUERDA */}
+        {/* ESQUERDA: CONFIG */}
         <div className="lg:col-span-6 space-y-6">
           <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div
                   className={cn(
-                    "p-4 rounded-xl border transition-all",
+                    "p-4 rounded-xl border transition-all shadow-inner",
                     isActive
                       ? "bg-indigo-50 border-indigo-200 text-indigo-600"
                       : "bg-slate-50 border-slate-200 text-slate-400",
@@ -416,9 +424,9 @@ export default function Radar() {
               <Button
                 onClick={() => performSave()}
                 disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg transition-all active:translate-y-1 active:border-b-0 border-b-4 border-indigo-800"
+                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all active:translate-y-0.5 active:border-b-0"
               >
-                <Save className="h-4 w-4 mr-2" /> SALVAR PROTOCOLOS
+                SALVAR PROTOCOLOS
               </Button>
             )}
           </div>
@@ -456,7 +464,6 @@ export default function Radar() {
                   </Select>
                 </div>
 
-                {/* FILTRO DE GRUPO */}
                 <div className="space-y-1.5">
                   <Label className="text-[9px] font-black text-slate-400 uppercase">Grupo</Label>
                   <Select value={groupFilter} onValueChange={setGroupFilter}>
@@ -510,12 +517,17 @@ export default function Radar() {
             </CardContent>
           </Card>
 
-          {/* DIVISÕES */}
+          {/* DIVISÕES COM SOMA TOTAL NO HEADER */}
           <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
-            <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em]">
-                <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
-              </CardTitle>
+            <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-[11px] font-black uppercase text-slate-500 tracking-[0.1em] flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
+                </CardTitle>
+                <Badge className="bg-indigo-600 text-white font-black text-[9px] px-2 py-0.5 shadow-sm">
+                  {totalSinaisGeral} Sinais Detectados
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-4 bg-slate-50/20">
               <div className="grid grid-cols-2 gap-4">
@@ -612,7 +624,7 @@ export default function Radar() {
           </Card>
         </div>
 
-        {/* DIREITA */}
+        {/* DIREITA: LIVE MATCHES */}
         <div className="lg:col-span-6 space-y-4 text-left">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div>
@@ -620,7 +632,7 @@ export default function Radar() {
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                Sincronização Database h2-linker protocol
+                Real-time database sync protocol
               </p>
             </div>
             <div className="flex items-center gap-3">
