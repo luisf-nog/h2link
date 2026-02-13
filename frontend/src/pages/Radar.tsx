@@ -42,39 +42,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SECTOR_KEYWORDS: Record<string, string[]> = {
-  "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
-  "Maquinário Agrícola": ["Agricultural Equipment", "Tractor"],
-  "Construção Civil": [
-    "Construction",
-    "Laborers",
-    "Cement",
-    "Masons",
-    "Concrete",
-    "Fence",
-    "Brickmasons",
-    "Iron",
-    "Paving",
-  ],
-  "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
-  "Instalações e Manutenção": ["Electricians", "Plumbers", "Installation", "Pipelayers", "Septic", "Repair Workers"],
-  "Mecânica e Reparos": ["Mechanics", "Service Technicians", "Automotive", "Diesel"],
-  "Limpeza e Governança": ["Maids", "Housekeeping", "Janitors", "Cleaners"],
-  "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Kitchen"],
-  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Hostess", "Dishwashers"],
-  "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage"],
-  "Bar e Cafeteria": ["Baristas", "Bartenders"],
-  "Logística e Carga": ["Laborers and Freight", "Stockers", "Packers", "Material Movers", "Order Fillers"],
-  "Transporte de Carga": ["Truck Drivers", "Shuttle", "Chauffeurs", "Delivery"],
-  "Manufatura e Produção": ["Assemblers", "Fabricators", "Production Workers", "Machine Feeders"],
-  "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers", "Brazers"],
-  "Indústria da Madeira": ["Woodworking", "Sawing Machine"],
-  "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing"],
-  "Setor de Carnes": ["Meat, Poultry", "Butchers", "Slaughterers"],
-  "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers"],
-  "Vendas e Comércio": ["Salespersons", "Counter", "Cashiers", "Retail"],
-};
-
 const US_STATES = [
   "AL",
   "AK",
@@ -127,6 +94,39 @@ const US_STATES = [
   "WI",
   "WY",
 ];
+
+const SECTOR_KEYWORDS: Record<string, string[]> = {
+  "Agricultura e Colheita": ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
+  "Maquinário Agrícola": ["Agricultural Equipment", "Tractor"],
+  "Construção Civil": [
+    "Construction",
+    "Laborers",
+    "Cement",
+    "Masons",
+    "Concrete",
+    "Fence",
+    "Brickmasons",
+    "Iron",
+    "Paving",
+  ],
+  "Carpintaria e Marcenaria": ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
+  "Instalações e Manutenção": ["Electricians", "Plumbers", "Installation", "Pipelayers", "Septic", "Repair Workers"],
+  "Mecânica e Reparos": ["Mechanics", "Service Technicians", "Automotive", "Diesel"],
+  "Limpeza e Governança": ["Maids", "Housekeeping", "Janitors", "Cleaners"],
+  "Cozinha e Gastronomia": ["Cooks", "Bakers", "Food Preparation", "Kitchen"],
+  "Atendimento de Salão": ["Waiters", "Waitresses", "Dining Room", "Hostess", "Dishwashers"],
+  "Hotelaria e Recepção": ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage"],
+  "Bar e Cafeteria": ["Baristas", "Bartenders"],
+  "Logística e Carga": ["Laborers and Freight", "Stockers", "Packers", "Material Movers", "Order Fillers"],
+  "Transporte de Carga": ["Truck Drivers", "Shuttle", "Chauffeurs", "Delivery"],
+  "Manufatura e Produção": ["Assemblers", "Fabricators", "Production Workers", "Machine Feeders"],
+  "Soldagem e Metalurgia": ["Welders", "Cutters", "Solderers", "Brazers"],
+  "Indústria da Madeira": ["Woodworking", "Sawing Machine"],
+  "Têxtil e Lavanderia": ["Textile", "Laundry", "Sewing"],
+  "Setor de Carnes": ["Meat, Poultry", "Butchers", "Slaughterers"],
+  "Paisagismo e Jardinagem": ["Landscaping", "Groundskeeping", "Tree Trimmers"],
+  "Vendas e Comércio": ["Salespersons", "Counter", "Cashiers", "Retail"],
+};
 
 export default function Radar() {
   const { profile } = useAuth();
@@ -203,7 +203,7 @@ export default function Radar() {
     if (!profile?.id) return;
     try {
       const { data } = await supabase.rpc("get_radar_stats" as any, {
-        p_user_id: profile.id, // Sincroniza com a fila do usuário
+        p_user_id: profile.id,
         p_visa_type: visaType,
         p_state: stateFilter,
         p_min_wage: minWage !== "" ? Number(minWage) : 0,
@@ -292,14 +292,13 @@ export default function Radar() {
         .delete()
         .eq("user_id", profile.id);
 
-      // Limpeza imediata local
       setMatchedJobs([]);
       setMatchCount(0);
-      await updateStats();
+      await updateStats(); // Contador total cai na hora
 
-      toast({ title: "Signal Capturado!", className: "bg-emerald-600 text-white" });
+      toast({ title: "Signal Capturado!", className: "bg-emerald-600 text-white shadow-xl" });
     } catch (err) {
-      toast({ title: "Erro", variant: "destructive" });
+      toast({ title: "Erro no envio", variant: "destructive" });
     } finally {
       setBatchSending(false);
     }
@@ -330,6 +329,7 @@ export default function Radar() {
     if (!error) {
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
+      await updateStats();
     }
   };
 
@@ -342,10 +342,10 @@ export default function Radar() {
   };
 
   useEffect(() => {
-    const hasSeen = localStorage.getItem("h2_radar_onboarding_v8");
+    const hasSeen = localStorage.getItem("h2_radar_onboarding_v10");
     if (!hasSeen && !loading) {
       setShowInstructions(true);
-      localStorage.setItem("h2_radar_onboarding_v8", "true");
+      localStorage.setItem("h2_radar_onboarding_v10", "true");
     }
   }, [loading]);
 
@@ -402,53 +402,53 @@ export default function Radar() {
           <div className="grid grid-cols-1 md:grid-cols-5 h-full">
             <div className="md:col-span-2 bg-indigo-600 p-10 text-white flex flex-col justify-between relative overflow-hidden">
               <div className="z-10 text-left">
-                <Badge className="bg-white/20 text-white border-none px-3 py-1 text-[10px] font-black uppercase mb-4 tracking-widest">
+                <Badge className="bg-white/20 text-white border-none px-3 py-1 text-[10px] font-black tracking-widest uppercase mb-4 tracking-widest">
                   Protocolo Diamond
                 </Badge>
                 <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none mb-4">
                   Radar Signal
                 </h2>
                 <p className="text-indigo-100 text-sm font-medium opacity-90 leading-relaxed text-left">
-                  Deixe nossa tecnologia trabalhar enquanto você foca no que importa.
+                  Sua central de automação e busca em tempo real.
                 </p>
               </div>
               <Bot className="absolute -bottom-10 -left-10 h-64 w-64 text-white/10" />
             </div>
             <div className="md:col-span-3 p-10 space-y-8 bg-white overflow-y-auto max-h-[85vh] custom-scrollbar text-left">
               <section className="text-left">
-                <h3 className="text-lg font-black uppercase italic tracking-tight text-slate-900 mb-2">
-                  O que é o Radar Signal?
+                <h3 className="text-lg font-black uppercase italic tracking-tight text-slate-900 mb-2 text-left">
+                  O que criamos?
                 </h3>
-                <p className="text-sm text-slate-500 leading-relaxed text-left">
-                  É o seu assistente robô. Ele monitora o banco H2 Linker 24h por dia e detecta oportunidades em
-                  milissegundos.
+                <p className="text-sm text-slate-500 text-left leading-relaxed">
+                  O <strong>Radar Signal</strong> monitora o banco H2 Linker 24h por dia e detecta sinais de contratação
+                  em milissegundos.
                 </p>
               </section>
               <section className="bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100 text-left">
                 <div className="flex items-center gap-3 mb-3 text-left">
                   <Zap className="h-6 w-6 text-indigo-600 fill-indigo-600" />
-                  <h3 className="text-lg font-black uppercase italic tracking-tight text-indigo-900">
+                  <h3 className="text-lg font-black uppercase italic tracking-tight text-indigo-900 text-left">
                     Modo Piloto Automático
                   </h3>
                 </div>
                 <p className="text-sm text-indigo-700 leading-relaxed mb-4 text-left">
-                  Ative o <strong>Auto-Enviar</strong> e o robô assume o controle total, enviando sua aplicação
-                  instantaneamente assim que um sinal for detectado.
+                  Ao ativar o <strong>Auto-Enviar</strong>, o robô manda a aplicação por você, mesmo enquanto você
+                  trabalha ou dorme.
                 </p>
                 <ul className="space-y-2 text-left">
                   <li className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase">
                     <CheckCircle2 className="h-4 w-4" /> Busca 24/7 Ativa
                   </li>
                   <li className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase">
-                    <CheckCircle2 className="h-4 w-4" /> Envio Instantâneo por Robô
+                    <CheckCircle2 className="h-4 w-4" /> Envio por Robô
                   </li>
                 </ul>
               </section>
               <Button
                 onClick={() => setShowInstructions(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-7 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-7 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition-all uppercase tracking-widest text-xs"
               >
-                Entendido, Iniciar Operação <ArrowRight className="h-4 w-4" />
+                Iniciar Operação <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -464,7 +464,7 @@ export default function Radar() {
             >
               <HelpCircle className="h-4 w-4" />
             </button>
-            <div className="flex items-center justify-between pr-8">
+            <div className="flex items-center justify-between pr-8 text-left">
               <div className="flex items-center gap-4 text-left">
                 <div
                   className={cn(
@@ -476,7 +476,7 @@ export default function Radar() {
                 >
                   <Radio className={cn("h-7 w-7", isActive && "animate-pulse")} />
                 </div>
-                <div>
+                <div className="text-left">
                   <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">
                     Radar Signal
                   </h1>
@@ -484,9 +484,7 @@ export default function Radar() {
                     {isActive ? (
                       <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
                         <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
-                          LIVE
-                        </span>
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">LIVE</span>
                       </div>
                     ) : (
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 leading-none">
@@ -533,9 +531,11 @@ export default function Radar() {
               </div>
             </CardHeader>
             <CardContent className="p-5">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-left">
                 <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Visto</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">
+                    Visto
+                  </Label>
                   <Select value={visaType} onValueChange={setVisaType}>
                     <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
@@ -550,7 +550,9 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">
+                    Grupo
+                  </Label>
                   <Select value={groupFilter} onValueChange={setGroupFilter}>
                     <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
@@ -564,7 +566,9 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">
+                    Estado
+                  </Label>
                   <Select value={stateFilter} onValueChange={setStateFilter}>
                     <SelectTrigger className="h-9 border-slate-200 font-bold">
                       <SelectValue />
@@ -580,7 +584,9 @@ export default function Radar() {
                   </Select>
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mín $/h</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">
+                    $/h
+                  </Label>
                   <Input
                     type="number"
                     value={minWage}
@@ -589,7 +595,9 @@ export default function Radar() {
                   />
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Máx Exp</Label>
+                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">
+                    Exp
+                  </Label>
                   <Input
                     type="number"
                     value={maxExperience}
@@ -608,7 +616,7 @@ export default function Radar() {
                   <LayoutGrid className="h-4 w-4 text-indigo-600" /> Divisões Estratégicas
                 </CardTitle>
                 <Badge className="bg-indigo-600 text-white font-black text-[9px] px-2 py-0.5 shadow-sm">
-                  {totalSinaisGeral} Sinais Ativos
+                  {totalSinaisGeral} Sinais
                 </Badge>
               </div>
             </CardHeader>
@@ -626,9 +634,7 @@ export default function Radar() {
                           key={segment}
                           className={cn(
                             "border bg-white rounded-xl overflow-hidden shadow-sm transition-all text-left",
-                            selectedInSector > 0
-                              ? "border-indigo-400 ring-1 ring-indigo-100"
-                              : "border-slate-200 hover:border-indigo-300",
+                            selectedInSector > 0 ? "border-indigo-400 ring-1 ring-indigo-100" : "border-slate-200",
                           )}
                         >
                           <div
@@ -670,7 +676,7 @@ export default function Radar() {
                                 allSelected ? "bg-indigo-600 text-white" : "text-indigo-600 border-indigo-100",
                               )}
                             >
-                              {allSelected ? "REMOVER" : "ADD SETOR"}
+                              {allSelected ? "REMOVER" : "ADD"}
                             </Button>
                           </div>
                           {expandedSegments.includes(segment) && (
@@ -714,7 +720,7 @@ export default function Radar() {
                 <Target className="h-6 w-6 text-indigo-600" /> Detecção de Matches
               </h2>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 text-left">
-                Real-time database sync protocol
+                Real-time sync protocol
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -768,7 +774,7 @@ export default function Radar() {
                         </h3>
                         <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-50/50 text-left">
                           <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                          <p className="text-[11px] font-black text-indigo-900 uppercase italic leading-none">
+                          <p className="text-[11px] font-black text-indigo-900 uppercase italic leading-none text-left">
                             {job.company || "Empresa"}
                           </p>
                         </div>
@@ -781,11 +787,11 @@ export default function Radar() {
                           </span>
                         </div>
                       </div>
-                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-200 min-w-[160px]">
+                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-200 min-w-[160px] text-center">
                         <Button
                           onClick={() => handleSendApplication(match.id, job.id)}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full active:translate-y-0.5 border-b-2 border-emerald-900 uppercase tracking-widest text-center"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:translate-y-0.5 border-b-2 border-emerald-900 uppercase tracking-widest text-center"
                         >
                           ENVIAR
                         </Button>
@@ -795,13 +801,13 @@ export default function Radar() {
                           onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
                           className="text-[9px] font-black h-8 w-full border-slate-300 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2 uppercase tracking-widest text-center"
                         >
-                          VER HUB
+                          HUB
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => removeMatch(match.id)}
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 transition-colors"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 transition-colors text-center"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
