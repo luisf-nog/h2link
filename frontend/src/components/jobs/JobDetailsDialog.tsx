@@ -16,8 +16,8 @@ import {
   Rocket,
   Clock,
   Lock,
-  MessageCircle,
-  MessageSquare,
+  MessageCircle, // Para SMS
+  MessageSquare, // Para WhatsApp
   CheckCircle2,
   GraduationCap,
   Info,
@@ -104,6 +104,26 @@ export function JobDetailsDialog({
 
   const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access");
 
+  // --- FUNÇÕES DE CONTATO RÁPIDO ---
+  const getMessageBody = () => {
+    return `Hello! I saw your job posting for ${job?.job_title} at ${job?.company} on H2 Linker and would like to apply. My name is [My Name].`;
+  };
+
+  const handleCall = () => {
+    window.location.href = `tel:${job.phone}`;
+  };
+
+  const handleSMS = () => {
+    // SMS Link universal
+    window.location.href = `sms:${job.phone}?&body=${encodeURIComponent(getMessageBody())}`;
+  };
+
+  const handleWhatsApp = () => {
+    // Remove caracteres não numéricos do telefone
+    const cleanPhone = job.phone.replace(/\D/g, "");
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(getMessageBody())}`, "_blank");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
@@ -112,8 +132,26 @@ export function JobDetailsDialog({
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
+                {/* BADGE VISA TYPE COLORIDO E AJUSTADO */}
                 {job?.visa_type && (
-                  <Badge className="text-[10px] uppercase font-bold" translate="no">
+                  <Badge
+                    className={cn(
+                      "text-[10px] uppercase font-bold border px-2 py-0.5",
+                      // Cores consistentes com a tabela
+                      job.visa_type === "H-2A" &&
+                        !job.was_early_access &&
+                        "bg-green-600 border-green-600 text-white hover:bg-green-700",
+                      job.visa_type === "H-2B" &&
+                        !job.was_early_access &&
+                        "bg-blue-600 border-blue-600 text-white hover:bg-blue-700",
+                      (job.visa_type.includes("Early Access") || job.was_early_access) &&
+                        "bg-amber-50 border-amber-400 text-amber-900",
+                    )}
+                    translate="no"
+                  >
+                    {job.visa_type.includes("Early Access") && (
+                      <Zap className="h-3 w-3 mr-1 text-amber-600 fill-amber-600 animate-pulse" />
+                    )}
                     {job.visa_type}
                   </Badge>
                 )}
@@ -158,7 +196,7 @@ export function JobDetailsDialog({
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {/* CARDS DE LARGURA TOTAL (EXTENDIDOS) */}
             <div className="space-y-4">
-              {/* 1. AVISO EARLY ACCESS ATIVO (OCUPANDO TUDO) */}
+              {/* 1. AVISO EARLY ACCESS ATIVO */}
               {isCurrentlyEarlyAccess && (
                 <div className="w-full p-5 rounded-2xl border border-violet-200 bg-violet-50/60 flex flex-col sm:flex-row gap-4 items-start sm:items-center shadow-sm">
                   <div className="bg-violet-600 p-3 rounded-xl text-white shadow-lg shrink-0">
@@ -175,7 +213,7 @@ export function JobDetailsDialog({
                 </div>
               )}
 
-              {/* 2. EXPLICAÇÃO DO GRUPO (OCUPANDO TUDO) */}
+              {/* 2. EXPLICAÇÃO DO GRUPO */}
               {job?.randomization_group && (
                 <div
                   className={cn(
@@ -317,7 +355,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* CONTATOS */}
+                {/* --- CONTATOS TUNADOS --- */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -336,26 +374,63 @@ export function JobDetailsDialog({
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
                   <div className="space-y-4 mt-4 text-left">
+                    {/* EMAIL */}
                     <div translate="no">
                       <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
                         {t("jobs.details.email_label")}
                       </span>
-                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all">
-                        {canSeeContacts ? job?.email : "••••••••@•••••••.com"}
+                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 break-all flex justify-between items-center">
+                        <span>{canSeeContacts ? job?.email : "••••••••@•••••••.com"}</span>
+                        {canSeeContacts && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => (window.location.href = `mailto:${job.email}`)}
+                          >
+                            <Mail className="h-3 w-3 text-slate-500" />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  {canSeeContacts && (
-                    <div className="space-y-2 pt-2">
-                      <Button
-                        variant="outline"
-                        className="w-full bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs"
-                        onClick={() => (window.location.href = `mailto:${job.email}`)}
-                      >
-                        <Mail className="h-3.5 w-3.5 mr-1.5" /> {t("jobs.details.send_email")}
-                      </Button>
+
+                    {/* TELEFONE COM AÇÕES RÁPIDAS */}
+                    <div translate="no">
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
+                        {t("jobs.details.phone_label") || "Phone"}
+                      </span>
+                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 flex justify-between items-center">
+                        <span>{canSeeContacts && job?.phone ? job.phone : "•••-•••-••••"}</span>
+                      </div>
+
+                      {/* BOTÕES DE AÇÃO RÁPIDA DE TELEFONE */}
+                      {canSeeContacts && job?.phone && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 h-8 text-xs"
+                            onClick={handleCall}
+                          >
+                            <Phone className="h-3 w-3 mr-1" /> Call
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 h-8 text-xs"
+                            onClick={handleSMS}
+                          >
+                            <MessageCircle className="h-3 w-3 mr-1" /> SMS
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 h-8 text-xs"
+                            onClick={handleWhatsApp}
+                          >
+                            <MessageSquare className="h-3 w-3 mr-1" /> Whats
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
