@@ -367,7 +367,7 @@ export default function Jobs() {
           </CardHeader>
         </Card>
 
-        {/* --- TABELA ORIGINAL (11 COLUNAS) --- */}
+        {/* --- TABELA ATUALIZADA (COM CATEGORIA E FONTE NORMALIZADA) --- */}
         <Card className="border-slate-200 overflow-hidden shadow-sm">
           <CardContent className="p-0 overflow-x-auto text-left">
             <Table>
@@ -383,6 +383,10 @@ export default function Jobs() {
                       {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
                     </button>
                   </TableHead>
+
+                  {/* NOVA COLUNA: CATEGORIA */}
+                  <TableHead>Category</TableHead>
+
                   <TableHead>
                     <button onClick={() => toggleSort("city")}>
                       {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
@@ -402,7 +406,7 @@ export default function Jobs() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-20">
+                    <TableCell colSpan={13} className="text-center py-20">
                       <Loader2 className="animate-spin inline h-6 w-6" />
                     </TableCell>
                   </TableRow>
@@ -424,15 +428,23 @@ export default function Jobs() {
                           {j.company}
                         </span>
                       </TableCell>
-                      <TableCell className="text-slate-600 uppercase text-[11px]">
-                        {j.city}, {j.state}
-                      </TableCell>
-                      <TableCell className="text-center text-slate-600">{j.openings ?? "-"}</TableCell>
-                      <TableCell>
-                        <span className="font-bold text-green-700">{renderPrice(j)}</span>
+
+                      {/* NOVA CÉLULA: CATEGORIA (Fonte text-sm) */}
+                      <TableCell className="text-sm text-slate-600">
+                        <span translate="no" className="font-medium text-blue-900/80">
+                          {j.category || "-"}
+                        </span>
                       </TableCell>
 
-                      {/* BADGE DIAMOND MASTER V64 (Contraste Corrigido) */}
+                      {/* LOCAIS E DATAS NORMALIZADOS (De text-[11px] para text-sm ou text-xs ajustado) */}
+                      <TableCell className="text-sm text-slate-600 uppercase">
+                        {j.city}, {j.state}
+                      </TableCell>
+                      <TableCell className="text-center text-slate-600 text-sm">{j.openings ?? "-"}</TableCell>
+                      <TableCell>
+                        <span className="font-bold text-green-700 text-sm">{renderPrice(j)}</span>
+                      </TableCell>
+
                       <TableCell>
                         {(() => {
                           const b = getVisaBadgeConfig(j.visa_type);
@@ -475,10 +487,18 @@ export default function Jobs() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-[11px] whitespace-nowrap">{formatDate(j.posted_date)}</TableCell>
-                      <TableCell className="text-[11px] whitespace-nowrap">{formatDate(j.start_date)}</TableCell>
-                      <TableCell className="text-[11px] whitespace-nowrap">{formatDate(j.end_date)}</TableCell>
-                      <TableCell className="text-[11px] whitespace-nowrap">
+
+                      {/* DATAS NORMALIZADAS PARA text-sm */}
+                      <TableCell className="text-sm whitespace-nowrap text-slate-600">
+                        {formatDate(j.posted_date)}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap text-slate-600">
+                        {formatDate(j.start_date)}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap text-slate-600">
+                        {formatDate(j.end_date)}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap text-slate-600">
                         {formatExperience(j.experience_months)}
                       </TableCell>
 
