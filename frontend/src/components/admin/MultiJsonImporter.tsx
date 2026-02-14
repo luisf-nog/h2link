@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-// Adicionado CardDescription aqui
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw, Database, FileJson, CheckCircle2 } from "lucide-react";
-// Adicionado Badge e Label que estavam faltando
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import JSZip from "jszip";
@@ -85,11 +83,12 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const list = JSON.parse(content);
-          const visaType = filename.toLowerCase().includes("h2b")
-            ? "H-2B"
-            : filename.toLowerCase().includes("jo")
-              ? "H-2A (Early Access)"
-              : "H-2A";
+
+          // LÓGICA DE IDENTIFICAÇÃO DE BASE
+          const isEarlyAccess = filename.toLowerCase().includes("jo");
+          const isH2B = filename.toLowerCase().includes("h2b");
+
+          const visaType = isH2B ? "H-2B" : isEarlyAccess ? "H-2A (Early Access)" : "H-2A";
 
           list.forEach((item: any) => {
             const flat = {
@@ -108,6 +107,7 @@ export function MultiJsonImporter() {
             const weeklyHours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
             const posted = formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE"]));
 
+            // O MAP garante unicidade pelo fingerprint antes de enviar ao banco
             rawJobsMap.set(fingerprint, {
               id: crypto.randomUUID(),
               job_id: rawJobId.split("-GHOST")[0].trim(),
@@ -132,7 +132,7 @@ export function MultiJsonImporter() {
               ),
               education_required: getVal(flat, ["educationLevel", "jobMinedu"]),
               is_active: true,
-              was_early_access: filename.toLowerCase().includes("jo"),
+              was_early_access: isEarlyAccess, // Define se a vaga nasceu como Early
             });
           });
         }
@@ -150,7 +150,7 @@ export function MultiJsonImporter() {
 
       toast({
         title: "Sincronização Turbo V62 Concluída!",
-        description: `${allJobs.length} vagas únicas processadas.`,
+        description: `${allJobs.length} vagas processadas.`,
       });
       setFiles([]);
     } catch (err: any) {
@@ -186,7 +186,7 @@ export function MultiJsonImporter() {
       <CardContent className="p-8 space-y-6 bg-white text-left">
         <div className="grid w-full items-center gap-4">
           <Label className="text-xs font-black uppercase text-slate-500 tracking-widest text-left">
-            Selecione arquivos JSON ou ZIP
+            Selecione arquivos JSON ou ZIP (H2A, H2B ou JO-A)
           </Label>
           <div className="flex items-center justify-center w-full">
             <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
@@ -211,7 +211,7 @@ export function MultiJsonImporter() {
           <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
             <span className="text-xs font-bold text-emerald-800 uppercase">
-              Último lote: {stats.total} vagas de {stats.files} arquivos.
+              Sucesso: {stats.total} vagas únicas processadas.
             </span>
           </div>
         )}
