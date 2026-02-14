@@ -127,10 +127,8 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [pendingCount, setPendingCount] = useState(0);
-
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -216,12 +214,12 @@ export default function Jobs() {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // AJUSTE 1: ADIÇÃO DO FILTRO IS_ACTIVE PARA MIRROR SYNC
+    // FILTRO MIRROR SYNC ATIVADO
     let query = supabase
       .from("public_jobs")
       .select("*", { count: "exact" })
       .eq("is_banned", false)
-      .eq("is_active", true); // <--- Garante as 5.3k vagas ativas
+      .eq("is_active", true);
 
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
     if (sortKey !== "posted_date") query = query.order("posted_date", { ascending: false });
@@ -272,8 +270,7 @@ export default function Jobs() {
   ]);
 
   const addToQueue = async (job: Job) => {
-    if (!profile) return;
-    if (planSettings.job_db_blur) return;
+    if (!profile || planSettings.job_db_blur) return;
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
     const { error } = await supabase
       .from("my_queue")
@@ -353,32 +350,23 @@ export default function Jobs() {
         </div>
 
         {pendingCount > 0 && (
-          <div className="animate-in fade-in slide-in-from-top-2 duration-500 overflow-visible">
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-l-4 border-l-blue-600 transition-all">
-              <div className="flex items-center gap-4 overflow-visible">
-                <div className="relative shrink-0 p-1">
-                  <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-                    <Zap className="h-6 w-6 text-white fill-white/20" />
-                  </div>
-                  <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[11px] font-black h-6 w-6 rounded-full flex items-center justify-center border-[3px] border-white shadow-md animate-in zoom-in duration-300">
-                    {pendingCount}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-slate-900 font-bold text-base leading-tight">{t("jobs.queue_banner.title")}</h3>
-                  <p className="text-slate-500 text-sm truncate">
-                    {t("jobs.queue_banner.subtitle", { count: pendingCount })}
-                  </p>
-                </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 mb-6 flex items-center justify-between gap-4 shadow-sm border-l-4 border-l-blue-600 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Zap className="h-6 w-6 text-white" />
               </div>
-              <Button
-                onClick={() => navigate("/queue")}
-                className="shrink-0 bg-slate-900 hover:bg-blue-600 text-white font-bold h-11 px-6 rounded-xl shadow-lg transition-all active:scale-95 flex items-center gap-2 group"
-              >
-                {t("jobs.queue_banner.cta")}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
+              <div>
+                <h3 className="text-slate-900 font-bold text-base leading-tight">{t("jobs.queue_banner.title")}</h3>
+                <p className="text-slate-500 text-sm">{t("jobs.queue_banner.subtitle", { count: pendingCount })}</p>
+              </div>
             </div>
+            <Button
+              onClick={() => navigate("/queue")}
+              className="bg-slate-900 hover:bg-blue-600 text-white font-bold h-11 px-6 rounded-xl transition-all flex items-center gap-2 group"
+            >
+              {t("jobs.queue_banner.cta")}{" "}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
           </div>
         )}
 
@@ -588,7 +576,7 @@ export default function Jobs() {
                           </div>
                         </TableCell>
 
-                        {/* AJUSTE 2: LÓGICA DO BADGE MASTER V64 */}
+                        {/* AJUSTE DO BADGE DIAMOND MASTER V64 */}
                         <TableCell>
                           {(() => {
                             const b = getVisaBadgeConfig(j.visa_type);
@@ -599,15 +587,18 @@ export default function Jobs() {
                                 variant={b.variant}
                                 className={cn(
                                   b.className,
-                                  "text-[10px]",
-                                  wasEarly && "border-2 border-amber-400 bg-amber-50 shadow-sm",
+                                  "text-[10px] font-black border-2 transition-all duration-300",
+                                  // Cores corrigidas para contraste (Amber 900 sobre fundo Amber)
+                                  wasEarly
+                                    ? "border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 hover:scale-105 shadow-sm"
+                                    : "text-white",
                                 )}
                               >
                                 <div className="flex items-center gap-1">
                                   {isCurrentlyEarly ? (
-                                    <Zap className="h-3 w-3 text-amber-500 fill-amber-500 animate-pulse" />
+                                    <Zap className="h-3 w-3 text-amber-600 fill-amber-600 animate-pulse" />
                                   ) : wasEarly ? (
-                                    <Rocket className="h-3 w-3 text-amber-500 fill-amber-500" />
+                                    <Rocket className="h-3 w-3 text-amber-600 fill-amber-600" />
                                   ) : null}
                                   <span translate="no">{b.label}</span>
                                 </div>
