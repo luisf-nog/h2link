@@ -41,10 +41,12 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
+// IMPORTANTE: Certifique-se de ter criado o componente JobCategoryFilter.tsx na pasta correta
+import { JobCategoryFilter } from "@/components/jobs/JobCategoryFilter";
 
 type Job = Tables<"public_jobs">;
 
-// Modal de Onboarding restaurado
+// --- Modal de Onboarding (Mantido) ---
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -119,7 +121,10 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-  const [categoryFilter, setCategoryFilter] = useState(""); // Filtro mantido
+
+  // Filtro de Categoria (agora usado pelo JobCategoryFilter)
+  const [categoryFilter, setCategoryFilter] = useState("");
+
   const [minSalary, setMinSalary] = useState("");
   const [maxSalary, setMaxSalary] = useState("");
   const [page, setPage] = useState(1);
@@ -141,7 +146,6 @@ export default function Jobs() {
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
@@ -186,12 +190,19 @@ export default function Jobs() {
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
 
     if (visaType !== "all") query = query.eq("visa_type", visaType);
+
+    // Busca Textual Geral
     const term = searchTerm.trim();
     if (term)
       query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
+
+    // Filtros Específicos
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
-    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`); // Filtro aplicado na query
+
+    // Filtro de Categoria (Integração com o novo componente)
+    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`);
+
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
@@ -285,6 +296,7 @@ export default function Jobs() {
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Filtro de Visto */}
               <Select
                 value={visaType}
                 onValueChange={(v: any) => {
@@ -303,6 +315,8 @@ export default function Jobs() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Busca Geral */}
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -312,6 +326,8 @@ export default function Jobs() {
                   className="pl-10 h-10"
                 />
               </div>
+
+              {/* Filtros de Local */}
               <Input
                 placeholder="State (Ex: TX)"
                 value={stateFilter}
@@ -327,16 +343,12 @@ export default function Jobs() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* FILTRO DE CATEGORIA (MANTIDO) */}
+              {/* --- NOVO FILTRO DE CATEGORIA MODERNO --- */}
               <div className="relative">
-                <Tags className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Category (Ex: Mason, Laborer)"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="pl-10 h-10"
-                />
+                <JobCategoryFilter value={categoryFilter} onChange={setCategoryFilter} />
               </div>
+
+              {/* Filtros de Salário */}
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
                   MIN $
@@ -365,7 +377,7 @@ export default function Jobs() {
           </CardHeader>
         </Card>
 
-        {/* --- TABELA NORMALIZADA (SEM COLUNA EXTRA) --- */}
+        {/* --- TABELA DE VAGAS --- */}
         <Card className="border-slate-200 overflow-hidden shadow-sm">
           <CardContent className="p-0 overflow-x-auto text-left">
             <Table>
@@ -422,8 +434,6 @@ export default function Jobs() {
                           {j.company}
                         </span>
                       </TableCell>
-
-                      {/* LOCAIS E DATAS NORMALIZADOS (text-sm em vez de text-[11px]) */}
                       <TableCell className="text-sm text-slate-600 uppercase">
                         {j.city}, {j.state}
                       </TableCell>
@@ -475,7 +485,7 @@ export default function Jobs() {
                         )}
                       </TableCell>
 
-                      {/* DATAS NORMALIZADAS (text-sm) */}
+                      {/* Datas Padronizadas (text-sm) */}
                       <TableCell className="text-sm whitespace-nowrap text-slate-600">
                         {formatDate(j.posted_date)}
                       </TableCell>
@@ -519,6 +529,7 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
+        {/* Modal de Detalhes */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o) => !o && setSelectedJob(null)}
