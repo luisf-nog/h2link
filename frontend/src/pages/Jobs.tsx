@@ -34,6 +34,8 @@ import {
   ShieldAlert,
   Lock,
   Tags,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
@@ -166,6 +168,7 @@ export default function Jobs() {
   const planTier = profile?.plan_tier || "free";
   const planSettings = PLANS_CONFIG[planTier].settings;
   const pageSize = 50;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
 
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "-";
@@ -567,6 +570,36 @@ export default function Jobs() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* --- PAGINAÇÃO RESTAURADA --- */}
+        <div className="flex items-center justify-between py-4">
+          <div className="text-sm text-muted-foreground hidden sm:block">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground sm:hidden">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
 
         {/* Modal de Detalhes */}
         <JobDetailsDialog
