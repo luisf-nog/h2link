@@ -41,8 +41,23 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
-// IMPORTANTE: Certifique-se de ter criado o componente JobCategoryFilter.tsx na pasta correta
-import { JobCategoryFilter } from "@/components/jobs/JobCategoryFilter";
+
+// --- LISTA DE CATEGORIAS SIMPLIFICADA (EMBUTIDA) ---
+const JOB_CATEGORIES_LIST = [
+  { value: "Agricultural Equipment", label: "🚜 Operadores de Máquinas (Ag)" },
+  { value: "Farmworkers", label: "🌾 Trabalhadores Rurais / Colheita" },
+  { value: "Construction Laborers", label: "🏗️ Construção Civil (Geral)" },
+  { value: "Landscape", label: "🌳 Paisagismo e Jardinagem" },
+  { value: "Truck Drivers", label: "🚚 Motoristas de Caminhão" },
+  { value: "Housekeeping", label: "🧹 Limpeza e Camareira" },
+  { value: "Cooks", label: "🍳 Cozinheiros e Auxiliares" },
+  { value: "Meat", label: "🥩 Açougue e Processamento" },
+  { value: "Amusement", label: "🎡 Parques e Diversão" },
+  { value: "Forest", label: "🌲 Florestal e Conservação" },
+  { value: "Janitors", label: "🧽 Zeladoria e Manutenção" },
+  { value: "Packers", label: "📦 Empacotadores" },
+  { value: "Helpers", label: "🔨 Ajudantes Gerais" },
+];
 
 type Job = Tables<"public_jobs">;
 
@@ -113,7 +128,6 @@ export default function Jobs() {
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [pendingCount, setPendingCount] = useState(0);
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
-  const [jobReports, setJobReports] = useState<Record<string, { count: number; reasons: ReportReason[] }>>({});
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   // Estados dos Filtros
@@ -122,7 +136,7 @@ export default function Jobs() {
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
 
-  // Filtro de Categoria (agora usado pelo JobCategoryFilter)
+  // FILTRO DE CATEGORIA
   const [categoryFilter, setCategoryFilter] = useState("");
 
   const [minSalary, setMinSalary] = useState("");
@@ -200,7 +214,7 @@ export default function Jobs() {
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
 
-    // Filtro de Categoria (Integração com o novo componente)
+    // Filtro de Categoria (Integração)
     if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`);
 
     if (minSalary) query = query.gte("salary", Number(minSalary));
@@ -343,9 +357,23 @@ export default function Jobs() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* --- NOVO FILTRO DE CATEGORIA MODERNO --- */}
+              {/* --- FILTRO DE CATEGORIA SIMPLES E EMBUTIDO --- */}
               <div className="relative">
-                <JobCategoryFilter value={categoryFilter} onChange={setCategoryFilter} />
+                <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val === "all" ? "" : val)}>
+                  <SelectTrigger className="w-full bg-white h-10 border-slate-200 text-slate-700">
+                    <SelectValue placeholder="Filtrar por Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="font-bold text-blue-900 cursor-pointer">
+                      Todas as Categorias
+                    </SelectItem>
+                    {JOB_CATEGORIES_LIST.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value} className="cursor-pointer">
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Filtros de Salário */}
