@@ -222,7 +222,6 @@ export default function Jobs() {
 
     // FILTRO DE CATEGORIA (Exato)
     if (categoryFilter.trim()) {
-      // Usamos ILIKE para não ter problema com maiúsculas/minúsculas, mas buscamos o termo exato ou parte dele
       query = query.ilike("category", `%${categoryFilter.trim()}%`);
     }
 
@@ -490,9 +489,12 @@ export default function Jobs() {
                               className={cn(
                                 b.className,
                                 "text-[10px] font-black border-2 transition-all",
+                                // AQUI ESTÁ A CORREÇÃO DE COR DO BADGE:
+                                !wasEarly && j.visa_type === "H-2A" && "bg-green-600 border-green-600 text-white",
+                                !wasEarly && j.visa_type === "H-2B" && "bg-blue-600 border-blue-600 text-white",
                                 wasEarly
                                   ? "border-amber-400 bg-amber-50 text-amber-900 shadow-sm hover:brightness-95 hover:scale-105"
-                                  : "text-white",
+                                  : "text-white", // Fallback seguro
                               )}
                             >
                               <div className="flex items-center gap-1">
@@ -522,6 +524,7 @@ export default function Jobs() {
                         )}
                       </TableCell>
 
+                      {/* Datas Padronizadas (text-sm) */}
                       <TableCell className="text-sm whitespace-nowrap text-slate-600">
                         {formatDate(j.posted_date)}
                       </TableCell>
