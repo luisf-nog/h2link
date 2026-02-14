@@ -31,32 +31,31 @@ import {
   Rocket,
   ArrowRight,
   X,
-  ShieldAlert,
-  Lock,
-  Tags,
 } from "lucide-react";
-import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
-import type { ReportReason } from "@/components/queue/ReportJobButton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
-// --- LISTA DE CATEGORIAS SIMPLIFICADA (EMBUTIDA) ---
+// --- LISTA SIMPLIFICADA (Baseada nos dados REAIS da sua coluna 'category') ---
+// Como o banco já tem o nome por extenso, o value é igual ao label (ou parte dele).
 const JOB_CATEGORIES_LIST = [
-  { value: "Agricultural Equipment", label: "🚜 Operadores de Máquinas (Ag)" },
-  { value: "Farmworkers", label: "🌾 Trabalhadores Rurais / Colheita" },
-  { value: "Construction Laborers", label: "🏗️ Construção Civil (Geral)" },
-  { value: "Landscape", label: "🌳 Paisagismo e Jardinagem" },
-  { value: "Truck Drivers", label: "🚚 Motoristas de Caminhão" },
-  { value: "Housekeeping", label: "🧹 Limpeza e Camareira" },
-  { value: "Cooks", label: "🍳 Cozinheiros e Auxiliares" },
-  { value: "Meat", label: "🥩 Açougue e Processamento" },
-  { value: "Amusement", label: "🎡 Parques e Diversão" },
-  { value: "Forest", label: "🌲 Florestal e Conservação" },
-  { value: "Janitors", label: "🧽 Zeladoria e Manutenção" },
-  { value: "Packers", label: "📦 Empacotadores" },
-  { value: "Helpers", label: "🔨 Ajudantes Gerais" },
+  { value: "Farmworkers and Laborers", label: "🌾 Farmworkers & Crop Laborers" },
+  { value: "Agricultural Equipment", label: "🚜 Agricultural Equipment Operators" },
+  { value: "Landscaping", label: "🌳 Landscaping & Groundskeeping" },
+  { value: "Construction Laborers", label: "🏗️ Construction Laborers" },
+  { value: "Ranch", label: "🐄 Livestock & Ranch Workers" },
+  { value: "Maids", label: "🧹 Maids & Housekeeping" },
+  { value: "Cooks", label: "🍳 Cooks (Restaurant & Inst)" },
+  { value: "Truck Drivers", label: "🚚 Truck Drivers (Heavy/Light)" },
+  { value: "Waiters", label: "🍽️ Waiters & Waitresses" },
+  { value: "Food Preparation", label: "🥗 Food Preparation Workers" },
+  { value: "Mechanics", label: "🔧 Farm Equipment Mechanics" },
+  { value: "Janitors", label: "🧽 Janitors & Cleaners" },
+  { value: "Material Movers", label: "📦 Material Movers & Stock" },
+  { value: "Cement Masons", label: "🧱 Cement Masons" },
+  { value: "Dishwashers", label: "🧼 Dishwashers" },
+  { value: "Amusement", label: "🎡 Amusement Attendants" },
 ];
 
 type Job = Tables<"public_jobs">;
@@ -136,7 +135,7 @@ export default function Jobs() {
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
 
-  // FILTRO DE CATEGORIA
+  // FILTRO DE CATEGORIA (Simples)
   const [categoryFilter, setCategoryFilter] = useState("");
 
   const [minSalary, setMinSalary] = useState("");
@@ -357,11 +356,11 @@ export default function Jobs() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* --- FILTRO DE CATEGORIA SIMPLES E EMBUTIDO --- */}
+              {/* --- FILTRO DE CATEGORIA SIMPLIFICADO --- */}
               <div className="relative">
                 <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val === "all" ? "" : val)}>
                   <SelectTrigger className="w-full bg-white h-10 border-slate-200 text-slate-700">
-                    <SelectValue placeholder="Filtrar por Categoria" />
+                    <SelectValue placeholder="Category / Categoria" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all" className="font-bold text-blue-900 cursor-pointer">
