@@ -44,7 +44,7 @@ import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/li
 
 type Job = Tables<"public_jobs">;
 
-// --- Modal de Onboarding (Mantido) ---
+// Modal de Onboarding restaurado
 function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -61,20 +61,32 @@ function OnboardingModal() {
   };
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 shadow-2xl bg-white rounded-xl">
-        <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3 text-white">
-            <Briefcase className="h-5 w-5" />
-            <h2 className="text-xl font-bold">H2 Linker Platform</h2>
+      <DialogContent className="sm:max-w-2xl p-0 border-0 shadow-2xl bg-white rounded-xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+        <div className="bg-slate-900 px-6 sm:px-8 py-5 sm:py-6 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 text-white shrink-0">
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight">
+                H2 Linker Platform
+              </h2>
+              <p className="text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider font-semibold">
+                Official Automation Tool
+              </p>
+            </div>
           </div>
-          <button onClick={handleClose} className="text-slate-400 hover:text-white">
+          <button
+            onClick={handleClose}
+            className="text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="p-8">
-          <h3 className="text-slate-900 font-bold mb-2">{t("jobs.onboarding.transparency_title")}</h3>
-          <p className="text-slate-600 text-sm mb-6">{t("jobs.onboarding.transparency_text")}</p>
-          <Button onClick={handleClose} className="w-full bg-slate-900 text-white">
+        <div className="p-8 space-y-4">
+          <h3 className="text-slate-900 font-bold">{t("jobs.onboarding.transparency_title")}</h3>
+          <p className="text-slate-600 text-sm leading-relaxed">{t("jobs.onboarding.transparency_text")}</p>
+          <Button onClick={handleClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 shadow-lg">
             {t("jobs.onboarding.cta")}
           </Button>
         </div>
@@ -95,6 +107,7 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [pendingCount, setPendingCount] = useState(0);
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
@@ -106,7 +119,7 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get("category") ?? ""); // Categoria Restaurada
+  const [categoryFilter, setCategoryFilter] = useState(""); // RESTAURADO
   const [minSalary, setMinSalary] = useState("");
   const [maxSalary, setMaxSalary] = useState("");
   const [page, setPage] = useState(1);
@@ -156,8 +169,7 @@ export default function Jobs() {
   };
 
   useEffect(() => {
-    if (!profile?.id) return;
-    syncQueue();
+    if (profile?.id) syncQueue();
   }, [profile?.id]);
 
   const fetchJobs = async () => {
@@ -165,6 +177,7 @@ export default function Jobs() {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
+    // FILTRO MIRROR SYNC (IMPORTANTE)
     let query = supabase
       .from("public_jobs")
       .select("*", { count: "exact" })
@@ -179,7 +192,7 @@ export default function Jobs() {
       query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
-    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`); // Lógica da categoria
+    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`); // RESTAURADO
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
@@ -216,9 +229,7 @@ export default function Jobs() {
     if (!profile) return;
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
     const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
-    if (!error) {
-      syncQueue();
-    }
+    if (!error) syncQueue();
     setProcessingJobIds((prev) => {
       const n = new Set(prev);
       n.delete(job.id);
@@ -235,13 +246,32 @@ export default function Jobs() {
     }
   };
 
+  const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => {
+    if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />;
+    return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+  };
+
+  const getGroupBadgeConfig = (group: string) => {
+    const g = group.toUpperCase();
+    if (g === "A") return { label: "GRUPO - A", className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
+    if (g === "B") return { label: "GRUPO - B", className: "bg-blue-50 text-blue-800 border-blue-300" };
+    if (g === "C" || g === "D")
+      return { label: `GRUPO - ${g}`, className: "bg-amber-50 text-amber-800 border-amber-300" };
+    return { label: `GRUPO - ${g}`, className: "bg-slate-50 text-slate-700 border-slate-300" };
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6 text-left">
         <OnboardingModal />
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
+            <p className="text-muted-foreground mt-1">
+              {t("jobs.subtitle", { totalCount: formatNumber(totalCount), visaLabel: visaType })}
+            </p>
+          </div>
           {isAdmin && (
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => navigate("/admin/importer")}>
@@ -254,9 +284,8 @@ export default function Jobs() {
 
         {/* --- GRID DE FILTROS PADRONIZADOS --- */}
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="p-4">
+          <CardHeader className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Visto */}
               <Select
                 value={visaType}
                 onValueChange={(v: any) => {
@@ -275,7 +304,6 @@ export default function Jobs() {
                   ))}
                 </SelectContent>
               </Select>
-              {/* Busca Geral */}
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -285,14 +313,22 @@ export default function Jobs() {
                   className="pl-10 h-10"
                 />
               </div>
-              {/* Estado */}
               <Input
                 placeholder="State (Ex: TX)"
                 value={stateFilter}
                 onChange={(e) => setStateFilter(e.target.value)}
                 className="h-10"
               />
-              {/* Categoria (SOC) - RESTAURADA */}
+              <Input
+                placeholder="City"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="h-10"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Categoria Restaurada */}
               <div className="relative">
                 <Tags className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -302,70 +338,63 @@ export default function Jobs() {
                   className="pl-10 h-10"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              {/* Cidade */}
-              <Input
-                placeholder="City"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-                className="h-10"
-              />
-
-              {/* Salário Min - PADRONIZADO */}
-              <div className="relative w-full">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Min $</div>
+              {/* Salários Padronizados */}
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
+                  MIN $
+                </span>
                 <Input
                   type="number"
                   placeholder="0.00"
                   value={minSalary}
                   onChange={(e) => setMinSalary(e.target.value)}
-                  className="pl-14 h-10"
+                  className="pl-12 h-10"
                 />
               </div>
-
-              {/* Salário Max - PADRONIZADO */}
-              <div className="relative w-full">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Max $</div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
+                  MAX $
+                </span>
                 <Input
                   type="number"
                   placeholder="0.00"
                   value={maxSalary}
                   onChange={(e) => setMaxSalary(e.target.value)}
-                  className="pl-14 h-10"
+                  className="pl-12 h-10"
                 />
               </div>
             </div>
           </CardHeader>
         </Card>
 
-        {/* --- TABELA DE VAGAS --- */}
+        {/* --- TABELA ORIGINAL (11 COLUNAS) --- */}
         <Card className="border-slate-200 overflow-hidden shadow-sm">
           <CardContent className="p-0 overflow-x-auto text-left">
             <Table>
               <TableHeader>
-                <TableRow className="whitespace-nowrap bg-slate-50/80">
-                  <TableHead className="py-4">
+                <TableRow className="whitespace-nowrap bg-slate-50/80 text-left">
+                  <TableHead className="text-left py-4">
                     <button onClick={() => toggleSort("job_title")}>
-                      {t("jobs.table.headers.job_title")} <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                      {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
                     </button>
                   </TableHead>
                   <TableHead>
                     <button onClick={() => toggleSort("company")}>
-                      {t("jobs.table.headers.company")} <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                      {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
                     </button>
                   </TableHead>
                   <TableHead>
                     <button onClick={() => toggleSort("city")}>
-                      {t("jobs.table.headers.location")} <ArrowUpDown className="ml-1 h-3 w-3 inline" />
+                      {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
                     </button>
                   </TableHead>
                   <TableHead className="text-center">Openings</TableHead>
                   <TableHead>Salary</TableHead>
                   <TableHead>Visa</TableHead>
-                  <TableHead>Group</TableHead>
-                  <TableHead>Dates</TableHead>
+                  <TableHead>Grupo</TableHead>
+                  <TableHead>Posted</TableHead>
+                  <TableHead>Start</TableHead>
+                  <TableHead>End</TableHead>
                   <TableHead>Exp</TableHead>
                   <TableHead className="text-right sticky right-0 bg-white z-10">Action</TableHead>
                 </TableRow>
@@ -373,7 +402,7 @@ export default function Jobs() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-20">
+                    <TableCell colSpan={12} className="text-center py-20">
                       <Loader2 className="animate-spin inline h-6 w-6" />
                     </TableCell>
                   </TableRow>
@@ -381,26 +410,29 @@ export default function Jobs() {
                   jobs.map((j) => (
                     <TableRow
                       key={j.id}
-                      onClick={() => setSelectedJob(j)}
-                      className="cursor-pointer hover:bg-slate-50 border-slate-100"
+                      onClick={() => (planSettings.job_db_blur ? null : setSelectedJob(j))}
+                      className="cursor-pointer hover:bg-slate-50/80 transition-all border-slate-100 text-left"
                     >
-                      <TableCell className="font-semibold py-4">
+                      <TableCell className="font-semibold text-slate-900 py-4 text-sm">
                         <span translate="no">{j.job_title}</span>
                       </TableCell>
                       <TableCell>
-                        <span translate="no" className={cn(planSettings.job_db_blur && "blur-sm")}>
+                        <span
+                          translate="no"
+                          className={cn("text-sm text-slate-600", planSettings.job_db_blur && "blur-sm")}
+                        >
                           {j.company}
                         </span>
                       </TableCell>
-                      <TableCell className="uppercase text-xs">
+                      <TableCell className="text-slate-600 uppercase text-[11px]">
                         {j.city}, {j.state}
                       </TableCell>
-                      <TableCell className="text-center">{j.openings}</TableCell>
+                      <TableCell className="text-center text-slate-600">{j.openings ?? "-"}</TableCell>
                       <TableCell>
                         <span className="font-bold text-green-700">{renderPrice(j)}</span>
                       </TableCell>
 
-                      {/* BADGE DIAMOND MASTER V64 */}
+                      {/* BADGE DIAMOND MASTER V64 (Contraste Corrigido) */}
                       <TableCell>
                         {(() => {
                           const b = getVisaBadgeConfig(j.visa_type);
@@ -411,17 +443,19 @@ export default function Jobs() {
                               variant={b.variant}
                               className={cn(
                                 b.className,
-                                "text-[10px] font-black border-2",
-                                wasEarly ? "border-amber-400 bg-amber-100 text-amber-900" : "text-white",
+                                "text-[10px] font-black border-2 transition-all",
+                                wasEarly
+                                  ? "border-amber-400 bg-amber-50 text-amber-900 shadow-sm hover:brightness-95 hover:scale-105"
+                                  : "text-white",
                               )}
                             >
                               <div className="flex items-center gap-1">
                                 {isCurrentlyEarly ? (
-                                  <Zap className="h-3 w-3 animate-pulse fill-amber-600" />
+                                  <Zap className="h-3 w-3 text-amber-600 fill-amber-600 animate-pulse" />
                                 ) : wasEarly ? (
-                                  <Rocket className="h-3 w-3 fill-amber-600" />
+                                  <Rocket className="h-3 w-3 text-amber-600 fill-amber-600" />
                                 ) : null}
-                                {b.label}
+                                <span translate="no">{b.label}</span>
                               </div>
                             </Badge>
                           );
@@ -433,7 +467,7 @@ export default function Jobs() {
                           <Badge
                             variant="outline"
                             className={cn(
-                              "text-[10px] font-bold",
+                              "font-bold text-[10px]",
                               getGroupBadgeConfig(j.randomization_group).className,
                             )}
                           >
@@ -441,21 +475,20 @@ export default function Jobs() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-[10px] whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span>Post: {formatDate(j.posted_date)}</span>
-                          <span className="text-blue-600 font-bold">Start: {formatDate(j.start_date)}</span>
-                        </div>
+                      <TableCell className="text-[11px] whitespace-nowrap">{formatDate(j.posted_date)}</TableCell>
+                      <TableCell className="text-[11px] whitespace-nowrap">{formatDate(j.start_date)}</TableCell>
+                      <TableCell className="text-[11px] whitespace-nowrap">{formatDate(j.end_date)}</TableCell>
+                      <TableCell className="text-[11px] whitespace-nowrap">
+                        {formatExperience(j.experience_months)}
                       </TableCell>
-                      <TableCell className="text-xs">{formatExperience(j.experience_months)}</TableCell>
 
-                      <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)]">
+                      <TableCell className="text-right sticky right-0 bg-white shadow-[-10px_0_15_px_-3px_rgba(0,0,0,0.05)] z-10">
                         <Button
                           size="sm"
                           variant={queuedJobIds.has(j.id) ? "default" : "outline"}
                           className={cn(
                             "h-8 w-8 p-0 rounded-full",
-                            queuedJobIds.has(j.id) && "bg-red-600 border-red-600 hover:bg-red-700 text-white",
+                            queuedJobIds.has(j.id) && "bg-red-600 border-red-600 text-white",
                           )}
                           onClick={(e) => {
                             e.stopPropagation();
