@@ -119,7 +119,7 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
-  const [categoryFilter, setCategoryFilter] = useState(""); // RESTAURADO
+  const [categoryFilter, setCategoryFilter] = useState(""); // Filtro mantido
   const [minSalary, setMinSalary] = useState("");
   const [maxSalary, setMaxSalary] = useState("");
   const [page, setPage] = useState(1);
@@ -177,7 +177,6 @@ export default function Jobs() {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // FILTRO MIRROR SYNC (IMPORTANTE)
     let query = supabase
       .from("public_jobs")
       .select("*", { count: "exact" })
@@ -192,7 +191,7 @@ export default function Jobs() {
       query = query.or(`job_title.ilike.%${term}%,company.ilike.%${term}%,city.ilike.%${term}%,job_id.ilike.%${term}%`);
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
-    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`); // RESTAURADO
+    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`); // Filtro aplicado na query
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
 
@@ -282,7 +281,7 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* --- GRID DE FILTROS PADRONIZADOS --- */}
+        {/* --- GRID DE FILTROS --- */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -328,17 +327,16 @@ export default function Jobs() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Categoria Restaurada */}
+              {/* FILTRO DE CATEGORIA (MANTIDO) */}
               <div className="relative">
                 <Tags className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Category (Ex: 45-2092)"
+                  placeholder="Category (Ex: Mason, Laborer)"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   className="pl-10 h-10"
                 />
               </div>
-              {/* Salários Padronizados */}
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
                   MIN $
@@ -367,7 +365,7 @@ export default function Jobs() {
           </CardHeader>
         </Card>
 
-        {/* --- TABELA ATUALIZADA (COM CATEGORIA E FONTE NORMALIZADA) --- */}
+        {/* --- TABELA NORMALIZADA (SEM COLUNA EXTRA) --- */}
         <Card className="border-slate-200 overflow-hidden shadow-sm">
           <CardContent className="p-0 overflow-x-auto text-left">
             <Table>
@@ -383,10 +381,6 @@ export default function Jobs() {
                       {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
                     </button>
                   </TableHead>
-
-                  {/* NOVA COLUNA: CATEGORIA */}
-                  <TableHead>Category</TableHead>
-
                   <TableHead>
                     <button onClick={() => toggleSort("city")}>
                       {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
@@ -406,7 +400,7 @@ export default function Jobs() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-20">
+                    <TableCell colSpan={12} className="text-center py-20">
                       <Loader2 className="animate-spin inline h-6 w-6" />
                     </TableCell>
                   </TableRow>
@@ -429,14 +423,7 @@ export default function Jobs() {
                         </span>
                       </TableCell>
 
-                      {/* NOVA CÉLULA: CATEGORIA (Fonte text-sm) */}
-                      <TableCell className="text-sm text-slate-600">
-                        <span translate="no" className="font-medium text-blue-900/80">
-                          {j.category || "-"}
-                        </span>
-                      </TableCell>
-
-                      {/* LOCAIS E DATAS NORMALIZADOS (De text-[11px] para text-sm ou text-xs ajustado) */}
+                      {/* LOCAIS E DATAS NORMALIZADOS (text-sm em vez de text-[11px]) */}
                       <TableCell className="text-sm text-slate-600 uppercase">
                         {j.city}, {j.state}
                       </TableCell>
@@ -488,7 +475,7 @@ export default function Jobs() {
                         )}
                       </TableCell>
 
-                      {/* DATAS NORMALIZADAS PARA text-sm */}
+                      {/* DATAS NORMALIZADAS (text-sm) */}
                       <TableCell className="text-sm whitespace-nowrap text-slate-600">
                         {formatDate(j.posted_date)}
                       </TableCell>
@@ -532,7 +519,6 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        {/* Paginação e Dialog de Detalhes (Mantidos) */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o) => !o && setSelectedJob(null)}
