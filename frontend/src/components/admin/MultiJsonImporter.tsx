@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database, FileJson, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, Database, FileJson, CheckCircle2, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import JSZip from "jszip";
@@ -60,9 +60,10 @@ export function MultiJsonImporter() {
     const rawJobsMap = new Map();
 
     try {
-      // 1. RESET: Desativa todas as vagas antes de começar (Mirror Sync)
+      // 1. CHAMADA DA NOVA LÓGICA DE HISTÓRICO:
+      // Move o que está na public_jobs para jobs_history e limpa a principal.
       const { error: resetError } = await supabase.rpc("deactivate_all_jobs");
-      if (resetError) throw new Error("Falha ao resetar base de dados: " + resetError.message);
+      if (resetError) throw new Error("Erro no Backup/Reset: " + resetError.message);
 
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
@@ -93,7 +94,7 @@ export function MultiJsonImporter() {
             if (!rawId) return;
 
             const email = getVal(flat, ["recApplyEmail", "email"]);
-            if (!email || email.toUpperCase() === "N/A") return; // Filtro de e-mail ausente
+            if (!email || email === "N/A") return;
 
             const fingerprint = getCaseBody(rawId);
             const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
@@ -102,7 +103,7 @@ export function MultiJsonImporter() {
               job_id: rawId.split("-GHOST")[0].trim(),
               visa_type: visaType,
               fingerprint: fingerprint,
-              is_active: true, // Reativa apenas as que constam no arquivo
+              is_active: true,
               job_title: getVal(flat, ["jobTitle", "tempneedJobtitle", "title"]),
               company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
               email: email.toLowerCase(),
@@ -117,15 +118,13 @@ export function MultiJsonImporter() {
                 new Date().toISOString().split("T")[0],
               end_date: formatToISODate(getVal(flat, ["jobEndDate", "tempneedEnd"])),
               job_duties: getVal(flat, ["jobDuties", "tempneedDescription"]),
-              job_min_special_req: getVal(flat, ["jobMinspecialreq", "specialRequirements", "jobAddReqinfo"]),
+              job_min_special_req: getVal(flat, ["jobMinspecialreq", "specialRequirements"]),
               wage_additional: getVal(flat, ["wageAdditional", "wageAddinfo"]),
               rec_pay_deductions: getVal(flat, ["recPayDeductions", "deductionsInfo"]),
               weekly_hours: hours,
               category: getVal(flat, ["jobCategory", "socCode"]),
-              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded", "tempneedWkrPos"]) || "0"),
-              experience_months: parseInt(
-                getVal(flat, ["experienceMonths", "jobMinexpmonths", "monthsExperience"]) || "0",
-              ),
+              openings: parseInt(getVal(flat, ["jobWrksNeeded", "totalWorkersNeeded"]) || "0"),
+              experience_months: parseInt(getVal(flat, ["experienceMonths", "jobMinexpmonths"]) || "0"),
               education_required: getVal(flat, ["educationLevel", "jobMinedu"]),
               transport_provided:
                 getVal(flat, ["transportation", "transportProvided"])?.toLowerCase().includes("yes") || false,
@@ -138,8 +137,6 @@ export function MultiJsonImporter() {
       }
 
       const allJobs = Array.from(rawJobsMap.values());
-      setStats({ total: allJobs.length, files: files.length });
-
       const BATCH_SIZE = 1000;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
         const batch = allJobs.slice(i, i + BATCH_SIZE);
@@ -148,8 +145,8 @@ export function MultiJsonImporter() {
       }
 
       toast({
-        title: "Sincronização Mirror Sync Concluída!",
-        description: `${allJobs.length} vagas ativas no sistema agora.`,
+        title: "Mirror Sync V64 Concluído!",
+        description: `${allJobs.length} vagas sincronizadas e histórico atualizado.`,
       });
       setFiles([]);
     } catch (err: any) {
@@ -165,34 +162,31 @@ export function MultiJsonImporter() {
         <div className="flex items-center justify-between text-left">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
-              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Mirror V63
+              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V64
             </CardTitle>
             <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
-              Mirror Sync Mode • Live DOL Data
+              Mirror Sync & History Archiving
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-8 space-y-6 bg-white text-left">
-        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-          <div className="text-xs text-amber-900 leading-relaxed font-bold uppercase italic">
-            Atenção: Este modo desativa vagas antigas. Apenas as vagas presentes nos arquivos enviados estarão ativas
-            após o processo.
+        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-start gap-3">
+          <History className="h-5 w-5 text-indigo-600 mt-0.5" />
+          <div className="text-xs text-indigo-900 leading-relaxed font-bold uppercase">
+            Sistema de Proteção de Selo 🚀: Vagas antigas serão movidas para o histórico antes da sincronização.
           </div>
         </div>
 
         <div className="grid w-full items-center gap-4">
           <Label className="text-xs font-black uppercase text-slate-500 tracking-widest text-left">
-            Upload de arquivos DOL (.json / .zip)
+            Arquivos DOL (.json / .zip)
           </Label>
-          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <FileJson className="w-10 h-10 mb-3 text-slate-400" />
-              <p className="mb-2 text-sm text-slate-500 font-bold">
-                {files.length > 0 ? `${files.length} selecionados` : "Clique para upload"}
-              </p>
-            </div>
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100">
+            <FileJson className="w-10 h-10 mb-3 text-slate-400" />
+            <p className="text-sm text-slate-500 font-bold">
+              {files.length > 0 ? `${files.length} selecionados` : "Clique para upload"}
+            </p>
             <input
               type="file"
               multiple
@@ -203,22 +197,13 @@ export function MultiJsonImporter() {
           </label>
         </div>
 
-        {stats.total > 0 && !processing && (
-          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            <span className="text-xs font-bold text-emerald-800 uppercase italic">
-              Sucesso: {stats.total} vagas ativas sincronizadas.
-            </span>
-          </div>
-        )}
-
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg border-b-4 border-indigo-900 active:translate-y-1 active:border-b-0"
+          className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg border-b-4 border-indigo-900 active:translate-y-1"
         >
           {processing ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <RefreshCw className="mr-3 h-6 w-6" />}
-          EXECUTAR MIRROR SYNC V63
+          SINCROZINAR E ARQUIVAR V64
         </Button>
       </CardContent>
     </Card>
