@@ -31,31 +31,38 @@ import {
   Rocket,
   ArrowRight,
   X,
+  ShieldAlert,
+  Lock,
+  Tags,
 } from "lucide-react";
+import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
+import type { ReportReason } from "@/components/queue/ReportJobButton";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
-// --- LISTA SIMPLIFICADA (Baseada nos dados REAIS da sua coluna 'category') ---
-// Como o banco já tem o nome por extenso, o value é igual ao label (ou parte dele).
+// --- LISTA EXATA (Cópia fiel da coluna 'category' do seu CSV) ---
 const JOB_CATEGORIES_LIST = [
-  { value: "Farmworkers and Laborers", label: "🌾 Farmworkers & Crop Laborers" },
-  { value: "Agricultural Equipment", label: "🚜 Agricultural Equipment Operators" },
-  { value: "Landscaping", label: "🌳 Landscaping & Groundskeeping" },
-  { value: "Construction Laborers", label: "🏗️ Construction Laborers" },
-  { value: "Ranch", label: "🐄 Livestock & Ranch Workers" },
-  { value: "Maids", label: "🧹 Maids & Housekeeping" },
-  { value: "Cooks", label: "🍳 Cooks (Restaurant & Inst)" },
-  { value: "Truck Drivers", label: "🚚 Truck Drivers (Heavy/Light)" },
-  { value: "Waiters", label: "🍽️ Waiters & Waitresses" },
-  { value: "Food Preparation", label: "🥗 Food Preparation Workers" },
-  { value: "Mechanics", label: "🔧 Farm Equipment Mechanics" },
-  { value: "Janitors", label: "🧽 Janitors & Cleaners" },
-  { value: "Material Movers", label: "📦 Material Movers & Stock" },
-  { value: "Cement Masons", label: "🧱 Cement Masons" },
-  { value: "Dishwashers", label: "🧼 Dishwashers" },
-  { value: "Amusement", label: "🎡 Amusement Attendants" },
+  "Farmworkers and Laborers, Crop, Nursery, and Greenhouse",
+  "Agricultural Equipment Operators",
+  "Landscaping and Groundskeeping Workers",
+  "Farmworkers, Farm, Ranch, and Aquacultural Animals",
+  "Construction Laborers",
+  "Maids and Housekeeping Cleaners",
+  "Cooks, Restaurant",
+  "Heavy and Tractor-Trailer Truck Drivers",
+  "Waiters and Waitresses",
+  "Food Preparation Workers",
+  "Farm Equipment Mechanics and Service Technicians",
+  "Janitors and Cleaners, Except Maids and Housekeeping Cleaners",
+  "Laborers and Freight, Stock, and Material Movers, Hand",
+  "Cement Masons and Concrete Finishers",
+  "Dishwashers",
+  "Fast Food and Counter Workers",
+  "Amusement and Recreation Attendants",
+  "Hotel, Motel, and Resort Desk Clerks",
+  "Animal Caretakers",
 ];
 
 type Job = Tables<"public_jobs">;
@@ -135,7 +142,7 @@ export default function Jobs() {
   const [stateFilter, setStateFilter] = useState(() => searchParams.get("state") ?? "");
   const [cityFilter, setCityFilter] = useState(() => searchParams.get("city") ?? "");
 
-  // FILTRO DE CATEGORIA (Simples)
+  // FILTRO DE CATEGORIA
   const [categoryFilter, setCategoryFilter] = useState("");
 
   const [minSalary, setMinSalary] = useState("");
@@ -213,8 +220,11 @@ export default function Jobs() {
     if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
 
-    // Filtro de Categoria (Integração)
-    if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`);
+    // FILTRO DE CATEGORIA (Exato)
+    if (categoryFilter.trim()) {
+      // Usamos ILIKE para não ter problema com maiúsculas/minúsculas, mas buscamos o termo exato ou parte dele
+      query = query.ilike("category", `%${categoryFilter.trim()}%`);
+    }
 
     if (minSalary) query = query.gte("salary", Number(minSalary));
     if (maxSalary) query = query.lte("salary", Number(maxSalary));
@@ -356,19 +366,19 @@ export default function Jobs() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* --- FILTRO DE CATEGORIA SIMPLIFICADO --- */}
+              {/* --- FILTRO DE CATEGORIA COM DADOS REAIS --- */}
               <div className="relative">
                 <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val === "all" ? "" : val)}>
                   <SelectTrigger className="w-full bg-white h-10 border-slate-200 text-slate-700">
-                    <SelectValue placeholder="Category / Categoria" />
+                    <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all" className="font-bold text-blue-900 cursor-pointer">
-                      Todas as Categorias
+                      All Categories
                     </SelectItem>
-                    {JOB_CATEGORIES_LIST.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value} className="cursor-pointer">
-                        {cat.label}
+                    {JOB_CATEGORIES_LIST.map((catName) => (
+                      <SelectItem key={catName} value={catName} className="cursor-pointer">
+                        {catName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -512,7 +522,6 @@ export default function Jobs() {
                         )}
                       </TableCell>
 
-                      {/* Datas Padronizadas (text-sm) */}
                       <TableCell className="text-sm whitespace-nowrap text-slate-600">
                         {formatDate(j.posted_date)}
                       </TableCell>
