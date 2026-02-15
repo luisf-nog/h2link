@@ -12,10 +12,12 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
+  // --- HELPER: Cálculo de Salário ---
   const calculateFinalWage = (rawVal: any, hours: any) => {
     if (!rawVal) return null;
     let val = parseFloat(String(rawVal).replace(/[$,]/g, ""));
     if (isNaN(val) || val <= 0) return null;
+
     if (val > 100) {
       const h = hours && hours > 0 ? hours : 40;
       let calc = val / (h * 4.333);
@@ -161,19 +163,78 @@ export function MultiJsonImporter() {
 
   return (
     <Card className="border-4 border-indigo-700 shadow-2xl overflow-hidden">
-      <CardHeader className="bg-indigo-700 text-white p-6">
-        <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
-          <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V68
-        </CardTitle>
+      <CardHeader className="bg-indigo-700 text-white p-6 text-left">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
+              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V68
+            </CardTitle>
+            <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
+              Queue Protection & Local Date Sync (V68)
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-8 space-y-6 bg-white text-left">
+        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-start gap-3">
+          <History className="h-5 w-5 text-indigo-600 mt-0.5" />
+          <div className="text-xs text-indigo-900 leading-relaxed font-bold uppercase">
+            🛡️ PROTEÇÃO ATIVA: A fila não será resetada e as datas foram corrigidas para o fuso de NY.
+          </div>
+        </div>
+
+        <div className="grid w-full items-center gap-4">
+          <Label className="text-xs font-black uppercase text-slate-500 tracking-widest text-left">
+            Arquivos DOL (.json / .zip)
+          </Label>
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+            <FileJson className="w-10 h-10 mb-3 text-slate-400" />
+            <p className="text-sm text-slate-500 font-bold">
+              {files.length > 0 ? `${files.length} arquivos selecionados` : "Clique para selecionar arquivos"}
+            </p>
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+              accept=".json,.zip"
+            />
+          </label>
+
+          {files.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {files.map((f, i) => (
+                <div
+                  key={i}
+                  className="text-[10px] bg-slate-100 px-2 py-1 rounded border border-slate-200 font-mono flex items-center gap-1"
+                >
+                  {f.name}
+                  <X
+                    className="h-3 w-3 cursor-pointer text-red-500"
+                    onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
-          className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg active:translate-y-1"
+          className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg border-b-4 border-indigo-900 active:translate-y-1 disabled:bg-slate-300 disabled:border-slate-400"
         >
-          {processing ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <RefreshCw className="mr-3 h-6 w-6" />}
-          SINCROZINAR AGORA (DATA FIX)
+          {processing ? (
+            <>
+              <Loader2 className="animate-spin mr-3 h-6 w-6" />
+              PROCESSANDO...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-3 h-6 w-6" />
+              SINCROZINAR AGORA (V68)
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>
