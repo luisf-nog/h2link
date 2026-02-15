@@ -34,7 +34,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const location = useLocation();
 
-  if (loading) {
+  // 1. Se estiver carregando os dados iniciais do Supabase ou SMTP
+  if (loading || !smtpStatus) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -42,28 +43,30 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // 2. Se não estiver logado
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
-  // TRIGGER: Se logado, mas SMTP incompleto, manda para onboarding (exceto se estiver indo para Settings)
-  const needsOnboarding = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
+  // 3. Verificação de Onboarding
+  const needsOnboarding = !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
   const isSettingsRoute = location.pathname.startsWith("/settings");
 
+  // Se precisa de onboarding e NÃO está tentando acessar as configurações
   if (needsOnboarding && !isSettingsRoute) {
+    console.log("DEBUG: Onboarding pendente. Redirecionando...");
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Se passou por tudo, renderiza o layout com o conteúdo
   return <AppLayout>{children}</AppLayout>;
 }
 
-// --- ONBOARDING ROUTE (Evita que quem já terminou volte pra cá) ---
+// --- ONBOARDING ROUTE ---
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
 
-  if (loading) {
+  if (loading || !smtpStatus) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -73,14 +76,15 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  if (smtpStatus?.hasPassword && smtpStatus?.hasRiskProfile) {
+  // Se já completou tudo, não deixa ficar no onboarding
+  if (smtpStatus.hasPassword && smtpStatus.hasRiskProfile) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
 }
 
-// --- PUBLIC ROUTE (Manda quem já logou pra dentro do sistema) ---
+// --- PUBLIC ROUTE ---
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
@@ -133,7 +137,7 @@ const AppRoutes = () => (
       }
     />
 
-    {/* PROTECTED ROUTES (Tudo que exige Onboarding e Login) */}
+    {/* PROTECTED ROUTES */}
     <Route
       path="/dashboard"
       element={
