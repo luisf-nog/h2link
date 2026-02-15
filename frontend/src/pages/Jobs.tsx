@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
 import type { Tables } from "@/integrations/supabase/types";
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
@@ -33,12 +32,12 @@ import {
   ChevronRight,
   MapPin,
   Calendar,
-  Tags,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
-import { getVisaBadgeConfig, VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
+import { VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
 
 const JOB_CATEGORIES_LIST = [
   "Farmworkers and Laborers, Crop, Nursery, and Greenhouse",
@@ -168,6 +167,41 @@ export default function Jobs() {
     fetchJobs();
   }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, minSalary, maxSalary, sortKey, sortDir, page]);
 
+  const addToQueue = async (job: Job) => {
+    if (!profile?.id || planSettings.job_db_blur) {
+      toast({ title: "Acesso Restrito", description: "Seu plano não permite salvar vagas.", variant: "destructive" });
+      return;
+    }
+    setProcessingJobIds((prev) => new Set(prev).add(job.id));
+    const { error } = await supabase
+      .from("my_queue")
+      .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
+    if (!error) {
+      await syncQueue();
+      toast({ title: t("jobs.toasts.add_success_title") });
+    }
+    setProcessingJobIds((prev) => {
+      const n = new Set(prev);
+      n.delete(job.id);
+      return n;
+    });
+  };
+
+  const removeFromQueue = async (job: Job) => {
+    if (!profile?.id) return;
+    setProcessingJobIds((prev) => new Set(prev).add(job.id));
+    const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
+    if (!error) {
+      await syncQueue();
+      toast({ title: "Removido da fila" });
+    }
+    setProcessingJobIds((prev) => {
+      const n = new Set(prev);
+      n.delete(job.id);
+      return n;
+    });
+  };
+
   const toggleSort = (key: SortKey) => {
     setPage(1);
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -214,7 +248,6 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* --- FILTROS --- */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -295,7 +328,6 @@ export default function Jobs() {
             <Loader2 className="animate-spin h-8 w-8 text-primary" />
           </div>
         ) : isMobile ? (
-          /* MOBILE LAYOUT (Cards) */
           <div className="space-y-4">
             {jobs.map((j) => (
               <Card
@@ -337,7 +369,6 @@ export default function Jobs() {
             ))}
           </div>
         ) : (
-          /* DESKTOP LAYOUT (Full Table) */
           <Card className="border-slate-200 overflow-hidden shadow-sm">
             <Table>
               <TableHeader>
@@ -410,13 +441,24 @@ export default function Jobs() {
                     <TableCell className="text-right">
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="rounded-full h-8 w-8 p-0"
+                        variant={queuedJobIds.has(j.id) ? "default" : "outline"}
+                        className={cn(
+                          "rounded-full h-8 w-8 p-0",
+                          queuedJobIds.has(j.id) &&
+                            "bg-green-600 border-green-600 text-white hover:bg-red-500 hover:border-red-500",
+                        )}
                         onClick={(e) => {
-                          e.stopPropagation(); /* Add to queue logic */
+                          e.stopPropagation();
+                          queuedJobIds.has(j.id) ? removeFromQueue(j) : addToQueue(j);
                         }}
                       >
-                        <Plus className="h-4 w-4" />
+                        {processingJobIds.has(j.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : queuedJobIds.has(j.id) ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -426,7 +468,6 @@ export default function Jobs() {
           </Card>
         )}
 
-        {/* --- PAGINAÇÃO --- */}
         <div className="flex items-center justify-between py-6">
           <div className="hidden sm:block text-sm text-muted-foreground">
             Página {page} de {totalPages} ({formatNumber(totalCount)} total)
@@ -460,7 +501,9 @@ export default function Jobs() {
           job={selectedJob}
           planSettings={profile}
           formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
-          onAddToQueue={() => {}}
+          onAddToQueue={addToQueue}
+          isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
+          onShare={(j: any) => navigate(`/job/${j.id}`)}
         />
       </div>
     </TooltipProvider>
