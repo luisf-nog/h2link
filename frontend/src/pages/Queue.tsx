@@ -20,13 +20,15 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
 import { cn } from "@/lib/utils";
 
-interface QueueItem {
+// CORREÇÃO: Interface completa compatível com MobileQueueCard
+export interface QueueItem {
   id: string;
   status: string;
   sent_at: string | null;
   created_at: string;
   send_count: number;
   last_error?: string | null;
+  // Campos da View (Flat)
   job_title?: string;
   company?: string;
   contact_email?: string;
@@ -36,9 +38,24 @@ interface QueueItem {
   total_duration_seconds?: number;
   last_view_at?: string | null;
   user_id: string;
-  // Fallbacks de segurança para garantir o email
-  public_jobs?: { email?: string; job_title?: string; company?: string; visa_type?: string } | null;
-  manual_jobs?: { email?: string; job_title?: string; company?: string } | null;
+  // Campos de Relação (Necessários para tipagem estrita do MobileCard)
+  public_jobs: {
+    id: string;
+    job_title: string;
+    company: string;
+    email: string;
+    city: string;
+    state: string;
+    visa_type?: string | null;
+  } | null;
+  manual_jobs: {
+    id: string;
+    company: string;
+    job_title: string;
+    email: string;
+    eta_number: string | null;
+    phone: string | null;
+  } | null;
 }
 
 const EARLY_ACCESS_VARIATIONS = [
@@ -67,7 +84,7 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
-  // FETCH BLINDADO: Trazendo as relações explicitamente para garantir o dado
+  // FETCH: Busca dados completos para satisfazer a tipagem
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
@@ -76,8 +93,8 @@ export default function Queue() {
       .select(
         `
         *,
-        public_jobs (email, job_title, company, visa_type),
-        manual_jobs (email, job_title, company)
+        public_jobs (id, job_title, company, email, city, state, visa_type),
+        manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
       )
       .eq("user_id", profile.id)
@@ -92,7 +109,7 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
     const channel = supabase
-      .channel("queue_fix_v2")
+      .channel("queue_build_fix")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
       .subscribe();
     return () => {
@@ -100,7 +117,6 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
-  // LÓGICA DE ENVIO SEGURA
   const sendQueueItems = async (items: QueueItem[]) => {
     if (remainingToday <= 0) {
       toast({ title: "Limite diário atingido", variant: "destructive" });
@@ -114,25 +130,23 @@ export default function Queue() {
       .order("created_at", { ascending: false });
 
     for (const item of items) {
-      // 1. Resolução de Email Robusta (Prioridade: View > Public > Manual)
+      // Prioridade: View > Relação
       const targetEmail = item.contact_email || item.public_jobs?.email || item.manual_jobs?.email;
 
-      // 2. Resolução de Dados Complementares
-      const targetJob = item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
-      const targetVisa = item.visa_type || item.public_jobs?.visa_type;
-
       if (!targetEmail) {
-        console.warn(`Item ${item.id} pulado: Email não encontrado.`);
+        console.warn(`Item ${item.id} pulado: Sem e-mail.`);
         continue;
       }
 
+      const displayTitle = item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
       const template = templates?.[0] || {
-        subject: `Application for ${targetJob}`,
+        subject: `Application for ${displayTitle}`,
         body: "Hello, please find my resume attached.",
       };
       let finalBody = template.body;
 
-      if (targetVisa?.toLowerCase().includes("early access")) {
+      const vType = item.visa_type || item.public_jobs?.visa_type;
+      if (vType?.toLowerCase().includes("early access")) {
         finalBody =
           EARLY_ACCESS_VARIATIONS[Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length)] + "\n\n" + finalBody;
       }
@@ -140,7 +154,7 @@ export default function Queue() {
       try {
         const { error } = await supabase.functions.invoke("send-email-custom", {
           body: {
-            to: targetEmail, // Agora garantido que não é undefined
+            to: targetEmail,
             subject: template.subject,
             body: finalBody,
             queueId: item.id,
@@ -149,12 +163,11 @@ export default function Queue() {
         });
 
         if (error) throw error;
-
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
       } catch (e) {
-        console.error(`Erro envio item ${item.id}:`, e);
+        console.error(`Erro item ${item.id}:`, e);
       }
 
       await new Promise((r) => setTimeout(r, 500));
@@ -163,16 +176,13 @@ export default function Queue() {
     setSending(false);
     refreshProfile();
     fetchQueue();
-    toast({ title: "Envio finalizado com sucesso!" });
+    toast({ title: "Envio finalizado." });
   };
 
   const handleSendAll = () => {
     const items = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
-    if (items.length > 0) {
-      sendQueueItems(items);
-    } else {
-      toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
-    }
+    if (items.length > 0) sendQueueItems(items);
+    else toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
   };
 
   const removeFromQueue = async (id: string) => {
@@ -181,8 +191,8 @@ export default function Queue() {
     toast({ title: "Item removido" });
   };
 
-  // Helper para exibir dados na tabela (fallback visual)
-  const getItemDisplay = (item: QueueItem) => ({
+  // Helper de exibição seguro
+  const getDisplay = (item: QueueItem) => ({
     title: item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
     company: item.company || item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
   });
@@ -240,8 +250,8 @@ export default function Queue() {
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         queueId={historyItem?.id ?? ""}
-        jobTitle={getItemDisplay(historyItem || ({} as any)).title}
-        company={getItemDisplay(historyItem || ({} as any)).company}
+        jobTitle={getDisplay(historyItem || ({} as any)).title}
+        company={getDisplay(historyItem || ({} as any)).company}
       />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -321,7 +331,7 @@ export default function Queue() {
                 </TableRow>
               ) : (
                 queue.map((item) => {
-                  const display = getItemDisplay(item);
+                  const display = getDisplay(item);
                   return (
                     <TableRow key={item.id}>
                       <TableCell>
