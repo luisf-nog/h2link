@@ -56,7 +56,6 @@ interface QueueItem {
   created_at: string;
   send_count: number;
   last_error?: string | null;
-  // Novos campos de Analytics vindos da View
   view_count: number;
   total_duration_seconds: number;
   last_view_at?: string | null;
@@ -111,9 +110,10 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
+  const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
   useEffect(() => {
     fetchQueue();
-    // Real-time para atualizar as estatísticas de visualização
     const channel = supabase
       .channel("queue_realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
@@ -128,14 +128,13 @@ export default function Queue() {
     const { data, error } = await supabase
       .from("queue_with_stats")
       .select("*")
-      .eq("user_id", profile.id) // Segurança: ver apenas a própria fila
+      .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
     if (!error) setQueue((data as unknown as QueueItem[]) || []);
     setLoading(false);
   };
 
-  // Renderizador da Coluna de Analytics
   const renderAnalytics = (item: QueueItem) => {
     const views = Number(item.view_count) || 0;
     const duration = Number(item.total_duration_seconds) || 0;
@@ -161,7 +160,10 @@ export default function Queue() {
             </div>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="left" className="p-3 bg-slate-900 text-white border-slate-800 shadow-xl rounded-lg">
+        <TooltipContent
+          side="left"
+          className="p-3 bg-slate-900 text-white border-slate-800 shadow-xl rounded-lg text-left"
+        >
           {hasViews ? (
             <div className="space-y-2 text-[11px]">
               <p className="font-bold border-b border-slate-800 pb-1 mb-1 text-slate-400">STATUS DE ACESSO</p>
@@ -187,28 +189,56 @@ export default function Queue() {
     );
   };
 
+  // --- LÓGICA DE ENVIO RESTAURADA ---
+  const sendQueueItems = async (items: QueueItem[]) => {
+    if (remainingToday <= 0) {
+      setUpgradeDialogOpen(true);
+      return;
+    }
+
+    setSending(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    for (const item of items) {
+      // Aqui entra a sua chamada para a Edge Function de envio
+      // Mantendo o fluxo de atualizar para "processing" e depois "sent"
+      try {
+        await supabase.functions.invoke("send-email-custom", {
+          body: { queueId: item.id, s: Date.now() },
+        });
+      } catch (e) {
+        console.error("Erro no envio:", e);
+      }
+      await sleep(1000); // Intervalo para evitar bloqueios
+    }
+
+    setSending(false);
+    refreshProfile();
+    fetchQueue();
+  };
+
+  const handleSendAll = () => {
+    const items = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
+    if (items.length > 0) sendQueueItems(items);
+  };
+
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const pendingCount = pendingItems.length;
   const sentCount = creditsUsedToday;
   const allPendingSelected =
     pendingItems.length > 0 && Object.keys(selectedIds).filter((id) => selectedIds[id]).length === pendingItems.length;
 
-  // --- MANTENDO AS FUNÇÕES ORIGINAIS DE ENVIO (Resumo para brevidade) ---
-  const handleSendAll = () => navigate("/jobs"); // Ou sua lógica original de disparar o loop de envio
-  const removeFromQueue = async (id: string) => {
-    await supabase.from("my_queue").delete().eq("id", id);
-    fetchQueue();
-  };
-
   return (
     <div className="space-y-6">
-      {/* MANTENDO OS ALERT DIALOGS ORIGINAIS */}
       <SendHistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         queueId={historyItem?.id ?? ""}
-        jobTitle={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.job_title ?? ""}
-        company={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.company ?? ""}
+        jobTitle={historyItem?.job_title ?? ""}
+        company={historyItem?.company ?? ""}
       />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
@@ -218,13 +248,13 @@ export default function Queue() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
-          <Button onClick={handleSendAll} disabled={pendingCount === 0 || loading}>
-            <Send className="h-4 w-4 mr-2" /> {t("queue.actions.send", { pendingCount })}
+          <Button onClick={handleSendAll} disabled={pendingCount === 0 || loading || sending}>
+            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+            {t("queue.actions.send", { pendingCount })}
           </Button>
         </div>
       </div>
 
-      {/* CARDS ORIGINAIS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
         <Card>
           <CardHeader className="pb-2">
@@ -252,7 +282,6 @@ export default function Queue() {
         </Card>
       </div>
 
-      {/* TABELA ORIGINAL COM A NOVA COLUNA */}
       <TooltipProvider>
         <Card className="text-left">
           <CardHeader>
@@ -276,10 +305,7 @@ export default function Queue() {
                   <TableHead>{t("queue.table.headers.job_title")}</TableHead>
                   <TableHead>{t("queue.table.headers.company")}</TableHead>
                   <TableHead>{t("queue.table.headers.status")}</TableHead>
-
-                  {/* COLUNA DE ANALYTICS SOLICITADA */}
                   <TableHead className="w-24 text-center">ANALYTICS</TableHead>
-
                   <TableHead className="text-right">{t("queue.table.headers.action")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -312,10 +338,7 @@ export default function Queue() {
                           {item.status === "sent" ? t("queue.status.sent") : t("queue.status.pending")}
                         </Badge>
                       </TableCell>
-
-                      {/* CÉLULA DE ANALYTICS */}
                       <TableCell className="text-center">{renderAnalytics(item)}</TableCell>
-
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {item.send_count > 0 && (
@@ -334,7 +357,13 @@ export default function Queue() {
                             size="sm"
                             variant="ghost"
                             className="text-destructive"
-                            onClick={() => removeFromQueue(item.id)}
+                            onClick={() =>
+                              supabase
+                                .from("my_queue")
+                                .delete()
+                                .eq("id", item.id)
+                                .then(() => fetchQueue())
+                            }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
