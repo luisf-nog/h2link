@@ -20,21 +20,25 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
 import { cn } from "@/lib/utils";
 
-// Interface compatível com a estrutura aninhada (Nested)
-interface QueueItem {
+// Interface compatível com o sistema
+export interface QueueItem {
   id: string;
   status: string;
   sent_at: string | null;
   created_at: string;
   send_count: number;
   last_error?: string | null;
-  // Campos de Rastreio (View)
-  view_count: number;
-  total_duration_seconds: number;
-  last_view_at: string | null;
+  // Campos da View
+  job_title?: string;
+  company?: string;
+  contact_email?: string;
+  visa_type?: string;
   token?: string;
+  view_count?: number;
+  total_duration_seconds?: number;
+  last_view_at?: string | null;
   user_id: string;
-  // Dados Relacionados (A fonte segura dos dados)
+  // Fallbacks de relacionamento para o componente Mobile e segurança
   public_jobs: {
     id: string;
     job_title: string;
@@ -70,6 +74,10 @@ export default function Queue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // Estados para controle individual (Mobile e Desktop)
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
@@ -80,27 +88,24 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
-  // FETCH SEGURO: Busca explicitamente as relações para não vir vazio
+  // FETCH BLINDADO
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
-    // Voltamos a usar o select robusto que funcionava antes
     const { data, error } = await supabase
-      .from("queue_with_stats") // Usa a view para pegar as stats...
+      .from("queue_with_stats")
       .select(
         `
         *,
         public_jobs (id, job_title, company, email, city, state, visa_type),
         manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
-      ) // ...mas pede os dados das tabelas originais explicitamente
+      )
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
     if (!error) {
       setQueue((data as unknown as QueueItem[]) || []);
-    } else {
-      console.error("Erro fetch:", error);
     }
     setLoading(false);
   };
@@ -108,7 +113,7 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
     const channel = supabase
-      .channel("queue_final_fix")
+      .channel("queue_fix_final")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
       .subscribe();
     return () => {
@@ -116,44 +121,43 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
-  // LÓGICA DE ENVIO SEGURA (Resolve o erro 400)
+  // LÓGICA DE ENVIO SEGURA
   const sendQueueItems = async (items: QueueItem[]) => {
-    if (remainingToday <= 0) {
+    // Verifica limite se for envio em massa (mais de 1 item)
+    if (items.length > 1 && remainingToday <= 0) {
       toast({ title: "Limite diário atingido", variant: "destructive" });
       return;
     }
 
-    setSending(true);
+    if (items.length > 1) setSending(true);
+
     const { data: templates } = await supabase
       .from("email_templates")
       .select("*")
       .order("created_at", { ascending: false });
 
     for (const item of items) {
-      // PROCURA O E-MAIL DENTRO DOS OBJETOS ANINHADOS
-      const targetEmail = item.public_jobs?.email || item.manual_jobs?.email;
-      const targetJob = item.public_jobs?.job_title || item.manual_jobs?.job_title || "Job Opportunity";
+      const targetEmail = item.contact_email || item.public_jobs?.email || item.manual_jobs?.email;
 
-      // Se não achar e-mail, pula o item silenciosamente ou avisa no console
       if (!targetEmail) {
-        console.warn(`Item ${item.id} pulado: E-mail não encontrado nas relações.`);
+        console.warn(`Item ${item.id} pulado: Sem e-mail.`);
         continue;
       }
 
+      const displayTitle = item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
       const template = templates?.[0] || {
-        subject: `Application for ${targetJob}`,
+        subject: `Application for ${displayTitle}`,
         body: "Hello, please find my resume attached.",
       };
       let finalBody = template.body;
 
-      const vType = item.public_jobs?.visa_type;
+      const vType = item.visa_type || item.public_jobs?.visa_type;
       if (vType?.toLowerCase().includes("early access")) {
         finalBody =
           EARLY_ACCESS_VARIATIONS[Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length)] + "\n\n" + finalBody;
       }
 
       try {
-        // Envia com os dados garantidos
         const { error } = await supabase.functions.invoke("send-email-custom", {
           body: {
             to: targetEmail,
@@ -165,31 +169,47 @@ export default function Queue() {
         });
 
         if (error) throw error;
-
-        // Atualiza status local
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
       } catch (e) {
-        console.error(`Erro ao enviar item ${item.id}:`, e);
+        console.error(`Erro envio item ${item.id}:`, e);
       }
 
-      await new Promise((r) => setTimeout(r, 500));
+      // Delay pequeno entre envios em massa
+      if (items.length > 1) await new Promise((r) => setTimeout(r, 500));
     }
 
-    setSending(false);
+    if (items.length > 1) setSending(false);
     refreshProfile();
     fetchQueue();
-    toast({ title: "Envio finalizado." });
+    if (items.length > 1) toast({ title: "Envio finalizado." });
+  };
+
+  // --- HANDLERS INDIVIDUAIS (Necessários para Mobile e Ações) ---
+  const handleSendOne = async (item: QueueItem) => {
+    if (sendingIds.has(item.id)) return;
+    setSendingIds((prev) => new Set(prev).add(item.id));
+    await sendQueueItems([item]);
+    setSendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
+    toast({ title: "E-mail enviado!" });
+  };
+
+  const handleRetryOne = async (item: QueueItem) => {
+    setRetryingId(item.id);
+    await sendQueueItems([item]);
+    setRetryingId(null);
+    toast({ title: "Reenvio concluído" });
   };
 
   const handleSendAll = () => {
     const items = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
-    if (items.length > 0) {
-      sendQueueItems(items);
-    } else {
-      toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
-    }
+    if (items.length > 0) sendQueueItems(items);
+    else toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
   };
 
   const removeFromQueue = async (id: string) => {
@@ -198,10 +218,10 @@ export default function Queue() {
     toast({ title: "Item removido" });
   };
 
-  // Helper para exibir dados na tabela (resolve dados em branco)
+  // Helper de exibição
   const getDisplay = (item: QueueItem) => ({
-    title: item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
-    company: item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
+    title: item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
+    company: item.company || item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
   });
 
   const renderAnalytics = (item: QueueItem) => {
@@ -261,6 +281,7 @@ export default function Queue() {
         company={getDisplay(historyItem || ({} as any)).company}
       />
 
+      {/* HEADER PADRÃO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Queue</h1>
@@ -302,6 +323,7 @@ export default function Queue() {
         </Card>
       </div>
 
+      {/* TABELA PADRÃO */}
       <Card>
         <div className="p-0 overflow-x-auto">
           <Table>
@@ -361,6 +383,18 @@ export default function Queue() {
                       <TableCell className="text-center">{renderAnalytics(item)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={sendingIds.has(item.id)}
+                            onClick={() => handleSendOne(item)} // Adicionado handler individual
+                          >
+                            {sendingIds.has(item.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
                           {item.send_count > 0 && (
                             <Button
                               size="icon"
@@ -392,15 +426,26 @@ export default function Queue() {
         </div>
       </Card>
 
+      {/* MOBILE VIEW CORRIGIDA */}
       {isMobile && (
         <div className="space-y-4 md:hidden">
           {queue.map((item) => (
             <MobileQueueCard
               key={item.id}
-              item={item}
+              item={item} // A tipagem agora bate com a interface corrigida
               isSelected={!!selectedIds[item.id]}
-              onSelectChange={() => {}}
+              onSelectChange={(checked) => setSelectedIds((prev) => ({ ...prev, [item.id]: checked }))}
               onRemove={() => removeFromQueue(item.id)}
+              // PROPS QUE FALTAVAM ADICIONADAS:
+              onSend={() => handleSendOne(item)}
+              onRetry={() => handleRetryOne(item)}
+              onViewHistory={() => {
+                setHistoryItem(item);
+                setHistoryDialogOpen(true);
+              }}
+              isSending={sendingIds.has(item.id)}
+              isRetrying={retryingId === item.id}
+              globalSending={sending}
             />
           ))}
         </div>
