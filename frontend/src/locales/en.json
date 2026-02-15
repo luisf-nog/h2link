@@ -320,6 +320,23 @@
       "title": "Warning: max-speed sending",
       "description": "Sending with zero delay may cause temporary Gmail blocks. To enable Safe Sending Mode (Anti-Spam), consider the Diamond plan.",
       "cta": "View plans"
+    },
+    "analytics": {
+      "title": "Sending Analytics",
+      "subtitle": "Track your outreach performance",
+      "total_sent": "Emails Sent",
+      "total_sent_desc": "All time",
+      "opened": "Emails Opened",
+      "open_rate": "open rate",
+      "cv_viewed": "CVs Viewed",
+      "view_rate": "view rate",
+      "failed": "Failed",
+      "fail_rate": "fail rate",
+      "no_data": "No data yet",
+      "funnel_title": "Engagement Funnel",
+      "sent": "Sent",
+      "opened_label": "Opened",
+      "cv_viewed_label": "CV Viewed"
     }
   },
   "settings": {
