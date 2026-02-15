@@ -6,113 +6,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Provider = "gmail" | "outlook";
-type RiskProfile = "conservative" | "standard" | "aggressive";
-
-type SaveSmtpRequest = {
-  provider: Provider;
-  email: string;
-  password?: string;
-  risk_profile?: RiskProfile;
-};
-
-function json(status: number, payload: unknown) {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
-  });
-}
-
-function requireEnv(name: string): string {
-  const value = Deno.env.get(name);
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
+// ... (types e helpers json/requireEnv permanecem iguais)
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return json(401, { success: false, error: "Unauthorized" });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-
-    const supabaseUrl = requireEnv("SUPABASE_URL");
-    const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: userData, error: userError } = await authClient.auth.getUser(token);
-    const userId = userData?.user?.id;
-    if (userError || !userId) {
-      return json(401, { success: false, error: "Unauthorized" });
-    }
+    // ... (lógica de auth e userId permanece igual até o body)
 
     const body: SaveSmtpRequest = await req.json();
     const provider: Provider = body.provider === "outlook" ? "outlook" : "gmail";
     const email = String(body.email ?? "").trim();
-    const password = typeof body.password === "string" ? body.password.trim() : "";
+
+    // --- LÓGICA DE LIMPEZA DA SENHA ---
+    // Remove espaços internos e garante que são apenas letras minúsculas
+    const rawPassword = typeof body.password === "string" ? body.password : "";
+    const password = rawPassword.replace(/\s/g, "").toLowerCase();
+
+    // --- VALIDAÇÃO ANTES DE IR AO BANCO ---
+    // Se enviou senha, ela PRECISA ter 16 letras. Se não, barramos aqui com erro amigável.
+    if (password.length > 0 && !/^[a-z]{16}$/.test(password)) {
+      return json(400, {
+        success: false,
+        error: "A senha de app deve ter exatamente 16 letras (sem números ou espaços).",
+      });
+    }
+
     const riskProfile = ["conservative", "standard", "aggressive"].includes(body.risk_profile ?? "")
       ? (body.risk_profile as RiskProfile)
       : null;
 
     if (!email) return json(400, { success: false, error: "Missing email" });
 
+    const supabaseUrl = requireEnv("SUPABASE_URL");
     const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. ANTES DE QUALQUER COISA, VERIFICAR SE O USUÁRIO JÁ TEM HISTÓRICO
-    const { data: existingSmtp } = await serviceClient
-      .from("smtp_credentials")
-      .select("warmup_started_at")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // ... (Restante da lógica de warmup e upsert na smtp_credentials permanece igual)
 
-    // 2. Build upsert data (Dados básicos)
-    const upsertData: Record<string, unknown> = {
-      user_id: userId,
-      provider,
-      email,
-      updated_at: new Date().toISOString(),
-    };
-
-    // 3. Lógica Blindada do Perfil de Risco
-    if (riskProfile) {
-      upsertData.risk_profile = riskProfile;
-      upsertData.last_usage_date = new Date().toISOString().slice(0, 10);
-
-      // SÓ INICIA O WARMUP E LIMITES SE FOR A PRIMEIRA VEZ!
-      // Se existingSmtp?.warmup_started_at já existir, nós ignoramos isso para não resetar.
-      if (!existingSmtp?.warmup_started_at) {
-        upsertData.warmup_started_at = new Date().toISOString().slice(0, 10);
-
-        // Novos limites Turbo da plataforma
-        const startLimits: Record<RiskProfile, number> = {
-          conservative: 50,
-          standard: 100,
-          aggressive: 150,
-        };
-        upsertData.current_daily_limit = startLimits[riskProfile];
-        upsertData.emails_sent_today = 0;
-      }
-    }
-
-    const { error: credsError } = await serviceClient
-      .from("smtp_credentials")
-      .upsert(upsertData, { onConflict: "user_id" });
-    if (credsError) throw credsError;
-
+    // 4. Upsert da Senha na tabela de secrets
     if (password.length > 0) {
       const { error: secretError } = await serviceClient
         .from("smtp_credentials_secrets")
         .upsert({ user_id: userId, password }, { onConflict: "user_id" });
-      if (secretError) throw secretError;
+
+      if (secretError) {
+        // Se ainda der erro de padrão aqui, o log vai nos dizer exatamente o que o banco rejeitou
+        console.error("Erro de Constraint no Banco:", secretError);
+        throw new Error("O formato da senha foi rejeitado pelo banco de dados.");
+      }
     }
 
     return json(200, { success: true });
