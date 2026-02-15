@@ -320,6 +320,23 @@
       "title": "Aviso: envío a máxima velocidad",
       "description": "Enviar sin delay puede causar bloqueos temporales en Gmail. Para activar el Modo de Envío Seguro (Anti-Spam), considera el plan Diamond.",
       "cta": "Ver planes"
+    },
+    "analytics": {
+      "title": "Análisis de Envíos",
+      "subtitle": "Rastrea el rendimiento de tus candidaturas",
+      "total_sent": "Emails Enviados",
+      "total_sent_desc": "Total general",
+      "opened": "Emails Abiertos",
+      "open_rate": "tasa de apertura",
+      "cv_viewed": "CVs Visualizados",
+      "view_rate": "tasa de visualización",
+      "failed": "Fallaron",
+      "fail_rate": "tasa de fallo",
+      "no_data": "Sin datos aún",
+      "funnel_title": "Embudo de Engagement",
+      "sent": "Enviados",
+      "opened_label": "Abiertos",
+      "cv_viewed_label": "CV Visualizado"
     }
   },
   "settings": {

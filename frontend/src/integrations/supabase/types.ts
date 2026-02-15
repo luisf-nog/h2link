@@ -220,6 +220,219 @@ export type Database = {
           },
         ]
       }
+      jobs_history: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          city: string
+          company: string
+          created_at: string
+          crop_activities: string | null
+          description: string | null
+          education_required: string | null
+          email: string
+          email_invalid_dns: boolean
+          end_date: string | null
+          experience_months: number | null
+          fingerprint: string | null
+          housing_addr: string | null
+          housing_capacity: number | null
+          housing_city: string | null
+          housing_info: string | null
+          housing_state: string | null
+          housing_type: string | null
+          housing_zip: string | null
+          id: string
+          is_active: boolean | null
+          is_banned: boolean
+          is_meal_provision: boolean | null
+          job_duties: string | null
+          job_id: string
+          job_is_background: boolean | null
+          job_is_driver: boolean | null
+          job_is_drug_screen: boolean | null
+          job_is_lifting: boolean | null
+          job_lifting_weight: string | null
+          job_min_special_req: string | null
+          job_title: string
+          meal_charge: number | null
+          openings: number | null
+          overtime_available: boolean | null
+          overtime_from: number | null
+          overtime_salary: number | null
+          overtime_to: number | null
+          pay_frequency: string | null
+          phone: string | null
+          posted_date: string | null
+          randomization_group: string | null
+          rec_pay_deductions: string | null
+          requirements: string | null
+          salary: number | null
+          shift_end: string | null
+          shift_start: string | null
+          source_url: string | null
+          start_date: string | null
+          state: string
+          tools_provided: boolean | null
+          training_months: number | null
+          transport_desc: string | null
+          transport_max_reimburse: number | null
+          transport_min_reimburse: number | null
+          transport_provided: boolean | null
+          visa_type: string | null
+          wage_additional: string | null
+          wage_from: number | null
+          wage_to: number | null
+          wage_unit: string | null
+          was_early_access: boolean | null
+          website: string | null
+          weekly_hours: number | null
+          worksite_address: string | null
+          worksite_zip: string | null
+          zip: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string | null
+          city: string
+          company: string
+          created_at?: string
+          crop_activities?: string | null
+          description?: string | null
+          education_required?: string | null
+          email: string
+          email_invalid_dns?: boolean
+          end_date?: string | null
+          experience_months?: number | null
+          fingerprint?: string | null
+          housing_addr?: string | null
+          housing_capacity?: number | null
+          housing_city?: string | null
+          housing_info?: string | null
+          housing_state?: string | null
+          housing_type?: string | null
+          housing_zip?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_banned?: boolean
+          is_meal_provision?: boolean | null
+          job_duties?: string | null
+          job_id: string
+          job_is_background?: boolean | null
+          job_is_driver?: boolean | null
+          job_is_drug_screen?: boolean | null
+          job_is_lifting?: boolean | null
+          job_lifting_weight?: string | null
+          job_min_special_req?: string | null
+          job_title: string
+          meal_charge?: number | null
+          openings?: number | null
+          overtime_available?: boolean | null
+          overtime_from?: number | null
+          overtime_salary?: number | null
+          overtime_to?: number | null
+          pay_frequency?: string | null
+          phone?: string | null
+          posted_date?: string | null
+          randomization_group?: string | null
+          rec_pay_deductions?: string | null
+          requirements?: string | null
+          salary?: number | null
+          shift_end?: string | null
+          shift_start?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          state: string
+          tools_provided?: boolean | null
+          training_months?: number | null
+          transport_desc?: string | null
+          transport_max_reimburse?: number | null
+          transport_min_reimburse?: number | null
+          transport_provided?: boolean | null
+          visa_type?: string | null
+          wage_additional?: string | null
+          wage_from?: number | null
+          wage_to?: number | null
+          wage_unit?: string | null
+          was_early_access?: boolean | null
+          website?: string | null
+          weekly_hours?: number | null
+          worksite_address?: string | null
+          worksite_zip?: string | null
+          zip?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string | null
+          city?: string
+          company?: string
+          created_at?: string
+          crop_activities?: string | null
+          description?: string | null
+          education_required?: string | null
+          email?: string
+          email_invalid_dns?: boolean
+          end_date?: string | null
+          experience_months?: number | null
+          fingerprint?: string | null
+          housing_addr?: string | null
+          housing_capacity?: number | null
+          housing_city?: string | null
+          housing_info?: string | null
+          housing_state?: string | null
+          housing_type?: string | null
+          housing_zip?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_banned?: boolean
+          is_meal_provision?: boolean | null
+          job_duties?: string | null
+          job_id?: string
+          job_is_background?: boolean | null
+          job_is_driver?: boolean | null
+          job_is_drug_screen?: boolean | null
+          job_is_lifting?: boolean | null
+          job_lifting_weight?: string | null
+          job_min_special_req?: string | null
+          job_title?: string
+          meal_charge?: number | null
+          openings?: number | null
+          overtime_available?: boolean | null
+          overtime_from?: number | null
+          overtime_salary?: number | null
+          overtime_to?: number | null
+          pay_frequency?: string | null
+          phone?: string | null
+          posted_date?: string | null
+          randomization_group?: string | null
+          rec_pay_deductions?: string | null
+          requirements?: string | null
+          salary?: number | null
+          shift_end?: string | null
+          shift_start?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          state?: string
+          tools_provided?: boolean | null
+          training_months?: number | null
+          transport_desc?: string | null
+          transport_max_reimburse?: number | null
+          transport_min_reimburse?: number | null
+          transport_provided?: boolean | null
+          visa_type?: string | null
+          wage_additional?: string | null
+          wage_from?: number | null
+          wage_to?: number | null
+          wage_unit?: string | null
+          was_early_access?: boolean | null
+          website?: string | null
+          weekly_hours?: number | null
+          worksite_address?: string | null
+          worksite_zip?: string | null
+          zip?: string | null
+        }
+        Relationships: []
+      }
       manual_jobs: {
         Row: {
           company: string
@@ -492,6 +705,7 @@ export type Database = {
           worksite_address: string | null
           worksite_zip: string | null
           zip: string | null
+          zip_code: string | null
         }
         Insert: {
           category?: string | null
@@ -561,6 +775,7 @@ export type Database = {
           worksite_address?: string | null
           worksite_zip?: string | null
           zip?: string | null
+          zip_code?: string | null
         }
         Update: {
           category?: string | null
@@ -630,6 +845,7 @@ export type Database = {
           worksite_address?: string | null
           worksite_zip?: string | null
           zip?: string | null
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -943,6 +1159,7 @@ export type Database = {
         }
         Returns: number
       }
+      deactivate_all_jobs: { Args: never; Returns: undefined }
       downgrade_smtp_warmup: { Args: { p_user_id: string }; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
       get_category_stats_cached: {
