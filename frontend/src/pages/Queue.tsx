@@ -20,7 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
 import { cn } from "@/lib/utils";
 
-// Interface compatível com o sistema
+// Interface mapeada diretamente para a tabela my_queue + relações
 export interface QueueItem {
   id: string;
   status: string;
@@ -28,17 +28,9 @@ export interface QueueItem {
   created_at: string;
   send_count: number;
   last_error?: string | null;
-  // Campos da View
-  job_title?: string;
-  company?: string;
-  contact_email?: string;
-  visa_type?: string;
-  token?: string;
-  view_count?: number;
-  total_duration_seconds?: number;
-  last_view_at?: string | null;
   user_id: string;
-  // Fallbacks de relacionamento para o componente Mobile e segurança
+
+  // Relações Diretas (Garantidas pelo Supabase)
   public_jobs: {
     id: string;
     job_title: string;
@@ -48,6 +40,7 @@ export interface QueueItem {
     state: string;
     visa_type?: string | null;
   } | null;
+
   manual_jobs: {
     id: string;
     company: string;
@@ -56,6 +49,13 @@ export interface QueueItem {
     eta_number: string | null;
     phone: string | null;
   } | null;
+
+  // Analytics calculado no front (Array de visualizações)
+  profile_views: {
+    id: string;
+    duration_seconds: number;
+    opened_at: string;
+  }[];
 }
 
 const EARLY_ACCESS_VARIATIONS = [
@@ -74,7 +74,8 @@ export default function Queue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  // Estados para controle individual (Mobile e Desktop)
+
+  // Controle Individual
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
@@ -88,17 +89,19 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
-  // FETCH BLINDADO
+  // FETCH DIRETO DA TABELA (Resolve o "0 vagas")
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
+    // Consulta direta à tabela my_queue (Fonte da Verdade)
     const { data, error } = await supabase
-      .from("queue_with_stats")
+      .from("my_queue")
       .select(
         `
         *,
         public_jobs (id, job_title, company, email, city, state, visa_type),
-        manual_jobs (id, company, job_title, email, eta_number, phone)
+        manual_jobs (id, company, job_title, email, eta_number, phone),
+        profile_views (id, duration_seconds, opened_at)
       `,
       )
       .eq("user_id", profile.id)
@@ -106,6 +109,8 @@ export default function Queue() {
 
     if (!error) {
       setQueue((data as unknown as QueueItem[]) || []);
+    } else {
+      console.error("Erro ao buscar fila:", error);
     }
     setLoading(false);
   };
@@ -113,7 +118,7 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
     const channel = supabase
-      .channel("queue_fix_final")
+      .channel("queue_real_fix")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
       .subscribe();
     return () => {
@@ -121,37 +126,36 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
-  // LÓGICA DE ENVIO SEGURA
+  // LÓGICA DE ENVIO BLINDADA
   const sendQueueItems = async (items: QueueItem[]) => {
-    // Verifica limite se for envio em massa (mais de 1 item)
     if (items.length > 1 && remainingToday <= 0) {
       toast({ title: "Limite diário atingido", variant: "destructive" });
       return;
     }
 
     if (items.length > 1) setSending(true);
-
     const { data: templates } = await supabase
       .from("email_templates")
       .select("*")
       .order("created_at", { ascending: false });
 
     for (const item of items) {
-      const targetEmail = item.contact_email || item.public_jobs?.email || item.manual_jobs?.email;
+      // Pega email da relação correta
+      const targetEmail = item.public_jobs?.email || item.manual_jobs?.email;
 
       if (!targetEmail) {
         console.warn(`Item ${item.id} pulado: Sem e-mail.`);
         continue;
       }
 
-      const displayTitle = item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
+      const displayTitle = item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
       const template = templates?.[0] || {
         subject: `Application for ${displayTitle}`,
         body: "Hello, please find my resume attached.",
       };
       let finalBody = template.body;
 
-      const vType = item.visa_type || item.public_jobs?.visa_type;
+      const vType = item.public_jobs?.visa_type;
       if (vType?.toLowerCase().includes("early access")) {
         finalBody =
           EARLY_ACCESS_VARIATIONS[Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length)] + "\n\n" + finalBody;
@@ -169,6 +173,7 @@ export default function Queue() {
         });
 
         if (error) throw error;
+
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
@@ -176,7 +181,6 @@ export default function Queue() {
         console.error(`Erro envio item ${item.id}:`, e);
       }
 
-      // Delay pequeno entre envios em massa
       if (items.length > 1) await new Promise((r) => setTimeout(r, 500));
     }
 
@@ -186,7 +190,7 @@ export default function Queue() {
     if (items.length > 1) toast({ title: "Envio finalizado." });
   };
 
-  // --- HANDLERS INDIVIDUAIS (Necessários para Mobile e Ações) ---
+  // Handlers Individuais
   const handleSendOne = async (item: QueueItem) => {
     if (sendingIds.has(item.id)) return;
     setSendingIds((prev) => new Set(prev).add(item.id));
@@ -218,15 +222,24 @@ export default function Queue() {
     toast({ title: "Item removido" });
   };
 
-  // Helper de exibição
+  // Helper de Exibição
   const getDisplay = (item: QueueItem) => ({
-    title: item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
-    company: item.company || item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
+    title: item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
+    company: item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
   });
 
+  // Analytics Calculado no Front (Robustez)
   const renderAnalytics = (item: QueueItem) => {
-    const views = Number(item.view_count) || 0;
-    const duration = Number(item.total_duration_seconds) || 0;
+    const views = item.profile_views?.length || 0;
+    const duration = item.profile_views?.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) || 0;
+
+    // Pega a data mais recente
+    const lastViewDate = item.profile_views?.length
+      ? item.profile_views.reduce((latest, current) =>
+          new Date(latest.opened_at) > new Date(current.opened_at) ? latest : current,
+        ).opened_at
+      : null;
+
     const hasViews = views > 0;
     const isHighInterest = views >= 3 || duration > 45;
 
@@ -252,9 +265,7 @@ export default function Queue() {
                 <p>
                   <strong>Tempo:</strong> {duration}s
                 </p>
-                {item.last_view_at && (
-                  <p className="opacity-70">Último: {format(new Date(item.last_view_at), "dd/MM HH:mm")}</p>
-                )}
+                {lastViewDate && <p className="opacity-70">Último: {format(new Date(lastViewDate), "dd/MM HH:mm")}</p>}
               </div>
             ) : (
               <p className="text-xs">Aguardando visualização</p>
@@ -281,7 +292,6 @@ export default function Queue() {
         company={getDisplay(historyItem || ({} as any)).company}
       />
 
-      {/* HEADER PADRÃO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Queue</h1>
@@ -323,7 +333,6 @@ export default function Queue() {
         </Card>
       </div>
 
-      {/* TABELA PADRÃO */}
       <Card>
         <div className="p-0 overflow-x-auto">
           <Table>
@@ -387,7 +396,7 @@ export default function Queue() {
                             size="icon"
                             variant="ghost"
                             disabled={sendingIds.has(item.id)}
-                            onClick={() => handleSendOne(item)} // Adicionado handler individual
+                            onClick={() => handleSendOne(item)}
                           >
                             {sendingIds.has(item.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -426,17 +435,15 @@ export default function Queue() {
         </div>
       </Card>
 
-      {/* MOBILE VIEW CORRIGIDA */}
       {isMobile && (
         <div className="space-y-4 md:hidden">
           {queue.map((item) => (
             <MobileQueueCard
               key={item.id}
-              item={item} // A tipagem agora bate com a interface corrigida
+              item={item}
               isSelected={!!selectedIds[item.id]}
               onSelectChange={(checked) => setSelectedIds((prev) => ({ ...prev, [item.id]: checked }))}
               onRemove={() => removeFromQueue(item.id)}
-              // PROPS QUE FALTAVAM ADICIONADAS:
               onSend={() => handleSendOne(item)}
               onRetry={() => handleRetryOne(item)}
               onViewHistory={() => {
