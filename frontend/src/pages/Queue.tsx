@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Send, Loader2, RefreshCw, History, FileText, Eye, Flame } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Eye, Flame } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
@@ -27,11 +27,12 @@ interface QueueItem {
   created_at: string;
   send_count: number;
   last_error?: string | null;
+  // Campos vindos da View (Garantidos pela sua base)
   job_title: string;
   company: string;
-  contact_email?: string; // Importante para o envio
+  contact_email: string;
   visa_type?: string;
-  token: string;
+  token?: string;
   view_count: number;
   total_duration_seconds: number;
   last_view_at: string | null;
@@ -39,7 +40,7 @@ interface QueueItem {
 }
 
 const EARLY_ACCESS_VARIATIONS = [
-  "Attention: I am aware that this job was recently filed and is in initial processing with the DOL...",
+  "Attention: I am aware that this job was recently filed and is in initial processing with the Department of Labor (DOL)...",
   "I understand this job order is currently in initial processing with the DOL...",
   "Acknowledging that this position is currently filed for processing with the Department of Labor...",
 ];
@@ -64,7 +65,6 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
-  // FETCH DE DADOS (Mantendo a lógica da View)
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
@@ -91,7 +91,6 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
-  // --- LÓGICA DE ENVIO REAL (CORRIGIDA) ---
   const sendQueueItems = async (items: QueueItem[]) => {
     if (remainingToday <= 0) {
       toast({ title: "Limite diário atingido", variant: "destructive" });
@@ -99,19 +98,13 @@ export default function Queue() {
     }
 
     setSending(true);
-    // Busca templates apenas uma vez
     const { data: templates } = await supabase
       .from("email_templates")
       .select("*")
       .order("created_at", { ascending: false });
 
     for (const item of items) {
-      // Se não tiver email na view (contact_email), pula
-      if (!item.contact_email) {
-        console.warn(`Item ${item.id} sem email de contato.`);
-        continue;
-      }
-
+      // Como a base é limpa, confiamos que o email existe.
       const template = templates?.[0] || {
         subject: `Application for ${item.job_title}`,
         body: "Hello, please find my resume attached.",
@@ -124,54 +117,50 @@ export default function Queue() {
       }
 
       try {
-        // Chama a Edge Function
         const { error } = await supabase.functions.invoke("send-email-custom", {
           body: {
-            to: item.contact_email,
+            to: item.contact_email, // Campo garantido pela View
             subject: template.subject,
             body: finalBody,
             queueId: item.id,
-            s: Date.now(), // Carimbo de tempo
+            s: Date.now(),
           },
         });
 
         if (error) throw error;
 
-        // Atualiza UI localmente para parecer rápido
+        // Atualiza visualmente para dar feedback rápido
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
       } catch (e) {
-        console.error(`Erro ao enviar item ${item.id}:`, e);
+        console.error(`Erro envio item ${item.id}:`, e);
       }
 
-      // Pequena pausa para não estourar rate limits
       await new Promise((r) => setTimeout(r, 500));
     }
 
     setSending(false);
     refreshProfile();
-    fetchQueue(); // Recarrega para garantir status real
-    toast({ title: "Processo de envio finalizado." });
+    fetchQueue();
+    toast({ title: "Envio em massa finalizado!" });
   };
 
   const handleSendAll = () => {
-    // Filtra apenas os pendentes e respeita o limite diário
-    const itemsToSend = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
-    if (itemsToSend.length > 0) {
-      sendQueueItems(itemsToSend);
+    const items = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
+    if (items.length > 0) {
+      sendQueueItems(items);
     } else {
-      toast({ title: "Nada para enviar", description: "Sua fila de pendentes está vazia ou limite atingido." });
+      toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
     }
   };
 
   const removeFromQueue = async (id: string) => {
     await supabase.from("my_queue").delete().eq("id", id);
     fetchQueue();
-    toast({ title: "Item removido da fila" });
+    toast({ title: "Item removido" });
   };
 
-  // Renderização da Coluna de Analytics (Design Limpo)
   const renderAnalytics = (item: QueueItem) => {
     const views = Number(item.view_count) || 0;
     const duration = Number(item.total_duration_seconds) || 0;
@@ -229,7 +218,6 @@ export default function Queue() {
         company={historyItem?.company ?? ""}
       />
 
-      {/* HEADER PADRÃO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Queue</h1>
@@ -237,7 +225,6 @@ export default function Queue() {
         </div>
         <div className="flex gap-2">
           <AddManualJobDialog onAdded={fetchQueue} />
-          {/* BOTÃO CORRIGIDO: Chama handleSendAll em vez de navegar */}
           <Button onClick={handleSendAll} disabled={pendingCount === 0 || loading || sending}>
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             {sending ? "Enviando..." : "Enviar Todos"}
@@ -245,7 +232,6 @@ export default function Queue() {
         </div>
       </div>
 
-      {/* CARDS PADRÃO */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -273,7 +259,6 @@ export default function Queue() {
         </Card>
       </div>
 
-      {/* TABELA PADRÃO */}
       <Card>
         <div className="p-0 overflow-x-auto">
           <Table>
@@ -319,8 +304,8 @@ export default function Queue() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium">{item.job_title || "Cargo não informado"}</span>
-                        <span className="text-xs text-muted-foreground">{item.company || "Empresa não informada"}</span>
+                        <span className="font-medium">{item.job_title}</span>
+                        <span className="text-xs text-muted-foreground">{item.company}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -361,7 +346,6 @@ export default function Queue() {
         </div>
       </Card>
 
-      {/* MOBILE VIEW (SE NECESSÁRIO) */}
       {isMobile && (
         <div className="space-y-4 md:hidden">
           {queue.map((item) => (
