@@ -1,3 +1,4 @@
+// Onboarding.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -12,18 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import {
-  CheckCircle2,
-  ArrowRight,
-  ArrowLeft,
-  Loader2,
-  Rocket,
-  Info,
-  Key,
-  Lock,
-  TrendingUp,
-  Shield,
-} from "lucide-react";
+import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, Rocket, Info, Key, Lock, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Provider = "gmail" | "outlook";
@@ -56,19 +46,18 @@ export default function Onboarding() {
         .select("has_password, risk_profile")
         .eq("user_id", user.id)
         .maybeSingle();
-
       if (data?.has_password && data?.risk_profile) {
         navigate("/dashboard", { replace: true });
-        return;
+      } else if (data?.has_password && !data?.risk_profile) {
+        setStep(3);
       }
-      if (data?.has_password && !data?.risk_profile) setStep(3);
       setCheckingSmtp(false);
     };
     checkStatus();
   }, [user?.id, navigate]);
 
+  // --- TRATAMENTO DE SENHA (16 LETRAS MINÚSCULAS) ---
   const handlePasswordChange = (val: string) => {
-    // Sanitização: apenas letras, minúsculo, limite 16
     const sanitized = val
       .replace(/[^a-zA-Z]/g, "")
       .toLowerCase()
@@ -109,12 +98,11 @@ export default function Onboarding() {
     setLoading(true);
     try {
       const { data: session } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
-        body: JSON.stringify({ provider, email, risk_profile: riskProfile }),
+        body: JSON.stringify({ provider, email: email.trim().toLowerCase(), risk_profile: riskProfile }),
       });
-      if (!res.ok) throw new Error("Error");
       setStep(4);
     } catch (e: any) {
       toast({ title: t("warmup.toasts.profile_error"), variant: "destructive" });
@@ -128,8 +116,8 @@ export default function Onboarding() {
     try {
       await refreshSmtpStatus?.();
       await refreshProfile?.();
-      // Delay essencial para evitar o looping de redirecionamento no dashboard
-      await new Promise((r) => setTimeout(r, 600));
+      // Delay de 800ms para garantir que a transação no banco propagou para o cache do Supabase Auth
+      await new Promise((r) => setTimeout(r, 800));
       navigate("/dashboard", { replace: true });
     } catch (error) {
       navigate("/dashboard");
@@ -153,7 +141,6 @@ export default function Onboarding() {
           {t("onboarding.step", { current: step, total: totalSteps })}
         </Badge>
       </div>
-
       <Progress value={progress} className="h-1 rounded-none" />
 
       <div className="flex-1 flex items-center justify-center p-6">
@@ -237,9 +224,6 @@ export default function Onboarding() {
                     placeholder="xxxx xxxx xxxx xxxx"
                     className="h-14 text-center text-xl font-mono tracking-[0.4em] lowercase shadow-inner"
                   />
-                  <p className="text-[10px] text-muted-foreground text-center italic">
-                    {t("onboarding.smtp.password_hint") || "Use as 16 letras minúsculas sem espaços."}
-                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t">
@@ -269,24 +253,21 @@ export default function Onboarding() {
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-primary" /> {t("onboarding.warmup.title")}
                 </CardTitle>
-                <CardDescription>{t("onboarding.warmup.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3">
-                  {["conservative", "standard", "aggressive"].map((id) => (
-                    <div
-                      key={id}
-                      onClick={() => setRiskProfile(id as RiskProfile)}
-                      className={cn(
-                        "p-4 border-2 rounded-xl cursor-pointer transition-all",
-                        riskProfile === id ? "border-primary bg-primary/5" : "border-slate-100 hover:border-slate-200",
-                      )}
-                    >
-                      <p className="font-bold capitalize">{t(`warmup.profiles.${id}.title`)}</p>
-                      <p className="text-xs text-slate-500">{t(`warmup.profiles.${id}.description`)}</p>
-                    </div>
-                  ))}
-                </div>
+                {["conservative", "standard", "aggressive"].map((id) => (
+                  <div
+                    key={id}
+                    onClick={() => setRiskProfile(id as RiskProfile)}
+                    className={cn(
+                      "p-4 border-2 rounded-xl cursor-pointer transition-all",
+                      riskProfile === id ? "border-primary bg-primary/5" : "border-slate-100",
+                    )}
+                  >
+                    <p className="font-bold capitalize">{t(`warmup.profiles.${id}.title`)}</p>
+                    <p className="text-xs text-slate-500">{t(`warmup.profiles.${id}.description`)}</p>
+                  </div>
+                ))}
                 <div className="flex gap-3 pt-4">
                   <Button variant="ghost" onClick={() => setStep(2)}>
                     {t("common.previous")}
@@ -308,11 +289,7 @@ export default function Onboarding() {
                 {t("onboarding.complete.title")}
               </CardTitle>
               <CardDescription className="text-base mt-2 mb-8">{t("onboarding.complete.description")}</CardDescription>
-              <Button
-                onClick={handleComplete}
-                disabled={loading}
-                className="w-full h-14 font-black text-lg shadow-xl uppercase italic"
-              >
+              <Button onClick={handleComplete} disabled={loading} className="w-full h-14 font-black text-lg shadow-xl">
                 {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : t("onboarding.complete.go_dashboard")}
               </Button>
             </Card>
