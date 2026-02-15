@@ -32,6 +32,7 @@ import {
   Key,
   Lock,
 } from "lucide-react";
+import { cn } from "@/lib/utils"; // <-- IMPORTAÇÃO CORRIGIDA
 
 type Provider = "gmail" | "outlook";
 type RiskProfile = "conservative" | "standard" | "aggressive";
@@ -78,9 +79,9 @@ export default function Onboarding() {
     checkExistingSmtp();
   }, [user?.id, navigate]);
 
-  // --- VALIDAÇÃO DA SENHA DE APP (16 letras) ---
+  // --- VALIDAÇÃO DA SENHA DE APP (16 letras apenas) ---
   const handlePasswordChange = (val: string) => {
-    // Remove espaços e números, aceita apenas letras e limita a 16
+    // Remove espaços, números e símbolos. Aceita apenas letras e trava em 16.
     const sanitized = val
       .replace(/[^a-zA-Z]/g, "")
       .slice(0, 16)
@@ -90,10 +91,11 @@ export default function Onboarding() {
 
   const handleSaveSmtp = async () => {
     if (!user?.id) return;
+
     if (password.length !== 16) {
       toast({
-        title: "Senha inválida",
-        description: "A Senha de App deve ter exatamente 16 letras.",
+        title: "Senha incompleta",
+        description: "A Senha de App do Google/Outlook deve ter exatamente 16 letras.",
         variant: "destructive",
       });
       return;
@@ -111,12 +113,12 @@ export default function Onboarding() {
       });
 
       const payload = await res.json();
-      if (!res.ok || payload?.success === false) throw new Error(payload?.error);
+      if (!res.ok || payload?.success === false) throw new Error(payload?.error || "Erro ao salvar");
 
-      toast({ title: "SMTP Configurado!" });
+      toast({ title: "Configuração salva!", description: "E-mail autenticado com sucesso." });
       setStep(3);
     } catch (e: any) {
-      toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
+      toast({ title: "Erro na autenticação", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -141,20 +143,21 @@ export default function Onboarding() {
     }
   };
 
-  // --- SOLUÇÃO DO LOOPING DE REDIRECIONAMENTO ---
+  // --- FINALIZAÇÃO COM DELAY PARA EVITAR LOOPING ---
   const handleComplete = async () => {
     setLoading(true);
     try {
-      // 1. Força a atualização do estado global no Contexto
+      // 1. Atualiza o contexto global com os novos dados do banco
       await refreshSmtpStatus?.();
       await refreshProfile?.();
 
-      // 2. Delay estratégico para garantir que o cache do Apollo/Supabase assente
+      // 2. Delay de 500ms para garantir que o estado do React atualizou
       await new Promise((r) => setTimeout(r, 500));
 
-      // 3. Navega usando replace para limpar a pilha
+      // 3. Redireciona
       navigate("/dashboard", { replace: true });
     } catch (error) {
+      console.error("Erro ao finalizar:", error);
       navigate("/dashboard");
     } finally {
       setLoading(false);
@@ -163,66 +166,73 @@ export default function Onboarding() {
 
   if (checkingSmtp)
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium text-slate-500">Verificando status...</p>
+        </div>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="p-6 flex items-center justify-between border-b bg-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <div className="p-6 flex items-center justify-between border-b bg-white shadow-sm">
         <BrandLogo height={28} />
-        <Badge variant="outline">
+        <Badge variant="secondary" className="font-bold">
           Passo {step} de {totalSteps}
         </Badge>
       </div>
 
-      <Progress value={progress} className="h-1 rounded-none" />
+      <Progress value={progress} className="h-1 rounded-none bg-slate-100" />
 
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           {step === 1 && (
-            <Card className="shadow-xl border-none">
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-4 rounded-full bg-primary/10 w-fit">
-                  <Rocket className="h-10 w-10 text-primary" />
+            <Card className="shadow-2xl border-none">
+              <CardHeader className="text-center pb-8">
+                <div className="mx-auto mb-4 p-5 rounded-full bg-primary/10 w-fit">
+                  <Rocket className="h-12 w-12 text-primary" />
                 </div>
-                <CardTitle className="text-2xl font-black italic uppercase">Bem-vindo Sócio!</CardTitle>
-                <CardDescription>Vamos configurar sua máquina de envios em menos de 2 minutos.</CardDescription>
+                <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">
+                  Bem-vindo, Sócio!
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Sua conta foi criada. Agora, vamos conectar seu e-mail para que a IA comece a trabalhar.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={() => setStep(2)} className="w-full h-12 text-lg font-bold">
-                  COMEÇAR CONFIGURAÇÃO <ArrowRight className="ml-2" />
+                <Button onClick={() => setStep(2)} className="w-full h-14 text-lg font-bold shadow-lg">
+                  INICIAR CONFIGURAÇÃO <ArrowRight className="ml-2" />
                 </Button>
               </CardContent>
             </Card>
           )}
 
           {step === 2 && (
-            <Card className="shadow-xl border-none">
+            <Card className="shadow-2xl border-none">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="text-primary" /> Configuração de E-mail
+                <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+                  <Key className="text-primary h-6 w-6" /> Conexão SMTP
                 </CardTitle>
-                <CardDescription>Conecte sua conta para que a IA envie os e-mails por você.</CardDescription>
+                <CardDescription>Use os dados da sua conta para habilitar o envio automático.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-                  <div className="text-xs text-amber-800">
-                    <p className="font-bold uppercase tracking-tight">Atenção: Use uma "Senha de App"</p>
+              <CardContent className="space-y-6">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex gap-3">
+                  <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="text-xs text-blue-900 leading-relaxed">
+                    <p className="font-bold uppercase tracking-wide">O que é a Senha de App?</p>
                     <p className="mt-1">
-                      Por segurança, o Google e Outlook não aceitam sua senha normal. Você deve gerar uma senha de 16
-                      letras nas configurações da sua conta.
+                      Para sua segurança, o Google e o Outlook exigem uma senha específica de 16 letras gerada nas
+                      configurações de segurança da sua conta. **Não use sua senha normal de login.**
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Provedor</Label>
+                    <Label className="font-bold">Provedor</Label>
                     <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -232,21 +242,28 @@ export default function Onboarding() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Seu E-mail</Label>
-                    <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="exemplo@gmail.com" />
+                    <Label className="font-bold">E-mail</Label>
+                    <Input
+                      className="h-11"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                    />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label className="font-bold text-primary">Senha de App (16 letras)</Label>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-end">
+                    <Label className="font-bold text-primary flex items-center gap-2">
+                      <Lock className="h-4 w-4" /> Senha de App (16 letras)
+                    </Label>
                     <span
                       className={cn(
-                        "text-[10px] font-bold",
-                        password.length === 16 ? "text-emerald-500" : "text-slate-400",
+                        "text-[10px] font-black px-2 py-0.5 rounded bg-slate-100",
+                        password.length === 16 ? "text-emerald-600 bg-emerald-50" : "text-slate-400",
                       )}
                     >
-                      {password.length}/16 CARACTERES
+                      {password.length}/16
                     </span>
                   </div>
                   <Input
@@ -254,25 +271,28 @@ export default function Onboarding() {
                     value={password}
                     onChange={(e) => handlePasswordChange(e.target.value)}
                     placeholder="xxxx xxxx xxxx xxxx"
-                    className="h-12 text-center text-lg font-mono tracking-[0.3em] uppercase"
+                    className="h-14 text-center text-xl font-mono tracking-[0.4em] uppercase placeholder:tracking-normal placeholder:text-sm"
                   />
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                    <Info className="h-3 w-3" />
-                    <span>Apenas letras são permitidas. Remova espaços se colar.</span>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Dica: Copie e cole os 16 dígitos sem se preocupar com os espaços.
+                  </p>
                 </div>
 
-                <div className="flex gap-2 pt-4">
-                  <Button variant="ghost" onClick={() => setStep(1)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button variant="ghost" onClick={() => setStep(1)} className="h-11">
+                    Voltar
                   </Button>
                   <Button
                     onClick={handleSaveSmtp}
                     disabled={loading || password.length !== 16}
-                    className="flex-1 font-bold"
+                    className="flex-1 h-11 font-bold shadow-md"
                   >
-                    {loading ? <Loader2 className="animate-spin mr-2" /> : <Lock className="mr-2 h-4 w-4" />}
-                    AUTENTICAR E CONTINUAR
+                    {loading ? (
+                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                    ) : (
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                    )}
+                    VERIFICAR E CONTINUAR
                   </Button>
                 </div>
               </CardContent>
@@ -282,36 +302,62 @@ export default function Onboarding() {
           {step === 3 && (
             <Card className="shadow-xl border-none">
               <CardHeader>
-                <CardTitle>Perfil de Aquecimento</CardTitle>
-                <CardDescription>Como você quer que a IA gerencie o volume de envios?</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="text-primary h-6 w-6" /> Perfil de Envio
+                </CardTitle>
+                <CardDescription>Escolha a intensidade com que a IA deve disparar seus currículos.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {["conservative", "standard", "aggressive"].map((p) => (
+                {[
+                  { id: "conservative", title: "Conservador", desc: "Foco total em segurança, envios mais lentos." },
+                  { id: "standard", title: "Padrão", desc: "Equilíbrio entre volume e segurança (Recomendado)." },
+                  { id: "aggressive", title: "Agressivo", desc: "Máximo volume de envios diários." },
+                ].map((p) => (
                   <div
-                    key={p}
-                    onClick={() => setRiskProfile(p as any)}
+                    key={p.id}
+                    onClick={() => setRiskProfile(p.id as any)}
                     className={cn(
-                      "p-4 border-2 rounded-xl cursor-pointer transition-all",
-                      riskProfile === p ? "border-primary bg-primary/5" : "border-slate-100",
+                      "p-4 border-2 rounded-2xl cursor-pointer transition-all hover:border-primary/50",
+                      riskProfile === p.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-slate-100",
                     )}
                   >
-                    <p className="font-bold capitalize">{p}</p>
+                    <p className="font-bold text-slate-900">{p.title}</p>
+                    <p className="text-xs text-slate-500">{p.desc}</p>
                   </div>
                 ))}
-                <Button onClick={handleSaveRiskProfile} disabled={!riskProfile || loading} className="w-full mt-4">
-                  SALVAR PERFIL
-                </Button>
+                <div className="flex gap-3 pt-4">
+                  <Button variant="ghost" onClick={() => setStep(2)}>
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={handleSaveRiskProfile}
+                    disabled={!riskProfile || loading}
+                    className="flex-1 font-bold h-11"
+                  >
+                    PRÓXIMO PASSO
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
 
           {step === 4 && (
-            <Card className="shadow-xl border-none text-center p-8">
-              <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
-              <CardTitle className="text-2xl font-black uppercase">Tudo Pronto!</CardTitle>
-              <CardDescription className="mb-6">Sua conta está configurada e pronta para decolar.</CardDescription>
-              <Button onClick={handleComplete} disabled={loading} className="w-full h-12 font-bold text-lg">
-                {loading ? <Loader2 className="animate-spin mr-2" /> : "IR PARA O DASHBOARD"}
+            <Card className="shadow-2xl border-none text-center p-10 animate-in zoom-in-95 duration-500">
+              <div className="bg-emerald-100 p-5 rounded-full w-fit mx-auto mb-6">
+                <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+              </div>
+              <CardTitle className="text-3xl font-black uppercase italic tracking-tighter">
+                Configuração Finalizada!
+              </CardTitle>
+              <CardDescription className="text-base mt-2 mb-8">
+                Seu e-mail foi conectado com sucesso e o motor de IA está aquecido.
+              </CardDescription>
+              <Button
+                onClick={handleComplete}
+                disabled={loading}
+                className="w-full h-14 font-black text-lg shadow-xl uppercase italic"
+              >
+                {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : "ACESSAR MEU DASHBOARD"}
               </Button>
             </Card>
           )}
