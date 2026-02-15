@@ -11,39 +11,43 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
+    if (!authHeader?.startsWith("Bearer ")) throw new Error("Não autorizado");
 
     const token = authHeader.replace("Bearer ", "");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser(token);
-    if (userError || !user) throw new Error("Unauthorized");
+    if (userError || !user) throw new Error("Usuário não encontrado");
 
     const body = await req.json();
 
-    // --- LIMPEZA E NORMALIZAÇÃO ---
+    // --- 1. DEEP CLEAN (Limpeza Profunda) ---
     const provider = String(body.provider ?? "gmail").toLowerCase();
     const email = String(body.email ?? "")
-      .trim()
+      .replace(/\s/g, "")
       .toLowerCase();
-
-    // Remove todos os espaços e força minúsculas (Padrão Gmail)
     const rawPassword = typeof body.password === "string" ? body.password : "";
     const password = rawPassword.replace(/\s/g, "").toLowerCase();
 
-    // Validação de segurança para evitar o Pattern Mismatch no Banco
+    // --- 2. VALIDAÇÃO PRÉ-BANCO (Catch Early) ---
     if (password.length > 0 && !/^[a-z]{16}$/.test(password)) {
-      return new Response(JSON.stringify({ success: false, error: "A senha deve ter 16 letras minúsculas." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Pattern Fail: A senha deve ter 16 letras puras. Recebemos ${password.length} caracteres: [${password}]`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
+    // --- 3. DIAGNÓSTICO SEQUENCIAL ---
+
+    // Passo A: Tabela de Perfil/Email
     const { data: existing } = await supabase
       .from("smtp_credentials")
       .select("warmup_started_at")
@@ -68,20 +72,41 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { error: dbError } = await supabase.from("smtp_credentials").upsert(upsertData, { onConflict: "user_id" });
-    if (dbError) throw dbError;
 
+    if (dbError) {
+      // Se falhar aqui, o erro é no Email ou no Provider
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Erro na Tabela Principal (Email/Provider): ${dbError.message} - Detalhe: ${dbError.details}`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    // Passo B: Tabela de Senha (Secrets)
     if (password.length > 0) {
       const { error: secretError } = await supabase
         .from("smtp_credentials_secrets")
         .upsert({ user_id: user.id, password }, { onConflict: "user_id" });
-      if (secretError) throw secretError;
+
+      if (secretError) {
+        // Se falhar aqui, o erro é no Padrão da Senha (Regex do Banco)
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Erro na Tabela de Senha (Pattern Mismatch): ${secretError.message} - Verifique se o banco exige 16 letras minúsculas.`,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        );
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: `Critical Error: ${error.message}` }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
