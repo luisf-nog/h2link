@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,11 +10,7 @@ import {
   CheckCircle,
   Sparkles,
   AlertCircle,
-  Wheat,
-  Building2,
-  ConciergeBell,
-  Hammer,
-  Zap,
+  Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractTextFromPDF } from "@/lib/pdf";
@@ -25,16 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
-// Definição dos nichos para o sistema H-2
-const NICHES = [
-  { id: "h2a", label: "Agriculture (H-2A)", icon: Wheat, desc: "Farming, Livestock, Harvest" },
-  { id: "h2b_construction", label: "Construction (H-2B)", icon: Hammer, desc: "Masonry, Carpentry, Labor" },
-  { id: "h2b_hospitality", label: "Hospitality (H-2B)", icon: ConciergeBell, desc: "Housekeeping, Waiter, Hotel" },
-  { id: "h2b_landscaping", label: "Landscaping (H-2B)", icon: Building2, desc: "Gardening, Maintenance" },
-];
+// --- Tipagens e Opções ---
+type Niche = "h2a" | "h2b_hospitality" | "h2b_construction" | "h2b_landscaping" | "h2b_warehouse" | "generic";
 
 interface SafeResumeData {
   personal_info: { full_name: string; city_state_country: string; email: string; phone: string };
@@ -52,188 +44,238 @@ export default function ResumeConverter() {
   const [step, setStep] = useState<Step>("idle");
   const [resume, setResume] = useState<SafeResumeData | null>(null);
 
-  // Estados de Personalização (O "Pulo do Gato")
-  const [selectedNiche, setSelectedNiche] = useState<string>("");
-  const [extraSkills, setExtraSkills] = useState("");
+  // --- Estados do Formulário de Contexto ---
+  const [niche, setNiche] = useState<Niche | "">("");
+  const [selections, setSelections] = useState<Record<string, boolean>>({});
+  const [englishLevel, setEnglishLevel] = useState("basic");
+  const [extraInfo, setExtraInfo] = useState("");
 
+  const handleCheckbox = (id: string) => {
+    setSelections((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // --- Processamento ---
   const processFile = useCallback(
     async (file: File) => {
-      if (!selectedNiche) {
-        toast({ title: "Select a niche", description: "Please choose a job category first.", variant: "destructive" });
+      if (!niche) {
+        toast({
+          title: "Select a job type",
+          description: "Please choose your target niche first.",
+          variant: "destructive",
+        });
         return;
       }
 
       try {
         setStep("reading");
         let rawText = "";
-
         if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
           rawText = await extractTextFromPDF(file);
-        } else if (
-          file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-          file.name.endsWith(".docx")
-        ) {
+        } else {
           rawText = await extractTextFromDOCX(file);
         }
 
-        if (!rawText || rawText.trim().length < 50) throw new Error("Could not read file content.");
-
         setStep("translating");
 
-        // ENVIANDO O CONTEXTO PARA A IA
+        // Enviamos o texto original + todos os marcadores de contexto
         const { data, error } = await supabase.functions.invoke("convert-resume", {
           body: {
             raw_text: rawText,
-            target_niche: selectedNiche,
-            extra_info: extraSkills, // Informações chaves que o usuário digitou
+            context: {
+              target_niche: niche,
+              capabilities: Object.keys(selections).filter((k) => selections[k]),
+              english_level: englishLevel,
+              additional_notes: extraInfo,
+            },
           },
         });
 
-        if (error || !data) throw new Error("AI failed to process resume.");
-
+        if (error) throw error;
         setStep("formatting");
-        await new Promise((r) => setTimeout(r, 800));
-
-        setResume(data as SafeResumeData);
+        setResume(data);
         setStep("done");
-        toast({ title: "Success!", description: "Resume optimized for " + selectedNiche });
+        toast({ title: "Resume Generated!" });
       } catch (err: any) {
         setStep("error");
-        toast({ title: "Failed", description: err.message, variant: "destructive" });
+        toast({ title: "Error", description: err.message, variant: "destructive" });
       }
     },
-    [selectedNiche, extraSkills],
+    [niche, selections, englishLevel, extraInfo],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (files) => files.length > 0 && processFile(files[0]),
-    accept: {
-      "application/pdf": [".pdf"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-    },
     maxFiles: 1,
     disabled: step !== "idle" && step !== "error",
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 p-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900">AI Resume Optimizer</h1>
-        <p className="text-slate-500 font-medium">
-          Configure seu perfil para alinhar o currículo com as exigências americanas.
-        </p>
+    <div className="max-w-5xl mx-auto space-y-6 p-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Resume Converter</h1>
+        <p className="text-muted-foreground">Transform your CV into a US-standard resume tailored for H-2 visas.</p>
       </div>
 
       {step !== "done" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* COLUNA 1: CONFIGURAÇÃO DE NICHO */}
-          <div className="space-y-6">
-            <Card className="border-2 shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-indigo-600" /> 1. Escolha o Alvo
-                </CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          {/* LADO ESQUERDO: FORMULÁRIO DE CONTEXTO */}
+          <div className="md:col-span-7 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">1. Job Target & Capabilities</CardTitle>
+                <CardDescription>
+                  This information will be used to create a strong "Capability Section".
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-2">
-                  {NICHES.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => setSelectedNiche(n.id)}
-                      className={cn(
-                        "flex items-center gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer",
-                        selectedNiche === n.id
-                          ? "border-indigo-600 bg-indigo-50"
-                          : "border-slate-100 hover:border-slate-200",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "p-2 rounded-lg",
-                          selectedNiche === n.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400",
-                        )}
-                      >
-                        <n.icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p
-                          className={cn(
-                            "text-sm font-bold",
-                            selectedNiche === n.id ? "text-indigo-900" : "text-slate-700",
-                          )}
-                        >
-                          {n.label}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-medium">{n.desc}</p>
-                      </div>
-                      {selectedNiche === n.id && <CheckCircle className="h-5 w-5 text-indigo-600" />}
-                    </div>
-                  ))}
+              <CardContent className="space-y-6">
+                {/* Tipo de Vaga */}
+                <div className="space-y-3">
+                  <Label className="font-bold">Job Type (Required)</Label>
+                  <Select onValueChange={(v) => setNiche(v as Niche)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target niche..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="h2a">H-2A Farm / Field Worker</SelectItem>
+                      <SelectItem value="h2b_hospitality">H-2B Hospitality (Hotel/Kitchen)</SelectItem>
+                      <SelectItem value="h2b_construction">H-2B Construction Helper</SelectItem>
+                      <SelectItem value="h2b_landscaping">H-2B Landscaping</SelectItem>
+                      <SelectItem value="h2b_warehouse">H-2B Warehouse / Production</SelectItem>
+                      <SelectItem value="generic">General H-2A/H-2B</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-2 pt-4">
-                  <Label className="text-[10px] font-black uppercase text-slate-400">
-                    Informações Chaves (Opcional)
-                  </Label>
-                  <Textarea
-                    placeholder="Ex: Tenho experiência com tratores John Deere, possuo CNH D, ou trabalhei 5 anos em obras..."
-                    className="resize-none h-24 text-sm"
-                    value={extraSkills}
-                    onChange={(e) => setExtraSkills(e.target.value)}
-                  />
+                {/* Disponibilidade */}
+                <div className="space-y-3">
+                  <Label className="font-bold">Availability</Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: "shifts", label: "Available for 8–12 hour shifts" },
+                      { id: "weekends", label: "Available for weekends / holidays" },
+                      { id: "relocate", label: "Willing to relocate anywhere in the U.S." },
+                      { id: "immediate", label: "Available to start immediately" },
+                    ].map((item) => (
+                      <div key={item.id} className="flex items-center space-x-2">
+                        <Checkbox id={item.id} onCheckedChange={() => handleCheckbox(item.id)} />
+                        <label htmlFor={item.id} className="text-sm leading-none">
+                          {item.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Capacidade Física */}
+                <div className="space-y-3">
+                  <Label className="font-bold">Physical Capability</Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: "lift50", label: "Able to lift 50 lbs / 23 kg" },
+                      { id: "standing", label: "Comfortable standing for long periods" },
+                      { id: "weather", label: "Comfortable working in extreme heat/cold" },
+                      { id: "fastpace", label: "Comfortable working at a fast pace" },
+                    ].map((item) => (
+                      <div key={item.id} className="flex items-center space-x-2">
+                        <Checkbox id={item.id} onCheckedChange={() => handleCheckbox(item.id)} />
+                        <label htmlFor={item.id} className="text-sm leading-none">
+                          {item.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Idioma */}
+                <div className="space-y-3">
+                  <Label className="font-bold">English Communication</Label>
+                  <Select onValueChange={setEnglishLevel} defaultValue="basic">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None / Very Basic</SelectItem>
+                      <SelectItem value="basic">Basic (Can follow instructions)</SelectItem>
+                      <SelectItem value="intermediate">Intermediate / Conversation</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* COLUNA 2: UPLOAD */}
-          <div className="flex flex-col">
-            <Card
-              className={cn(
-                "flex-1 border-2 border-dashed transition-all flex flex-col items-center justify-center p-10",
-                isDragActive ? "border-indigo-600 bg-indigo-50/50" : "border-slate-200",
-              )}
-            >
-              {step === "idle" || step === "error" ? (
-                <div {...getRootProps()} className="text-center cursor-pointer">
+          {/* LADO DIREITO: UPLOAD */}
+          <div className="md:col-span-5 flex flex-col gap-6">
+            <Card className="flex-1 flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-lg">2. Original CV</CardTitle>
+                <CardDescription>Upload your current file.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col">
+                <div
+                  {...getRootProps()}
+                  className={cn(
+                    "flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-6 text-center transition-colors cursor-pointer",
+                    isDragActive ? "border-primary bg-primary/5" : "border-muted",
+                  )}
+                >
                   <input {...getInputProps()} />
-                  <div className="bg-indigo-50 p-6 rounded-full mb-6 mx-auto w-fit">
-                    <Upload className="h-10 w-10 text-indigo-600" />
-                  </div>
-                  <h3 className="text-xl font-black uppercase italic text-slate-900">2. Envie seu CV Original</h3>
-                  <p className="text-slate-400 text-sm mt-2">Arraste seu arquivo PDF ou Word aqui</p>
-                  {!selectedNiche && (
-                    <p className="text-amber-500 text-[10px] font-bold mt-4 uppercase">Selecione um nicho primeiro ↑</p>
+                  {step === "idle" || step === "error" ? (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-4" />
+                      <p className="text-sm font-medium">Click or drag your PDF/DOCX</p>
+                      <p className="text-xs text-muted-foreground mt-1 italic">
+                        The AI will combine this file with your choices.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="space-y-4 w-full">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm font-bold animate-pulse uppercase tracking-wider">{step}...</p>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="w-full space-y-6 text-center">
-                  <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
-                  <span className="text-lg font-black uppercase text-slate-700 italic">{step}...</span>
-                  <Progress value={40} className="h-2" />
-                </div>
-              )}
+              </CardContent>
             </Card>
           </div>
         </div>
       )}
 
-      {/* RESULTADO (EDITOR/PREVIEW) */}
+      {/* RESULTADO (EDITOR) */}
       {step === "done" && resume && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom duration-500">
-          {/* Editor de campos e Preview do PDF entrariam aqui */}
-          <Card className="p-6 col-span-2 bg-indigo-900 text-white flex justify-between items-center rounded-[2rem]">
+        <Card className="animate-in fade-in zoom-in-95 duration-300">
+          <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
             <div>
-              <h3 className="text-xl font-black uppercase italic tracking-tighter">Currículo Otimizado com Sucesso!</h3>
-              <p className="text-indigo-200 text-sm">
-                Focado em: <span className="font-bold text-white uppercase">{selectedNiche}</span>
-              </p>
+              <CardTitle>Resume Ready</CardTitle>
+              <CardDescription>Review the US-optimized version below.</CardDescription>
             </div>
-            <Button size="lg" className="bg-white text-indigo-900 hover:bg-indigo-50 font-black">
-              <Download className="mr-2 h-5 w-5" /> DOWNLOAD PDF
+            <Button
+              onClick={() => {
+                const doc = generateResumePDF(resume as any);
+                doc.save(`${resume.personal_info.full_name}_US_Resume.pdf`);
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" /> Download PDF
             </Button>
-          </Card>
-        </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <Label className="text-primary font-bold">Generated Content (Editable)</Label>
+                <Textarea
+                  className="min-h-[400px] font-mono text-sm"
+                  value={
+                    resume.summary + "\n\n" + resume.experience.map((e) => `${e.title}\n${e.company}`).join("\n\n")
+                  }
+                  readOnly
+                />
+              </div>
+              <div className="bg-slate-50 rounded-lg p-6 border flex items-center justify-center text-muted-foreground italic text-sm">
+                PDF Preview will be generated upon download.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
