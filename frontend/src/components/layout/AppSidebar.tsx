@@ -61,9 +61,18 @@ export function AppSidebar() {
     { title: t("nav.jobs"), url: "/jobs", icon: Search },
     { title: t("nav.queue"), url: "/queue", icon: ListTodo },
     ...(isFreeUser ? [{ title: t("nav.referrals"), url: "/referrals", icon: Users }] : []),
-    ...(!isFreeUser ? [{ title: "Radar", url: "/radar", icon: Radar }] : []),
+
+    // ITEM RADAR: Agora visível para todos, mas com trava e badge de "Em breve"
+    {
+      title: "Radar",
+      url: "/radar",
+      icon: Radar,
+      comingSoon: true,
+    },
+
     { title: t("nav.plans"), url: "/plans", icon: Diamond },
-    // ITEM ESPECIAL: Resume AI (Coming Soon)
+
+    // ITEM: Resume AI
     {
       title: "Resume AI",
       url: "/resume-converter",
@@ -152,7 +161,7 @@ export function AppSidebar() {
                         }}
                       >
                         {item.comingSoon ? (
-                          // RENDERIZAÇÃO ESPECIAL DO ITEM "COMING SOON"
+                          // RENDERIZAÇÃO DO ITEM "COMING SOON" (Radar e Resume AI)
                           <div
                             className={cn(
                               "flex items-center gap-3 rounded-lg px-3 w-full group",
@@ -277,7 +286,7 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
 
-      {/* MODAL DE LOGIN (ESTILIZADO) */}
+      {/* MODAL DE LOGIN */}
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
         <DialogContent className="sm:max-w-md bg-white text-slate-900 border-none shadow-2xl rounded-2xl">
           <DialogHeader className="space-y-3">
