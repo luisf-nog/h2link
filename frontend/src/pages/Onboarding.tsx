@@ -9,13 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import {
@@ -35,6 +29,8 @@ import {
   Info,
   TrendingUp,
   Star,
+  Key,
+  Lock,
 } from "lucide-react";
 
 type Provider = "gmail" | "outlook";
@@ -55,7 +51,6 @@ export default function Onboarding() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Warmup profile
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
 
   const totalSteps = 4;
@@ -63,7 +58,6 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (!user?.id) return;
-
     const checkExistingSmtp = async () => {
       setCheckingSmtp(true);
       const { data } = await supabase
@@ -72,56 +66,57 @@ export default function Onboarding() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // If SMTP already configured with warmup, redirect to dashboard
       if (data?.has_password && data?.risk_profile) {
         navigate("/dashboard", { replace: true });
         return;
       }
-
-      // If has SMTP but no warmup profile, start at step 3
       if (data?.has_password && !data?.risk_profile) {
         setStep(3);
       }
-
       setCheckingSmtp(false);
     };
-
     checkExistingSmtp();
   }, [user?.id, navigate]);
 
+  // --- VALIDAÇÃO DA SENHA DE APP (16 letras) ---
+  const handlePasswordChange = (val: string) => {
+    // Remove espaços e números, aceita apenas letras e limita a 16
+    const sanitized = val
+      .replace(/[^a-zA-Z]/g, "")
+      .slice(0, 16)
+      .toLowerCase();
+    setPassword(sanitized);
+  };
+
   const handleSaveSmtp = async () => {
     if (!user?.id) return;
-    if (!email || !password) {
-      toast({ title: t("smtp.toasts.email_required"), variant: "destructive" });
+    if (password.length !== 16) {
+      toast({
+        title: "Senha inválida",
+        description: "A Senha de App deve ter exatamente 16 letras.",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
+      const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error(t("common.errors.no_session"));
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ provider, email, password }),
       });
 
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || payload?.success === false) {
-        throw new Error(payload?.error || `HTTP ${res.status}`);
-      }
+      const payload = await res.json();
+      if (!res.ok || payload?.success === false) throw new Error(payload?.error);
 
-      toast({ title: t("smtp.toasts.saved") });
+      toast({ title: "SMTP Configurado!" });
       setStep(3);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("common.errors.save_failed");
-      toast({ title: t("smtp.toasts.save_error_title"), description: message, variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -129,392 +124,195 @@ export default function Onboarding() {
 
   const handleSaveRiskProfile = async () => {
     if (!user?.id || !riskProfile) return;
-
     setLoading(true);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error(t("common.errors.no_session"));
-
+      const { data: sessionData } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token}` },
         body: JSON.stringify({ provider, email, risk_profile: riskProfile }),
       });
-
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || payload?.success === false) throw new Error(payload?.error || `HTTP ${res.status}`);
-
-      toast({ title: t("warmup.toasts.profile_saved") });
+      if (!res.ok) throw new Error("Falha ao salvar perfil");
       setStep(4);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("common.errors.save_failed");
-      toast({ title: t("warmup.toasts.profile_error"), description: message, variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  // --- SOLUÇÃO DO LOOPING DE REDIRECIONAMENTO ---
   const handleComplete = async () => {
-    await refreshSmtpStatus?.();
-    await refreshProfile?.();
-    navigate("/dashboard", { replace: true });
+    setLoading(true);
+    try {
+      // 1. Força a atualização do estado global no Contexto
+      await refreshSmtpStatus?.();
+      await refreshProfile?.();
+
+      // 2. Delay estratégico para garantir que o cache do Apollo/Supabase assente
+      await new Promise((r) => setTimeout(r, 500));
+
+      // 3. Navega usando replace para limpar a pilha
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      navigate("/dashboard");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (checkingSmtp) {
+  if (checkingSmtp)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t("common.loading")}
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin" />
       </div>
     );
-  }
-
-  const profiles = [
-    {
-      id: "conservative" as const,
-      icon: Shield,
-      title: t("warmup.profiles.conservative.title"),
-      description: t("warmup.profiles.conservative.description"),
-      details: t("warmup.profiles.conservative.details"),
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
-      borderColor: "border-blue-500",
-    },
-    {
-      id: "standard" as const,
-      icon: Clock,
-      title: t("warmup.profiles.standard.title"),
-      description: t("warmup.profiles.standard.description"),
-      details: t("warmup.profiles.standard.details"),
-      color: "text-amber-500",
-      bgColor: "bg-amber-500/10",
-      borderColor: "border-amber-500",
-    },
-    {
-      id: "aggressive" as const,
-      icon: Zap,
-      title: t("warmup.profiles.aggressive.title"),
-      description: t("warmup.profiles.aggressive.description"),
-      details: t("warmup.profiles.aggressive.details"),
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
-      borderColor: "border-emerald-500",
-    },
-  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
-      {/* Header */}
-      <div className="p-6 flex items-center justify-between border-b border-border/50">
-        <BrandLogo height={32} />
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{t("onboarding.step", { current: step, total: totalSteps })}</span>
-        </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="p-6 flex items-center justify-between border-b bg-white">
+        <BrandLogo height={28} />
+        <Badge variant="outline">
+          Passo {step} de {totalSteps}
+        </Badge>
       </div>
 
-      {/* Progress */}
-      <div className="px-6 py-4">
-        <Progress value={progress} className="h-2" />
-      </div>
+      <Progress value={progress} className="h-1 rounded-none" />
 
-      {/* Content */}
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl">
-          {/* Step 1: Welcome */}
+        <div className="w-full max-w-xl">
           {step === 1 && (
-            <Card className="border-primary/20">
-              <CardHeader className="text-center pb-2">
-                <div className="mx-auto mb-4 p-4 rounded-full bg-primary/10">
-                  <Rocket className="h-12 w-12 text-primary" />
+            <Card className="shadow-xl border-none">
+              <CardHeader className="text-center">
+                <div className="mx-auto mb-4 p-4 rounded-full bg-primary/10 w-fit">
+                  <Rocket className="h-10 w-10 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">{t("onboarding.welcome.title")}</CardTitle>
-                <CardDescription className="text-base">
-                  {t("onboarding.welcome.description")}
-                </CardDescription>
+                <CardTitle className="text-2xl font-black italic uppercase">Bem-vindo Sócio!</CardTitle>
+                <CardDescription>Vamos configurar sua máquina de envios em menos de 2 minutos.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4">
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                    <Settings className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium">{t("onboarding.welcome.step1_title")}</p>
-                      <p className="text-sm text-muted-foreground">{t("onboarding.welcome.step1_desc")}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                    <Shield className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium">{t("onboarding.welcome.step2_title")}</p>
-                      <p className="text-sm text-muted-foreground">{t("onboarding.welcome.step2_desc")}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                    <FileText className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium">{t("onboarding.welcome.step3_title")}</p>
-                      <p className="text-sm text-muted-foreground">{t("onboarding.welcome.step3_desc")}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <Button onClick={() => setStep(2)} className="w-full" size="lg">
-                  {t("onboarding.welcome.start")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+              <CardContent>
+                <Button onClick={() => setStep(2)} className="w-full h-12 text-lg font-bold">
+                  COMEÇAR CONFIGURAÇÃO <ArrowRight className="ml-2" />
                 </Button>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 2: SMTP Setup */}
           {step === 2 && (
-            <Card className="border-primary/20">
+            <Card className="shadow-xl border-none">
               <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Mail className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>{t("onboarding.smtp.title")}</CardTitle>
-                    <CardDescription>{t("onboarding.smtp.description")}</CardDescription>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="text-primary" /> Configuração de E-mail
+                </CardTitle>
+                <CardDescription>Conecte sua conta para que a IA envie os e-mails por você.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Why App Password */}
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                  <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium text-foreground">{t("onboarding.smtp.why_app_password_title")}</p>
-                    <p className="mt-1">{t("onboarding.smtp.why_app_password_desc")}</p>
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <div className="text-xs text-amber-800">
+                    <p className="font-bold uppercase tracking-tight">Atenção: Use uma "Senha de App"</p>
+                    <p className="mt-1">
+                      Por segurança, o Google e Outlook não aceitam sua senha normal. Você deve gerar uma senha de 16
+                      letras nas configurações da sua conta.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Provedor</Label>
+                    <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gmail">Gmail</SelectItem>
+                        <SelectItem value="outlook">Outlook</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Seu E-mail</Label>
+                    <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="exemplo@gmail.com" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t("smtp.fields.provider")}</Label>
-                  <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("common.select")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gmail">Gmail</SelectItem>
-                      <SelectItem value="outlook">Outlook</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Provider-specific help card */}
-                <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
-                  {provider === "gmail" ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{t("onboarding.smtp.gmail_guide_title")}</span>
-                      </div>
-                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-                        <li>{t("onboarding.smtp.gmail_step1")}</li>
-                        <li>{t("onboarding.smtp.gmail_step2")}</li>
-                        <li>{t("onboarding.smtp.gmail_step3")}</li>
-                      </ol>
-                      <a
-                        href="https://myaccount.google.com/apppasswords"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium"
-                      >
-                        {t("onboarding.smtp.gmail_link")}
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{t("onboarding.smtp.outlook_guide_title")}</span>
-                      </div>
-                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-                        <li>{t("onboarding.smtp.outlook_step1")}</li>
-                        <li>{t("onboarding.smtp.outlook_step2")}</li>
-                        <li>{t("onboarding.smtp.outlook_step3")}</li>
-                      </ol>
-                      <a
-                        href="https://account.microsoft.com/security"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium"
-                      >
-                        {t("onboarding.smtp.outlook_link")}
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("smtp.fields.email")}</Label>
-                  <Input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t("smtp.placeholders.email")}
-                    type="email"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("smtp.fields.password")}</Label>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("smtp.placeholders.password")}
-                  />
-                  <p className="text-xs text-muted-foreground">{t("onboarding.smtp.password_hint")}</p>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setStep(1)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    {t("common.previous")}
-                  </Button>
-                  <Button onClick={handleSaveSmtp} disabled={loading || !email || !password} className="flex-1">
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t("onboarding.smtp.continue")}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 3: Warmup Profile */}
-          {step === 3 && (
-            <Card className="border-primary/20">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Shield className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>{t("onboarding.warmup.title")}</CardTitle>
-                    <CardDescription>{t("onboarding.warmup.subtitle")}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Educational section: Why warmup matters */}
-                <div className="space-y-3 p-4 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold">{t("onboarding.warmup.why_title")}</h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t("onboarding.warmup.why_desc")}
-                  </p>
-                  <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside pl-1">
-                    <li>{t("onboarding.warmup.why_point1")}</li>
-                    <li>{t("onboarding.warmup.why_point2")}</li>
-                    <li>{t("onboarding.warmup.why_point3")}</li>
-                  </ul>
-                </div>
-
-                {/* Recommendation banner */}
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                  <Star className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-emerald-600 dark:text-emerald-400">{t("onboarding.warmup.recommendation_title")}</p>
-                    <p className="text-muted-foreground mt-0.5">{t("onboarding.warmup.recommendation_desc")}</p>
-                  </div>
-                </div>
-
-                {/* Profile options */}
-                <div className="space-y-3">
-                  {profiles.map((p) => (
-                    <div
-                      key={p.id}
-                      className={`relative flex items-start gap-4 p-4 rounded-lg border-2 transition-all cursor-pointer hover:border-primary/50 ${
-                        riskProfile === p.id ? `${p.borderColor} ${p.bgColor}` : "border-border"
-                      }`}
-                      onClick={() => setRiskProfile(p.id)}
-                    >
-                      <div className={`p-2 rounded-lg ${p.bgColor}`}>
-                        <p.icon className={`h-5 w-5 ${p.color}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{p.title}</p>
-                          {p.id === "standard" && (
-                            <Badge variant="secondary" className="text-xs bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                              {t("onboarding.warmup.recommended_badge")}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{p.description}</p>
-                        <p className="text-xs text-muted-foreground/80 mt-2 italic">{p.details}</p>
-                      </div>
-                      {riskProfile === p.id && (
-                        <CheckCircle2 className={`h-5 w-5 ${p.color}`} />
+                  <div className="flex justify-between items-center">
+                    <Label className="font-bold text-primary">Senha de App (16 letras)</Label>
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold",
+                        password.length === 16 ? "text-emerald-500" : "text-slate-400",
                       )}
-                    </div>
-                  ))}
+                    >
+                      {password.length}/16 CARACTERES
+                    </span>
+                  </div>
+                  <Input
+                    type="text"
+                    value={password}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    placeholder="xxxx xxxx xxxx xxxx"
+                    className="h-12 text-center text-lg font-mono tracking-[0.3em] uppercase"
+                  />
+                  <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                    <Info className="h-3 w-3" />
+                    <span>Apenas letras são permitidas. Remova espaços se colar.</span>
+                  </div>
                 </div>
 
-                {/* How it works note */}
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
-                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="text-xs text-muted-foreground">{t("onboarding.warmup.how_it_works")}</p>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button variant="outline" onClick={() => setStep(2)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    {t("common.previous")}
+                <div className="flex gap-2 pt-4">
+                  <Button variant="ghost" onClick={() => setStep(1)}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
                   </Button>
-                  <Button onClick={handleSaveRiskProfile} disabled={loading || !riskProfile} className="flex-1">
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t("onboarding.warmup.continue")}
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                  <Button
+                    onClick={handleSaveSmtp}
+                    disabled={loading || password.length !== 16}
+                    className="flex-1 font-bold"
+                  >
+                    {loading ? <Loader2 className="animate-spin mr-2" /> : <Lock className="mr-2 h-4 w-4" />}
+                    AUTENTICAR E CONTINUAR
                   </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 4: Complete */}
-          {step === 4 && (
-            <Card className="border-primary/20">
-              <CardHeader className="text-center pb-2">
-                <div className="mx-auto mb-4 p-4 rounded-full bg-emerald-500/10">
-                  <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-                </div>
-                <CardTitle className="text-2xl">{t("onboarding.complete.title")}</CardTitle>
-                <CardDescription className="text-base">
-                  {t("onboarding.complete.description")}
-                </CardDescription>
+          {step === 3 && (
+            <Card className="shadow-xl border-none">
+              <CardHeader>
+                <CardTitle>Perfil de Aquecimento</CardTitle>
+                <CardDescription>Como você quer que a IA gerencie o volume de envios?</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4">
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    <p className="text-sm">{t("onboarding.complete.smtp_ready")}</p>
+              <CardContent className="space-y-4">
+                {["conservative", "standard", "aggressive"].map((p) => (
+                  <div
+                    key={p}
+                    onClick={() => setRiskProfile(p as any)}
+                    className={cn(
+                      "p-4 border-2 rounded-xl cursor-pointer transition-all",
+                      riskProfile === p ? "border-primary bg-primary/5" : "border-slate-100",
+                    )}
+                  >
+                    <p className="font-bold capitalize">{p}</p>
                   </div>
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    <p className="text-sm">{t("onboarding.complete.warmup_ready")}</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-sm text-muted-foreground">{t("onboarding.complete.next_steps")}</p>
-                </div>
-
-                <Button onClick={handleComplete} className="w-full" size="lg">
-                  {t("onboarding.complete.go_dashboard")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                ))}
+                <Button onClick={handleSaveRiskProfile} disabled={!riskProfile || loading} className="w-full mt-4">
+                  SALVAR PERFIL
                 </Button>
               </CardContent>
+            </Card>
+          )}
+
+          {step === 4 && (
+            <Card className="shadow-xl border-none text-center p-8">
+              <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
+              <CardTitle className="text-2xl font-black uppercase">Tudo Pronto!</CardTitle>
+              <CardDescription className="mb-6">Sua conta está configurada e pronta para decolar.</CardDescription>
+              <Button onClick={handleComplete} disabled={loading} className="w-full h-12 font-bold text-lg">
+                {loading ? <Loader2 className="animate-spin mr-2" /> : "IR PARA O DASHBOARD"}
+              </Button>
             </Card>
           )}
         </div>
