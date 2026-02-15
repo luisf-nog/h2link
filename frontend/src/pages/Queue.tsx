@@ -8,29 +8,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Trash2,
-  Send,
-  Loader2,
-  RefreshCw,
-  History,
-  FileText,
-  Eye,
-  Clock,
-  Flame,
-  ExternalLink,
-  Zap,
-} from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, FileText, Eye, Flame } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { formatNumber } from "@/lib/number";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
 import { SendHistoryDialog } from "@/components/queue/SendHistoryDialog";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
 import { cn } from "@/lib/utils";
-import { MobileQueueCard } from "@/components/queue/MobileQueueCard"; // Certifique-se que este componente existe ou remova a lógica mobile se preferir
 
-// Interface alinhada com a View corrigida
 interface QueueItem {
   id: string;
   status: string;
@@ -40,7 +29,7 @@ interface QueueItem {
   last_error?: string | null;
   job_title: string;
   company: string;
-  contact_email?: string;
+  contact_email?: string; // Importante para o envio
   visa_type?: string;
   token: string;
   view_count: number;
@@ -58,6 +47,7 @@ const EARLY_ACCESS_VARIATIONS = [
 export default function Queue() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -74,7 +64,7 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
-  // FETCH CORRIGIDO
+  // FETCH DE DADOS (Mantendo a lógica da View)
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
@@ -84,10 +74,7 @@ export default function Queue() {
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Erro SQL:", error);
-      toast({ title: "Erro ao carregar fila", variant: "destructive" });
-    } else {
+    if (!error) {
       setQueue((data as unknown as QueueItem[]) || []);
     }
     setLoading(false);
@@ -96,7 +83,7 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
     const channel = supabase
-      .channel("queue_fix")
+      .channel("queue_std_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
       .subscribe();
     return () => {
@@ -104,26 +91,30 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
-  // LÓGICA DE ENVIO REAL (SEM REDIRECT)
+  // --- LÓGICA DE ENVIO REAL (CORRIGIDA) ---
   const sendQueueItems = async (items: QueueItem[]) => {
     if (remainingToday <= 0) {
-      toast({ title: "Limite diário atingido", description: "Faça upgrade para enviar mais.", variant: "destructive" });
+      toast({ title: "Limite diário atingido", variant: "destructive" });
       return;
     }
 
     setSending(true);
+    // Busca templates apenas uma vez
     const { data: templates } = await supabase
       .from("email_templates")
       .select("*")
       .order("created_at", { ascending: false });
 
-    // Loop de envio real
     for (const item of items) {
-      if (!item.contact_email) continue;
+      // Se não tiver email na view (contact_email), pula
+      if (!item.contact_email) {
+        console.warn(`Item ${item.id} sem email de contato.`);
+        continue;
+      }
 
       const template = templates?.[0] || {
         subject: `Application for ${item.job_title}`,
-        body: "Hello, attached is my resume.",
+        body: "Hello, please find my resume attached.",
       };
       let finalBody = template.body;
 
@@ -133,38 +124,54 @@ export default function Queue() {
       }
 
       try {
-        await supabase.functions.invoke("send-email-custom", {
+        // Chama a Edge Function
+        const { error } = await supabase.functions.invoke("send-email-custom", {
           body: {
             to: item.contact_email,
             subject: template.subject,
             body: finalBody,
             queueId: item.id,
-            s: Date.now(),
+            s: Date.now(), // Carimbo de tempo
           },
         });
 
-        // Atualização otimista local
+        if (error) throw error;
+
+        // Atualiza UI localmente para parecer rápido
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
       } catch (e) {
-        console.error(e);
+        console.error(`Erro ao enviar item ${item.id}:`, e);
       }
-      // Pequeno delay para não sobrecarregar
-      await new Promise((r) => setTimeout(r, 800));
+
+      // Pequena pausa para não estourar rate limits
+      await new Promise((r) => setTimeout(r, 500));
     }
 
     setSending(false);
     refreshProfile();
-    fetchQueue();
-    toast({ title: "Envio em massa finalizado!" });
+    fetchQueue(); // Recarrega para garantir status real
+    toast({ title: "Processo de envio finalizado." });
   };
 
   const handleSendAll = () => {
-    const items = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
-    if (items.length > 0) sendQueueItems(items);
+    // Filtra apenas os pendentes e respeita o limite diário
+    const itemsToSend = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
+    if (itemsToSend.length > 0) {
+      sendQueueItems(itemsToSend);
+    } else {
+      toast({ title: "Nada para enviar", description: "Sua fila de pendentes está vazia ou limite atingido." });
+    }
   };
 
+  const removeFromQueue = async (id: string) => {
+    await supabase.from("my_queue").delete().eq("id", id);
+    fetchQueue();
+    toast({ title: "Item removido da fila" });
+  };
+
+  // Renderização da Coluna de Analytics (Design Limpo)
   const renderAnalytics = (item: QueueItem) => {
     const views = Number(item.view_count) || 0;
     const duration = Number(item.total_duration_seconds) || 0;
@@ -175,39 +182,31 @@ export default function Queue() {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex justify-center cursor-help">
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all",
-                  hasViews ? "bg-indigo-50 text-indigo-700 font-bold" : "text-slate-300 bg-slate-50",
-                )}
-              >
-                {isHighInterest ? (
-                  <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="text-xs">{views}</span>
-              </div>
+            <div className="flex items-center gap-2 cursor-help text-muted-foreground hover:text-foreground transition-colors">
+              {isHighInterest ? (
+                <Flame className="h-4 w-4 text-orange-500" />
+              ) : (
+                <Eye className={cn("h-4 w-4", hasViews ? "text-blue-500" : "opacity-30")} />
+              )}
+              <span className={cn("text-xs font-medium", hasViews && "text-foreground")}>{views}</span>
             </div>
           </TooltipTrigger>
-          <TooltipContent
-            side="left"
-            className="bg-[#0F172A] text-white p-4 rounded-xl border border-slate-800 shadow-2xl"
-          >
-            <div className="space-y-2 text-[11px]">
-              <p className="font-black border-b border-slate-700 pb-2 mb-2 text-slate-400 uppercase tracking-widest">
-                RASTREIO DE ACESSO
-              </p>
-              <div className="flex justify-between gap-8">
-                <span>Aberturas:</span>
-                <span className="font-bold text-emerald-400">{views}x</span>
+          <TooltipContent>
+            {hasViews ? (
+              <div className="text-xs space-y-1">
+                <p>
+                  <strong>Visto:</strong> {views} vezes
+                </p>
+                <p>
+                  <strong>Tempo:</strong> {duration}s
+                </p>
+                {item.last_view_at && (
+                  <p className="opacity-70">Último: {format(new Date(item.last_view_at), "dd/MM HH:mm")}</p>
+                )}
               </div>
-              <div className="flex justify-between gap-8">
-                <span>Tempo:</span>
-                <span className="font-bold text-blue-400">{duration}s</span>
-              </div>
-            </div>
+            ) : (
+              <p className="text-xs">Aguardando visualização</p>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -216,11 +215,12 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const pendingCount = pendingItems.length;
+  const sentCount = creditsUsedToday;
   const allPendingSelected =
     pendingItems.length > 0 && Object.keys(selectedIds).filter((id) => selectedIds[id]).length === pendingItems.length;
 
   return (
-    <div className="space-y-8 p-4 md:p-0 max-w-7xl mx-auto">
+    <div className="space-y-6">
       <SendHistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
@@ -229,78 +229,58 @@ export default function Queue() {
         company={historyItem?.company ?? ""}
       />
 
-      {/* HEADER IDÊNTICO À IMAGEM 1 */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      {/* HEADER PADRÃO */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1
-            className="text-4xl md:text-5xl font-black italic text-[#0F172A] uppercase tracking-tighter"
-            style={{ fontFamily: "Inter, sans-serif" }}
-          >
-            MINHA FILA INTELIGENTE
-          </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 ml-1">
-            {pendingCount} PENDING • {creditsUsedToday} SENT
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Queue</h1>
+          <p className="text-muted-foreground">Gerencie seus envios ({pendingCount} pendentes)</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <AddManualJobDialog onAdded={fetchQueue} />
-          {/* BOTÃO ROXO GRANDE */}
-          <Button
-            onClick={handleSendAll}
-            disabled={pendingCount === 0 || loading || sending}
-            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-black italic text-sm px-8 py-6 rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-wider"
-          >
-            {sending ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Send className="h-5 w-5 mr-2" />}
-            SEND ALL ({pendingCount})
+          {/* BOTÃO CORRIGIDO: Chama handleSendAll em vez de navegar */}
+          <Button onClick={handleSendAll} disabled={pendingCount === 0 || loading || sending}>
+            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+            {sending ? "Enviando..." : "Enviar Todos"}
           </Button>
         </div>
       </div>
 
-      {/* CARDS IDÊNTICOS À IMAGEM 1 (COM NÚMEROS GIGANTES) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-[2rem] border-none shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-2">
-          <CardHeader className="pb-0 pt-6 px-6">
-            <CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">
-              Prontos para Envio
-            </CardTitle>
+      {/* CARDS PADRÃO */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Na Fila</CardTitle>
           </CardHeader>
-          <CardContent className="px-6 pb-6 pt-2">
-            <p className="text-6xl font-black italic tracking-tighter text-[#0F172A]">{pendingCount}</p>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(pendingCount)}</div>
           </CardContent>
         </Card>
-
-        <Card className="rounded-[2rem] border-2 border-[#EEF2FF] bg-[#F5F7FF] shadow-none p-2">
-          <CardHeader className="pb-0 pt-6 px-6">
-            <CardTitle className="text-[10px] font-bold uppercase text-[#6366F1] tracking-widest">
-              Disparados Hoje
-            </CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Enviados Hoje</CardTitle>
           </CardHeader>
-          <CardContent className="px-6 pb-6 pt-2">
-            <p className="text-6xl font-black italic tracking-tighter text-[#4338CA]">{creditsUsedToday}</p>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(sentCount)}</div>
           </CardContent>
         </Card>
-
-        <Card className="rounded-[2rem] border-none shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-2">
-          <CardHeader className="pb-0 pt-6 px-6">
-            <CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">
-              Limite do Plano
-            </CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Limite Diário</CardTitle>
           </CardHeader>
-          <CardContent className="px-6 pb-6 pt-2">
-            <p className="text-6xl font-black italic tracking-tighter text-[#0F172A]">{dailyLimitTotal}</p>
+          <CardContent>
+            <div className="text-2xl font-bold">{dailyLimitTotal}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* TABELA IDÊNTICA À IMAGEM 1 */}
-      <TooltipProvider>
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden px-4 py-2">
+      {/* TABELA PADRÃO */}
+      <Card>
+        <div className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-none hover:bg-transparent">
-                <TableHead className="w-12 py-8 pl-8">
+              <TableRow>
+                <TableHead className="w-12">
                   <Checkbox
-                    className="h-5 w-5 rounded-md border-slate-300 data-[state=checked]:bg-[#4F46E5] data-[state=checked]:text-white"
                     checked={allPendingSelected}
                     onCheckedChange={(v) => {
                       const next: Record<string, boolean> = {};
@@ -309,98 +289,65 @@ export default function Queue() {
                     }}
                   />
                 </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] py-8">
-                  Oportunidade / Empresa
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] py-8 text-center">
-                  Status de Envio
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] py-8 text-center">
-                  Inteligência (CV)
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] py-8 text-right pr-8">
-                  Ações
-                </TableHead>
+                <TableHead>Vaga / Empresa</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Analytics</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-32 text-center text-slate-300">
-                    <Loader2 className="h-10 w-10 animate-spin mx-auto" />
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Carregando...
                   </TableCell>
                 </TableRow>
               ) : queue.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="py-32 text-center text-slate-300 font-bold uppercase tracking-widest"
-                  >
-                    Sua fila está vazia
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Fila vazia
                   </TableCell>
                 </TableRow>
               ) : (
                 queue.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-slate-50/50 transition-colors border-none group">
-                    <TableCell className="py-6 pl-8">
+                  <TableRow key={item.id}>
+                    <TableCell>
                       <Checkbox
-                        className="h-5 w-5 rounded-md border-slate-300 data-[state=checked]:bg-[#4F46E5]"
                         checked={!!selectedIds[item.id]}
                         onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [item.id]: !!v }))}
                       />
                     </TableCell>
-                    <TableCell className="py-6">
-                      <div className="flex items-center gap-4">
-                        {/* ÍCONE DE RAIO ROXO (ZAP) */}
-                        <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center">
-                          <Zap className="h-4 w-4 text-[#4F46E5] fill-[#4F46E5]" />
-                        </div>
-                        <div className="flex flex-col">
-                          {/* DADOS CORRIGIDOS (SEM BLANK) */}
-                          <span className="font-black text-[#0F172A] uppercase tracking-tighter text-base">
-                            {item.company || "Empresa Desconhecida"}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                            {item.job_title || "Cargo não informado"}
-                          </span>
-                        </div>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{item.job_title || "Cargo não informado"}</span>
+                        <span className="text-xs text-muted-foreground">{item.company || "Empresa não informada"}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center py-6">
-                      <Badge
-                        className={cn(
-                          "uppercase text-[10px] font-black px-4 py-1.5 border-none rounded-lg shadow-none",
-                          item.status === "sent" ? "bg-[#E0E7FF] text-[#4338CA]" : "bg-[#F1F5F9] text-[#64748B]",
-                        )}
-                      >
-                        {item.status.toUpperCase()}
+                    <TableCell>
+                      <Badge variant={item.status === "sent" ? "default" : "secondary"}>
+                        {item.status === "sent" ? "Enviado" : "Pendente"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center py-6">{renderAnalytics(item)}</TableCell>
-                    <TableCell className="text-right pr-8 py-6">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <TableCell>{renderAnalytics(item)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {item.send_count > 0 && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setHistoryItem(item);
+                              setHistoryDialogOpen(true);
+                            }}
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-10 w-10 rounded-xl bg-white border border-slate-100 hover:bg-slate-50 text-slate-400"
-                          onClick={() => {
-                            setHistoryItem(item);
-                            setHistoryDialogOpen(true);
-                          }}
-                        >
-                          <History className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-10 w-10 rounded-xl bg-white border border-slate-100 hover:bg-red-50 text-red-400 hover:text-red-500"
-                          onClick={() =>
-                            supabase
-                              .from("my_queue")
-                              .delete()
-                              .eq("id", item.id)
-                              .then(() => fetchQueue())
-                          }
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeFromQueue(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -412,7 +359,22 @@ export default function Queue() {
             </TableBody>
           </Table>
         </div>
-      </TooltipProvider>
+      </Card>
+
+      {/* MOBILE VIEW (SE NECESSÁRIO) */}
+      {isMobile && (
+        <div className="space-y-4 md:hidden">
+          {queue.map((item) => (
+            <MobileQueueCard
+              key={item.id}
+              item={item}
+              isSelected={!!selectedIds[item.id]}
+              onSelectChange={() => {}}
+              onRemove={() => removeFromQueue(item.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
