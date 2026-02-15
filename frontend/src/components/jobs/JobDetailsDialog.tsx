@@ -23,6 +23,8 @@ import {
   Zap,
   Plus,
   Minus,
+  ArrowLeft,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -42,13 +44,11 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // LÓGICA DE IDENTIFICAÇÃO PREMIUM
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
   const canSaveJob = isRegistered;
 
-  // Validação de Telefone Disponível
   const hasValidPhone =
     job?.phone && job.phone !== "N/A" && job.phone !== "n/a" && job.phone.trim() !== "" && job.phone !== "0";
 
@@ -110,19 +110,21 @@ export function JobDetailsDialog({
   const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access");
   const isCertifiedOpportunity = job?.was_early_access && !isCurrentlyEarlyAccess;
 
-  // --- FUNÇÕES DE CONTATO RÁPIDO ---
   const getMessageBody = () => {
-    return `Hello! I saw your job posting for ${job?.job_title} at ${job?.company} on H2 Linker and would like to apply. My name is [My Name].`;
+    // Texto de mensagem também traduzível
+    return t("jobs.details.contact_msg_template", {
+      jobTitle: job?.job_title,
+      company: job?.company,
+      defaultValue: `Hello! I saw your job posting for ${job?.job_title} at ${job?.company} on H2 Linker and would like to apply.`,
+    });
   };
 
   const handleCall = () => {
     if (job.phone) window.location.href = `tel:${job.phone}`;
   };
-
   const handleSMS = () => {
     if (job.phone) window.location.href = `sms:${job.phone}?&body=${encodeURIComponent(getMessageBody())}`;
   };
-
   const handleWhatsApp = () => {
     if (job.phone) {
       const cleanPhone = job.phone.replace(/\D/g, "");
@@ -135,19 +137,15 @@ export function JobDetailsDialog({
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
         {/* HEADER */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
-          <div className="flex justify-between items-start text-left">
+          <div className="flex justify-between items-start gap-4 text-left">
             <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {job?.visa_type && (
                   <Badge
                     className={cn(
                       "text-[10px] uppercase font-bold border px-2 py-0.5",
-                      job.visa_type === "H-2A" &&
-                        !job.was_early_access &&
-                        "bg-green-600 border-green-600 text-white hover:bg-green-700",
-                      job.visa_type === "H-2B" &&
-                        !job.was_early_access &&
-                        "bg-blue-600 border-blue-600 text-white hover:bg-blue-700",
+                      job.visa_type === "H-2A" && !job.was_early_access && "bg-green-600 border-green-600 text-white",
+                      job.visa_type === "H-2B" && !job.was_early_access && "bg-blue-600 border-blue-600 text-white",
                       (job.visa_type.includes("Early Access") || (job.was_early_access && isCurrentlyEarlyAccess)) &&
                         "bg-amber-50 border-amber-400 text-amber-900",
                     )}
@@ -159,14 +157,6 @@ export function JobDetailsDialog({
                     {job.visa_type}
                   </Badge>
                 )}
-                {job?.job_id && (
-                  <span
-                    className="font-mono text-[10px] text-muted-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
-                    translate="no"
-                  >
-                    {canSeeContacts ? job.job_id.split("-GHOST")[0] : maskJobId(job.job_id)}
-                  </span>
-                )}
               </div>
               <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
                 <span translate="no">{job?.job_title}</span>
@@ -175,93 +165,21 @@ export function JobDetailsDialog({
                 <span className="flex items-center gap-1 text-slate-900" translate="no">
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
-                <span className="flex items-center gap-1" translate="no">
-                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
-                </span>
               </DialogDescription>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full shrink-0 h-10 w-10"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="h-6 w-6 text-slate-500" />
+            </Button>
           </div>
         </div>
 
-        {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto text-left">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
-            <div className="space-y-4">
-              {isCurrentlyEarlyAccess && (
-                <div className="w-full p-5 rounded-2xl border border-violet-200 bg-violet-50/60 flex flex-col sm:flex-row gap-4 items-start sm:items-center shadow-sm">
-                  <div className="bg-violet-600 p-3 rounded-xl text-white shadow-lg shrink-0">
-                    <Zap className="h-7 w-7 fill-white animate-pulse" />
-                  </div>
-                  <div>
-                    <p className="text-base font-black text-violet-900 uppercase tracking-tight">
-                      {t("jobs.details.active_early_title")}
-                    </p>
-                    <p className="text-sm text-violet-700 leading-relaxed font-medium mt-0.5">
-                      {t("jobs.details.active_early_desc")}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {job?.randomization_group && (
-                <div
-                  className={cn(
-                    "w-full p-5 rounded-2xl border flex gap-4 items-start sm:items-center shadow-sm",
-                    job.randomization_group === "A"
-                      ? "bg-emerald-50 border-emerald-100"
-                      : job.randomization_group === "B"
-                        ? "bg-blue-50 border-blue-100"
-                        : "bg-amber-50 border-amber-100",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "p-3 rounded-xl shrink-0",
-                      job.randomization_group === "A"
-                        ? "bg-emerald-600 text-white"
-                        : job.randomization_group === "B"
-                          ? "bg-blue-600 text-white"
-                          : "bg-amber-600 text-white",
-                    )}
-                  >
-                    <Info className="h-7 w-7" />
-                  </div>
-                  <div>
-                    <p
-                      className={cn(
-                        "text-base font-black uppercase tracking-tight",
-                        job.randomization_group === "A"
-                          ? "text-emerald-900"
-                          : job.randomization_group === "B"
-                            ? "text-blue-900"
-                            : "text-amber-900",
-                      )}
-                    >
-                      {t("jobs.details.group_title", { group: job.randomization_group })}
-                    </p>
-                    <p className="text-sm text-slate-700 font-medium mt-0.5">
-                      {job.randomization_group === "A"
-                        ? t("jobs.details.group_a_desc")
-                        : t("jobs.details.group_general_desc")}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {isCertifiedOpportunity && (
-              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-2xl p-4 flex items-center gap-4 text-left">
-                <div className="bg-amber-500 p-2.5 rounded-xl text-white shadow-lg">
-                  <Rocket className="h-6 w-6 animate-bounce" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-900 text-sm tracking-tight">
-                    {t("jobs.details.early_access_evolution_title")}
-                  </h4>
-                  <p className="text-amber-800 text-xs font-medium">{t("jobs.details.early_access_evolution_text")}</p>
-                </div>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
                 {/* DATAS */}
@@ -286,14 +204,8 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* FINANCEIRO */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4 text-left">
-                  <div className="flex justify-between items-center border-b pb-4">
-                    <span className="font-semibold text-sm text-slate-600">
-                      {t("jobs.details.available_positions")}
-                    </span>
-                    <Badge className="bg-blue-600 font-bold px-3">{job?.openings || "N/A"}</Badge>
-                  </div>
+                {/* FINANCEIRO (TRADUZIDO) */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
                   <div>
                     <div className="flex items-center gap-2 text-green-700 font-bold mb-1">
                       <DollarSign className="h-5 w-5" /> <span>{t("jobs.details.remuneration")}</span>
@@ -305,141 +217,96 @@ export function JobDetailsDialog({
                   {job?.wage_additional && (
                     <div className="mt-4 pt-4 border-t border-dashed border-green-200">
                       <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-green-600 mb-2">
-                        <Plus className="h-3 w-3" /> Bonuses & Extras
+                        <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label", "Bonuses & Extras")}
                       </h5>
                       <p className="text-xs text-green-800 font-medium bg-green-50/50 p-2 rounded">
-                        <span translate="yes">{job.wage_additional}</span>
+                        <span>{job.wage_additional}</span>
                       </p>
                     </div>
                   )}
                   {job?.rec_pay_deductions && (
                     <div className="mt-4 pt-4 border-t border-dashed border-red-200">
                       <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-red-600 mb-2">
-                        <Minus className="h-3 w-3" /> Deductions
+                        <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label", "Deductions")}
                       </h5>
                       <p className="text-xs text-red-800 font-medium bg-red-50/50 p-2 rounded">
-                        <span translate="yes">{job.rec_pay_deductions}</span>
+                        <span>{job.rec_pay_deductions}</span>
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* CONTATOS */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden text-left">
-                  {!canSeeContacts && (
-                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-                      <Lock className="h-7 w-7 text-amber-500 mb-3" />
-                      <Button
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold h-9 text-xs px-5 shadow-lg animate-pulse"
-                        onClick={handleGoToPlans}
-                      >
-                        <Rocket className="h-3.5 w-3.5 mr-2" /> {t("jobs.upgrade.cta")}
-                      </Button>
-                    </div>
-                  )}
+                {/* CONTATOS (TRADUZIDO) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   <h4 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-2 uppercase text-[10px] tracking-widest">
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
                   <div className="space-y-4 mt-4">
-                    <div>
-                      <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                        {t("jobs.details.email_label")}
-                      </span>
-                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 flex justify-between items-center">
-                        <span>{canSeeContacts ? job?.email : "••••••••@•••••••.com"}</span>
-                        {canSeeContacts && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6"
-                            onClick={() => (window.location.href = `mailto:${job.email}`)}
-                          >
-                            <Mail className="h-3 w-3 text-slate-500" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* LÓGICA CONDICIONAL: SÓ MOSTRA SE O TELEFONE FOR VÁLIDO */}
-                    {hasValidPhone && (
-                      <div translate="no">
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1" translate="yes">
-                          {t("jobs.details.phone_label") || "Phone"}
-                        </span>
-                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100">
-                          <span>{canSeeContacts ? job.phone : "•••-•••-••••"}</span>
-                        </div>
-                        {canSeeContacts && (
-                          <div className="grid grid-cols-3 gap-2 mt-2">
-                            <Button
-                              variant="outline"
-                              className="bg-green-50 border-green-200 text-green-700 h-8 text-xs font-bold"
-                              onClick={handleCall}
-                            >
-                              <Phone className="h-3 w-3 mr-1" /> Call
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="bg-blue-50 border-blue-200 text-blue-700 h-8 text-xs font-bold"
-                              onClick={handleSMS}
-                            >
-                              <MessageCircle className="h-3 w-3 mr-1" /> SMS
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="bg-emerald-50 border-emerald-200 text-emerald-700 h-8 text-xs font-bold"
-                              onClick={handleWhatsApp}
-                            >
-                              <svg viewBox="0 0 24 24" className="h-3 w-3 mr-1 fill-current">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                              </svg>{" "}
-                              WhatsApp
-                            </Button>
-                          </div>
-                        )}
+                    {hasValidPhone && canSeeContacts && (
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          className="bg-green-50 border-green-200 text-green-700 h-8 text-xs font-bold"
+                          onClick={handleCall}
+                        >
+                          <Phone className="h-3 w-3 mr-1" /> {t("common.call", "Call")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="bg-blue-50 border-blue-200 text-blue-700 h-8 text-xs font-bold"
+                          onClick={handleSMS}
+                        >
+                          <MessageCircle className="h-3 w-3 mr-1" /> {t("common.sms", "SMS")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="bg-emerald-50 border-emerald-200 text-emerald-700 h-8 text-xs font-bold"
+                          onClick={handleWhatsApp}
+                        >
+                          <Zap className="h-3 w-3 mr-1" /> WhatsApp
+                        </Button>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="lg:col-span-8 space-y-6 text-left">
+              {/* DESCRIÇÃO */}
+              <div className="lg:col-span-8 space-y-6">
                 {job?.job_min_special_req && (
                   <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
                     <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
                       <AlertTriangle className="h-6 w-6 text-amber-500" /> {t("jobs.details.special_reqs")}
                     </h4>
                     <div className="bg-amber-50 rounded-xl p-5 border border-amber-100">
-                      <p className="text-sm text-amber-900">
-                        <span translate="yes">{job.job_min_special_req}</span>
+                      <p className="text-sm text-amber-900 leading-relaxed">
+                        <span>{job.job_min_special_req}</span>
                       </p>
                     </div>
                   </div>
                 )}
-                <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
-                  <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
-                    <Briefcase className="h-6 w-6 text-blue-600" /> {t("jobs.details.job_description")}
-                  </h4>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    <span translate="yes">{job?.job_duties}</span>
-                  </p>
-                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* FOOTER MOBILE */}
-        <div className="sm:hidden p-4 border-t bg-white flex gap-3 sticky bottom-0 z-50 shadow-lg">
+        {/* FOOTER MOBILE AJUSTADO E TRADUZIDO */}
+        <div className="sm:hidden p-4 border-t bg-white flex flex-col gap-3 sticky bottom-0 z-50 shadow-lg">
+          <div className="flex gap-3">
+            <Button
+              className="flex-1 font-bold h-12 text-base shadow-lg"
+              disabled={!canSaveJob}
+              onClick={() => job && onAddToQueue(job)}
+            >
+              {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job_mobile")}
+            </Button>
+          </div>
           <Button
-            className="flex-1 font-bold h-12 text-base shadow-lg"
-            disabled={!canSaveJob}
-            onClick={() => job && onAddToQueue(job)}
+            variant="ghost"
+            className="w-full text-slate-500 font-bold h-10 flex items-center justify-center gap-2"
+            onClick={() => onOpenChange(false)}
           >
-            {!canSaveJob && <Lock className="h-4 w-4 mr-2" />} {t("jobs.details.save_job_mobile")}
-          </Button>
-          <Button variant="outline" size="icon" className="h-12 w-12" onClick={handleShare}>
-            <Share2 className="h-5 w-5 text-slate-600" />
+            <ArrowLeft className="h-4 w-4" /> {t("common.back_to_list", "Back to Job List")}
           </Button>
         </div>
       </DialogContent>
