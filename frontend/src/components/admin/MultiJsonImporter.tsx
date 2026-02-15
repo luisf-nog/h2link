@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw, Database, FileJson, History } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import JSZip from "jszip";
 
@@ -64,9 +63,9 @@ export function MultiJsonImporter() {
     const rawJobsMap = new Map();
 
     try {
-      // 1. BACKUP E LIMPEZA
-      const { error: resetError } = await supabase.rpc("deactivate_all_jobs");
-      if (resetError) throw new Error("Erro no Backup/Reset: " + resetError.message);
+      // --- PROTEÇÃO ANTI-WIPE ---
+      // Removido o rpc "deactivate_all_jobs" para evitar que a fila dos usuários desapareça
+      // A lógica agora se baseia no UPSERT (conflito pelo fingerprint)
 
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
@@ -105,6 +104,13 @@ export function MultiJsonImporter() {
             const fingerprint = getCaseBody(rawId);
             const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
 
+            // --- CORREÇÃO DE DATA (BUG 15/02) ---
+            // Usamos a data local formatada para YYYY-MM-DD em vez de .toISOString() pura
+            // Isso evita que importações feitas à noite no Brasil saltem para o dia seguinte UTC
+            const todayLocal = new Date().toLocaleDateString("en-CA");
+            const postedDate =
+              formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"])) || todayLocal;
+
             rawJobsMap.set(fingerprint, {
               job_id: rawId.split("-GHOST")[0].trim(),
               visa_type: visaType,
@@ -121,36 +127,25 @@ export function MultiJsonImporter() {
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode", "zip"]),
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), hours),
               start_date: formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate"])),
-              posted_date:
-                formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE"])) ||
-                new Date().toISOString().split("T")[0],
+              posted_date: postedDate,
               end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
 
               job_duties: getVal(flat, ["tempneedDescription", "jobDuties"]),
 
-              // --- CORREÇÃO: ADICIONADAS CHAVES FALTANTES DO H-2A ---
-              job_min_special_req: getVal(flat, [
-                "jobMinspecialreq",
-                "jobAddReqinfo", // Chave crítica H-2A
-                "specialRequirements",
-              ]),
+              // --- CAMPOS ADICIONAIS H-2A ---
+              job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "specialRequirements"]),
 
               wage_additional: getVal(flat, [
                 "wageAdditional",
-                "jobSpecialPayInfo", // Chave crítica H-2A
+                "jobSpecialPayInfo",
                 "addSpecialPayInfo",
                 "wageAddinfo",
               ]),
 
-              rec_pay_deductions: getVal(flat, [
-                "recPayDeductions",
-                "jobPayDeduction", // Chave crítica H-2A
-                "deductionsInfo",
-              ]),
+              rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction", "deductionsInfo"]),
 
               weekly_hours: hours,
 
-              // --- CATEGORIA (Mantida do ajuste anterior) ---
               category:
                 getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle", "socCodeTitle", "SOC_TITLE"]) ||
                 "General Application",
@@ -174,7 +169,7 @@ export function MultiJsonImporter() {
       }
 
       const allJobs = Array.from(rawJobsMap.values());
-      const BATCH_SIZE = 1000;
+      const BATCH_SIZE = 500; // Reduzido para maior estabilidade
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
         const batch = allJobs.slice(i, i + BATCH_SIZE);
         const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
@@ -182,8 +177,8 @@ export function MultiJsonImporter() {
       }
 
       toast({
-        title: "Sincronização V64 (Full Data) Concluída!",
-        description: `${allJobs.length} vagas importadas com todos os detalhes adicionais.`,
+        title: "Sincronização V65 Concluída!",
+        description: `${allJobs.length} vagas processadas. A fila foi preservada e as datas corrigidas.`,
       });
       setFiles([]);
     } catch (err: any) {
@@ -199,10 +194,10 @@ export function MultiJsonImporter() {
         <div className="flex items-center justify-between text-left">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
-              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V64
+              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V65
             </CardTitle>
             <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
-              Mirror Sync & History Archiving (Full Data Patch)
+              Queue Protection & Local Date Sync (V65)
             </CardDescription>
           </div>
         </div>
@@ -211,8 +206,8 @@ export function MultiJsonImporter() {
         <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-start gap-3">
           <History className="h-5 w-5 text-indigo-600 mt-0.5" />
           <div className="text-xs text-indigo-900 leading-relaxed font-bold uppercase">
-            Sistema de Proteção de Selo 🚀: Agora capturando todos os campos adicionais (Deduções, Extras, Requisitos)
-            para H-2A.
+            SISTEMA ANTI-WIPE ATIVO 🛡️: As vagas existentes serão atualizadas via Upsert. A fila (my_queue) não será
+            mais resetada durante a importação.
           </div>
         </div>
 
@@ -241,7 +236,7 @@ export function MultiJsonImporter() {
           className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg border-b-4 border-indigo-900 active:translate-y-1"
         >
           {processing ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <RefreshCw className="mr-3 h-6 w-6" />}
-          SINCROZINAR E ARQUIVAR V64
+          IMPORTAR SEM APAGAR FILA
         </Button>
       </CardContent>
     </Card>
