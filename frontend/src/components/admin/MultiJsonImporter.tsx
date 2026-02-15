@@ -12,12 +12,10 @@ export function MultiJsonImporter() {
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
-  // --- HELPER: Cálculo de Salário ---
   const calculateFinalWage = (rawVal: any, hours: any) => {
     if (!rawVal) return null;
     let val = parseFloat(String(rawVal).replace(/[$,]/g, ""));
     if (isNaN(val) || val <= 0) return null;
-
     if (val > 100) {
       const h = hours && hours > 0 ? hours : 40;
       let calc = val / (h * 4.333);
@@ -26,11 +24,23 @@ export function MultiJsonImporter() {
     return val;
   };
 
-  const formatToISODate = (dateStr: any) => {
+  // --- HELPER DE DATA GLOBAL (STATIC DATE) ---
+  const formatToStaticDate = (dateStr: any) => {
     if (!dateStr || dateStr === "N/A") return null;
     try {
+      // Pegamos apenas os primeiros 10 caracteres (YYYY-MM-DD)
+      // Ignoramos completamente o "T04:00:00Z" que causa o pulo de dia
+      if (typeof dateStr === "string" && dateStr.includes("T")) {
+        return dateStr.split("T")[0];
+      }
       const d = new Date(dateStr);
-      return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
+      if (isNaN(d.getTime())) return null;
+
+      // Se for um objeto Date, extraímos o ano/mês/dia original do arquivo
+      const year = d.getUTCFullYear();
+      const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(d.getUTCDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     } catch {
       return null;
     }
@@ -62,8 +72,6 @@ export function MultiJsonImporter() {
     const rawJobsMap = new Map();
 
     try {
-      // --- PROTEÇÃO ANTI-WIPE (Fila preservada) ---
-
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents = [];
@@ -78,7 +86,6 @@ export function MultiJsonImporter() {
 
         for (const { filename, content } of contents) {
           const list = JSON.parse(content);
-
           const nameLower = filename.toLowerCase();
           const isEarly = nameLower.includes("jo") || nameLower.includes("_jo");
           const isH2B = nameLower.includes("h2b") && !nameLower.includes("h2a");
@@ -101,14 +108,17 @@ export function MultiJsonImporter() {
             const fingerprint = getCaseBody(rawId);
             const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
 
-            // --- AJUSTE DEFINITIVO DE DATA (PARA NÃO PULAR DIA APÓS AS 21H) ---
-            const now = new Date();
-            const offset = now.getTimezoneOffset() * 60000;
-            const localISOTime = new Date(now.getTime() - offset).toISOString().split("T")[0];
+            // --- LÓGICA DE DATA GLOBAL ---
+            // 1. Extraímos a data do arquivo sem deixar o JS converter fuso
+            const fileDate = formatToStaticDate(
+              getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"]),
+            );
 
-            const postedDate =
-              formatToISODate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"])) ||
-              localISOTime;
+            // 2. Fallback: Se não tem data no arquivo, usamos o dia atual UTC, mas cortado
+            // Isso garante que "hoje" seja o mesmo dia para o sistema inteiro
+            const todayUTC = new Date().toISOString().split("T")[0];
+
+            const postedDate = fileDate || todayUTC;
 
             rawJobsMap.set(fingerprint, {
               job_id: rawId.split("-GHOST")[0].trim(),
@@ -123,9 +133,9 @@ export function MultiJsonImporter() {
               state: getVal(flat, ["jobState", "state"]),
               zip_code: getVal(flat, ["jobPostcode", "empPostalCode", "zip"]),
               salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), hours),
-              start_date: formatToISODate(getVal(flat, ["tempneedStart", "jobBeginDate"])),
+              start_date: formatToStaticDate(getVal(flat, ["tempneedStart", "jobBeginDate"])),
               posted_date: postedDate,
-              end_date: formatToISODate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
+              end_date: formatToStaticDate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
               job_duties: getVal(flat, ["tempneedDescription", "jobDuties"]),
               job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "specialRequirements"]),
               wage_additional: getVal(flat, [
@@ -165,8 +175,8 @@ export function MultiJsonImporter() {
       }
 
       toast({
-        title: "Sincronização V65 Concluída!",
-        description: `${allJobs.length} vagas processadas com sucesso.`,
+        title: "Sincronização V67 Concluída!",
+        description: `${allJobs.length} vagas sincronizadas com Data Global (Static).`,
       });
       setFiles([]);
     } catch (err: any) {
@@ -182,19 +192,20 @@ export function MultiJsonImporter() {
         <div className="flex items-center justify-between text-left">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
-              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V65
+              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V67
             </CardTitle>
             <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
-              TimeZone Correction & Queue Protection (V65)
+              Global Static Date (No-Timezone) & Queue Protection
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-8 space-y-6 bg-white text-left">
-        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-start gap-3">
-          <History className="h-5 w-5 text-indigo-600 mt-0.5" />
-          <div className="text-xs text-indigo-900 leading-relaxed font-bold uppercase">
-            🛡️ PROTEÇÃO ATIVA: Data de hoje corrigida para o fuso horário local e fila preservada.
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3">
+          <RefreshCw className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div className="text-xs text-blue-900 font-bold uppercase leading-tight">
+            DATA GLOBAL ATIVA: O sistema agora ignora fusos horários e fixa a data do calendário. Isso elimina o erro de
+            vagas aparecendo com data de "amanhã".
           </div>
         </div>
 
@@ -223,7 +234,7 @@ export function MultiJsonImporter() {
           className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg active:translate-y-1"
         >
           {processing ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <RefreshCw className="mr-3 h-6 w-6" />}
-          SINCROZINAR DADOS V65
+          SINCROZINAR V67 (STATIC DATE)
         </Button>
       </CardContent>
     </Card>
