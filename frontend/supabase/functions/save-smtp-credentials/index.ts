@@ -6,61 +6,85 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ... (types e helpers json/requireEnv permanecem iguais)
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // ... (lógica de auth e userId permanece igual até o body)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
 
-    const body: SaveSmtpRequest = await req.json();
-    const provider: Provider = body.provider === "outlook" ? "outlook" : "gmail";
-    const email = String(body.email ?? "").trim();
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // --- LÓGICA DE LIMPEZA DA SENHA ---
-    // Remove espaços internos e garante que são apenas letras minúsculas
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+    if (userError || !user) throw new Error("Unauthorized");
+
+    const body = await req.json();
+
+    // --- LIMPEZA E NORMALIZAÇÃO ---
+    const provider = String(body.provider ?? "gmail").toLowerCase();
+    const email = String(body.email ?? "")
+      .trim()
+      .toLowerCase();
+
+    // Remove todos os espaços e força minúsculas (Padrão Gmail)
     const rawPassword = typeof body.password === "string" ? body.password : "";
     const password = rawPassword.replace(/\s/g, "").toLowerCase();
 
-    // --- VALIDAÇÃO ANTES DE IR AO BANCO ---
-    // Se enviou senha, ela PRECISA ter 16 letras. Se não, barramos aqui com erro amigável.
+    // Validação de segurança para evitar o Pattern Mismatch no Banco
     if (password.length > 0 && !/^[a-z]{16}$/.test(password)) {
-      return json(400, {
-        success: false,
-        error: "A senha de app deve ter exatamente 16 letras (sem números ou espaços).",
+      return new Response(JSON.stringify({ success: false, error: "A senha deve ter 16 letras minúsculas." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const riskProfile = ["conservative", "standard", "aggressive"].includes(body.risk_profile ?? "")
-      ? (body.risk_profile as RiskProfile)
-      : null;
+    const { data: existing } = await supabase
+      .from("smtp_credentials")
+      .select("warmup_started_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (!email) return json(400, { success: false, error: "Missing email" });
+    const upsertData: any = {
+      user_id: user.id,
+      provider,
+      email,
+      updated_at: new Date().toISOString(),
+    };
 
-    const supabaseUrl = requireEnv("SUPABASE_URL");
-    const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-
-    // ... (Restante da lógica de warmup e upsert na smtp_credentials permanece igual)
-
-    // 4. Upsert da Senha na tabela de secrets
-    if (password.length > 0) {
-      const { error: secretError } = await serviceClient
-        .from("smtp_credentials_secrets")
-        .upsert({ user_id: userId, password }, { onConflict: "user_id" });
-
-      if (secretError) {
-        // Se ainda der erro de padrão aqui, o log vai nos dizer exatamente o que o banco rejeitou
-        console.error("Erro de Constraint no Banco:", secretError);
-        throw new Error("O formato da senha foi rejeitado pelo banco de dados.");
+    if (body.risk_profile) {
+      upsertData.risk_profile = body.risk_profile;
+      if (!existing?.warmup_started_at) {
+        upsertData.warmup_started_at = new Date().toISOString().slice(0, 10);
+        const limits: any = { conservative: 50, standard: 100, aggressive: 150 };
+        upsertData.current_daily_limit = limits[body.risk_profile] || 100;
+        upsertData.emails_sent_today = 0;
       }
     }
 
-    return json(200, { success: true });
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Failed to save SMTP";
-    return json(500, { success: false, error: errorMessage });
+    const { error: dbError } = await supabase.from("smtp_credentials").upsert(upsertData, { onConflict: "user_id" });
+    if (dbError) throw dbError;
+
+    if (password.length > 0) {
+      const { error: secretError } = await supabase
+        .from("smtp_credentials_secrets")
+        .upsert({ user_id: user.id, password }, { onConflict: "user_id" });
+      if (secretError) throw secretError;
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
