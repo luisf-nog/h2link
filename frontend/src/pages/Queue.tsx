@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PLANS_CONFIG } from "@/config/plans.config";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,48 +14,81 @@ import {
   Loader2,
   RefreshCw,
   History,
+  Lock,
   FileText,
+  AlertCircle,
   Eye,
   Clock,
   Flame,
   ExternalLink,
-  Mail,
-  Zap,
 } from "lucide-react";
+import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
+import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
 import { SendHistoryDialog } from "@/components/queue/SendHistoryDialog";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
+import { SendingStatusCard } from "@/components/queue/SendingStatusCard";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, type Locale } from "date-fns";
+import { ptBR, enUS, es } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface QueueItem {
   id: string;
   status: string;
   sent_at: string | null;
+  opened_at?: string | null;
+  profile_viewed_at?: string | null;
+  tracking_id?: string;
   created_at: string;
   send_count: number;
   last_error?: string | null;
-  job_title: string;
-  company: string;
-  token: string;
+  // V68 tracking fields
   view_count: number;
   total_duration_seconds: number;
-  last_view_at: string | null;
-  user_id: string;
+  last_view_at?: string | null;
+  token?: string;
+  public_jobs: {
+    id: string;
+    job_title: string;
+    company: string;
+    email: string;
+    city: string;
+    state: string;
+    visa_type?: string | null;
+  } | null;
+  manual_jobs: {
+    id: string;
+    company: string;
+    job_title: string;
+    email: string;
+    eta_number: string | null;
+    phone: string | null;
+  } | null;
 }
+
+const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
 
 export default function Queue() {
   const { profile, refreshProfile } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -67,6 +100,18 @@ export default function Queue() {
   const dailyLimitTotal =
     (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + Number((profile as any)?.referral_bonus_limit ?? 0);
   const creditsUsedToday = profile?.credits_used_today || 0;
+  const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
+
+  useEffect(() => {
+    fetchQueue();
+    const channel = supabase
+      .channel("queue_updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
   const fetchQueue = async () => {
     if (!profile?.id) return;
@@ -80,68 +125,25 @@ export default function Queue() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchQueue();
-    const channel = supabase
-      .channel("rt-stats")
-      .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.id]);
-
   const renderResumeStatus = (item: QueueItem) => {
     const views = Number(item.view_count) || 0;
-    const duration = Number(item.total_duration_seconds) || 0;
     const hasViews = views > 0;
-    const isHighInterest = views >= 3 || duration > 45;
-
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="relative inline-block cursor-help">
-            <div
-              className={cn(
-                "p-2 rounded-xl transition-all border",
-                hasViews
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                  : "bg-slate-50 border-slate-100 text-slate-200",
-              )}
-            >
-              <FileText className={cn("h-5 w-5", isHighInterest && "animate-pulse")} />
-              {hasViews && (
-                <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[8px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center border border-white">
-                  {views}
-                </span>
-              )}
-            </div>
+          <div className="flex justify-center">
+            <FileText className={cn("h-4 w-4", hasViews ? "text-success" : "text-muted-foreground")} />
           </div>
         </TooltipTrigger>
-        <TooltipContent className="p-0 w-64 bg-slate-900 text-white border-slate-800 shadow-2xl rounded-2xl overflow-hidden">
-          <div className="p-4 space-y-3 text-left text-[10px]">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="font-black uppercase tracking-widest text-slate-500">Analytics</span>
-              {isHighInterest && <Badge className="bg-orange-500 text-[8px] h-4 font-black">HOT LEAD</Badge>}
+        <TooltipContent>
+          {hasViews ? (
+            <div className="text-xs">
+              <p className="font-bold">Visualizado: {views}x</p>
+              <p>Tempo: {item.total_duration_seconds}s</p>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Visto:</span>
-                <span className="font-bold">{views}x</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Leitura:</span>
-                <span className="font-bold">{duration}s</span>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              className="w-full h-8 text-[9px] font-bold bg-slate-800 hover:bg-white hover:text-slate-900 border border-slate-700 uppercase"
-              onClick={() => window.open(`/profile/${item.token}?q=${item.id}&s=${Date.now()}`, "_blank")}
-            >
-              Testar Link
-            </Button>
-          </div>
+          ) : (
+            <p className="text-xs">CV não visualizado</p>
+          )}
         </TooltipContent>
       </Tooltip>
     );
@@ -149,184 +151,155 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const pendingCount = pendingItems.length;
-  const allPendingSelected = pendingItems.length > 0 && Object.keys(selectedIds).length === pendingCount;
+  const sentCount = creditsUsedToday;
+  const allPendingSelected =
+    pendingItems.length > 0 && Object.keys(selectedIds).filter((id) => selectedIds[id]).length === pendingItems.length;
 
   return (
-    <div className="space-y-6 text-left max-w-7xl mx-auto p-4 sm:p-0">
+    <div className="space-y-6">
       <SendHistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         queueId={historyItem?.id ?? ""}
-        jobTitle={historyItem?.job_title ?? ""}
-        company={historyItem?.company ?? ""}
+        jobTitle={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.job_title ?? ""}
+        company={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.company ?? ""}
       />
 
-      {/* HEADER - DESIGN ORIGINAL */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
         <div>
-          <h1 className="text-4xl font-black italic text-[#0F172A] uppercase tracking-tighter">
-            MINHA FILA INTELIGENTE
-          </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {pendingCount} PENDING • {creditsUsedToday} SENT
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">{t("queue.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("queue.subtitle", { pendingCount, sentCount })}</p>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex gap-2 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
-          <Button
-            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-black italic px-8 py-6 rounded-2xl shadow-[0_10px_20px_-5px_rgba(79,70,229,0.4)] transition-all active:scale-95"
-            onClick={() => navigate("/jobs")}
-          >
-            <Send className="h-4 w-4 mr-2" /> SEND ALL ({pendingCount})
+          <Button onClick={() => navigate("/jobs")} disabled={pendingCount === 0 || loading}>
+            <Send className="h-4 w-4 mr-2" />
+            {t("queue.actions.send", { pendingCount })}
           </Button>
         </div>
       </div>
 
-      {/* STATS CARDS - DESIGN ORIGINAL */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <Card className="rounded-[2rem] border-2 shadow-sm p-4">
-          <CardHeader className="p-0 mb-1">
-            <CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">
-              Prontos para Envio
-            </CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">{t("queue.stats.in_queue")}</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 text-5xl font-black italic tracking-tighter">{pendingCount}</CardContent>
-        </Card>
-        <Card className="rounded-[2rem] border-2 shadow-sm p-4 border-indigo-100">
-          <CardHeader className="p-0 mb-1">
-            <CardTitle className="text-[10px] font-bold uppercase text-indigo-400 tracking-widest">
-              Disparados Hoje
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 text-5xl font-black italic tracking-tighter text-indigo-700">
-            {creditsUsedToday}
+          <CardContent>
+            <p className="text-3xl font-bold">{formatNumber(pendingCount)}</p>
           </CardContent>
         </Card>
-        <Card className="rounded-[2rem] border-2 shadow-sm p-4">
-          <CardHeader className="p-0 mb-1">
-            <CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">
-              Limite do Plano
-            </CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">{t("queue.stats.sent_today")}</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 text-5xl font-black italic tracking-tighter">{dailyLimitTotal}</CardContent>
+          <CardContent>
+            <p className="text-3xl font-bold">{formatNumber(sentCount)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">{t("queue.stats.daily_limit")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{dailyLimitTotal}</p>
+          </CardContent>
         </Card>
       </div>
 
-      {/* TABLE SECTION */}
       <TooltipProvider>
-        <Card className="rounded-[2.5rem] border-0 shadow-2xl overflow-hidden bg-white">
-          <Table>
-            <TableHeader className="bg-white border-b border-slate-50">
-              <TableRow>
-                <TableHead className="w-12 px-6 py-8">
-                  <Checkbox
-                    checked={allPendingSelected}
-                    onCheckedChange={(v) => {
-                      const next: Record<string, boolean> = {};
-                      if (v) pendingItems.forEach((it) => (next[it.id] = true));
-                      setSelectedIds(next);
-                    }}
-                  />
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest p-6">
-                  Oportunidade / Empresa
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest p-6 text-center">
-                  Status de Envio
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest p-6 text-center">
-                  Inteligência (CV)
-                </TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest p-6 text-right">
-                  Ações
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+        <Card className="text-left">
+          <CardHeader>
+            <CardTitle>{t("queue.table.title")}</CardTitle>
+            <CardDescription>{t("queue.table.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="py-20 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-slate-200" />
-                  </TableCell>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allPendingSelected}
+                      onCheckedChange={(v) => {
+                        const next: Record<string, boolean> = {};
+                        if (v) pendingItems.forEach((it) => (next[it.id] = true));
+                        setSelectedIds(next);
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>{t("queue.table.headers.job_title")}</TableHead>
+                  <TableHead>{t("queue.table.headers.company")}</TableHead>
+                  <TableHead>{t("queue.table.headers.status")}</TableHead>
+                  <TableHead className="w-14 text-center">CV</TableHead>
+                  <TableHead className="text-right">{t("queue.table.headers.action")}</TableHead>
                 </TableRow>
-              ) : (
-                queue.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className="hover:bg-slate-50/50 transition-colors group border-b border-slate-50"
-                  >
-                    <TableCell className="px-6 py-8">
-                      <Checkbox
-                        checked={!!selectedIds[item.id]}
-                        onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [item.id]: !!v }))}
-                      />
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      {t("queue.table.loading")}
                     </TableCell>
-                    <TableCell className="p-6">
-                      <div className="flex items-center gap-3">
-                        <Zap className="h-4 w-4 text-[#4F46E5] fill-[#4F46E5] opacity-70 shrink-0" />
-                        <div className="flex flex-col">
-                          <span
-                            className="font-black text-slate-900 uppercase tracking-tighter text-lg leading-tight"
-                            translate="no"
-                          >
-                            {item.company}
-                          </span>
-                          <span
-                            className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5"
-                            translate="no"
-                          >
-                            {item.job_title}
-                          </span>
-                        </div>
-                      </div>
+                  </TableRow>
+                ) : queue.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      {t("queue.table.empty")}
                     </TableCell>
-                    <TableCell className="p-6 text-center">
-                      <Badge
-                        className={cn(
-                          "uppercase text-[9px] font-black px-3 py-1 border-none shadow-none",
-                          item.status === "sent" ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-400",
-                        )}
-                      >
-                        {item.status.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="p-6 text-center">{renderResumeStatus(item)}</TableCell>
-                    <TableCell className="p-6 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {item.send_count > 0 && (
+                  </TableRow>
+                ) : (
+                  queue.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={!!selectedIds[item.id]}
+                          onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [item.id]: !!v }))}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{item.job_title}</TableCell>
+                      <TableCell>{item.company}</TableCell>
+                      <TableCell>
+                        <Badge variant={item.status === "sent" ? "default" : "secondary"}>
+                          {item.status === "sent" ? t("queue.status.sent") : t("queue.status.pending")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{renderResumeStatus(item)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {item.send_count > 0 && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setHistoryItem(item);
+                                setHistoryDialogOpen(true);
+                              }}
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 rounded-lg"
-                            onClick={() => {
-                              setHistoryItem(item);
-                              setHistoryDialogOpen(true);
-                            }}
+                            className="text-destructive"
+                            onClick={() =>
+                              supabase
+                                .from("my_queue")
+                                .delete()
+                                .eq("id", item.id)
+                                .then(() => fetchQueue())
+                            }
                           >
-                            <History className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-lg text-red-500"
-                          onClick={() =>
-                            supabase
-                              .from("my_queue")
-                              .delete()
-                              .eq("id", item.id)
-                              .then(() => fetchQueue())
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
       </TooltipProvider>
     </div>
