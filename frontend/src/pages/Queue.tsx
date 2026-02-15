@@ -20,25 +20,21 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
 import { cn } from "@/lib/utils";
 
-// CORREÇÃO: Interface completa compatível com MobileQueueCard
-export interface QueueItem {
+// Interface compatível com a estrutura aninhada (Nested)
+interface QueueItem {
   id: string;
   status: string;
   sent_at: string | null;
   created_at: string;
   send_count: number;
   last_error?: string | null;
-  // Campos da View (Flat)
-  job_title?: string;
-  company?: string;
-  contact_email?: string;
-  visa_type?: string;
+  // Campos de Rastreio (View)
+  view_count: number;
+  total_duration_seconds: number;
+  last_view_at: string | null;
   token?: string;
-  view_count?: number;
-  total_duration_seconds?: number;
-  last_view_at?: string | null;
   user_id: string;
-  // Campos de Relação (Necessários para tipagem estrita do MobileCard)
+  // Dados Relacionados (A fonte segura dos dados)
   public_jobs: {
     id: string;
     job_title: string;
@@ -84,24 +80,27 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
-  // FETCH: Busca dados completos para satisfazer a tipagem
+  // FETCH SEGURO: Busca explicitamente as relações para não vir vazio
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
+    // Voltamos a usar o select robusto que funcionava antes
     const { data, error } = await supabase
-      .from("queue_with_stats")
+      .from("queue_with_stats") // Usa a view para pegar as stats...
       .select(
         `
         *,
         public_jobs (id, job_title, company, email, city, state, visa_type),
         manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
-      )
+      ) // ...mas pede os dados das tabelas originais explicitamente
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
     if (!error) {
       setQueue((data as unknown as QueueItem[]) || []);
+    } else {
+      console.error("Erro fetch:", error);
     }
     setLoading(false);
   };
@@ -109,7 +108,7 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
     const channel = supabase
-      .channel("queue_build_fix")
+      .channel("queue_final_fix")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
       .subscribe();
     return () => {
@@ -117,6 +116,7 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
+  // LÓGICA DE ENVIO SEGURA (Resolve o erro 400)
   const sendQueueItems = async (items: QueueItem[]) => {
     if (remainingToday <= 0) {
       toast({ title: "Limite diário atingido", variant: "destructive" });
@@ -130,28 +130,30 @@ export default function Queue() {
       .order("created_at", { ascending: false });
 
     for (const item of items) {
-      // Prioridade: View > Relação
-      const targetEmail = item.contact_email || item.public_jobs?.email || item.manual_jobs?.email;
+      // PROCURA O E-MAIL DENTRO DOS OBJETOS ANINHADOS
+      const targetEmail = item.public_jobs?.email || item.manual_jobs?.email;
+      const targetJob = item.public_jobs?.job_title || item.manual_jobs?.job_title || "Job Opportunity";
 
+      // Se não achar e-mail, pula o item silenciosamente ou avisa no console
       if (!targetEmail) {
-        console.warn(`Item ${item.id} pulado: Sem e-mail.`);
+        console.warn(`Item ${item.id} pulado: E-mail não encontrado nas relações.`);
         continue;
       }
 
-      const displayTitle = item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
       const template = templates?.[0] || {
-        subject: `Application for ${displayTitle}`,
+        subject: `Application for ${targetJob}`,
         body: "Hello, please find my resume attached.",
       };
       let finalBody = template.body;
 
-      const vType = item.visa_type || item.public_jobs?.visa_type;
+      const vType = item.public_jobs?.visa_type;
       if (vType?.toLowerCase().includes("early access")) {
         finalBody =
           EARLY_ACCESS_VARIATIONS[Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length)] + "\n\n" + finalBody;
       }
 
       try {
+        // Envia com os dados garantidos
         const { error } = await supabase.functions.invoke("send-email-custom", {
           body: {
             to: targetEmail,
@@ -163,11 +165,13 @@ export default function Queue() {
         });
 
         if (error) throw error;
+
+        // Atualiza status local
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
       } catch (e) {
-        console.error(`Erro item ${item.id}:`, e);
+        console.error(`Erro ao enviar item ${item.id}:`, e);
       }
 
       await new Promise((r) => setTimeout(r, 500));
@@ -181,8 +185,11 @@ export default function Queue() {
 
   const handleSendAll = () => {
     const items = queue.filter((q) => q.status === "pending").slice(0, remainingToday);
-    if (items.length > 0) sendQueueItems(items);
-    else toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
+    if (items.length > 0) {
+      sendQueueItems(items);
+    } else {
+      toast({ title: "Nada para enviar", description: "Fila vazia ou limite atingido." });
+    }
   };
 
   const removeFromQueue = async (id: string) => {
@@ -191,10 +198,10 @@ export default function Queue() {
     toast({ title: "Item removido" });
   };
 
-  // Helper de exibição seguro
+  // Helper para exibir dados na tabela (resolve dados em branco)
   const getDisplay = (item: QueueItem) => ({
-    title: item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
-    company: item.company || item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
+    title: item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
+    company: item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
   });
 
   const renderAnalytics = (item: QueueItem) => {
