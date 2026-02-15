@@ -24,23 +24,13 @@ export function MultiJsonImporter() {
     return val;
   };
 
-  // --- HELPER DE DATA GLOBAL (STATIC DATE) ---
   const formatToStaticDate = (dateStr: any) => {
     if (!dateStr || dateStr === "N/A") return null;
     try {
-      // Pegamos apenas os primeiros 10 caracteres (YYYY-MM-DD)
-      // Ignoramos completamente o "T04:00:00Z" que causa o pulo de dia
-      if (typeof dateStr === "string" && dateStr.includes("T")) {
-        return dateStr.split("T")[0];
-      }
+      if (typeof dateStr === "string" && dateStr.includes("T")) return dateStr.split("T")[0];
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-
-      // Se for um objeto Date, extraímos o ano/mês/dia original do arquivo
-      const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-      const day = String(d.getUTCDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
+      return d.toISOString().split("T")[0];
     } catch {
       return null;
     }
@@ -59,9 +49,7 @@ export function MultiJsonImporter() {
     if (!obj) return null;
     for (const key of keys) {
       const val = obj[key] ?? obj[key?.toLowerCase()];
-      if (val !== undefined && val !== null && String(val).trim() !== "") {
-        return String(val).trim();
-      }
+      if (val !== undefined && val !== null && String(val).trim() !== "") return String(val).trim();
     }
     return null;
   };
@@ -75,7 +63,6 @@ export function MultiJsonImporter() {
       for (const file of files) {
         const isZip = file.name.endsWith(".zip");
         let contents = [];
-
         if (isZip) {
           const zip = await new JSZip().loadAsync(file);
           const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
@@ -98,27 +85,18 @@ export function MultiJsonImporter() {
               ...(item.jobRequirements?.qualification || {}),
               ...(item.employer || {}),
             };
-
             const rawId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
             if (!rawId) return;
-
             const email = getVal(flat, ["recApplyEmail", "email"]);
             if (!email || email === "N/A") return;
 
             const fingerprint = getCaseBody(rawId);
             const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
 
-            // --- LÓGICA DE DATA GLOBAL ---
-            // 1. Extraímos a data do arquivo sem deixar o JS converter fuso
-            const fileDate = formatToStaticDate(
-              getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"]),
-            );
-
-            // 2. Fallback: Se não tem data no arquivo, usamos o dia atual UTC, mas cortado
-            // Isso garante que "hoje" seja o mesmo dia para o sistema inteiro
-            const todayUTC = new Date().toISOString().split("T")[0];
-
-            const postedDate = fileDate || todayUTC;
+            // DATA GLOBAL: Baseada em New York (Onde o DOL opera)
+            const nyToday = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+            const postedDate =
+              formatToStaticDate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"])) || nyToday;
 
             rawJobsMap.set(fingerprint, {
               job_id: rawId.split("-GHOST")[0].trim(),
@@ -169,15 +147,10 @@ export function MultiJsonImporter() {
       const allJobs = Array.from(rawJobsMap.values());
       const BATCH_SIZE = 500;
       for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
-        const batch = allJobs.slice(i, i + BATCH_SIZE);
-        const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
-        if (error) throw error;
+        await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
       }
 
-      toast({
-        title: "Sincronização V67 Concluída!",
-        description: `${allJobs.length} vagas sincronizadas com Data Global (Static).`,
-      });
+      toast({ title: "Sincronização V68 Concluída!", description: "Dados e datas atualizados com sucesso." });
       setFiles([]);
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });
@@ -189,52 +162,18 @@ export function MultiJsonImporter() {
   return (
     <Card className="border-4 border-indigo-700 shadow-2xl overflow-hidden">
       <CardHeader className="bg-indigo-700 text-white p-6">
-        <div className="flex items-center justify-between text-left">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
-              <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V67
-            </CardTitle>
-            <CardDescription className="text-indigo-100 font-bold uppercase text-[10px] tracking-widest">
-              Global Static Date (No-Timezone) & Queue Protection
-            </CardDescription>
-          </div>
-        </div>
+        <CardTitle className="flex items-center gap-2 text-2xl font-black italic uppercase tracking-tighter">
+          <Database className="h-7 w-7 text-indigo-300" /> H2 Linker Master V68
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-8 space-y-6 bg-white text-left">
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3">
-          <RefreshCw className="h-5 w-5 text-blue-600 mt-0.5" />
-          <div className="text-xs text-blue-900 font-bold uppercase leading-tight">
-            DATA GLOBAL ATIVA: O sistema agora ignora fusos horários e fixa a data do calendário. Isso elimina o erro de
-            vagas aparecendo com data de "amanhã".
-          </div>
-        </div>
-
-        <div className="grid w-full items-center gap-4">
-          <Label className="text-xs font-black uppercase text-slate-500 tracking-widest text-left">
-            Arquivos DOL (.json / .zip)
-          </Label>
-          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100">
-            <FileJson className="w-10 h-10 mb-3 text-slate-400" />
-            <p className="text-sm text-slate-500 font-bold">
-              {files.length > 0 ? `${files.length} selecionados` : "Clique para upload"}
-            </p>
-            <input
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => setFiles(Array.from(e.target.files || []))}
-              accept=".json,.zip"
-            />
-          </label>
-        </div>
-
         <Button
           onClick={processJobs}
           disabled={processing || files.length === 0}
           className="w-full h-16 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-xl shadow-lg active:translate-y-1"
         >
           {processing ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <RefreshCw className="mr-3 h-6 w-6" />}
-          SINCROZINAR V67 (STATIC DATE)
+          SINCROZINAR AGORA (DATA FIX)
         </Button>
       </CardContent>
     </Card>
