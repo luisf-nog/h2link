@@ -1,17 +1,7 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
-import {
-  Upload,
-  FileText,
-  Loader2,
-  Download,
-  ArrowRight,
-  CheckCircle,
-  Sparkles,
-  AlertCircle,
-  Info,
-} from "lucide-react";
+import { Upload, FileText, Loader2, Download, CheckCircle, Sparkles, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractTextFromPDF } from "@/lib/pdf";
 import { extractTextFromDOCX } from "@/lib/docx";
@@ -23,9 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils"; // <-- IMPORTAÇÃO CORRIGIDA AQUI
 
-// --- Tipagens e Opções ---
+// --- Tipagens ---
 type Niche = "h2a" | "h2b_hospitality" | "h2b_construction" | "h2b_landscaping" | "h2b_warehouse" | "generic";
 
 interface SafeResumeData {
@@ -41,6 +32,7 @@ type Step = "idle" | "reading" | "translating" | "formatting" | "done" | "error"
 
 export default function ResumeConverter() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [step, setStep] = useState<Step>("idle");
   const [resume, setResume] = useState<SafeResumeData | null>(null);
 
@@ -77,7 +69,6 @@ export default function ResumeConverter() {
 
         setStep("translating");
 
-        // Enviamos o texto original + todos os marcadores de contexto
         const { data, error } = await supabase.functions.invoke("convert-resume", {
           body: {
             raw_text: rawText,
@@ -91,6 +82,7 @@ export default function ResumeConverter() {
         });
 
         if (error) throw error;
+
         setStep("formatting");
         setResume(data);
         setStep("done");
@@ -100,7 +92,7 @@ export default function ResumeConverter() {
         toast({ title: "Error", description: err.message, variant: "destructive" });
       }
     },
-    [niche, selections, englishLevel, extraInfo],
+    [niche, selections, englishLevel, extraInfo, toast],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -110,7 +102,7 @@ export default function ResumeConverter() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 p-6">
+    <div className="max-w-5xl mx-auto space-y-6 p-6 text-left">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Resume Converter</h1>
         <p className="text-muted-foreground">Transform your CV into a US-standard resume tailored for H-2 visas.</p>
@@ -118,17 +110,13 @@ export default function ResumeConverter() {
 
       {step !== "done" && (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* LADO ESQUERDO: FORMULÁRIO DE CONTEXTO */}
           <div className="md:col-span-7 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">1. Job Target & Capabilities</CardTitle>
-                <CardDescription>
-                  This information will be used to create a strong "Capability Section".
-                </CardDescription>
+                <CardDescription>Select your niche and physical capabilities for the US market.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Tipo de Vaga */}
                 <div className="space-y-3">
                   <Label className="font-bold">Job Type (Required)</Label>
                   <Select onValueChange={(v) => setNiche(v as Niche)}>
@@ -146,19 +134,23 @@ export default function ResumeConverter() {
                   </Select>
                 </div>
 
-                {/* Disponibilidade */}
                 <div className="space-y-3">
-                  <Label className="font-bold">Availability</Label>
-                  <div className="grid grid-cols-1 gap-2">
+                  <Label className="font-bold">Availability & Capability</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                     {[
-                      { id: "shifts", label: "Available for 8–12 hour shifts" },
-                      { id: "weekends", label: "Available for weekends / holidays" },
-                      { id: "relocate", label: "Willing to relocate anywhere in the U.S." },
-                      { id: "immediate", label: "Available to start immediately" },
+                      { id: "shifts", label: "8–12 hour shifts" },
+                      { id: "weekends", label: "Weekends / Holidays" },
+                      { id: "relocate", label: "Willing to relocate" },
+                      { id: "lift50", label: "Lift 50 lbs / 23 kg" },
+                      { id: "standing", label: "Long periods standing" },
+                      { id: "weather", label: "Extreme heat/cold" },
                     ].map((item) => (
                       <div key={item.id} className="flex items-center space-x-2">
                         <Checkbox id={item.id} onCheckedChange={() => handleCheckbox(item.id)} />
-                        <label htmlFor={item.id} className="text-sm leading-none">
+                        <label
+                          htmlFor={item.id}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
                           {item.label}
                         </label>
                       </div>
@@ -166,72 +158,57 @@ export default function ResumeConverter() {
                   </div>
                 </div>
 
-                {/* Capacidade Física */}
                 <div className="space-y-3">
-                  <Label className="font-bold">Physical Capability</Label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {[
-                      { id: "lift50", label: "Able to lift 50 lbs / 23 kg" },
-                      { id: "standing", label: "Comfortable standing for long periods" },
-                      { id: "weather", label: "Comfortable working in extreme heat/cold" },
-                      { id: "fastpace", label: "Comfortable working at a fast pace" },
-                    ].map((item) => (
-                      <div key={item.id} className="flex items-center space-x-2">
-                        <Checkbox id={item.id} onCheckedChange={() => handleCheckbox(item.id)} />
-                        <label htmlFor={item.id} className="text-sm leading-none">
-                          {item.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Idioma */}
-                <div className="space-y-3">
-                  <Label className="font-bold">English Communication</Label>
+                  <Label className="font-bold">English Level</Label>
                   <Select onValueChange={setEnglishLevel} defaultValue="basic">
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None / Very Basic</SelectItem>
-                      <SelectItem value="basic">Basic (Can follow instructions)</SelectItem>
-                      <SelectItem value="intermediate">Intermediate / Conversation</SelectItem>
+                      <SelectItem value="basic">Basic (Instructions only)</SelectItem>
+                      <SelectItem value="intermediate">Intermediate / Conversational</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-bold">Specific Experience (Optional)</Label>
+                  <Textarea
+                    placeholder="List specific machines you operate or specific tasks..."
+                    value={extraInfo}
+                    onChange={(e) => setExtraInfo(e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* LADO DIREITO: UPLOAD */}
-          <div className="md:col-span-5 flex flex-col gap-6">
-            <Card className="flex-1 flex flex-col">
+          <div className="md:col-span-5">
+            <Card className="h-full">
               <CardHeader>
-                <CardTitle className="text-lg">2. Original CV</CardTitle>
-                <CardDescription>Upload your current file.</CardDescription>
+                <CardTitle className="text-lg">2. Upload File</CardTitle>
+                <CardDescription>Upload your current CV.</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
+              <CardContent>
                 <div
                   {...getRootProps()}
                   className={cn(
-                    "flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-6 text-center transition-colors cursor-pointer",
+                    "border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-12 text-center transition-colors cursor-pointer min-h-[300px]",
                     isDragActive ? "border-primary bg-primary/5" : "border-muted",
                   )}
                 >
                   <input {...getInputProps()} />
                   {step === "idle" || step === "error" ? (
                     <>
-                      <Upload className="h-8 w-8 text-muted-foreground mb-4" />
-                      <p className="text-sm font-medium">Click or drag your PDF/DOCX</p>
-                      <p className="text-xs text-muted-foreground mt-1 italic">
-                        The AI will combine this file with your choices.
-                      </p>
+                      <Upload className="h-10 w-10 text-muted-foreground mb-4" />
+                      <p className="text-sm font-bold">Drop your CV here</p>
+                      <p className="text-xs text-muted-foreground mt-2 italic">PDF or DOCX supported.</p>
                     </>
                   ) : (
-                    <div className="space-y-4 w-full">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                      <p className="text-sm font-bold animate-pulse uppercase tracking-wider">{step}...</p>
+                    <div className="space-y-4">
+                      <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
+                      <p className="text-sm font-bold animate-pulse uppercase">{step}...</p>
                     </div>
                   )}
                 </div>
@@ -241,13 +218,12 @@ export default function ResumeConverter() {
         </div>
       )}
 
-      {/* RESULTADO (EDITOR) */}
       {step === "done" && resume && (
         <Card className="animate-in fade-in zoom-in-95 duration-300">
           <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
             <div>
               <CardTitle>Resume Ready</CardTitle>
-              <CardDescription>Review the US-optimized version below.</CardDescription>
+              <CardDescription>Optimized for US H-2 Recruiters.</CardDescription>
             </div>
             <Button
               onClick={() => {
@@ -259,19 +235,16 @@ export default function ResumeConverter() {
             </Button>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label className="text-primary font-bold">Generated Content (Editable)</Label>
-                <Textarea
-                  className="min-h-[400px] font-mono text-sm"
-                  value={
-                    resume.summary + "\n\n" + resume.experience.map((e) => `${e.title}\n${e.company}`).join("\n\n")
-                  }
-                  readOnly
-                />
-              </div>
-              <div className="bg-slate-50 rounded-lg p-6 border flex items-center justify-center text-muted-foreground italic text-sm">
-                PDF Preview will be generated upon download.
+            <div className="bg-slate-50 border rounded-xl p-8 min-h-[400px] flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="bg-emerald-100 p-4 rounded-full w-fit mx-auto">
+                  <CheckCircle className="h-8 w-8 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-bold">All set!</h3>
+                <p className="text-muted-foreground max-w-sm">
+                  Your resume has been reformatted with the professional US standard and includes your physical
+                  capabilities.
+                </p>
               </div>
             </div>
           </CardContent>
