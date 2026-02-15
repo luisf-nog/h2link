@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
-import { Download, MessageCircle, Loader2, FileText, AlertCircle, Phone, MessageSquare } from "lucide-react";
+import { Download, MessageCircle, Loader2, FileText, AlertCircle, Phone, MessageSquare, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotFound from "./NotFound";
 
@@ -18,13 +18,16 @@ interface ProfileData {
 export default function PublicProfile() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
-  const queueId = searchParams.get("q"); // Optional queue ID for per-item tracking
+  const queueId = searchParams.get("q");
+  const sentAt = searchParams.get("s"); // Timestamp de envio
+
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pdfError, setPdfError] = useState(false);
+  const [viewId, setViewId] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  // Track view and fetch profile data
+  const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!token) {
       setNotFound(true);
@@ -34,31 +37,40 @@ export default function PublicProfile() {
 
     async function trackAndFetch() {
       try {
-        // Pass undefined instead of null when queueId is not present
-        const rpcParams: { p_token: string; p_queue_id?: string } = {
-          p_token: token,
-        };
-        if (queueId) {
-          rpcParams.p_queue_id = queueId;
+        // 1. TRAVA ANTI-ANTIVÍRUS (60 Segundos)
+        const now = Date.now();
+        const diffInSeconds = sentAt ? (now - parseInt(sentAt)) / 1000 : 999;
+
+        let trackingData = null;
+
+        if (diffInSeconds > 60) {
+          // Se passou de 60s, registra a visualização e inicia contador
+          const { data, error } = await supabase.rpc("track_profile_view_v2", {
+            p_token: token,
+            p_queue_id: queueId,
+          });
+          if (!error && data) {
+            trackingData = data[0];
+            setViewId(trackingData.view_id); // ID desta visualização específica
+          }
+        } else {
+          console.log("Visualização ignorada: Possível bot/antivírus");
+          // Apenas busca os dados do perfil sem registrar estatística nova
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, full_name, phone_e164, resume_url, contact_email")
+            .eq("public_token", token)
+            .single();
+          trackingData = data;
         }
 
-        const { data, error } = await supabase.rpc("track_profile_view", rpcParams);
-
-        if (error) {
-          console.error("RPC error:", error);
+        if (!trackingData) {
           setNotFound(true);
           return;
         }
 
-        if (!data || data.length === 0) {
-          console.error("Profile not found for token:", token);
-          setNotFound(true);
-          return;
-        }
-
-        setProfile(data[0] as ProfileData);
+        setProfile(trackingData as ProfileData);
       } catch (err) {
-        console.error("Error fetching profile:", err);
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -66,205 +78,75 @@ export default function PublicProfile() {
     }
 
     trackAndFetch();
-  }, [token, queueId]);
 
-  // Track WhatsApp click
-  const handleWhatsAppClick = () => {
+    return () => {
+      if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+    };
+  }, [token, queueId, sentAt]);
+
+  // 2. LÓGICA DO CONTADOR DE TEMPO (HEARTBEAT)
+  useEffect(() => {
+    if (viewId) {
+      heartbeatInterval.current = setInterval(async () => {
+        await supabase.rpc("update_view_duration", { p_view_id: viewId });
+      }, 10000); // Avisa o banco a cada 10 segundos
+    }
+    return () => {
+      if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+    };
+  }, [viewId]);
+
+  const handleWhatsAppClick = async () => {
     if (!token || !profile?.phone_e164) return;
-
-    // Track click silently (fire and forget)
-    void (async () => {
-      try {
-        await supabase.rpc("track_whatsapp_click", { p_token: token });
-      } catch (e) {
-        console.error("Failed to track click:", e);
-      }
-    })();
-
-    // Format phone number for WhatsApp (remove + if present)
-    const phone = profile.phone_e164.replace(/^\+/, "");
+    try {
+      await supabase.rpc("track_whatsapp_click", { p_token: token });
+    } catch (e) {}
+    const phone = profile.phone_e164.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}`, "_blank");
   };
 
-  // Handle PDF download - force download with CORS handling
-  const handleDownload = async () => {
-    if (!profile?.resume_url) return;
-    
-    try {
-      // Try to fetch and download as blob
-      const response = await fetch(profile.resume_url, { mode: 'cors' });
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        // Clean filename
-        const safeName = (profile.full_name || 'resume').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
-        link.download = `${safeName}.pdf`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        // Cleanup
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }, 100);
-      } else {
-        throw new Error('Fetch failed');
-      }
-    } catch (error) {
-      console.error('Download failed, trying direct link:', error);
-      // Fallback: create a direct link with download attribute
-      const link = document.createElement('a');
-      link.href = profile.resume_url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      const safeName = (profile.full_name || 'resume').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
-      link.download = `${safeName}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  // Handle SMS/iMessage click
-  const handleSmsClick = () => {
-    if (!profile?.phone_e164) return;
-    window.location.href = `sms:${profile.phone_e164}`;
-  };
-
-  // Handle Call click
-  const handleCallClick = () => {
-    if (!profile?.phone_e164) return;
-    window.location.href = `tel:${profile.phone_e164}`;
-  };
-
-  if (loading) {
+  if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin" />
       </div>
     );
-  }
-
-  if (notFound || !profile) {
-    return <NotFound />;
-  }
-
-  const hasResume = !!profile.resume_url;
-  const hasPhone = !!profile.phone_e164;
+  if (notFound || !profile) return <NotFound />;
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 py-3">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <header className="bg-white border-b px-4 py-3 sticky top-0 z-10">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <BrandLogo height={32} className="rounded-md" />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold truncate">
-              {profile.full_name || "Candidate Profile"}
-            </h1>
-          </div>
+          <BrandLogo height={32} />
+          <h1 className="text-lg font-bold truncate">{profile.full_name}</h1>
         </div>
       </header>
 
-      {/* PDF Viewer Area */}
-      <main className="flex-1 flex flex-col p-4 pb-48">
-        <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
-          {hasResume ? (
-            <div className="flex-1 bg-background rounded-lg border shadow-sm overflow-hidden" style={{ minHeight: 'calc(100vh - 200px)' }}>
-              {!pdfError ? (
-                <object
-                  data={`${profile.resume_url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
-                  type="application/pdf"
-                  className="w-full h-full"
-                  style={{ minHeight: 'calc(100vh - 200px)' }}
-                >
-                  {/* Fallback for browsers that don't support object tag */}
-                  <iframe
-                    src={`${profile.resume_url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
-                    className="w-full h-full"
-                    style={{ minHeight: 'calc(100vh - 200px)' }}
-                    title="Resume PDF"
-                    onError={() => setPdfError(true)}
-                  />
-                </object>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full p-6 text-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
-                  <FileText className="w-16 h-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Preview Unavailable</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Your browser doesn't support inline PDF viewing.
-                    <br />
-                    Click the button below to download.
-                  </p>
-                </div>
-              )}
-            </div>
+      <main className="flex-1 p-4 pb-40">
+        <div className="max-w-lg mx-auto h-full min-h-[500px] bg-white rounded-xl shadow-sm border overflow-hidden">
+          {profile.resume_url ? (
+            <iframe src={`${profile.resume_url}#toolbar=0`} className="w-full h-full min-h-[600px]" title="Resume" />
           ) : (
-            <div className="flex-1 bg-background rounded-lg border shadow-sm flex flex-col items-center justify-center p-6 text-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
-              <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Resume Available</h3>
-              <p className="text-sm text-muted-foreground">
-                This candidate hasn't uploaded a resume yet.
-              </p>
+            <div className="flex flex-col items-center justify-center p-20 text-center">
+              <AlertCircle className="h-12 w-12 text-slate-300 mb-2" />
+              <p>Currículo não disponível</p>
             </div>
           )}
         </div>
       </main>
 
-      {/* Sticky Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-4 safe-area-bottom">
-        <div className="max-w-lg mx-auto flex flex-col gap-3">
-          {/* Contact Buttons Row */}
-          {hasPhone && (
-            <div className="flex gap-2">
-              <Button
-                onClick={handleWhatsAppClick}
-                className={cn(
-                  "flex-1 h-12 text-base font-medium",
-                  "bg-[#25D366] hover:bg-[#20BD5A] text-white"
-                )}
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                WhatsApp
-              </Button>
-              <Button
-                onClick={handleSmsClick}
-                variant="outline"
-                className="flex-1 h-12 text-base font-medium"
-              >
-                <MessageSquare className="w-5 h-5 mr-2" />
-                SMS
-              </Button>
-              <Button
-                onClick={handleCallClick}
-                variant="outline"
-                className="h-12 px-4"
-                title="Call"
-              >
-                <Phone className="w-5 h-5" />
-              </Button>
-            </div>
-          )}
-          
-          {/* Download Button Row */}
-          {hasResume && (
-            <Button
-              onClick={handleDownload}
-              variant={hasPhone ? "secondary" : "default"}
-              className="w-full h-12 text-base font-medium"
-            >
-              <Download className="w-5 h-5 mr-2" />
-              Download Resume
-            </Button>
-          )}
-
-          {!hasPhone && !hasResume && (
-            <p className="text-center text-muted-foreground w-full py-2">
-              No contact options available
-            </p>
-          )}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t">
+        <div className="max-w-lg mx-auto grid grid-cols-2 gap-3">
+          <Button onClick={handleWhatsAppClick} className="bg-[#25D366] hover:bg-[#20BD5A] h-12 font-bold">
+            <MessageCircle className="mr-2" /> WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => (window.location.href = `tel:${profile.phone_e164}`)}
+            className="h-12 font-bold"
+          >
+            <Phone className="mr-2" /> Ligar
+          </Button>
         </div>
       </div>
     </div>
