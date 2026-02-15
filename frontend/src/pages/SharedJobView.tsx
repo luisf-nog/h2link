@@ -126,7 +126,7 @@ export default function SharedJobView() {
   };
 
   const formatExperience = (months: number | null | undefined) => {
-    if (!months || months <= 0) return t("jobs.details.no_experience", "Sem experiência necessária");
+    if (!months || months <= 0) return t("jobs.details.no_experience");
     if (months < 12) return t("jobs.table.experience_months", { count: months });
     const years = Math.floor(months / 12);
     const rem = months % 12;
@@ -148,9 +148,9 @@ export default function SharedJobView() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 text-left">
         <Card className="max-w-md w-full text-center p-8 space-y-4">
           <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto" />
-          <h2 className="text-xl font-bold text-slate-800">{t("jobs.details.not_found", "Vaga não encontrada")}</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t("jobs.details.not_found")}</h2>
           <Button onClick={() => navigate("/jobs")} className="w-full">
-            {t("jobs.details.browse_others", "Ver outras vagas")}
+            {t("jobs.details.browse_others")}
           </Button>
         </Card>
       </div>
@@ -161,11 +161,11 @@ export default function SharedJobView() {
 
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
-    if (g === "A") return { label: `GRUPO - A`, className: "bg-emerald-50 text-emerald-800 border-emerald-200" };
-    if (g === "B") return { label: `GRUPO - B`, className: "bg-blue-50 text-blue-800 border-blue-200" };
+    if (g === "A") return { label: t("jobs.group_label", { group: "A" }), className: "bg-emerald-50 text-emerald-800 border-emerald-200" };
+    if (g === "B") return { label: t("jobs.group_label", { group: "B" }), className: "bg-blue-50 text-blue-800 border-blue-200" };
     if (g === "C" || g === "D")
-      return { label: `GRUPO - ${g}`, className: "bg-amber-50 text-amber-800 border-amber-200" };
-    return { label: `GRUPO - ${g}`, className: "bg-slate-50 text-slate-700 border-slate-200" };
+      return { label: t("jobs.group_label", { group: g }), className: "bg-amber-50 text-amber-800 border-amber-200" };
+    return { label: t("jobs.group_label", { group: g }), className: "bg-slate-50 text-slate-700 border-slate-200" };
   };
 
   return (
@@ -306,7 +306,7 @@ export default function SharedJobView() {
                     {job.wage_additional && (
                       <div className="bg-green-50/50 p-3 rounded-lg border border-green-100">
                         <span className="flex items-center gap-1 text-[10px] font-black uppercase text-green-700 mb-1">
-                          <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label", "Bónus & Extras")}
+                          <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label")}
                         </span>
                         <p className="text-sm text-green-900 leading-snug font-medium">{job.wage_additional}</p>
                       </div>
@@ -315,7 +315,7 @@ export default function SharedJobView() {
                     {job.rec_pay_deductions && (
                       <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                         <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400 mb-1">
-                          <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label", "Deduções")}
+                          <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label")}
                         </span>
                         <p className="text-xs text-slate-500 leading-snug">{job.rec_pay_deductions}</p>
                       </div>
@@ -331,18 +331,16 @@ export default function SharedJobView() {
                       <ListPlus className="h-7 w-7 text-indigo-400" />
                     </div>
                     <h3 className="font-black text-xl leading-tight">
-                      {locale === "pt" ? "Organize seus envios" : "Organize your apps"}
+                      {t("jobs.shared.organize_title")}
                     </h3>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      {locale === "pt"
-                        ? "Crie sua conta para adicionar esta vaga à sua fila e aceder aos dados diretos do empregador."
-                        : "Create your account to add this job to your queue and unlock direct employer contacts."}
+                      {t("jobs.shared.organize_desc")}
                     </p>
                     <Button
                       className="w-full font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg h-12"
                       onClick={() => navigate("/auth")}
                     >
-                      {locale === "pt" ? "Adicionar à Minha Fila" : "Add to My Queue"}
+                      {t("jobs.shared.add_to_queue")}
                     </Button>
                   </div>
                 </div>
@@ -390,7 +388,7 @@ export default function SharedJobView() {
                       </div>
                       <div>
                         <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          {t("jobs.details.education", "Escolaridade")}
+                          {t("jobs.details.education")}
                         </span>
                         <span className="font-bold text-lg text-slate-900">{job.education_required || "-"}</span>
                       </div>
@@ -407,7 +405,7 @@ export default function SharedJobView() {
                 onClick={() => navigate("/auth")}
               >
                 <Plus className="h-5 w-5 mr-2" />
-                {locale === "pt" ? "Adicionar à Fila de Envio" : "Add to My Queue"}
+                {t("jobs.shared.add_to_send_queue")}
               </Button>
               <Button
                 variant="ghost"

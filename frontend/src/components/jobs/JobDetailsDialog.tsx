@@ -261,7 +261,7 @@ export function JobDetailsDialog({
                   {job?.wage_additional && (
                     <div className="mt-4 pt-4 border-t border-dashed border-green-200">
                       <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-green-600 mb-2">
-                        <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label", "Bonuses & Extras")}
+                        <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label")}
                       </h5>
                       <p className="text-xs text-green-800 font-medium bg-green-50/50 p-2 rounded">
                         <span>{job.wage_additional}</span>
@@ -271,7 +271,7 @@ export function JobDetailsDialog({
                   {job?.rec_pay_deductions && (
                     <div className="mt-4 pt-4 border-t border-dashed border-red-200">
                       <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-red-600 mb-2">
-                        <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label", "Deductions")}
+                        <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label")}
                       </h5>
                       <p className="text-xs text-red-800 font-medium bg-red-50/50 p-2 rounded">
                         <span>{job.rec_pay_deductions}</span>
@@ -322,7 +322,7 @@ export function JobDetailsDialog({
                           className="bg-green-50 border-green-200 text-green-700 h-8 text-xs font-bold"
                           onClick={handleCall}
                         >
-                          <Phone className="h-3 w-3 mr-1" /> {t("common.call", "Call")}
+                          <Phone className="h-3 w-3 mr-1" /> {t("jobs.details.call_action")}
                         </Button>
                         <Button
                           variant="outline"
@@ -390,7 +390,7 @@ export function JobDetailsDialog({
             className="w-full text-slate-500 font-bold h-10 flex items-center justify-center gap-2"
             onClick={() => onOpenChange(false)}
           >
-            <ArrowLeft className="h-4 w-4" /> {t("common.back_to_list", "Back to Job List")}
+            <ArrowLeft className="h-4 w-4" /> {t("jobs.details.back_to_list")}
           </Button>
         </div>
       </DialogContent>

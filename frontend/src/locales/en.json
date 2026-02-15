@@ -1066,6 +1066,12 @@
       "housing_info": "Housing Information",
       "housing_type": "Housing Type:",
       "not_specified": "Not specified",
+      "not_found": "Job not found",
+      "browse_others": "Browse other jobs",
+      "education": "Education",
+      "wage_extra_label": "Bonuses & Extras",
+      "deductions_label": "Deductions",
+      "back_to_list": "Back to Job List",
       "additional_details": "Additional Details",
       "view_details": "View details",
       "save_job": "Save Job",
@@ -1101,7 +1107,20 @@
       "cta": "Upgrade now"
     },
     "pagination": {
-      "page_of": "Page {{page}} of {{totalPages}}"
+      "page_of": "Page {{page}} of {{totalPages}}",
+      "page_of_total": "Page {{page}} of {{totalPages}} ({{total}} total)",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "restricted_title": "Restricted Access",
+    "restricted_desc": "Your plan does not allow saving jobs.",
+    "group_label": "GROUP - {{group}}",
+    "jobs_found": "{{count}} jobs found",
+    "shared": {
+      "organize_title": "Organize your apps",
+      "organize_desc": "Create your account to add this job to your queue and unlock direct employer contacts.",
+      "add_to_queue": "Add to My Queue",
+      "add_to_send_queue": "Add to Send Queue"
     },
     "toasts": {
       "load_error_title": "Job load error",

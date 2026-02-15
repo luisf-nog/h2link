@@ -1066,6 +1066,12 @@
       "housing_info": "Housing Information",
       "housing_type": "Housing Type:",
       "not_specified": "Não especificado",
+      "not_found": "Vaga não encontrada",
+      "browse_others": "Ver outras vagas",
+      "education": "Escolaridade",
+      "wage_extra_label": "Bônus & Extras",
+      "deductions_label": "Deduções",
+      "back_to_list": "Voltar para a lista",
       "additional_details": "Detalhes Adicionais",
       "view_details": "Ver detalhes",
       "save_job": "Salvar Vaga",
@@ -1101,7 +1107,20 @@
       "cta": "Fazer upgrade"
     },
     "pagination": {
-      "page_of": "Página {{page}} de {{totalPages}}"
+      "page_of": "Página {{page}} de {{totalPages}}",
+      "page_of_total": "Página {{page}} de {{totalPages}} ({{total}} total)",
+      "previous": "Anterior",
+      "next": "Próximo"
+    },
+    "restricted_title": "Acesso Restrito",
+    "restricted_desc": "Seu plano não permite salvar vagas.",
+    "group_label": "GRUPO - {{group}}",
+    "jobs_found": "{{count}} vagas encontradas",
+    "shared": {
+      "organize_title": "Organize seus envios",
+      "organize_desc": "Crie sua conta para adicionar esta vaga à sua fila e aceder aos dados diretos do empregador.",
+      "add_to_queue": "Adicionar à Minha Fila",
+      "add_to_send_queue": "Adicionar à Fila de Envio"
     },
     "toasts": {
       "load_error_title": "Erro ao carregar vagas",

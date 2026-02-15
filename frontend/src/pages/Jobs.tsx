@@ -169,7 +169,7 @@ export default function Jobs() {
 
   const addToQueue = async (job: Job) => {
     if (!profile?.id || planSettings.job_db_blur) {
-      toast({ title: "Acesso Restrito", description: "Seu plano não permite salvar vagas.", variant: "destructive" });
+      toast({ title: t("jobs.restricted_title"), description: t("jobs.restricted_desc"), variant: "destructive" });
       return;
     }
     setProcessingJobIds((prev) => new Set(prev).add(job.id));
@@ -193,7 +193,7 @@ export default function Jobs() {
     const { error } = await supabase.from("my_queue").delete().eq("user_id", profile.id).eq("job_id", job.id);
     if (!error) {
       await syncQueue();
-      toast({ title: "Removido da fila" });
+      toast({ title: t("jobs.toasts.remove_success_title") });
     }
     setProcessingJobIds((prev) => {
       const n = new Set(prev);
@@ -218,11 +218,11 @@ export default function Jobs() {
 
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
-    if (g === "A") return { label: "GRUPO - A", className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
-    if (g === "B") return { label: "GRUPO - B", className: "bg-blue-50 text-blue-800 border-blue-300" };
+    if (g === "A") return { label: t("jobs.group_label", { group: "A" }), className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
+    if (g === "B") return { label: t("jobs.group_label", { group: "B" }), className: "bg-blue-50 text-blue-800 border-blue-300" };
     if (g === "C" || g === "D")
-      return { label: `GRUPO - ${g}`, className: "bg-amber-50 text-amber-800 border-amber-300" };
-    return { label: `GRUPO - ${g}`, className: "bg-slate-50 text-slate-700 border-slate-300" };
+      return { label: t("jobs.group_label", { group: g }), className: "bg-amber-50 text-amber-800 border-amber-300" };
+    return { label: t("jobs.group_label", { group: g }), className: "bg-slate-50 text-slate-700 border-slate-300" };
   };
 
   return (
@@ -231,7 +231,7 @@ export default function Jobs() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
-            <p className="text-muted-foreground mt-1">{formatNumber(totalCount)} vagas encontradas</p>
+            <p className="text-muted-foreground mt-1">{t("jobs.jobs_found", { count: totalCount })}</p>
           </div>
           {isAdmin && (
             <div className="flex gap-2">
@@ -259,7 +259,7 @@ export default function Jobs() {
                 }}
               >
                 <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Visa Type" />
+                  <SelectValue placeholder={t("jobs.filters.visa.placeholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {VISA_TYPE_OPTIONS.map((o) => (
@@ -272,20 +272,20 @@ export default function Jobs() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search jobs..."
+                  placeholder={t("jobs.search.placeholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 h-10"
                 />
               </div>
               <Input
-                placeholder="State (Ex: TX)"
+                placeholder={t("jobs.filters.state")}
                 value={stateFilter}
                 onChange={(e) => setStateFilter(e.target.value)}
                 className="h-10"
               />
               <Input
-                placeholder="City"
+                placeholder={t("jobs.filters.city")}
                 value={cityFilter}
                 onChange={(e) => setCityFilter(e.target.value)}
                 className="h-10"
@@ -294,10 +294,10 @@ export default function Jobs() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val === "all" ? "" : val)}>
                 <SelectTrigger className="bg-white h-10">
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={t("jobs.filters.category")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t("jobs.filters.category_all")}</SelectItem>
                   {JOB_CATEGORIES_LIST.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -307,14 +307,14 @@ export default function Jobs() {
               </Select>
               <Input
                 type="number"
-                placeholder="Min $"
+                placeholder={t("jobs.salary.min", "Min $")}
                 value={minSalary}
                 onChange={(e) => setMinSalary(e.target.value)}
                 className="h-10"
               />
               <Input
                 type="number"
-                placeholder="Max $"
+                placeholder={t("jobs.salary.max", "Max $")}
                 value={maxSalary}
                 onChange={(e) => setMaxSalary(e.target.value)}
                 className="h-10"
@@ -374,23 +374,23 @@ export default function Jobs() {
               <TableHeader>
                 <TableRow className="bg-slate-50/80 whitespace-nowrap">
                   <TableHead onClick={() => toggleSort("job_title")} className="cursor-pointer py-4">
-                    Title <SortIcon active={sortKey === "job_title"} dir={sortDir} />
+                    {t("jobs.table.headers.job_title")} <SortIcon active={sortKey === "job_title"} dir={sortDir} />
                   </TableHead>
                   <TableHead onClick={() => toggleSort("company")} className="cursor-pointer">
-                    Company <SortIcon active={sortKey === "company"} dir={sortDir} />
+                    {t("jobs.table.headers.company")} <SortIcon active={sortKey === "company"} dir={sortDir} />
                   </TableHead>
                   <TableHead onClick={() => toggleSort("city")} className="cursor-pointer">
-                    Location <SortIcon active={sortKey === "city"} dir={sortDir} />
+                    {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
                   </TableHead>
-                  <TableHead className="text-center">Openings</TableHead>
-                  <TableHead>Salary</TableHead>
-                  <TableHead>Visa</TableHead>
-                  <TableHead>Grupo</TableHead>
-                  <TableHead>Posted</TableHead>
-                  <TableHead>Start</TableHead>
-                  <TableHead>End</TableHead>
-                  <TableHead>Exp</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className="text-center">{t("jobs.table.headers.openings")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.salary")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.visa")}</TableHead>
+                  <TableHead>{t("jobs.groups.group_label")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.posted")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.start")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.end")}</TableHead>
+                  <TableHead>{t("jobs.table.headers.experience")}</TableHead>
+                  <TableHead className="text-right">{t("jobs.table.headers.action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -470,7 +470,7 @@ export default function Jobs() {
 
         <div className="flex items-center justify-between py-6">
           <div className="hidden sm:block text-sm text-muted-foreground">
-            Página {page} de {totalPages} ({formatNumber(totalCount)} total)
+            {t("jobs.pagination.page_of_total", { page, totalPages, total: formatNumber(totalCount) })}
           </div>
           <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
             <Button
@@ -479,7 +479,7 @@ export default function Jobs() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
-              <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("jobs.pagination.previous")}
             </Button>
             <span className="sm:hidden text-sm font-medium">
               {page} / {totalPages}
@@ -490,7 +490,7 @@ export default function Jobs() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >
-              Próximo <ChevronRight className="h-4 w-4 ml-1" />
+              {t("jobs.pagination.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
