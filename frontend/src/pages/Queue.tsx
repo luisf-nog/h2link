@@ -27,16 +27,18 @@ interface QueueItem {
   created_at: string;
   send_count: number;
   last_error?: string | null;
-  // Campos vindos da View (Garantidos pela sua base)
-  job_title: string;
-  company: string;
-  contact_email: string;
+  job_title?: string;
+  company?: string;
+  contact_email?: string;
   visa_type?: string;
   token?: string;
-  view_count: number;
-  total_duration_seconds: number;
-  last_view_at: string | null;
+  view_count?: number;
+  total_duration_seconds?: number;
+  last_view_at?: string | null;
   user_id: string;
+  // Fallbacks de segurança para garantir o email
+  public_jobs?: { email?: string; job_title?: string; company?: string; visa_type?: string } | null;
+  manual_jobs?: { email?: string; job_title?: string; company?: string } | null;
 }
 
 const EARLY_ACCESS_VARIATIONS = [
@@ -65,12 +67,19 @@ export default function Queue() {
   const creditsUsedToday = profile?.credits_used_today || 0;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
+  // FETCH BLINDADO: Trazendo as relações explicitamente para garantir o dado
   const fetchQueue = async () => {
     if (!profile?.id) return;
 
     const { data, error } = await supabase
       .from("queue_with_stats")
-      .select("*")
+      .select(
+        `
+        *,
+        public_jobs (email, job_title, company, visa_type),
+        manual_jobs (email, job_title, company)
+      `,
+      )
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false });
 
@@ -83,7 +92,7 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
     const channel = supabase
-      .channel("queue_std_rt")
+      .channel("queue_fix_v2")
       .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
       .subscribe();
     return () => {
@@ -91,6 +100,7 @@ export default function Queue() {
     };
   }, [profile?.id]);
 
+  // LÓGICA DE ENVIO SEGURA
   const sendQueueItems = async (items: QueueItem[]) => {
     if (remainingToday <= 0) {
       toast({ title: "Limite diário atingido", variant: "destructive" });
@@ -104,14 +114,25 @@ export default function Queue() {
       .order("created_at", { ascending: false });
 
     for (const item of items) {
-      // Como a base é limpa, confiamos que o email existe.
+      // 1. Resolução de Email Robusta (Prioridade: View > Public > Manual)
+      const targetEmail = item.contact_email || item.public_jobs?.email || item.manual_jobs?.email;
+
+      // 2. Resolução de Dados Complementares
+      const targetJob = item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Position";
+      const targetVisa = item.visa_type || item.public_jobs?.visa_type;
+
+      if (!targetEmail) {
+        console.warn(`Item ${item.id} pulado: Email não encontrado.`);
+        continue;
+      }
+
       const template = templates?.[0] || {
-        subject: `Application for ${item.job_title}`,
+        subject: `Application for ${targetJob}`,
         body: "Hello, please find my resume attached.",
       };
       let finalBody = template.body;
 
-      if (item.visa_type?.toLowerCase().includes("early access")) {
+      if (targetVisa?.toLowerCase().includes("early access")) {
         finalBody =
           EARLY_ACCESS_VARIATIONS[Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length)] + "\n\n" + finalBody;
       }
@@ -119,7 +140,7 @@ export default function Queue() {
       try {
         const { error } = await supabase.functions.invoke("send-email-custom", {
           body: {
-            to: item.contact_email, // Campo garantido pela View
+            to: targetEmail, // Agora garantido que não é undefined
             subject: template.subject,
             body: finalBody,
             queueId: item.id,
@@ -129,7 +150,6 @@ export default function Queue() {
 
         if (error) throw error;
 
-        // Atualiza visualmente para dar feedback rápido
         setQueue((prev) =>
           prev.map((q) => (q.id === item.id ? { ...q, status: "sent", send_count: q.send_count + 1 } : q)),
         );
@@ -143,7 +163,7 @@ export default function Queue() {
     setSending(false);
     refreshProfile();
     fetchQueue();
-    toast({ title: "Envio em massa finalizado!" });
+    toast({ title: "Envio finalizado com sucesso!" });
   };
 
   const handleSendAll = () => {
@@ -161,6 +181,12 @@ export default function Queue() {
     toast({ title: "Item removido" });
   };
 
+  // Helper para exibir dados na tabela (fallback visual)
+  const getItemDisplay = (item: QueueItem) => ({
+    title: item.job_title || item.public_jobs?.job_title || item.manual_jobs?.job_title || "Cargo não informado",
+    company: item.company || item.public_jobs?.company || item.manual_jobs?.company || "Empresa não informada",
+  });
+
   const renderAnalytics = (item: QueueItem) => {
     const views = Number(item.view_count) || 0;
     const duration = Number(item.total_duration_seconds) || 0;
@@ -171,7 +197,7 @@ export default function Queue() {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-2 cursor-help text-muted-foreground hover:text-foreground transition-colors">
+            <div className="flex items-center gap-2 cursor-help text-muted-foreground hover:text-foreground transition-colors justify-center">
               {isHighInterest ? (
                 <Flame className="h-4 w-4 text-orange-500" />
               ) : (
@@ -214,8 +240,8 @@ export default function Queue() {
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         queueId={historyItem?.id ?? ""}
-        jobTitle={historyItem?.job_title ?? ""}
-        company={historyItem?.company ?? ""}
+        jobTitle={getItemDisplay(historyItem || ({} as any)).title}
+        company={getItemDisplay(historyItem || ({} as any)).company}
       />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -276,7 +302,7 @@ export default function Queue() {
                 </TableHead>
                 <TableHead>Vaga / Empresa</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Analytics</TableHead>
+                <TableHead className="text-center">Analytics</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -294,52 +320,55 @@ export default function Queue() {
                   </TableCell>
                 </TableRow>
               ) : (
-                queue.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={!!selectedIds[item.id]}
-                        onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [item.id]: !!v }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{item.job_title}</span>
-                        <span className="text-xs text-muted-foreground">{item.company}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={item.status === "sent" ? "default" : "secondary"}>
-                        {item.status === "sent" ? "Enviado" : "Pendente"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{renderAnalytics(item)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {item.send_count > 0 && (
+                queue.map((item) => {
+                  const display = getItemDisplay(item);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={!!selectedIds[item.id]}
+                          onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [item.id]: !!v }))}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{display.title}</span>
+                          <span className="text-xs text-muted-foreground">{display.company}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.status === "sent" ? "default" : "secondary"}>
+                          {item.status === "sent" ? "Enviado" : "Pendente"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">{renderAnalytics(item)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {item.send_count > 0 && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                setHistoryItem(item);
+                                setHistoryDialogOpen(true);
+                              }}
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => {
-                              setHistoryItem(item);
-                              setHistoryDialogOpen(true);
-                            }}
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => removeFromQueue(item.id)}
                           >
-                            <History className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => removeFromQueue(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
