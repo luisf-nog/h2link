@@ -14,8 +14,8 @@ import {
   Utensils,
   Hammer,
   Package,
-  Globe,
   ShieldCheck,
+  Info, // <-- ADICIONADO AQUI
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractTextFromPDF } from "@/lib/pdf";
@@ -25,7 +25,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -46,7 +45,7 @@ export default function ResumeConverter() {
   const [englishLevel, setEnglishLevel] = useState("basic");
   const [extraTechnical, setExtraTechnical] = useState("");
 
-  // --- Estados de Compliance e Visto (Novos) ---
+  // --- Estados de Compliance e Visto ---
   const [currentLocation, setCurrentLocation] = useState("outside_us");
   const [workAuth, setWorkAuth] = useState("needs_sponsorship");
   const [hasH2History, setHasH2History] = useState("no");
@@ -159,6 +158,7 @@ export default function ResumeConverter() {
       h2Time,
       visaDenial,
       extraTechnical,
+      toast,
     ],
   );
 
@@ -203,7 +203,9 @@ export default function ResumeConverter() {
                         onClick={() => setNiche(item.id as Niche)}
                         className={cn(
                           "flex flex-col items-center p-3 rounded-xl border-2 cursor-pointer transition-all",
-                          niche === item.id ? "border-primary bg-primary/5" : "border-slate-100 hover:border-slate-300",
+                          niche === item.id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-slate-100 hover:border-slate-300",
                         )}
                       >
                         <item.icon
@@ -227,6 +229,9 @@ export default function ResumeConverter() {
                         />
                         <label htmlFor={opt.id} className="text-xs font-semibold leading-tight cursor-pointer">
                           {opt.label}
+                          <span className="block text-[8px] text-primary/60 uppercase font-black tracking-tighter mt-1">
+                            {opt.cat}
+                          </span>
                         </label>
                       </div>
                     ))}
@@ -235,7 +240,7 @@ export default function ResumeConverter() {
               </CardContent>
             </Card>
 
-            {/* CARD 2: VISA & COMPLIANCE (O DESTAQUE) */}
+            {/* CARD 2: VISA & COMPLIANCE */}
             <Card className="border-2 border-primary/20 shadow-md bg-primary/[0.01]">
               <CardHeader className="bg-primary/5 border-b border-primary/10">
                 <CardTitle className="text-lg flex items-center gap-2 text-primary">
@@ -335,7 +340,7 @@ export default function ResumeConverter() {
           <div className="lg:col-span-4">
             <Card
               className={cn(
-                "h-full border-2 border-dashed flex flex-col items-center justify-center p-6 text-center",
+                "h-full border-2 border-dashed flex flex-col items-center justify-center p-6 text-center transition-all",
                 !niche ? "opacity-30 bg-slate-50" : "cursor-pointer hover:bg-slate-50",
               )}
               {...getRootProps()}
