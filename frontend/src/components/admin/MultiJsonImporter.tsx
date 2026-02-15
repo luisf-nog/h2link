@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, Database, FileJson, History } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  Database,
+  FileJson,
+  History,
+  X, // Importação que faltava adicionada aqui
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import JSZip from "jszip";
 
