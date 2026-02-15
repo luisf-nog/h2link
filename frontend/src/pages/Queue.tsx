@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Mail,
   TrendingUp,
+  Zap,
 } from "lucide-react";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
@@ -133,32 +134,81 @@ export default function Queue() {
 
   const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
-  useEffect(() => {
-    fetchQueue();
-    const channel = supabase
-      .channel("queue-stats-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  // Pick send profile for premium plans
+  const pickSendProfile = () => {
+    if (planTier === "gold") return { xMailer: "Microsoft Outlook 16.0", userAgent: "Microsoft Outlook 16.0" };
+    if (planTier === "diamond") {
+      const pool = [
+        { xMailer: "iPhone Mail (20A362)", userAgent: "iPhone Mail (20A362)" },
+        { xMailer: "Android Mail", userAgent: "Android Mail" },
+        { xMailer: "Mozilla Thunderbird", userAgent: "Mozilla Thunderbird" },
+        { xMailer: "Microsoft Outlook 16.0", userAgent: "Microsoft Outlook 16.0" },
+      ];
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    return {};
+  };
 
+  const getDelayMs = () => {
+    if (planTier === "gold") return 5000;
+    if (planTier === "diamond") return 5000 + Math.floor(Math.random() * 10000);
+    return 1000;
+  };
+
+  // 1. Fetch initial queue with V68 Stats View
   const fetchQueue = async () => {
     const { data, error } = await supabase
       .from("queue_with_stats")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error) setQueue((data as unknown as QueueItem[]) || []);
+
+    if (error) {
+      console.error("Error fetching queue stats:", error);
+      toast({ title: t("queue.toasts.load_error_title"), description: error.message, variant: "destructive" });
+    } else {
+      setQueue((data as unknown as QueueItem[]) || []);
+    }
     setLoading(false);
   };
 
-  const removeFromQueue = async (id: string) => {
-    const { error } = await supabase.from("my_queue").delete().eq("id", id);
-    if (!error) {
-      setQueue((prev) => prev.filter((i) => i.id !== id));
-      toast({ title: t("queue.toasts.remove_success_title") });
-    }
+  useEffect(() => {
+    fetchQueue();
+
+    // 2. Real-time stats listener
+    const channel = supabase
+      .channel("queue-stats-updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profile_views" }, () => fetchQueue())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // SMTP Readiness Check
+  useEffect(() => {
+    let cancelled = false;
+    const checkSmtp = async () => {
+      if (!profile?.id) return;
+      const { data, error } = await supabase
+        .from("smtp_credentials")
+        .select("has_password")
+        .eq("user_id", profile.id)
+        .maybeSingle();
+      if (!cancelled) setSmtpReady(!error && Boolean(data?.has_password));
+    };
+    checkSmtp();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id]);
+
+  // --- RENDERING HELPERS ---
+  const statusLabel = (status: string) => {
+    if (status === "sent") return t("queue.status.sent");
+    if (status === "processing") return t("queue.status.processing");
+    if (status === "failed") return t("queue.status.failed");
+    return t("queue.status.pending");
   };
 
   const renderResumeStatus = (item: QueueItem) => {
@@ -236,27 +286,205 @@ export default function Queue() {
     );
   };
 
-  // --- LOGICA DE ENVIO (ORIGINAL RESTAURADA) ---
-  const sendQueueItems = async (items: QueueItem[]) => {
-    // Validação básica igual ao seu original
-    if (creditsRemaining <= 0) return;
-    setSending(true);
-    // ... Lógica de template, edge function, sleep e retry mantida conforme seu código ...
-    // (Omiti o miolo para focar na estrutura do JSX, mas no arquivo final ele está lá)
-    fetchQueue();
-    refreshProfile();
-    setSending(false);
+  // --- CORE LOGIC: SENDING ---
+  const applyTemplate = (text: string, vars: Record<string, string>) => {
+    let out = text;
+    for (const [k, v] of Object.entries(vars)) {
+      const re = new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, "g");
+      out = out.replace(re, v);
+    }
+    return out;
   };
 
-  const statusLabel = (status: string) => {
-    if (status === "sent") return t("queue.status.sent");
-    if (status === "processing") return t("queue.status.processing");
-    if (status === "failed") return t("queue.status.failed");
-    return t("queue.status.pending");
+  const hashToIndex = (s: string, mod: number) => {
+    if (mod <= 1) return 0;
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h % mod;
   };
+
+  const invokeEdgeFunction = async (functionName: string, body: any) => {
+    const { data, error } = await supabase.functions.invoke(functionName, { body });
+    if (error) throw error;
+    return data;
+  };
+
+  const ensureCanSend = async () => {
+    if (smtpReady !== true) {
+      setSmtpDialogOpen(true);
+      return { ok: false as const };
+    }
+    if (remainingToday <= 0) {
+      setUpgradeDialogOpen(true);
+      return { ok: false as const };
+    }
+    if (!profile?.full_name || profile?.age == null || !profile?.phone_e164 || !profile?.contact_email) {
+      toast({ title: t("smtp.toasts.profile_incomplete_title"), variant: "destructive" });
+      return { ok: false as const };
+    }
+    const { data: tplData, error: tplError } = await supabase
+      .from("email_templates")
+      .select("id,name,subject,body")
+      .order("created_at", { ascending: false });
+    if (tplError) {
+      toast({ title: t("common.errors.save_failed"), variant: "destructive" });
+      return { ok: false as const };
+    }
+
+    const templates = ((tplData as EmailTemplate[]) ?? []).filter(Boolean);
+    if (templates.length === 0 && planTier !== "black") {
+      toast({ title: t("queue.toasts.no_template_title"), variant: "destructive" });
+      return { ok: false as const };
+    }
+    return { ok: true as const, templates };
+  };
+
+  const sendQueueItems = async (items: QueueItem[]) => {
+    const guard = await ensureCanSend();
+    if (!guard.ok) return;
+
+    const { templates } = guard;
+    const sentIds: string[] = [];
+    const failedIds: string[] = [];
+    let creditsRemaining = remainingToday;
+
+    setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
+
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx];
+      if (creditsRemaining <= 0) break;
+
+      const job = item.public_jobs ?? item.manual_jobs;
+      if (!job?.email) {
+        await supabase.from("my_queue").update({ status: "failed", last_error: "Email ausente" }).eq("id", item.id);
+        failedIds.push(item.id);
+        continue;
+      }
+
+      const visaType = item.public_jobs?.visa_type || "H-2B";
+      const vars = {
+        name: profile?.full_name ?? "",
+        age: String(profile?.age ?? ""),
+        phone: profile?.phone_e164 ?? "",
+        contact_email: profile?.contact_email ?? "",
+        company: job.company ?? "",
+        position: job.job_title ?? "",
+        visa_type: visaType,
+      };
+
+      const fallbackTpl =
+        templates.length > 0
+          ? (templates[hashToIndex(String(item.tracking_id ?? item.id), templates.length)] ?? templates[0])
+          : null;
+      let finalSubject = fallbackTpl ? applyTemplate(fallbackTpl.subject, vars) : "";
+      let finalBody = fallbackTpl ? applyTemplate(fallbackTpl.body, vars) : "";
+
+      if (visaType?.toLowerCase().includes("early access")) {
+        finalBody =
+          EARLY_ACCESS_VARIATIONS[Math.floor(Math.random() * EARLY_ACCESS_VARIATIONS.length)] + "\n\n" + finalBody;
+      }
+
+      try {
+        if (planTier === "black") {
+          const payload = await invokeEdgeFunction("generate-job-email", { queueId: item.id });
+          if (payload?.success !== false && payload?.subject && payload?.body) {
+            finalSubject = String(payload.subject);
+            finalBody = String(payload.body);
+          }
+        }
+
+        const sendProfile = pickSendProfile();
+        const payload = await invokeEdgeFunction("send-email-custom", {
+          to: job.email,
+          subject: finalSubject,
+          body: finalBody,
+          queueId: item.id,
+          ...sendProfile,
+          s: Date.now(),
+        });
+
+        if (payload?.success === false) throw new Error(payload?.error || "Send failed");
+
+        sentIds.push(item.id);
+        creditsRemaining -= 1;
+      } catch (e: any) {
+        await supabase.from("my_queue").update({ status: "failed", last_error: e.message }).eq("id", item.id);
+        failedIds.push(item.id);
+      }
+
+      if (idx < items.length - 1 && sentIds.length > 0) await sleep(getDelayMs());
+    }
+
+    // Wrap-up updates
+    for (const sentId of sentIds) {
+      const currentItem = items.find((i) => i.id === sentId);
+      await supabase
+        .from("my_queue")
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          send_count: (currentItem?.send_count ?? 0) + 1,
+        })
+        .eq("id", sentId);
+    }
+
+    await refreshProfile();
+    fetchQueue();
+  };
+
+  // Event Handlers
+  const handleSendAll = () => sendQueueItems(pendingItems.slice(0, remainingToday));
+  const handleSendSelected = () => {
+    sendQueueItems(pendingItems.filter((it) => selectedPendingIds.includes(it.id)).slice(0, remainingToday));
+    setSelectedIds({});
+  };
+  const handleSendOne = (item: QueueItem) => sendQueueItems([item]);
+  const handleRemoveFromQueue = (id: string) => removeFromQueue(id);
+
+  const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
+  const pendingCount = pendingItems.length;
+  const sentCount = creditsUsedToday;
+  const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
+  const selectedPendingIds = useMemo(
+    () => Object.keys(selectedIds).filter((id) => selectedIds[id] && pendingIds.has(id)),
+    [selectedIds, pendingIds],
+  );
+  const allPendingSelected = pendingItems.length > 0 && selectedPendingIds.length === pendingItems.length;
 
   return (
-    <div className="space-y-8 text-left">
+    <div className="space-y-8 text-left max-w-7xl mx-auto">
+      {/* ALERT DIALOGS */}
+      <AlertDialog open={smtpDialogOpen} onOpenChange={setSmtpDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("queue.smtp_required.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("queue.smtp_required.description")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("queue.smtp_required.actions.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate("/settings/email")}>
+              {t("queue.smtp_required.actions.go_settings")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("queue.upgrade_required.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("queue.upgrade_required.description", { limit: dailyLimitTotal })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("queue.upgrade_required.actions.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate("/plans")}>
+              {t("queue.upgrade_required.actions.view_plans")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <SendHistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
@@ -265,60 +493,65 @@ export default function Queue() {
         company={(historyItem?.public_jobs ?? historyItem?.manual_jobs)?.company ?? ""}
       />
 
-      {/* HEADER PRINCIPAL */}
+      {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">
+          <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">
             Minha Fila Inteligente
           </h1>
-          <p className="text-slate-500 font-medium">{t("queue.subtitle", { pendingCount, sentCount })}</p>
+          <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+            {t("queue.subtitle", { pendingCount, sentCount })}
+          </p>
         </div>
 
         <div className="flex gap-3 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
           <Button
-            variant="secondary"
-            className="h-12 px-6 font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all"
-            onClick={() => sendQueueItems(pendingItems.slice(0, remainingToday))}
+            disabled={pendingCount === 0 || sending}
+            className="h-14 px-8 font-black bg-indigo-600 hover:bg-indigo-700 text-white uppercase tracking-widest shadow-[0_10px_20px_-10px_rgba(79,70,229,0.5)] active:scale-95 transition-all rounded-2xl"
+            onClick={handleSendAll}
           >
-            <Send className="h-4 w-4 mr-2" /> {t("queue.actions.send", { pendingCount })}
+            {sending ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Send className="h-5 w-5 mr-2" />}
+            {t("queue.actions.send", { pendingCount })}
           </Button>
         </div>
       </div>
 
-      {/* CARDS DE STATS */}
+      {/* STATS SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-3xl border-2 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Na Fila</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-black italic tracking-tighter">{formatNumber(pendingCount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-3xl border-2 shadow-sm border-indigo-100 bg-indigo-50/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
-              Enviados Hoje
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-black italic tracking-tighter text-indigo-700">{formatNumber(sentCount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-3xl border-2 shadow-sm">
+        <Card className="rounded-[2rem] border-2 shadow-sm border-slate-100">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Limite Diário
+              Prontos para Envio
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-black italic tracking-tighter">{dailyLimitTotal}</p>
+            <p className="text-5xl font-black italic tracking-tighter text-slate-900">{formatNumber(pendingCount)}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-[2rem] border-2 shadow-md border-indigo-100 bg-indigo-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
+              Disparados Hoje
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-5xl font-black italic tracking-tighter text-indigo-700">{formatNumber(sentCount)}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-[2rem] border-2 shadow-sm border-slate-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Limite do Plano
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-5xl font-black italic tracking-tighter text-slate-900">{dailyLimitTotal}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* TABELA / LISTAGEM */}
+      {/* QUEUE LISTING SECTION */}
       <TooltipProvider>
         {isMobile ? (
           <div className="space-y-4">
@@ -328,7 +561,7 @@ export default function Queue() {
                 item={item}
                 isSelected={!!selectedIds[item.id]}
                 onSelectChange={(checked) => setSelectedIds((prev) => ({ ...prev, [item.id]: checked }))}
-                onRemove={() => removeFromQueue(item.id)}
+                onRemove={() => handleRemoveFromQueue(item.id)}
               />
             ))}
           </div>
@@ -337,7 +570,7 @@ export default function Queue() {
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow className="border-b-2 border-slate-100">
-                  <TableHead className="w-12 p-6">
+                  <TableHead className="w-12 p-8">
                     <Checkbox
                       checked={allPendingSelected}
                       onCheckedChange={(v) => {
@@ -347,16 +580,16 @@ export default function Queue() {
                       }}
                     />
                   </TableHead>
-                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-6 text-slate-400">
-                    Vaga / Empresa
+                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-8 text-slate-400">
+                    Oportunidade / Empresa
                   </TableHead>
-                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-6 text-slate-400 text-center">
-                    Status
+                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-8 text-slate-400 text-center">
+                    Status de Envio
                   </TableHead>
-                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-6 text-slate-400 text-center">
-                    Engajamento CV
+                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-8 text-slate-400 text-center">
+                    Inteligência (CV)
                   </TableHead>
-                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-6 text-slate-400 text-right">
+                  <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] p-8 text-slate-400 text-right">
                     Ações
                   </TableHead>
                 </TableRow>
@@ -364,75 +597,77 @@ export default function Queue() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-20 text-center">
-                      <Loader2 className="h-10 w-10 animate-spin mx-auto text-slate-200" />
+                    <TableCell colSpan={5} className="py-32 text-center">
+                      <Loader2 className="h-12 w-12 animate-spin mx-auto text-indigo-600" />
                     </TableCell>
                   </TableRow>
                 ) : queue.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="py-20 text-center opacity-30 font-black uppercase tracking-widest"
-                    >
-                      Fila Vazia
+                    <TableCell colSpan={5} className="py-32 text-center opacity-20">
+                      <TrendingUp className="h-16 w-16 mx-auto mb-4" />
+                      <p className="font-black uppercase tracking-[0.3em]">Sua Fila está limpa</p>
                     </TableCell>
                   </TableRow>
                 ) : (
                   queue.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-slate-50/80 transition-all">
-                      <TableCell className="p-6">
+                    <TableRow
+                      key={item.id}
+                      className="hover:bg-slate-50/80 transition-all border-b border-slate-50 group"
+                    >
+                      <TableCell className="p-8">
                         <Checkbox
                           checked={!!selectedIds[item.id]}
                           disabled={item.status !== "pending"}
                           onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [item.id]: !!v }))}
                         />
                       </TableCell>
-                      <TableCell className="p-6">
+                      <TableCell className="p-8">
                         <div className="flex flex-col">
                           <span
-                            className="font-black text-slate-900 uppercase tracking-tighter text-lg leading-none mb-1"
+                            className="font-black text-slate-900 uppercase tracking-tighter text-lg leading-tight mb-1.5 group-hover:text-indigo-600 transition-colors"
                             translate="no"
                           >
                             {(item.public_jobs ?? item.manual_jobs)?.company}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">
+                          <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em] flex items-center gap-1.5 italic">
+                            <Zap className="h-3 w-3 text-indigo-500 fill-indigo-500" />{" "}
                             {(item.public_jobs ?? item.manual_jobs)?.job_title}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="p-6 text-center">
+                      <TableCell className="p-8 text-center">
                         <Badge
                           className={cn(
-                            "uppercase text-[10px] font-black px-3 py-1 border-none shadow-sm",
-                            item.status === "sent" ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500",
+                            "uppercase text-[10px] font-black px-4 py-1.5 border-none shadow-sm",
+                            item.status === "sent" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400",
                           )}
                         >
                           {statusLabel(item.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="p-6 text-center">{renderResumeStatus(item)}</TableCell>
-                      <TableCell className="p-6 text-right">
-                        <div className="flex justify-end gap-2">
+                      <TableCell className="p-8 text-center">{renderResumeStatus(item)}</TableCell>
+                      <TableCell className="p-8 text-right">
+                        <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           {item.send_count > 0 && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-10 w-10 rounded-xl"
+                              className="h-12 w-12 rounded-2xl bg-slate-50 hover:bg-white border border-transparent hover:border-slate-100 shadow-sm"
                               onClick={() => {
                                 setHistoryItem(item);
                                 setHistoryDialogOpen(true);
                               }}
                             >
-                              <History className="h-4 w-4" />
+                              <History className="h-5 w-5 text-slate-600" />
                             </Button>
                           )}
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-10 w-10 rounded-xl text-destructive hover:bg-red-50"
-                            onClick={() => removeFromQueue(item.id)}
+                            className="h-12 w-12 rounded-2xl bg-red-50/50 hover:bg-red-50 text-destructive border border-transparent hover:border-red-100 shadow-sm"
+                            onClick={() => handleRemoveFromQueue(item.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-5 w-5" />
                           </Button>
                         </div>
                       </TableCell>
