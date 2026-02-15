@@ -28,6 +28,7 @@ import Radar from "./pages/Radar";
 
 const queryClient = new QueryClient();
 
+// --- PROTECTED ROUTE (O Porteiro do Onboarding) ---
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
@@ -45,6 +46,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
+  // TRIGGER: Se logado, mas SMTP incompleto, manda para onboarding (exceto se estiver indo para Settings)
   const needsOnboarding = smtpStatus && (!smtpStatus.hasPassword || !smtpStatus.hasRiskProfile);
   const isSettingsRoute = location.pathname.startsWith("/settings");
 
@@ -52,9 +54,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  // Se passou por tudo, renderiza o layout com o conteúdo
   return <AppLayout>{children}</AppLayout>;
 }
 
+// --- ONBOARDING ROUTE (Evita que quem já terminou volte pra cá) ---
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
@@ -67,9 +71,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
 
   if (smtpStatus?.hasPassword && smtpStatus?.hasRiskProfile) {
     return <Navigate to="/dashboard" replace />;
@@ -78,6 +80,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// --- PUBLIC ROUTE (Manda quem já logou pra dentro do sistema) ---
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
@@ -94,14 +97,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   if (user) {
     const isAuthRoute = location.pathname === "/auth";
     const params = new URLSearchParams(location.search);
-    const isAuthCallback =
-      params.has("code") ||
-      params.has("token_hash") ||
-      params.has("token") ||
-      params.has("type") ||
-      params.has("error") ||
-      params.has("error_code") ||
-      params.has("error_description");
+    const isAuthCallback = params.has("code") || params.has("token_hash");
 
     if (!(isAuthRoute && isAuthCallback)) {
       return <Navigate to="/dashboard" replace />;
@@ -113,6 +109,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 const AppRoutes = () => (
   <Routes>
+    {/* AUTH & PUBLIC */}
     <Route
       path="/auth"
       element={
@@ -123,49 +120,36 @@ const AppRoutes = () => (
     />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<Navigate to="/jobs" replace />} />
-    {/* Public Routes - No auth required */}
+    <Route path="/job/:jobId" element={<SharedJobView />} />
+    <Route path="/v/:token" element={<PublicProfile />} />
+
+    {/* ONBOARDING FLOW */}
+    <Route
+      path="/onboarding"
+      element={
+        <OnboardingRoute>
+          <Onboarding />
+        </OnboardingRoute>
+      }
+    />
+
+    {/* PROTECTED ROUTES (Tudo que exige Onboarding e Login) */}
     <Route
       path="/dashboard"
       element={
-        <AppLayout>
+        <ProtectedRoute>
           <Dashboard />
-        </AppLayout>
+        </ProtectedRoute>
       }
     />
     <Route
       path="/jobs"
       element={
-        <AppLayout>
-          <Jobs />
-        </AppLayout>
-      }
-    />
-    <Route path="/job/:jobId" element={<SharedJobView />} />
-    <Route
-      path="/resume-converter"
-      element={
         <ProtectedRoute>
-          <ResumeConverter />
+          <Jobs />
         </ProtectedRoute>
       }
     />
-    <Route
-      path="/plans"
-      element={
-        <AppLayout>
-          <Plans />
-        </AppLayout>
-      }
-    />
-    <Route
-      path="/referrals"
-      element={
-        <AppLayout>
-          <Referrals />
-        </AppLayout>
-      }
-    />
-    {/* Protected Routes - Auth required */}
     <Route
       path="/queue"
       element={
@@ -175,10 +159,34 @@ const AppRoutes = () => (
       }
     />
     <Route
-      path="/payment-success"
+      path="/plans"
       element={
         <ProtectedRoute>
-          <PaymentSuccess />
+          <Plans />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/referrals"
+      element={
+        <ProtectedRoute>
+          <Referrals />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/radar"
+      element={
+        <ProtectedRoute>
+          <Radar />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/resume-converter"
+      element={
+        <ProtectedRoute>
+          <ResumeConverter />
         </ProtectedRoute>
       }
     />
@@ -199,21 +207,15 @@ const AppRoutes = () => (
       }
     />
     <Route
-      path="/onboarding"
-      element={
-        <OnboardingRoute>
-          <Onboarding />
-        </OnboardingRoute>
-      }
-    />
-    <Route
-      path="/radar"
+      path="/payment-success"
       element={
         <ProtectedRoute>
-          <Radar />
+          <PaymentSuccess />
         </ProtectedRoute>
       }
     />
+
+    {/* ADMIN */}
     <Route
       path="/admin/ai-usage"
       element={
@@ -238,7 +240,7 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
-    <Route path="/v/:token" element={<PublicProfile />} />
+
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
@@ -246,10 +248,6 @@ const AppRoutes = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
-      {/* Atenção: O AuthProvider DEVE estar dentro do BrowserRouter 
-        (para usar hooks de navegação se necessário) mas DEVE envolver 
-        todas as rotas e componentes de UI que possam depender do user.
-      */}
       <BrowserRouter>
         <AuthProvider>
           <TooltipProvider>
