@@ -13,23 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import {
-  Mail,
-  Shield,
-  Clock,
-  Zap,
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
   Loader2,
-  AlertTriangle,
   Rocket,
-  Settings,
-  FileText,
-  ExternalLink,
   Info,
-  TrendingUp,
   Key,
   Lock,
+  TrendingUp,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +31,7 @@ type RiskProfile = "conservative" | "standard" | "aggressive";
 
 export default function Onboarding() {
   const { t } = useTranslation();
-  const { user, profile, refreshProfile, refreshSmtpStatus } = useAuth();
+  const { user, refreshProfile, refreshSmtpStatus } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,11 +39,9 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [checkingSmtp, setCheckingSmtp] = useState(true);
 
-  // SMTP fields
   const [provider, setProvider] = useState<Provider>("gmail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
 
   const totalSteps = 4;
@@ -58,8 +49,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (!user?.id) return;
-
-    const checkExistingSmtp = async () => {
+    const checkStatus = async () => {
       setCheckingSmtp(true);
       const { data } = await supabase
         .from("smtp_credentials")
@@ -71,42 +61,35 @@ export default function Onboarding() {
         navigate("/dashboard", { replace: true });
         return;
       }
-
-      if (data?.has_password && !data?.risk_profile) {
-        setStep(3);
-      }
-
+      if (data?.has_password && !data?.risk_profile) setStep(3);
       setCheckingSmtp(false);
     };
-
-    checkExistingSmtp();
+    checkStatus();
   }, [user?.id, navigate]);
 
-  // --- LÓGICA DE SENHA DE APP (16 LETRAS) ---
   const handlePasswordChange = (val: string) => {
+    // Sanitização: apenas letras, minúsculo, limite 16
     const sanitized = val
       .replace(/[^a-zA-Z]/g, "")
-      .slice(0, 16)
-      .toLowerCase();
+      .toLowerCase()
+      .slice(0, 16);
     setPassword(sanitized);
   };
 
   const handleSaveSmtp = async () => {
     if (!user?.id) return;
     if (password.length !== 16) {
-      toast({ title: t("smtp.toasts.password_invalid") || "Invalid App Password", variant: "destructive" });
+      toast({ title: t("smtp.toasts.password_invalid"), variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
+      const { data: session } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ provider, email, password }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
+        body: JSON.stringify({ provider, email: email.trim().toLowerCase(), password }),
       });
 
       const payload = await res.json();
@@ -125,13 +108,13 @@ export default function Onboarding() {
     if (!user?.id || !riskProfile) return;
     setLoading(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: session } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
         body: JSON.stringify({ provider, email, risk_profile: riskProfile }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error("Error");
       setStep(4);
     } catch (e: any) {
       toast({ title: t("warmup.toasts.profile_error"), variant: "destructive" });
@@ -140,13 +123,12 @@ export default function Onboarding() {
     }
   };
 
-  // --- FINALIZAÇÃO BLINDADA CONTRA LOOPING ---
   const handleComplete = async () => {
     setLoading(true);
     try {
       await refreshSmtpStatus?.();
       await refreshProfile?.();
-      // Delay essencial para o cache do AuthContext atualizar antes da rota mudar
+      // Delay essencial para evitar o looping de redirecionamento no dashboard
       await new Promise((r) => setTimeout(r, 600));
       navigate("/dashboard", { replace: true });
     } catch (error) {
@@ -158,14 +140,13 @@ export default function Onboarding() {
 
   if (checkingSmtp)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
       <div className="p-6 flex items-center justify-between border-b bg-white shadow-sm">
         <BrandLogo height={28} />
         <Badge variant="outline" className="font-bold">
@@ -177,7 +158,6 @@ export default function Onboarding() {
 
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Step 1: Welcome */}
           {step === 1 && (
             <Card className="border-none shadow-2xl">
               <CardHeader className="text-center">
@@ -195,7 +175,6 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Step 2: SMTP Setup (O NOVO LAYOUT) */}
           {step === 2 && (
             <Card className="border-none shadow-2xl">
               <CardHeader>
@@ -205,7 +184,6 @@ export default function Onboarding() {
                 <CardDescription>{t("onboarding.smtp.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Info Box sobre App Password */}
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
                   <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
                   <div className="text-xs text-blue-900 leading-relaxed">
@@ -257,10 +235,10 @@ export default function Onboarding() {
                     value={password}
                     onChange={(e) => handlePasswordChange(e.target.value)}
                     placeholder="xxxx xxxx xxxx xxxx"
-                    className="h-14 text-center text-xl font-mono tracking-[0.4em] uppercase placeholder:tracking-normal placeholder:text-sm shadow-inner"
+                    className="h-14 text-center text-xl font-mono tracking-[0.4em] lowercase shadow-inner"
                   />
                   <p className="text-[10px] text-muted-foreground text-center italic">
-                    {t("onboarding.smtp.password_hint") || "Only letters allowed. Standard 16-character format."}
+                    {t("onboarding.smtp.password_hint") || "Use as 16 letras minúsculas sem espaços."}
                   </p>
                 </div>
 
@@ -285,7 +263,6 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Step 3: Warmup Profile */}
           {step === 3 && (
             <Card className="border-none shadow-2xl">
               <CardHeader>
@@ -295,7 +272,6 @@ export default function Onboarding() {
                 <CardDescription>{t("onboarding.warmup.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Aqui você usaria o map dos perfis de risco conforme o original */}
                 <div className="grid gap-3">
                   {["conservative", "standard", "aggressive"].map((id) => (
                     <div
@@ -323,7 +299,6 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Step 4: Complete */}
           {step === 4 && (
             <Card className="border-none shadow-2xl text-center p-10">
               <div className="bg-emerald-100 p-5 rounded-full w-fit mx-auto mb-6">
@@ -333,7 +308,11 @@ export default function Onboarding() {
                 {t("onboarding.complete.title")}
               </CardTitle>
               <CardDescription className="text-base mt-2 mb-8">{t("onboarding.complete.description")}</CardDescription>
-              <Button onClick={handleComplete} disabled={loading} className="w-full h-14 font-black text-lg shadow-xl">
+              <Button
+                onClick={handleComplete}
+                disabled={loading}
+                className="w-full h-14 font-black text-lg shadow-xl uppercase italic"
+              >
                 {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : t("onboarding.complete.go_dashboard")}
               </Button>
             </Card>
