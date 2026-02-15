@@ -32,8 +32,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
-  DollarSign,
   Calendar,
+  Tags,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -114,9 +114,14 @@ export default function Jobs() {
     return new Date(date).toLocaleDateString(i18n.language === "pt" ? "pt-BR" : "en-US", { timeZone: "UTC" });
   };
 
+  const formatExperience = (months: number | null | undefined) => {
+    if (!months || months <= 0) return "-";
+    return months < 12 ? `${months}m` : `${Math.floor(months / 12)}y`;
+  };
+
   const renderPrice = (job: Job) => {
-    if (job.wage_from) return `$${job.wage_from.toFixed(2)}`;
-    if (job.salary) return `$${job.salary.toFixed(2)}`;
+    if (job.wage_from) return <span translate="no">{`$${job.wage_from.toFixed(2)}`}</span>;
+    if (job.salary) return <span translate="no">{`$${job.salary.toFixed(2)}`}</span>;
     return "-";
   };
 
@@ -172,27 +177,44 @@ export default function Jobs() {
     }
   };
 
+  const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => {
+    if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />;
+    return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+  };
+
+  const getGroupBadgeConfig = (group: string) => {
+    const g = group.toUpperCase();
+    if (g === "A") return { label: "GRUPO - A", className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
+    if (g === "B") return { label: "GRUPO - B", className: "bg-blue-50 text-blue-800 border-blue-300" };
+    if (g === "C" || g === "D")
+      return { label: `GRUPO - ${g}`, className: "bg-amber-50 text-amber-800 border-amber-300" };
+    return { label: `GRUPO - ${g}`, className: "bg-slate-50 text-slate-700 border-slate-300" };
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6 text-left px-4 sm:px-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{formatNumber(totalCount)} vagas encontradas</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("nav.jobs")}</h1>
+            <p className="text-muted-foreground mt-1">{formatNumber(totalCount)} vagas encontradas</p>
           </div>
           {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/admin/importer")}
-              className="w-full sm:w-auto"
-            >
-              <Database className="mr-2 h-4 w-4" /> Sync Master
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/importer")}
+                className="w-full sm:w-auto"
+              >
+                <Database className="mr-2 h-4 w-4" /> Sync Master
+              </Button>
+              <JobImportDialog />
+            </div>
           )}
         </div>
 
-        {/* FILTROS RESPONSIVOS */}
+        {/* --- FILTROS --- */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -220,15 +242,25 @@ export default function Jobs() {
                   placeholder="Search jobs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-10"
                 />
               </div>
-              <Input placeholder="State (TX)" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} />
-              <Input placeholder="City" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} />
+              <Input
+                placeholder="State (Ex: TX)"
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value)}
+                className="h-10"
+              />
+              <Input
+                placeholder="City"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="h-10"
+              />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val === "all" ? "" : val)}>
-                <SelectTrigger className="bg-white">
+                <SelectTrigger className="bg-white h-10">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -245,55 +277,58 @@ export default function Jobs() {
                 placeholder="Min $"
                 value={minSalary}
                 onChange={(e) => setMinSalary(e.target.value)}
+                className="h-10"
               />
               <Input
                 type="number"
                 placeholder="Max $"
                 value={maxSalary}
                 onChange={(e) => setMaxSalary(e.target.value)}
+                className="h-10"
               />
             </div>
           </CardHeader>
         </Card>
 
-        {/* LISTA DE VAGAS - TABELA (DESKTOP) E CARDS (MOBILE) */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="animate-spin h-8 w-8 text-primary" />
           </div>
         ) : isMobile ? (
-          /* MOBILE LAYOUT */
+          /* MOBILE LAYOUT (Cards) */
           <div className="space-y-4">
             {jobs.map((j) => (
-              <Card key={j.id} onClick={() => setSelectedJob(j)} className="active:scale-[0.98] transition-transform">
+              <Card
+                key={j.id}
+                onClick={() => setSelectedJob(j)}
+                className="active:scale-[0.98] transition-transform cursor-pointer"
+              >
                 <CardContent className="p-4 space-y-3">
                   <div className="flex justify-between items-start gap-2">
                     <h3 className="font-bold text-slate-900 leading-tight flex-1">{j.job_title}</h3>
-                    <div className="text-right shrink-0">
-                      <span className="font-bold text-green-700 block">{renderPrice(j)}/h</span>
-                    </div>
+                    <span className="font-bold text-green-700 shrink-0">{renderPrice(j)}/h</span>
                   </div>
                   <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-slate-600">
                     <span className="flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" /> {j.company}
+                      <Briefcase className="h-3.5 w-3.5" /> {j.company}
                     </span>
                     <span className="flex items-center gap-1 uppercase">
-                      <MapPin className="h-3 w-3" /> {j.city}, {j.state}
+                      <MapPin className="h-3.5 w-3.5" /> {j.city}, {j.state}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                     <Badge
                       className={cn(
                         "text-[10px] font-black",
-                        j.visa_type === "H-2A" && !j.was_early_access && "bg-green-600 text-white",
-                        j.visa_type === "H-2B" && !j.was_early_access && "bg-blue-600 text-white",
+                        !j.was_early_access && j.visa_type === "H-2A" && "bg-green-600 text-white",
+                        !j.was_early_access && j.visa_type === "H-2B" && "bg-blue-600 text-white",
                         (j.visa_type.includes("Early Access") || j.was_early_access) &&
                           "bg-amber-50 border-amber-400 text-amber-900",
                       )}
                     >
                       {j.visa_type}
                     </Badge>
-                    <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
                       <Calendar className="h-3 w-3" /> {formatDate(j.posted_date)}
                     </span>
                   </div>
@@ -302,33 +337,45 @@ export default function Jobs() {
             ))}
           </div>
         ) : (
-          /* DESKTOP TABLE */
+          /* DESKTOP LAYOUT (Full Table) */
           <Card className="border-slate-200 overflow-hidden shadow-sm">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/80">
-                  <TableHead onClick={() => toggleSort("job_title")} className="cursor-pointer">
-                    Title
+                <TableRow className="bg-slate-50/80 whitespace-nowrap">
+                  <TableHead onClick={() => toggleSort("job_title")} className="cursor-pointer py-4">
+                    Title <SortIcon active={sortKey === "job_title"} dir={sortDir} />
                   </TableHead>
                   <TableHead onClick={() => toggleSort("company")} className="cursor-pointer">
-                    Company
+                    Company <SortIcon active={sortKey === "company"} dir={sortDir} />
                   </TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead onClick={() => toggleSort("city")} className="cursor-pointer">
+                    Location <SortIcon active={sortKey === "city"} dir={sortDir} />
+                  </TableHead>
+                  <TableHead className="text-center">Openings</TableHead>
                   <TableHead>Salary</TableHead>
                   <TableHead>Visa</TableHead>
+                  <TableHead>Grupo</TableHead>
                   <TableHead>Posted</TableHead>
+                  <TableHead>Start</TableHead>
+                  <TableHead>End</TableHead>
+                  <TableHead>Exp</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {jobs.map((j) => (
-                  <TableRow key={j.id} onClick={() => setSelectedJob(j)} className="cursor-pointer hover:bg-slate-50">
+                  <TableRow
+                    key={j.id}
+                    onClick={() => setSelectedJob(j)}
+                    className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  >
                     <TableCell className="font-semibold text-sm">{j.job_title}</TableCell>
                     <TableCell className="text-sm text-slate-600">{j.company}</TableCell>
                     <TableCell className="text-sm uppercase">
                       {j.city}, {j.state}
                     </TableCell>
-                    <TableCell className="font-bold text-green-700">{renderPrice(j)}</TableCell>
+                    <TableCell className="text-center text-sm">{j.openings ?? "-"}</TableCell>
+                    <TableCell className="font-bold text-green-700 text-sm">{renderPrice(j)}</TableCell>
                     <TableCell>
                       <Badge
                         className={cn(
@@ -336,19 +383,38 @@ export default function Jobs() {
                           !j.was_early_access && j.visa_type === "H-2A" && "bg-green-600 text-white border-green-600",
                           !j.was_early_access && j.visa_type === "H-2B" && "bg-blue-600 text-white border-blue-600",
                           (j.visa_type.includes("Early Access") || j.was_early_access) &&
-                            "bg-amber-50 text-amber-900 border-amber-400 hover:bg-amber-50",
+                            "bg-amber-50 border-amber-400 text-amber-900",
                         )}
                       >
                         {j.visa_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-600">{formatDate(j.posted_date)}</TableCell>
+                    <TableCell>
+                      {j.randomization_group && (
+                        <Badge
+                          variant="outline"
+                          className={cn("font-bold text-[10px]", getGroupBadgeConfig(j.randomization_group).className)}
+                        >
+                          {getGroupBadgeConfig(j.randomization_group).label}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                      {formatDate(j.posted_date)}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                      {formatDate(j.start_date)}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(j.end_date)}</TableCell>
+                    <TableCell className="text-sm text-slate-600">{formatExperience(j.experience_months)}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         size="sm"
                         variant="outline"
                         className="rounded-full h-8 w-8 p-0"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation(); /* Add to queue logic */
+                        }}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -360,22 +426,32 @@ export default function Jobs() {
           </Card>
         )}
 
-        {/* PAGINAÇÃO */}
+        {/* --- PAGINAÇÃO --- */}
         <div className="flex items-center justify-between py-6">
-          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-          </Button>
-          <span className="text-sm font-medium">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+          <div className="hidden sm:block text-sm text-muted-foreground">
+            Página {page} de {totalPages} ({formatNumber(totalCount)} total)
+          </div>
+          <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+            </Button>
+            <span className="sm:hidden text-sm font-medium">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Próximo <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
 
         <JobDetailsDialog
