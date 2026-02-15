@@ -1,11 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Tenta buscar por todos os nomes comuns que o Lovable/Vite usam
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Tenta pegar do ambiente, mas se falhar, usa os seus valores reais
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://dalarhopratsgzmmzhxx.supabase.co";
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGFyaG9wcmF0c2d6bW16aHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM5NDksImV4cCI6MjA4NDY1OTk0OX0.CIV7u2pMSudse-Zpfqf8OHLkm_exZn0EaYXVEFwoXTQ";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Atenção: Variáveis de ambiente do Supabase não detectadas. Verifique o arquivo .env");
+// Validação final para o console
+if (!supabaseUrl || supabaseUrl.includes("placeholder")) {
+  console.error("Erro Crítico: Supabase URL não configurada.");
 }
 
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
