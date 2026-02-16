@@ -1,116 +1,123 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
+// supabase/functions/save-smtp-credentials/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "https://esm.sh/nodemailer";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+serve(async (req) => {
+  // Handle CORS
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   try {
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+
+    // 1. Validar Autenticação
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) throw new Error("Não autorizado");
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const {
       data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(token);
-    if (userError || !user) throw new Error("Usuário não encontrado");
+      error: authError,
+    } = await supabaseClient.auth.getUser(authHeader?.replace("Bearer ", ""));
 
-    const body = await req.json();
-
-    // --- 1. DEEP CLEAN (Limpeza Profunda) ---
-    const provider = String(body.provider ?? "gmail").toLowerCase();
-    const email = String(body.email ?? "")
-      .replace(/\s/g, "")
-      .toLowerCase();
-    const rawPassword = typeof body.password === "string" ? body.password : "";
-    const password = rawPassword.replace(/\s/g, "").toLowerCase();
-
-    // --- 2. VALIDAÇÃO PRÉ-BANCO (Catch Early) ---
-    if (password.length > 0 && !/^[a-z]{16}$/.test(password)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Pattern Fail: A senha deve ter 16 letras puras. Recebemos ${password.length} caracteres: [${password}]`,
-        }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
-      );
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
     }
 
-    // --- 3. DIAGNÓSTICO SEQUENCIAL ---
+    const { provider, email, password, host, port, risk_profile } = await req.json();
 
-    // Passo A: Tabela de Perfil/Email
-    const { data: existing } = await supabase
-      .from("smtp_credentials")
-      .select("warmup_started_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // --- LÓGICA DE PERFIL DE RISCO ---
+    // Se o payload contém apenas o risk_profile, atualizamos e encerramos
+    if (risk_profile && !password) {
+      const { error: updateError } = await supabaseClient
+        .from("smtp_credentials")
+        .update({ risk_profile })
+        .eq("user_id", user.id);
 
-    const upsertData: any = {
-      user_id: user.id,
-      provider,
-      email,
-      updated_at: new Date().toISOString(),
+      if (updateError) throw updateError;
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- LÓGICA DE CONFIGURAÇÃO SMTP ---
+    let smtpConfig = {
+      host: "",
+      port: 465,
+      secure: true,
+      auth: { user: email, pass: password },
     };
 
-    if (body.risk_profile) {
-      upsertData.risk_profile = body.risk_profile;
-      if (!existing?.warmup_started_at) {
-        upsertData.warmup_started_at = new Date().toISOString().slice(0, 10);
-        const limits: any = { conservative: 50, standard: 100, aggressive: 150 };
-        upsertData.current_daily_limit = limits[body.risk_profile] || 100;
-        upsertData.emails_sent_today = 0;
-      }
+    if (provider === "gmail") {
+      smtpConfig.host = "smtp.gmail.com";
+      smtpConfig.port = 465;
+      smtpConfig.secure = true;
+    } else if (provider === "outlook") {
+      smtpConfig.host = "smtp-mail.outlook.com";
+      smtpConfig.port = 587;
+      smtpConfig.secure = false; // Outlook usa STARTTLS na porta 587
+    } else if (provider === "custom") {
+      smtpConfig.host = host;
+      smtpConfig.port = Number(port);
+      smtpConfig.secure = Number(port) === 465;
     }
 
-    const { error: dbError } = await supabase.from("smtp_credentials").upsert(upsertData, { onConflict: "user_id" });
+    // 2. TESTAR CONEXÃO (O "Pulo do Gato")
+    const transporter = nodemailer.createTransport(smtpConfig);
 
-    if (dbError) {
-      // Se falhar aqui, o erro é no Email ou no Provider
+    try {
+      await transporter.verify();
+    } catch (verifyError) {
+      console.error("Erro na verificação SMTP:", verifyError);
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Erro na Tabela Principal (Email/Provider): ${dbError.message} - Detalhe: ${dbError.details}`,
+          error:
+            "Falha na autenticação SMTP. Verifique se a 'Senha de App' está correta e se o e-mail permite conexões externas.",
         }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        },
       );
     }
 
-    // Passo B: Tabela de Senha (Secrets)
-    if (password.length > 0) {
-      const { error: secretError } = await supabase
-        .from("smtp_credentials_secrets")
-        .upsert({ user_id: user.id, password }, { onConflict: "user_id" });
+    // 3. SALVAR NO BANCO
+    // Aqui usamos upsert para criar ou atualizar as credenciais do usuário
+    const { error: dbError } = await supabaseClient.from("smtp_credentials").upsert(
+      {
+        user_id: user.id,
+        provider,
+        email,
+        password, // Idealmente, você deve criptografar isso antes de salvar
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        has_password: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
 
-      if (secretError) {
-        // Se falhar aqui, o erro é no Padrão da Senha (Regex do Banco)
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `Erro na Tabela de Senha (Pattern Mismatch): ${secretError.message} - Verifique se o banco exige 16 letras minúsculas.`,
-          }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
-        );
-      }
-    }
+    if (dbError) throw dbError;
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: `Critical Error: ${error.message}` }), {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
-};
-
-serve(handler);
+});
