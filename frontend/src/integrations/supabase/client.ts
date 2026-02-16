@@ -1,15 +1,19 @@
+// src/integrations/supabase/client.ts
 import { createClient } from "@supabase/supabase-js";
 
-// Pegando as variáveis do ambiente Vite
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-// Tentamos pegar a ANON_KEY ou a PUBLISHABLE_KEY (comum em alguns templates)
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Tentamos pegar das variáveis de ambiente primeiro (boa prática)
+// Se falhar, usamos os valores que você forneceu para não travar o app
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://dalarhopratsgzmmzhxx.supabase.co";
 
-// Verificação de segurança para evitar o erro de "required"
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "ERRO: Supabase URL ou Anon Key não encontradas. Verifique seu arquivo .env ou as configurações de segredos do projeto.",
-  );
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGFyaG9wcmF0c2d6bW16aHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM5NDksImV4cCI6MjA4NDY1OTk0OX0.CIV7u2pMSudse-Zpfqf8OHLkm_exZn0EaYXVEFwoXTQ";
+
+// Criamos o cliente garantindo que os valores não sejam vazios
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Log para te ajudar a debugar no console do navegador se as variáveis estão vindo do ambiente ou do código
+if (!import.meta.env.VITE_SUPABASE_URL) {
+  console.warn("Aviso: VITE_SUPABASE_URL não encontrada no ambiente. Usando URL de fallback.");
 }
-
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
