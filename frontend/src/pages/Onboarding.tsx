@@ -62,7 +62,6 @@ export default function Onboarding() {
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
-  // Verificação de Outlook para aviso
   const isOutlook = email.toLowerCase().endsWith("@outlook.com") || email.toLowerCase().endsWith("@hotmail.com");
 
   useEffect(() => {
@@ -163,7 +162,7 @@ export default function Onboarding() {
     setTesting(true);
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
-        body: { to: email, subject: "✅ Teste de Conexão SMTP - H2 Linker", body: "Sucesso!", provider },
+        body: { to: email, subject: "✅ Teste de Conexão SMTP", body: "Sucesso!", provider },
       });
       if (funcError) throw funcError;
       if (payload?.success === false) throw new Error(payload?.error);
@@ -214,33 +213,33 @@ export default function Onboarding() {
       icon: <ShieldCheck className="h-6 w-6 text-emerald-500" />,
       color: "border-emerald-200 bg-emerald-50/50",
       activeColor: "border-emerald-500 bg-emerald-50",
-      badge: t("warmup.profiles.conservative.badge", "Mais Seguro"),
+      badge: t("warmup.profiles.conservative.badge"),
       items: [
-        t("warmup.profiles.conservative.item1", "Aumento gradual e lento"),
-        t("warmup.profiles.conservative.item2", "Ideal para contas novas"),
-        t("warmup.profiles.conservative.item3", "Foco total em reputação"),
+        t("warmup.profiles.conservative.item1"),
+        t("warmup.profiles.conservative.item2"),
+        t("warmup.profiles.conservative.item3"),
       ],
     },
     standard: {
       icon: <Activity className="h-6 w-6 text-blue-500" />,
       color: "border-blue-200 bg-blue-50/50",
       activeColor: "border-blue-500 bg-blue-50",
-      badge: t("warmup.profiles.standard.badge", "Recomendado"),
+      badge: t("warmup.profiles.standard.badge"),
       items: [
-        t("warmup.profiles.standard.item1", "Equilíbrio entre volume e segurança"),
-        t("warmup.profiles.standard.item2", "Ramp-up moderado"),
-        t("warmup.profiles.standard.item3", "Para a maioria dos usuários"),
+        t("warmup.profiles.standard.item1"),
+        t("warmup.profiles.standard.item2"),
+        t("warmup.profiles.standard.item3"),
       ],
     },
     aggressive: {
       icon: <Zap className="h-6 w-6 text-amber-500" />,
       color: "border-amber-200 bg-amber-50/50",
       activeColor: "border-amber-500 bg-amber-50",
-      badge: t("warmup.profiles.aggressive.badge", "Alta Performance"),
+      badge: t("warmup.profiles.aggressive.badge"),
       items: [
-        t("warmup.profiles.aggressive.item1", "Aceleração rápida de volume"),
-        t("warmup.profiles.aggressive.item2", "Para domínios já aquecidos"),
-        t("warmup.profiles.aggressive.item3", "Máxima entrega em menos tempo"),
+        t("warmup.profiles.aggressive.item1"),
+        t("warmup.profiles.aggressive.item2"),
+        t("warmup.profiles.aggressive.item3"),
       ],
     },
   };
@@ -300,7 +299,6 @@ export default function Onboarding() {
                           width="100%"
                           height="100%"
                           src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
-                          title="Tutorial"
                           frameBorder="0"
                           allowFullScreen
                         />
@@ -326,11 +324,8 @@ export default function Onboarding() {
               {isOutlook && (
                 <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertTitle className="font-bold text-amber-800">Aviso: Outlook/Hotmail</AlertTitle>
-                  <AlertDescription className="text-xs">
-                    Provedores Microsoft possuem limites rígidos. Recomendamos usar <strong>Gmail</strong> se encontrar
-                    erros de envio constantes.
-                  </AlertDescription>
+                  <AlertTitle className="font-bold text-amber-800">{t("smtp.outlook_warning_title")}</AlertTitle>
+                  <AlertDescription className="text-xs">{t("smtp.outlook_warning_desc")}</AlertDescription>
                 </Alert>
               )}
 
@@ -383,7 +378,9 @@ export default function Onboarding() {
                       type="text"
                       value={password}
                       onChange={handlePasswordChange}
-                      placeholder={hasPassword ? t("smtp.placeholders.password_saved") : "abcd efgh ijkl mnop"}
+                      placeholder={
+                        hasPassword ? t("smtp.placeholders.password_saved") : t("smtp.placeholders.password_example")
+                      }
                       className={provider === "gmail" ? "font-mono text-lg tracking-wider" : ""}
                       maxLength={provider === "gmail" ? 19 : 100}
                       autoComplete="off"
@@ -447,23 +444,14 @@ export default function Onboarding() {
                   <div className="flex gap-3">
                     <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                     <div className="space-y-1">
-                      <p className="text-sm font-bold text-blue-900">
-                        {t("onboarding.warmup.why_title", "Por que preciso aquecer meu e-mail?")}
-                      </p>
+                      <p className="text-sm font-bold text-blue-900">{t("onboarding.warmup.why_title")}</p>
                       <p className="text-xs text-blue-800/80 leading-relaxed">
-                        Provedores monitoram o volume de envios. Se você começar a enviar muitos e-mails subitamente,
-                        sua conta será bloqueada. O warmup simula um comportamento humano natural para garantir que suas
-                        mensagens cheguem na caixa de entrada.
+                        {t("onboarding.warmup.why_description")}
                       </p>
                     </div>
                   </div>
                 </div>
-                <CardDescription>
-                  {t(
-                    "onboarding.warmup.instruction",
-                    "Selecione a intensidade do aquecimento com base na idade da sua conta:",
-                  )}
-                </CardDescription>
+                <CardDescription>{t("onboarding.warmup.instruction")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {(["conservative", "standard", "aggressive"] as RiskProfile[]).map((id) => (
