@@ -162,7 +162,7 @@ export default function Onboarding() {
     setTesting(true);
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
-        body: { to: email, subject: "✅ Teste de Conexão SMTP", body: "Sucesso!", provider },
+        body: { to: email, subject: "✅ SMTP Test", body: "Connection Successful!", provider },
       });
       if (funcError) throw funcError;
       if (payload?.success === false) throw new Error(payload?.error);
@@ -211,36 +211,15 @@ export default function Onboarding() {
   const profileDetails = {
     conservative: {
       icon: <ShieldCheck className="h-6 w-6 text-emerald-500" />,
-      color: "border-emerald-200 bg-emerald-50/50",
       activeColor: "border-emerald-500 bg-emerald-50",
-      badge: t("warmup.profiles.conservative.badge"),
-      items: [
-        t("warmup.profiles.conservative.item1"),
-        t("warmup.profiles.conservative.item2"),
-        t("warmup.profiles.conservative.item3"),
-      ],
     },
     standard: {
       icon: <Activity className="h-6 w-6 text-blue-500" />,
-      color: "border-blue-200 bg-blue-50/50",
       activeColor: "border-blue-500 bg-blue-50",
-      badge: t("warmup.profiles.standard.badge"),
-      items: [
-        t("warmup.profiles.standard.item1"),
-        t("warmup.profiles.standard.item2"),
-        t("warmup.profiles.standard.item3"),
-      ],
     },
     aggressive: {
       icon: <Zap className="h-6 w-6 text-amber-500" />,
-      color: "border-amber-200 bg-amber-50/50",
       activeColor: "border-amber-500 bg-amber-50",
-      badge: t("warmup.profiles.aggressive.badge"),
-      items: [
-        t("warmup.profiles.aggressive.item1"),
-        t("warmup.profiles.aggressive.item2"),
-        t("warmup.profiles.aggressive.item3"),
-      ],
     },
   };
 
@@ -273,6 +252,14 @@ export default function Onboarding() {
                 <CardDescription className="text-base">{t("onboarding.welcome.description")}</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  {[1, 2, 3].map((num) => (
+                    <div key={num} className="text-center p-4 rounded-xl bg-muted/50">
+                      <p className="font-bold text-sm mb-1">{t(`onboarding.welcome.step${num}_title`)}</p>
+                      <p className="text-xs text-muted-foreground">{t(`onboarding.welcome.step${num}_desc`)}</p>
+                    </div>
+                  ))}
+                </div>
                 <Button onClick={() => setStep(2)} className="w-full h-12 text-lg font-bold">
                   {t("onboarding.welcome.start")} <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -312,7 +299,15 @@ export default function Onboarding() {
                         <li>{t("smtp.tutorial.step4")}</li>
                       </ol>
                       <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-amber-300" asChild>
-                        <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={
+                            provider === "gmail"
+                              ? "https://myaccount.google.com/apppasswords"
+                              : "https://account.microsoft.com/security"
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           {t("smtp.tutorial.generate_now")} <ExternalLink className="w-3 h-3" />
                         </a>
                       </Button>
@@ -322,19 +317,23 @@ export default function Onboarding() {
               </Card>
 
               {isOutlook && (
-                <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertTitle className="font-bold text-amber-800">{t("smtp.outlook_warning_title")}</AlertTitle>
-                  <AlertDescription className="text-xs">{t("smtp.outlook_warning_desc")}</AlertDescription>
+                <Alert className="bg-blue-50 border-blue-200">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-800 font-bold">
+                    {t("onboarding.smtp.outlook_guide_title")}
+                  </AlertTitle>
+                  <AlertDescription className="text-blue-700 text-xs">
+                    {t("onboarding.smtp.outlook_step1")} • {t("onboarding.smtp.outlook_step2")}
+                  </AlertDescription>
                 </Alert>
               )}
 
               <Card className="border-none shadow-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" /> {t("smtp.title")}
+                    <Mail className="h-5 w-5" /> {t("onboarding.smtp.title")}
                   </CardTitle>
-                  <CardDescription>{t("smtp.subtitle")}</CardDescription>
+                  <CardDescription>{t("onboarding.smtp.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -379,7 +378,7 @@ export default function Onboarding() {
                       value={password}
                       onChange={handlePasswordChange}
                       placeholder={
-                        hasPassword ? t("smtp.placeholders.password_saved") : t("smtp.placeholders.password_example")
+                        hasPassword ? t("smtp.placeholders.password_saved") : t("onboarding.smtp.password_hint")
                       }
                       className={provider === "gmail" ? "font-mono text-lg tracking-wider" : ""}
                       maxLength={provider === "gmail" ? 19 : 100}
@@ -445,13 +444,11 @@ export default function Onboarding() {
                     <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-blue-900">{t("onboarding.warmup.why_title")}</p>
-                      <p className="text-xs text-blue-800/80 leading-relaxed">
-                        {t("onboarding.warmup.why_description")}
-                      </p>
+                      <p className="text-xs text-blue-800/80 leading-relaxed">{t("onboarding.warmup.why_desc")}</p>
                     </div>
                   </div>
                 </div>
-                <CardDescription>{t("onboarding.warmup.instruction")}</CardDescription>
+                <CardDescription>{t("onboarding.warmup.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {(["conservative", "standard", "aggressive"] as RiskProfile[]).map((id) => (
@@ -469,23 +466,19 @@ export default function Onboarding() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="font-bold text-lg capitalize text-slate-900">
-                            {t(`warmup.profiles.${id}.title`)}
-                          </p>
-                          <Badge variant={riskProfile === id ? "default" : "secondary"} className="text-[10px]">
-                            {profileDetails[id].badge}
-                          </Badge>
+                          <p className="font-bold text-lg text-slate-900">{t(`warmup.profiles.${id}.title`)}</p>
+                          {id === "standard" && (
+                            <Badge variant={riskProfile === id ? "default" : "secondary"} className="text-[10px]">
+                              {t("onboarding.warmup.recommended_badge")}
+                            </Badge>
+                          )}
                         </div>
-                        <p className="text-sm text-slate-500 mb-3 leading-relaxed">
+                        <p className="text-sm text-slate-500 mb-2 leading-relaxed">
                           {t(`warmup.profiles.${id}.description`)}
                         </p>
-                        <ul className="grid grid-cols-1 gap-2">
-                          {profileDetails[id].items.map((item, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                              <Check className="h-3 w-3 text-primary" /> {item}
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                          <Check className="h-3 w-3" /> {t(`warmup.profiles.${id}.details`)}
+                        </div>
                       </div>
                       {riskProfile === id && (
                         <div className="absolute top-4 right-4 animate-in zoom-in duration-300">
@@ -495,6 +488,14 @@ export default function Onboarding() {
                     </div>
                   </div>
                 ))}
+
+                <div className="mt-6 p-4 rounded-xl bg-muted/30 border border-dashed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <span className="font-bold text-foreground">{t("onboarding.warmup.recommendation_title")}:</span>{" "}
+                    {t("onboarding.warmup.how_it_works")}
+                  </p>
+                </div>
+
                 <div className="flex gap-3 pt-6">
                   <Button variant="ghost" onClick={() => setStep(2)} className="px-8">
                     {t("common.previous")}
@@ -521,6 +522,17 @@ export default function Onboarding() {
                 {t("onboarding.complete.title")}
               </CardTitle>
               <CardDescription className="text-base mt-2 mb-8">{t("onboarding.complete.description")}</CardDescription>
+
+              <div className="space-y-3 mb-8 text-left max-w-sm mx-auto">
+                <div className="flex items-center gap-3 text-sm font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {t("onboarding.complete.smtp_ready")}
+                </div>
+                <div className="flex items-center gap-3 text-sm font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {t("onboarding.complete.warmup_ready")}
+                </div>
+                <p className="text-xs text-muted-foreground mt-4 italic">{t("onboarding.complete.next_steps")}</p>
+              </div>
+
               <Button onClick={handleComplete} disabled={loading} className="w-full h-14 font-black text-lg shadow-xl">
                 {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : t("onboarding.complete.go_dashboard")}
               </Button>
