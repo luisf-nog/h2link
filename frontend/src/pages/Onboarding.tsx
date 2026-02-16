@@ -97,21 +97,21 @@ export default function Onboarding() {
   };
 
   // Save credentials — same as Settings
-  const handleSave = async () => {
-    if (!user?.id) return;
+  const handleSave = async (): Promise<boolean> => {
+    if (!user?.id) return false;
     if (!email) {
       toast({ title: t("smtp.toasts.email_required"), variant: "destructive" });
-      return;
+      return false;
     }
 
     const cleanPass = password.replace(/\s/g, "");
     if (provider === "gmail" && password && cleanPass.length !== 16) {
       toast({
-        title: "Senha inválida",
-        description: "A Senha de App do Google deve ter exatamente 16 letras.",
+        title: t("smtp.invalid_password_title"),
+        description: t("smtp.invalid_password_desc"),
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -121,7 +121,7 @@ export default function Onboarding() {
       });
 
       if (funcError) throw funcError;
-      if (payload?.success === false) throw new Error(payload?.error || "Erro ao salvar");
+      if (payload?.success === false) throw new Error(payload?.error || t("smtp.toasts.save_error_title"));
 
       if (password.trim().length > 0) {
         setHasPassword(true);
@@ -129,19 +129,33 @@ export default function Onboarding() {
       }
 
       toast({ title: t("smtp.toasts.saved") });
+      return true;
     } catch (e: any) {
       toast({ title: t("smtp.toasts.save_error_title"), description: e.message, variant: "destructive" });
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  // Test connection — same as Settings, using send-email-custom
+  // Test connection — auto-saves first if password is unsaved
   const handleTestConnection = async () => {
     if (!email) {
-      toast({ title: "Informe o e-mail primeiro", variant: "destructive" });
+      toast({ title: t("smtp.email_first"), variant: "destructive" });
       return;
     }
+
+    // If there's an unsaved password, save first
+    if (password.trim().length > 0) {
+      const saved = await handleSave();
+      if (!saved) return;
+    }
+
+    if (!hasPassword) {
+      toast({ title: t("smtp.save_first_title"), description: t("smtp.save_first_desc"), variant: "destructive" });
+      return;
+    }
+
     setTesting(true);
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
@@ -150,7 +164,6 @@ export default function Onboarding() {
           subject: "✅ Teste de Conexão SMTP - H2 Linker",
           body: "Parabéns! Sua conexão SMTP está funcionando perfeitamente no H2 Linker.",
           provider,
-          overridePassword: password.replace(/\s/g, "") || undefined,
         },
       });
 
@@ -158,13 +171,13 @@ export default function Onboarding() {
       if (payload?.success === false) throw new Error(payload?.error);
 
       toast({
-        title: "Conexão OK! 🚀",
-        description: "Enviamos um e-mail de teste para você.",
+        title: t("smtp.connection_ok_title"),
+        description: t("smtp.connection_ok_desc"),
         className: "bg-green-600 text-white border-none",
       });
     } catch (e: any) {
       const parsed = parseSmtpError(e.message);
-      toast({ title: "Erro na conexão", description: t(parsed.descriptionKey), variant: "destructive" });
+      toast({ title: t("smtp.connection_error_title"), description: t(parsed.descriptionKey), variant: "destructive" });
     } finally {
       setTesting(false);
     }
@@ -251,10 +264,10 @@ export default function Onboarding() {
               <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
                 <CardHeader className="pb-3 text-amber-800 dark:text-amber-500">
                   <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" /> Atenção: Não use sua senha normal
+                    <AlertTriangle className="h-5 w-5" /> {t("smtp.tutorial.warning_title")}
                   </CardTitle>
                   <CardDescription className="text-amber-700/80 dark:text-amber-400/80 font-medium">
-                    Sua senha de login pessoal NÃO funcionará. Siga o passo a passo abaixo:
+                    {t("smtp.tutorial.warning_desc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -273,20 +286,14 @@ export default function Onboarding() {
                     </div>
                     <div className="flex-1 space-y-3 text-sm flex flex-col justify-center">
                       <ol className="list-decimal list-inside space-y-2 text-muted-foreground font-medium">
-                        <li>
-                          Ative a <strong>Verificação em duas etapas</strong> no Google.
-                        </li>
-                        <li>
-                          Pesquise por <strong>"Senhas de App"</strong> na sua conta.
-                        </li>
-                        <li>
-                          Crie uma senha com o nome <strong>"H2 Linker"</strong>.
-                        </li>
-                        <li>Copie o código de 16 letras e cole abaixo.</li>
+                        <li dangerouslySetInnerHTML={{ __html: t("smtp.tutorial.step1") }} />
+                        <li dangerouslySetInnerHTML={{ __html: t("smtp.tutorial.step2") }} />
+                        <li dangerouslySetInnerHTML={{ __html: t("smtp.tutorial.step3") }} />
+                        <li>{t("smtp.tutorial.step4")}</li>
                       </ol>
                       <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-amber-300" asChild>
                         <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
-                          Gerar Senha Agora <ExternalLink className="w-3 h-3" />
+                          {t("smtp.tutorial.generate_now")} <ExternalLink className="w-3 h-3" />
                         </a>
                       </Button>
                     </div>
@@ -317,7 +324,7 @@ export default function Onboarding() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="gmail">Gmail (Recomendado)</SelectItem>
+                          <SelectItem value="gmail">{t("smtp.gmail_recommended")}</SelectItem>
                           <SelectItem value="outlook">Outlook</SelectItem>
                         </SelectContent>
                       </Select>
@@ -327,17 +334,17 @@ export default function Onboarding() {
                       <Input
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="seu.email@gmail.com"
+                        placeholder={t("smtp.placeholders.email")}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label className="flex justify-between">
-                      <span>Senha de App (16 letras)</span>
+                      <span>{t("smtp.password_label")}</span>
                       {provider === "gmail" && (
-                        <span className="text-[10px] text-red-500 font-bold uppercase">
-                          Senha normal não funciona
+                        <span className="text-[10px] text-destructive font-bold uppercase">
+                          {t("smtp.normal_password_warning")}
                         </span>
                       )}
                     </Label>
@@ -345,14 +352,14 @@ export default function Onboarding() {
                       type="text"
                       value={password}
                       onChange={handlePasswordChange}
-                      placeholder={hasPassword ? "•••• •••• •••• •••• (Salva)" : "abcd efgh ijkl mnop"}
+                      placeholder={hasPassword ? t("smtp.placeholders.password_saved") : "abcd efgh ijkl mnop"}
                       className={provider === "gmail" ? "font-mono text-lg tracking-wider" : ""}
                       maxLength={provider === "gmail" ? 19 : 100}
                       autoComplete="off"
                     />
                     <p className="text-xs text-muted-foreground">
                       {provider === "gmail"
-                        ? `Letras digitadas: ${password.replace(/\s/g, "").length}/16`
+                        ? t("smtp.letters_typed", { count: password.replace(/\s/g, "").length })
                         : t("smtp.password_note.empty")}
                     </p>
                   </div>
@@ -373,7 +380,7 @@ export default function Onboarding() {
                       ) : (
                         <Wifi className="mr-2 h-4 w-4" />
                       )}
-                      Testar Conexão
+                      {t("smtp.test_connection")}
                     </Button>
                   </div>
 
@@ -387,8 +394,8 @@ export default function Onboarding() {
                           setStep(3);
                         } else {
                           toast({
-                            title: "Salve suas credenciais primeiro",
-                            description: "Clique em Salvar antes de continuar.",
+                            title: t("smtp.save_first_title"),
+                            description: t("smtp.save_first_desc"),
                             variant: "destructive",
                           });
                         }

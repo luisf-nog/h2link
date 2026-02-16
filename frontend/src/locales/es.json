@@ -463,7 +463,29 @@
         "subject": "Solicitud H-2B - {{position}} ({{visa_type}})",
         "body": "Hola {{company}},\n\nMi nombre es {{name}} e me gustaría postularme para el puesto de {{position}} bajo la visa {{visa_type}}.\n\nSaludos cordiales,\n{{name}}\n{{phone}}\n{{contact_email}}"
       }
-    }
+    },
+    "tutorial": {
+      "warning_title": "Atención: No uses tu contraseña normal",
+      "warning_desc": "Tu contraseña de inicio de sesión NO funcionará. Sigue los pasos a continuación:",
+      "step1": "Activa la <strong>Verificación en dos pasos</strong> en Google.",
+      "step2": "Busca <strong>\"Contraseñas de aplicaciones\"</strong> en tu cuenta.",
+      "step3": "Crea una contraseña con el nombre <strong>\"H2 Linker\"</strong>.",
+      "step4": "Copia el código de 16 letras y pégalo abajo.",
+      "generate_now": "Generar Contraseña Ahora"
+    },
+    "password_label": "Contraseña de App (16 letras)",
+    "normal_password_warning": "Contraseña normal no funciona",
+    "invalid_password_title": "Contraseña inválida",
+    "invalid_password_desc": "La contraseña de app de Google debe tener exactamente 16 letras.",
+    "letters_typed": "Letras escritas: {{count}}/16",
+    "test_connection": "Probar Conexión",
+    "connection_ok_title": "¡Conexión OK! 🚀",
+    "connection_ok_desc": "Te enviamos un email de prueba.",
+    "connection_error_title": "Error de conexión",
+    "email_first": "Ingresa el email primero",
+    "gmail_recommended": "Gmail (Recomendado)",
+    "save_first_title": "Guarda tus credenciales primero",
+    "save_first_desc": "Haz clic en Guardar antes de continuar."
   },
   "templates": {
     "title": "Plantillas de email",

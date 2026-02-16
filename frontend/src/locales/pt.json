@@ -463,7 +463,29 @@
         "subject": "Aplicação H-2B - {{position}} ({{visa_type}})",
         "body": "Olá {{company}},\n\nMeu nome é {{name}} e gostaria de me candidatar para a vaga de {{position}} sob o visto {{visa_type}}.\n\nAtenciosamente,\n{{name}}\n{{phone}}\n{{contact_email}}"
       }
-    }
+    },
+    "tutorial": {
+      "warning_title": "Atenção: Não use sua senha normal",
+      "warning_desc": "Sua senha de login pessoal NÃO funcionará. Siga o passo a passo abaixo:",
+      "step1": "Ative a <strong>Verificação em duas etapas</strong> no Google.",
+      "step2": "Pesquise por <strong>\"Senhas de App\"</strong> na sua conta.",
+      "step3": "Crie uma senha com o nome <strong>\"H2 Linker\"</strong>.",
+      "step4": "Copie o código de 16 letras e cole abaixo.",
+      "generate_now": "Gerar Senha Agora"
+    },
+    "password_label": "Senha de App (16 letras)",
+    "normal_password_warning": "Senha normal não funciona",
+    "invalid_password_title": "Senha inválida",
+    "invalid_password_desc": "A Senha de App do Google deve ter exatamente 16 letras.",
+    "letters_typed": "Letras digitadas: {{count}}/16",
+    "test_connection": "Testar Conexão",
+    "connection_ok_title": "Conexão OK! 🚀",
+    "connection_ok_desc": "Enviamos um e-mail de teste para você.",
+    "connection_error_title": "Erro na conexão",
+    "email_first": "Informe o e-mail primeiro",
+    "gmail_recommended": "Gmail (Recomendado)",
+    "save_first_title": "Salve suas credenciais primeiro",
+    "save_first_desc": "Clique em Salvar antes de continuar."
   },
   "templates": {
     "title": "Templates de email",
