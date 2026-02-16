@@ -17,6 +17,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Search,
   Plus,
   Zap,
@@ -33,6 +41,8 @@ import {
   MapPin,
   Calendar,
   Check,
+  Send,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -79,6 +89,7 @@ export default function Jobs() {
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
@@ -131,8 +142,19 @@ export default function Jobs() {
   };
 
   useEffect(() => {
-    if (profile?.id) syncQueue();
+    if (profile?.id) {
+      syncQueue();
+      const hasSeenWelcome = localStorage.getItem("h2linker_jobs_welcome_seen");
+      if (!hasSeenWelcome) {
+        setShowWelcome(true);
+      }
+    }
   }, [profile?.id]);
+
+  const handleCloseWelcome = () => {
+    setShowWelcome(false);
+    localStorage.setItem("h2linker_jobs_welcome_seen", "true");
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -212,14 +234,23 @@ export default function Jobs() {
   };
 
   const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => {
-    if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />;
-    return dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+    if (!active) return <ArrowUpDown className="h-3.5 w-3.5 opacity-50 ml-1 inline" />;
+    return dir === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5 ml-1 inline" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 ml-1 inline" />
+    );
   };
 
   const getGroupBadgeConfig = (group: string) => {
     const g = group.toUpperCase();
-    if (g === "A") return { label: t("jobs.group_label", { group: "A" }), className: "bg-emerald-50 text-emerald-800 border-emerald-300" };
-    if (g === "B") return { label: t("jobs.group_label", { group: "B" }), className: "bg-blue-50 text-blue-800 border-blue-300" };
+    if (g === "A")
+      return {
+        label: t("jobs.group_label", { group: "A" }),
+        className: "bg-emerald-50 text-emerald-800 border-emerald-300",
+      };
+    if (g === "B")
+      return { label: t("jobs.group_label", { group: "B" }), className: "bg-blue-50 text-blue-800 border-blue-300" };
     if (g === "C" || g === "D")
       return { label: t("jobs.group_label", { group: g }), className: "bg-amber-50 text-amber-800 border-amber-300" };
     return { label: t("jobs.group_label", { group: g }), className: "bg-slate-50 text-slate-700 border-slate-300" };
@@ -382,13 +413,25 @@ export default function Jobs() {
                   <TableHead onClick={() => toggleSort("city")} className="cursor-pointer">
                     {t("jobs.table.headers.location")} <SortIcon active={sortKey === "city"} dir={sortDir} />
                   </TableHead>
-                  <TableHead className="text-center">{t("jobs.table.headers.openings")}</TableHead>
-                  <TableHead>{t("jobs.table.headers.salary")}</TableHead>
-                  <TableHead>{t("jobs.table.headers.visa")}</TableHead>
+                  <TableHead onClick={() => toggleSort("openings")} className="text-center cursor-pointer">
+                    {t("jobs.table.headers.openings")} <SortIcon active={sortKey === "openings"} dir={sortDir} />
+                  </TableHead>
+                  <TableHead onClick={() => toggleSort("salary")} className="cursor-pointer">
+                    {t("jobs.table.headers.salary")} <SortIcon active={sortKey === "salary"} dir={sortDir} />
+                  </TableHead>
+                  <TableHead onClick={() => toggleSort("visa_type")} className="cursor-pointer">
+                    {t("jobs.table.headers.visa")} <SortIcon active={sortKey === "visa_type"} dir={sortDir} />
+                  </TableHead>
                   <TableHead>{t("jobs.groups.group_label")}</TableHead>
-                  <TableHead>{t("jobs.table.headers.posted")}</TableHead>
-                  <TableHead>{t("jobs.table.headers.start")}</TableHead>
-                  <TableHead>{t("jobs.table.headers.end")}</TableHead>
+                  <TableHead onClick={() => toggleSort("posted_date")} className="cursor-pointer">
+                    {t("jobs.table.headers.posted")} <SortIcon active={sortKey === "posted_date"} dir={sortDir} />
+                  </TableHead>
+                  <TableHead onClick={() => toggleSort("start_date")} className="cursor-pointer">
+                    {t("jobs.table.headers.start")} <SortIcon active={sortKey === "start_date"} dir={sortDir} />
+                  </TableHead>
+                  <TableHead onClick={() => toggleSort("end_date")} className="cursor-pointer">
+                    {t("jobs.table.headers.end")} <SortIcon active={sortKey === "end_date"} dir={sortDir} />
+                  </TableHead>
                   <TableHead>{t("jobs.table.headers.experience")}</TableHead>
                   <TableHead className="text-right">{t("jobs.table.headers.action")}</TableHead>
                 </TableRow>
@@ -505,6 +548,47 @@ export default function Jobs() {
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
           onShare={(j: any) => navigate(`/job/${j.id}`)}
         />
+
+        {/* Pop-up Explicativo de Boas-Vindas */}
+        <Dialog open={showWelcome} onOpenChange={handleCloseWelcome}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+                <Rocket className="h-6 w-6 text-primary" /> Bem-vindo ao Jobs Hub!
+              </DialogTitle>
+              <DialogDescription className="pt-4 space-y-4 text-slate-700">
+                <p>
+                  Aqui você encontra as melhores oportunidades <strong>H-2A e H-2B</strong> atualizadas em tempo real.
+                </p>
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-3">
+                  <div className="flex gap-3">
+                    <Check className="h-5 w-5 text-green-600 shrink-0" />
+                    <p className="text-sm">Explore vagas por estado, salário ou categoria.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Check className="h-5 w-5 text-green-600 shrink-0" />
+                    <p className="text-sm">
+                      Adicione vagas à sua fila clicando no botão <strong>"+"</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 flex gap-3">
+                  <Send className="h-5 w-5 text-amber-600 shrink-0" />
+                  <p className="text-sm font-semibold text-amber-900">
+                    IMPORTANTE: Após adicionar as vagas desejadas, vá até a aba{" "}
+                    <span className="underline">"Minha Fila" (My Queue)</span> no menu lateral para revisar e realizar
+                    os envios das candidaturas.
+                  </p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <Button onClick={handleCloseWelcome} className="w-full font-bold">
+                Entendido, vamos lá!
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
