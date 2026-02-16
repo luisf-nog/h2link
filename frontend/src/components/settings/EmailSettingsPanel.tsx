@@ -85,8 +85,8 @@ export function EmailSettingsPanel() {
     const cleanPass = password.replace(/\s/g, "");
     if (provider === "gmail" && password && cleanPass.length !== 16) {
       toast({
-        title: "Senha inválida",
-        description: "A Senha de App do Google deve ter exatamente 16 letras.",
+        title: t("smtp.invalid_password_title"),
+        description: t("smtp.invalid_password_desc"),
         variant: "destructive",
       });
       return;
@@ -114,12 +114,23 @@ export function EmailSettingsPanel() {
     }
   };
 
-  // --- BOTÃO DE TESTE RÁPIDO ---
+  // --- BOTÃO DE TESTE RÁPIDO (auto-save before testing) ---
   const handleTestConnection = async () => {
     if (!email) {
-      toast({ title: "Informe o e-mail primeiro", variant: "destructive" });
+      toast({ title: t("smtp.email_first"), variant: "destructive" });
       return;
     }
+
+    // If there's an unsaved password, save first
+    if (password.trim().length > 0) {
+      await handleSave();
+    }
+
+    if (!hasPassword) {
+      toast({ title: t("smtp.save_first_title"), description: t("smtp.save_first_desc"), variant: "destructive" });
+      return;
+    }
+
     setTesting(true);
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
@@ -128,7 +139,6 @@ export function EmailSettingsPanel() {
           subject: "✅ Teste de Conexão SMTP - H2 Linker",
           body: "Parabéns! Sua conexão SMTP está funcionando perfeitamente no H2 Linker.",
           provider,
-          overridePassword: password.replace(/\s/g, "") || undefined,
         },
       });
 
@@ -136,13 +146,13 @@ export function EmailSettingsPanel() {
       if (payload?.success === false) throw new Error(payload?.error);
 
       toast({
-        title: "Conexão OK! 🚀",
-        description: "Enviamos um e-mail de teste para você.",
+        title: t("smtp.connection_ok_title"),
+        description: t("smtp.connection_ok_desc"),
         className: "bg-green-600 text-white border-none",
       });
     } catch (e: any) {
       const parsed = parseSmtpError(e.message);
-      toast({ title: "Erro na conexão", description: t(parsed.descriptionKey), variant: "destructive" });
+      toast({ title: t("smtp.connection_error_title"), description: t(parsed.descriptionKey), variant: "destructive" });
     } finally {
       setTesting(false);
     }
@@ -180,10 +190,10 @@ export function EmailSettingsPanel() {
       <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
         <CardHeader className="pb-3 text-amber-800 dark:text-amber-500">
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" /> Atenção: Não use sua senha normal
+            <AlertTriangle className="h-5 w-5" /> {t("smtp.tutorial.warning_title")}
           </CardTitle>
           <CardDescription className="text-amber-700/80 dark:text-amber-400/80 font-medium">
-            Sua senha de login pessoal NÃO funcionará. Siga o passo a passo abaixo:
+            {t("smtp.tutorial.warning_desc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -202,20 +212,14 @@ export function EmailSettingsPanel() {
             </div>
             <div className="flex-1 space-y-3 text-sm flex flex-col justify-center">
               <ol className="list-decimal list-inside space-y-2 text-muted-foreground font-medium">
-                <li>
-                  Ative a <strong>Verificação em duas etapas</strong> no Google.
-                </li>
-                <li>
-                  Pesquise por <strong>"Senhas de App"</strong> na sua conta.
-                </li>
-                <li>
-                  Crie uma senha com o nome <strong>"H2 Linker"</strong>.
-                </li>
-                <li>Copie o código de 16 letras e cole abaixo.</li>
+                <li dangerouslySetInnerHTML={{ __html: t("smtp.tutorial.step1") }} />
+                <li dangerouslySetInnerHTML={{ __html: t("smtp.tutorial.step2") }} />
+                <li dangerouslySetInnerHTML={{ __html: t("smtp.tutorial.step3") }} />
+                <li>{t("smtp.tutorial.step4")}</li>
               </ol>
               <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-amber-300" asChild>
                 <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
-                  Gerar Senha Agora <ExternalLink className="w-3 h-3" />
+                  {t("smtp.tutorial.generate_now")} <ExternalLink className="w-3 h-3" />
                 </a>
               </Button>
             </div>
@@ -248,7 +252,7 @@ export function EmailSettingsPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gmail">Gmail (Recomendado)</SelectItem>
+                  <SelectItem value="gmail">{t("smtp.gmail_recommended")}</SelectItem>
                   <SelectItem value="outlook">Outlook</SelectItem>
                 </SelectContent>
               </Select>
@@ -261,9 +265,9 @@ export function EmailSettingsPanel() {
 
           <div className="space-y-2">
             <Label className="flex justify-between">
-              <span>Senha de App (16 letras)</span>
+              <span>{t("smtp.password_label")}</span>
               {provider === "gmail" && (
-                <span className="text-[10px] text-red-500 font-bold uppercase">Senha normal não funciona</span>
+                <span className="text-[10px] text-destructive font-bold uppercase">{t("smtp.normal_password_warning")}</span>
               )}
             </Label>
             <Input
@@ -277,7 +281,7 @@ export function EmailSettingsPanel() {
             />
             <p className="text-xs text-muted-foreground">
               {provider === "gmail"
-                ? `Letras digitadas: ${password.replace(/\s/g, "").length}/16`
+                ? t("smtp.letters_typed", { count: password.replace(/\s/g, "").length })
                 : t("smtp.password_note.empty")}
             </p>
           </div>
@@ -293,8 +297,7 @@ export function EmailSettingsPanel() {
               variant="outline"
               className="flex-1 border-blue-200 text-blue-700"
             >
-              {testing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Wifi className="mr-2 h-4 w-4" />} Testar
-              Conexão
+              {testing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Wifi className="mr-2 h-4 w-4" />} {t("smtp.test_connection")}
             </Button>
           </div>
         </CardContent>

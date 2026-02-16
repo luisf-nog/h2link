@@ -463,7 +463,29 @@
         "subject": "H-2B application - {{position}} ({{visa_type}})",
         "body": "Hello {{company}},\n\nMy name is {{name}} and I would like to apply for the {{position}} position under {{visa_type}}.\n\nBest regards,\n{{name}}\n{{phone}}\n{{contact_email}}"
       }
-    }
+    },
+    "tutorial": {
+      "warning_title": "Warning: Do not use your regular password",
+      "warning_desc": "Your personal login password will NOT work. Follow the steps below:",
+      "step1": "Enable <strong>2-Step Verification</strong> on Google.",
+      "step2": "Search for <strong>\"App Passwords\"</strong> in your account.",
+      "step3": "Create a password named <strong>\"H2 Linker\"</strong>.",
+      "step4": "Copy the 16-letter code and paste it below.",
+      "generate_now": "Generate Password Now"
+    },
+    "password_label": "App Password (16 letters)",
+    "normal_password_warning": "Regular password won't work",
+    "invalid_password_title": "Invalid password",
+    "invalid_password_desc": "Google App Password must have exactly 16 letters.",
+    "letters_typed": "Letters typed: {{count}}/16",
+    "test_connection": "Test Connection",
+    "connection_ok_title": "Connection OK! 🚀",
+    "connection_ok_desc": "We sent a test email to you.",
+    "connection_error_title": "Connection error",
+    "email_first": "Enter email first",
+    "gmail_recommended": "Gmail (Recommended)",
+    "save_first_title": "Save your credentials first",
+    "save_first_desc": "Click Save before continuing."
   },
   "templates": {
     "title": "Email templates",
