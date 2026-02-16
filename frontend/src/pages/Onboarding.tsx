@@ -1,4 +1,3 @@
-// Onboarding.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -19,18 +18,19 @@ import {
   ArrowLeft,
   Loader2,
   Rocket,
-  Info,
   Key,
   Lock,
   Shield,
   AlertTriangle,
-  Globe,
+  ExternalLink,
+  Wifi,
+  Save,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { parseSmtpError } from "@/lib/smtpErrorParser";
 
-// AJUSTE: Adicionado tipo 'custom'
-type Provider = "gmail" | "outlook" | "custom";
+type Provider = "gmail" | "outlook";
 type RiskProfile = "conservative" | "standard" | "aggressive";
 
 export default function Onboarding() {
@@ -41,24 +41,19 @@ export default function Onboarding() {
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false); // AJUSTE: Estado de teste
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [checkingSmtp, setCheckingSmtp] = useState(true);
 
   const [provider, setProvider] = useState<Provider>("gmail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // AJUSTE: Campos para SMTP Customizado
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState("465");
+  const [hasPassword, setHasPassword] = useState(false);
 
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
 
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
-
-  // Verificação de Outlook para exibir alerta
-  const isOutlook = email.toLowerCase().endsWith("@outlook.com") || email.toLowerCase().endsWith("@hotmail.com");
 
   useEffect(() => {
     if (!user?.id) return;
@@ -66,110 +61,129 @@ export default function Onboarding() {
       setCheckingSmtp(true);
       const { data } = await supabase
         .from("smtp_credentials")
-        .select("has_password, risk_profile")
+        .select("has_password, risk_profile, provider, email")
         .eq("user_id", user.id)
         .maybeSingle();
       if (data?.has_password && data?.risk_profile) {
         navigate("/dashboard", { replace: true });
       } else if (data?.has_password && !data?.risk_profile) {
+        if (data.provider) setProvider(data.provider as Provider);
+        if (data.email) setEmail(data.email);
+        setHasPassword(true);
         setStep(3);
+      } else if (data) {
+        if (data.provider) setProvider(data.provider as Provider);
+        if (data.email) setEmail(data.email);
       }
       setCheckingSmtp(false);
     };
     checkStatus();
   }, [user?.id, navigate]);
 
-  const handlePasswordChange = (val: string) => {
-    const sanitized = val
-      .replace(/[^a-zA-Z]/g, "")
-      .toLowerCase()
-      .slice(0, 16);
-    setPassword(sanitized);
+  // Same password handler as Settings — Gmail: 16 letters with spaces every 4
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (provider === "gmail") {
+      const clean = val.replace(/[^a-zA-Z]/g, "").toLowerCase();
+      let formatted = "";
+      for (let i = 0; i < clean.length && i < 16; i++) {
+        if (i > 0 && i % 4 === 0) formatted += " ";
+        formatted += clean[i];
+      }
+      setPassword(formatted);
+    } else {
+      setPassword(val);
+    }
   };
 
-  // AJUSTE: Função para testar a conexão antes de salvar definitivamente
-  const handleTestConnection = async () => {
-    if (!email || password.length !== 16) {
-      toast({ title: t("smtp.toasts.fill_fields"), variant: "destructive" });
+  // Save credentials — same as Settings
+  const handleSave = async () => {
+    if (!user?.id) return;
+    if (!email) {
+      toast({ title: t("smtp.toasts.email_required"), variant: "destructive" });
       return;
     }
 
-    setTestingConnection(true);
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-smtp-connection`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
-        body: JSON.stringify({
-          provider,
-          email: email.trim().toLowerCase(),
-          password,
-          host: provider === "custom" ? host : undefined,
-          port: provider === "custom" ? Number(port) : undefined,
-        }),
-      });
-
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Falha na conexão");
-
-      toast({ title: "Conexão bem-sucedida!", description: "Seu SMTP está configurado corretamente." });
-      return true;
-    } catch (e: any) {
+    const cleanPass = password.replace(/\s/g, "");
+    if (provider === "gmail" && password && cleanPass.length !== 16) {
       toast({
-        title: "Erro de Conexão",
-        description: "Não conseguimos conectar. Verifique se a Senha de App está correta.",
+        title: "Senha inválida",
+        description: "A Senha de App do Google deve ter exatamente 16 letras.",
         variant: "destructive",
       });
-      return false;
-    } finally {
-      setTestingConnection(false);
+      return;
     }
-  };
 
-  const handleSaveSmtp = async () => {
-    if (!user?.id) return;
-
-    // Primeiro testamos a conexão
-    const isOk = await handleTestConnection();
-    if (!isOk) return;
-
-    setLoading(true);
+    setSaving(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
-        body: JSON.stringify({
-          provider,
-          email: email.trim().toLowerCase(),
-          password,
-          host: provider === "custom" ? host : undefined,
-          port: provider === "custom" ? Number(port) : undefined,
-        }),
+      const { data: payload, error: funcError } = await supabase.functions.invoke("save-smtp-credentials", {
+        body: { provider, email, password: cleanPass || undefined },
       });
 
-      const payload = await res.json();
-      if (!res.ok || payload?.success === false) throw new Error(payload?.error);
+      if (funcError) throw funcError;
+      if (payload?.success === false) throw new Error(payload?.error || "Erro ao salvar");
+
+      if (password.trim().length > 0) {
+        setHasPassword(true);
+        setPassword("");
+      }
 
       toast({ title: t("smtp.toasts.saved") });
-      setStep(3);
     } catch (e: any) {
       toast({ title: t("smtp.toasts.save_error_title"), description: e.message, variant: "destructive" });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  // ... (handleSaveRiskProfile e handleComplete permanecem iguais)
+  // Test connection — same as Settings, using send-email-custom
+  const handleTestConnection = async () => {
+    if (!email) {
+      toast({ title: "Informe o e-mail primeiro", variant: "destructive" });
+      return;
+    }
+    setTesting(true);
+    try {
+      const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
+        body: {
+          to: email,
+          subject: "✅ Teste de Conexão SMTP - H2 Linker",
+          body: "Parabéns! Sua conexão SMTP está funcionando perfeitamente no H2 Linker.",
+          provider,
+          overridePassword: password.replace(/\s/g, "") || undefined,
+        },
+      });
+
+      if (funcError) throw funcError;
+      if (payload?.success === false) throw new Error(payload?.error);
+
+      toast({
+        title: "Conexão OK! 🚀",
+        description: "Enviamos um e-mail de teste para você.",
+        className: "bg-green-600 text-white border-none",
+      });
+    } catch (e: any) {
+      const parsed = parseSmtpError(e.message);
+      toast({ title: "Erro na conexão", description: t(parsed.descriptionKey), variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  // Save & advance to step 3
+  const handleSaveAndContinue = async () => {
+    await handleSave();
+    if (hasPassword || password.replace(/\s/g, "").length === 16) {
+      setStep(3);
+    }
+  };
+
   const handleSaveRiskProfile = async () => {
     if (!user?.id || !riskProfile) return;
     setLoading(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
-        body: JSON.stringify({ provider, email: email.trim().toLowerCase(), risk_profile: riskProfile }),
+      await supabase.functions.invoke("save-smtp-credentials", {
+        body: { provider, email: email.trim().toLowerCase(), risk_profile: riskProfile },
       });
       setStep(4);
     } catch (e: any) {
@@ -195,14 +209,14 @@ export default function Onboarding() {
 
   if (checkingSmtp)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="p-6 flex items-center justify-between border-b bg-white shadow-sm">
+    <div className="min-h-screen bg-muted/30 flex flex-col">
+      <div className="p-6 flex items-center justify-between border-b bg-background shadow-sm">
         <BrandLogo height={28} />
         <Badge variant="outline" className="font-bold">
           {t("onboarding.step", { current: step, total: totalSteps })}
@@ -211,8 +225,8 @@ export default function Onboarding() {
       <Progress value={progress} className="h-1 rounded-none" />
 
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Passo 1: Welcome (Igual) */}
+        <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Step 1: Welcome */}
           {step === 1 && (
             <Card className="border-none shadow-2xl">
               <CardHeader className="text-center">
@@ -230,125 +244,167 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Passo 2: SMTP Config (AJUSTADO) */}
+          {/* Step 2: SMTP — replicated from Settings */}
           {step === 2 && (
-            <Card className="border-none shadow-2xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="h-5 w-5 text-primary" /> {t("onboarding.smtp.title")}
-                </CardTitle>
-                <CardDescription>{t("onboarding.smtp.description")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Alerta Preventivo Outlook */}
-                {isOutlook && (
-                  <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="font-bold text-amber-800">Atenção com Outlook/Hotmail</AlertTitle>
-                    <AlertDescription className="text-xs">
-                      Provedores da Microsoft possuem limites rigorosos de envio. Recomendamos usar{" "}
-                      <strong>Gmail</strong> para melhor performance do warmup.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-slate-500">{t("smtp.fields.provider")}</Label>
-                    <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gmail">Gmail</SelectItem>
-                        <SelectItem value="outlook">Outlook / Hotmail</SelectItem>
-                        <SelectItem value="custom">Outro (Customizado)</SelectItem>
-                      </SelectContent>
-                    </Select>
+            <div className="space-y-6">
+              {/* Tutorial card — same as Settings */}
+              <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
+                <CardHeader className="pb-3 text-amber-800 dark:text-amber-500">
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" /> Atenção: Não use sua senha normal
+                  </CardTitle>
+                  <CardDescription className="text-amber-700/80 dark:text-amber-400/80 font-medium">
+                    Sua senha de login pessoal NÃO funcionará. Siga o passo a passo abaixo:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1 max-w-[450px]">
+                      <div className="rounded-lg overflow-hidden border shadow-sm aspect-video bg-black">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
+                          title="Tutorial Senha de App Google"
+                          frameBorder="0"
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-3 text-sm flex flex-col justify-center">
+                      <ol className="list-decimal list-inside space-y-2 text-muted-foreground font-medium">
+                        <li>
+                          Ative a <strong>Verificação em duas etapas</strong> no Google.
+                        </li>
+                        <li>
+                          Pesquise por <strong>"Senhas de App"</strong> na sua conta.
+                        </li>
+                        <li>
+                          Crie uma senha com o nome <strong>"H2 Linker"</strong>.
+                        </li>
+                        <li>Copie o código de 16 letras e cole abaixo.</li>
+                      </ol>
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-amber-300" asChild>
+                        <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">
+                          Gerar Senha Agora <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </Button>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-slate-500">{t("smtp.fields.email")}</Label>
-                    <Input
-                      className="h-11"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={t("smtp.placeholders.email")}
-                    />
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Ajuste: Campos dinâmicos para SMTP Customizado */}
-                {provider === "custom" && (
-                  <div className="grid grid-cols-3 gap-4 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="col-span-2 space-y-2">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Host SMTP</Label>
-                      <Input
-                        value={host}
-                        onChange={(e) => setHost(e.target.value)}
-                        placeholder="smtp.exemplo.com"
-                        className="h-11"
-                      />
+              {/* SMTP Form — same as Settings */}
+              <Card className="border-none shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" /> {t("smtp.title")}
+                  </CardTitle>
+                  <CardDescription>{t("smtp.subtitle")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t("smtp.fields.provider")}</Label>
+                      <Select
+                        value={provider}
+                        onValueChange={(v) => {
+                          setProvider(v as Provider);
+                          setPassword("");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gmail">Gmail (Recomendado)</SelectItem>
+                          <SelectItem value="outlook">Outlook</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Porta</Label>
+                      <Label>{t("smtp.fields.email")}</Label>
                       <Input
-                        value={port}
-                        onChange={(e) => setPort(e.target.value)}
-                        placeholder="465"
-                        className="h-11"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="seu.email@gmail.com"
                       />
                     </div>
                   </div>
-                )}
 
-                <div className="space-y-3">
-                  <div className="flex justify-between items-end">
-                    <Label className="font-bold text-primary flex items-center gap-2">
-                      <Lock className="h-4 w-4" /> {t("smtp.fields.password")}
-                    </Label>
-                    <span
-                      className={cn(
-                        "text-[10px] font-black px-2 py-0.5 rounded",
-                        password.length === 16 ? "text-emerald-600 bg-emerald-50" : "text-slate-400 bg-slate-100",
+                  <div className="space-y-2">
+                    <Label className="flex justify-between">
+                      <span>Senha de App (16 letras)</span>
+                      {provider === "gmail" && (
+                        <span className="text-[10px] text-red-500 font-bold uppercase">
+                          Senha normal não funciona
+                        </span>
                       )}
-                    >
-                      {password.length}/16
-                    </span>
+                    </Label>
+                    <Input
+                      type="text"
+                      value={password}
+                      onChange={handlePasswordChange}
+                      placeholder={hasPassword ? "•••• •••• •••• •••• (Salva)" : "abcd efgh ijkl mnop"}
+                      className={provider === "gmail" ? "font-mono text-lg tracking-wider" : ""}
+                      maxLength={provider === "gmail" ? 19 : 100}
+                      autoComplete="off"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {provider === "gmail"
+                        ? `Letras digitadas: ${password.replace(/\s/g, "").length}/16`
+                        : t("smtp.password_note.empty")}
+                    </p>
                   </div>
-                  <Input
-                    type="text"
-                    value={password}
-                    onChange={(e) => handlePasswordChange(e.target.value)}
-                    placeholder="xxxx xxxx xxxx xxxx"
-                    className="h-14 text-center text-xl font-mono tracking-[0.4em] lowercase shadow-inner"
-                  />
-                  <p className="text-[10px] text-slate-400 text-center italic">
-                    Use a "Senha de App" de 16 dígitos, não sua senha comum.
-                  </p>
-                </div>
 
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button variant="ghost" onClick={() => setStep(1)} className="h-11">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> {t("common.previous")}
-                  </Button>
-                  <Button
-                    onClick={handleSaveSmtp}
-                    disabled={loading || testingConnection || password.length !== 16}
-                    className="flex-1 h-11 font-bold shadow-lg"
-                  >
-                    {loading || testingConnection ? (
-                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                    ) : (
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                    )}
-                    {testingConnection ? "Testando..." : t("onboarding.smtp.continue")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button onClick={handleSave} disabled={saving} className="flex-1">
+                      {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+                      {t("common.save")}
+                    </Button>
+                    <Button
+                      onClick={handleTestConnection}
+                      disabled={testing || (!hasPassword && !password)}
+                      variant="outline"
+                      className="flex-1 border-blue-200 text-blue-700"
+                    >
+                      {testing ? (
+                        <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                      ) : (
+                        <Wifi className="mr-2 h-4 w-4" />
+                      )}
+                      Testar Conexão
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-3 pt-4 border-t">
+                    <Button variant="ghost" onClick={() => setStep(1)} className="h-11">
+                      <ArrowLeft className="mr-2 h-4 w-4" /> {t("common.previous")}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (hasPassword) {
+                          setStep(3);
+                        } else {
+                          toast({
+                            title: "Salve suas credenciais primeiro",
+                            description: "Clique em Salvar antes de continuar.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      disabled={!hasPassword}
+                      className="flex-1 h-11 font-bold shadow-lg"
+                    >
+                      <ArrowRight className="mr-2 h-4 w-4" /> {t("onboarding.smtp.continue")}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {/* Passo 3: Risk Profile (Igual) */}
+          {/* Step 3: Risk Profile */}
           {step === 3 && (
             <Card className="border-none shadow-2xl">
               <CardHeader>
@@ -363,11 +419,11 @@ export default function Onboarding() {
                     onClick={() => setRiskProfile(id as RiskProfile)}
                     className={cn(
                       "p-4 border-2 rounded-xl cursor-pointer transition-all",
-                      riskProfile === id ? "border-primary bg-primary/5" : "border-slate-100",
+                      riskProfile === id ? "border-primary bg-primary/5" : "border-muted",
                     )}
                   >
                     <p className="font-bold capitalize">{t(`warmup.profiles.${id}.title`)}</p>
-                    <p className="text-xs text-slate-500">{t(`warmup.profiles.${id}.description`)}</p>
+                    <p className="text-xs text-muted-foreground">{t(`warmup.profiles.${id}.description`)}</p>
                   </div>
                 ))}
                 <div className="flex gap-3 pt-4">
@@ -375,6 +431,7 @@ export default function Onboarding() {
                     {t("common.previous")}
                   </Button>
                   <Button onClick={handleSaveRiskProfile} disabled={!riskProfile || loading} className="flex-1">
+                    {loading && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
                     {t("onboarding.warmup.continue")}
                   </Button>
                 </div>
@@ -382,7 +439,7 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Passo 4: Complete (Igual) */}
+          {/* Step 4: Complete */}
           {step === 4 && (
             <Card className="border-none shadow-2xl text-center p-10">
               <div className="bg-emerald-100 p-5 rounded-full w-fit mx-auto mb-6">
@@ -391,7 +448,9 @@ export default function Onboarding() {
               <CardTitle className="text-3xl font-black uppercase tracking-tighter">
                 {t("onboarding.complete.title")}
               </CardTitle>
-              <CardDescription className="text-base mt-2 mb-8">{t("onboarding.complete.description")}</CardDescription>
+              <CardDescription className="text-base mt-2 mb-8">
+                {t("onboarding.complete.description")}
+              </CardDescription>
               <Button onClick={handleComplete} disabled={loading} className="w-full h-14 font-black text-lg shadow-xl">
                 {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : t("onboarding.complete.go_dashboard")}
               </Button>

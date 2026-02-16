@@ -538,6 +538,41 @@ export type Database = {
           },
         ]
       }
+      profile_views: {
+        Row: {
+          browser_info: string | null
+          duration_seconds: number | null
+          id: string
+          opened_at: string | null
+          profile_id: string | null
+          queue_id: string | null
+        }
+        Insert: {
+          browser_info?: string | null
+          duration_seconds?: number | null
+          id?: string
+          opened_at?: string | null
+          profile_id?: string | null
+          queue_id?: string | null
+        }
+        Update: {
+          browser_info?: string | null
+          duration_seconds?: number | null
+          id?: string
+          opened_at?: string | null
+          profile_id?: string | null
+          queue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active_referrals_count: number
@@ -891,6 +926,13 @@ export type Database = {
             referencedRelation: "my_queue"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "queue_send_history_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "queue_with_stats"
+            referencedColumns: ["id"]
+          },
         ]
       }
       radar_matched_jobs: {
@@ -1140,6 +1182,34 @@ export type Database = {
           },
         ]
       }
+      queue_with_stats: {
+        Row: {
+          company: string | null
+          created_at: string | null
+          id: string | null
+          job_id: string | null
+          job_title: string | null
+          last_error: string | null
+          last_view_at: string | null
+          send_count: number | null
+          sent_at: string | null
+          status: string | null
+          token: string | null
+          total_duration_seconds: number | null
+          tracking_id: string | null
+          user_id: string | null
+          view_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "my_queue_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "public_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radar_category_stats: {
         Row: {
           job_count: number | null
@@ -1248,12 +1318,23 @@ export type Database = {
           resume_url: string
         }[]
       }
+      track_profile_view_v2: {
+        Args: { p_queue_id?: string; p_token: string }
+        Returns: {
+          full_name: string
+          id: string
+          phone_e164: string
+          resume_url: string
+          view_id: string
+        }[]
+      }
       track_whatsapp_click: { Args: { p_token: string }; Returns: undefined }
       trigger_immediate_radar: {
         Args: { target_user_id: string }
         Returns: number
       }
       update_smtp_warmup_limit: { Args: { p_user_id: string }; Returns: number }
+      update_view_duration: { Args: { p_view_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
