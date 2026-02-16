@@ -1,3 +1,4 @@
+// Onboarding.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -26,9 +27,15 @@ import {
   Wifi,
   Save,
   Mail,
+  Info,
+  ShieldCheck,
+  Zap,
+  Activity,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type Provider = "gmail" | "outlook";
 type RiskProfile = "conservative" | "standard" | "aggressive";
@@ -55,6 +62,9 @@ export default function Onboarding() {
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
+  // Verificação de Outlook para aviso
+  const isOutlook = email.toLowerCase().endsWith("@outlook.com") || email.toLowerCase().endsWith("@hotmail.com");
+
   useEffect(() => {
     if (!user?.id) return;
     const checkStatus = async () => {
@@ -64,6 +74,7 @@ export default function Onboarding() {
         .select("has_password, risk_profile, provider, email")
         .eq("user_id", user.id)
         .maybeSingle();
+
       if (data?.has_password && data?.risk_profile) {
         navigate("/dashboard", { replace: true });
       } else if (data?.has_password && !data?.risk_profile) {
@@ -80,7 +91,6 @@ export default function Onboarding() {
     checkStatus();
   }, [user?.id, navigate]);
 
-  // Same password handler as Settings — Gmail: 16 letters with spaces every 4
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (provider === "gmail") {
@@ -96,7 +106,6 @@ export default function Onboarding() {
     }
   };
 
-  // Save credentials — same as Settings
   const handleSave = async (): Promise<boolean> => {
     if (!user?.id) return false;
     if (!email) {
@@ -138,38 +147,26 @@ export default function Onboarding() {
     }
   };
 
-  // Test connection — auto-saves first if password is unsaved
   const handleTestConnection = async () => {
     if (!email) {
       toast({ title: t("smtp.email_first"), variant: "destructive" });
       return;
     }
-
-    // If there's an unsaved password, save first
     if (password.trim().length > 0) {
       const saved = await handleSave();
       if (!saved) return;
     }
-
     if (!hasPassword) {
       toast({ title: t("smtp.save_first_title"), description: t("smtp.save_first_desc"), variant: "destructive" });
       return;
     }
-
     setTesting(true);
     try {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
-        body: {
-          to: email,
-          subject: "✅ Teste de Conexão SMTP - H2 Linker",
-          body: "Parabéns! Sua conexão SMTP está funcionando perfeitamente no H2 Linker.",
-          provider,
-        },
+        body: { to: email, subject: "✅ Teste de Conexão SMTP - H2 Linker", body: "Sucesso!", provider },
       });
-
       if (funcError) throw funcError;
       if (payload?.success === false) throw new Error(payload?.error);
-
       toast({
         title: t("smtp.connection_ok_title"),
         description: t("smtp.connection_ok_desc"),
@@ -180,14 +177,6 @@ export default function Onboarding() {
       toast({ title: t("smtp.connection_error_title"), description: t(parsed.descriptionKey), variant: "destructive" });
     } finally {
       setTesting(false);
-    }
-  };
-
-  // Save & advance to step 3
-  const handleSaveAndContinue = async () => {
-    await handleSave();
-    if (hasPassword || password.replace(/\s/g, "").length === 16) {
-      setStep(3);
     }
   };
 
@@ -220,6 +209,42 @@ export default function Onboarding() {
     }
   };
 
+  const profileDetails = {
+    conservative: {
+      icon: <ShieldCheck className="h-6 w-6 text-emerald-500" />,
+      color: "border-emerald-200 bg-emerald-50/50",
+      activeColor: "border-emerald-500 bg-emerald-50",
+      badge: t("warmup.profiles.conservative.badge", "Mais Seguro"),
+      items: [
+        t("warmup.profiles.conservative.item1", "Aumento gradual e lento"),
+        t("warmup.profiles.conservative.item2", "Ideal para contas novas"),
+        t("warmup.profiles.conservative.item3", "Foco total em reputação"),
+      ],
+    },
+    standard: {
+      icon: <Activity className="h-6 w-6 text-blue-500" />,
+      color: "border-blue-200 bg-blue-50/50",
+      activeColor: "border-blue-500 bg-blue-50",
+      badge: t("warmup.profiles.standard.badge", "Recomendado"),
+      items: [
+        t("warmup.profiles.standard.item1", "Equilíbrio entre volume e segurança"),
+        t("warmup.profiles.standard.item2", "Ramp-up moderado"),
+        t("warmup.profiles.standard.item3", "Para a maioria dos usuários"),
+      ],
+    },
+    aggressive: {
+      icon: <Zap className="h-6 w-6 text-amber-500" />,
+      color: "border-amber-200 bg-amber-50/50",
+      activeColor: "border-amber-500 bg-amber-50",
+      badge: t("warmup.profiles.aggressive.badge", "Alta Performance"),
+      items: [
+        t("warmup.profiles.aggressive.item1", "Aceleração rápida de volume"),
+        t("warmup.profiles.aggressive.item2", "Para domínios já aquecidos"),
+        t("warmup.profiles.aggressive.item3", "Máxima entrega em menos tempo"),
+      ],
+    },
+  };
+
   if (checkingSmtp)
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -239,7 +264,6 @@ export default function Onboarding() {
 
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Step 1: Welcome */}
           {step === 1 && (
             <Card className="border-none shadow-2xl">
               <CardHeader className="text-center">
@@ -257,10 +281,8 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Step 2: SMTP — replicated from Settings */}
           {step === 2 && (
             <div className="space-y-6">
-              {/* Tutorial card — same as Settings */}
               <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
                 <CardHeader className="pb-3 text-amber-800 dark:text-amber-500">
                   <CardTitle className="flex items-center gap-2">
@@ -270,7 +292,7 @@ export default function Onboarding() {
                     {t("smtp.tutorial.warning_desc")}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="flex-1 max-w-[450px]">
                       <div className="rounded-lg overflow-hidden border shadow-sm aspect-video bg-black">
@@ -278,7 +300,7 @@ export default function Onboarding() {
                           width="100%"
                           height="100%"
                           src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
-                          title="Tutorial Senha de App Google"
+                          title="Tutorial"
                           frameBorder="0"
                           allowFullScreen
                         />
@@ -301,7 +323,17 @@ export default function Onboarding() {
                 </CardContent>
               </Card>
 
-              {/* SMTP Form — same as Settings */}
+              {isOutlook && (
+                <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="font-bold text-amber-800">Aviso: Outlook/Hotmail</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Provedores Microsoft possuem limites rígidos. Recomendamos usar <strong>Gmail</strong> se encontrar
+                    erros de envio constantes.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Card className="border-none shadow-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -338,7 +370,6 @@ export default function Onboarding() {
                       />
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <Label className="flex justify-between">
                       <span>{t("smtp.password_label")}</span>
@@ -363,10 +394,9 @@ export default function Onboarding() {
                         : t("smtp.password_note.empty")}
                     </p>
                   </div>
-
                   <div className="flex items-center gap-3 pt-2">
                     <Button onClick={handleSave} disabled={saving} className="flex-1">
-                      {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+                      {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}{" "}
                       {t("common.save")}
                     </Button>
                     <Button
@@ -375,15 +405,10 @@ export default function Onboarding() {
                       variant="outline"
                       className="flex-1 border-blue-200 text-blue-700"
                     >
-                      {testing ? (
-                        <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                      ) : (
-                        <Wifi className="mr-2 h-4 w-4" />
-                      )}
+                      {testing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Wifi className="mr-2 h-4 w-4" />}{" "}
                       {t("smtp.test_connection")}
                     </Button>
                   </div>
-
                   <div className="flex gap-3 pt-4 border-t">
                     <Button variant="ghost" onClick={() => setStep(1)} className="h-11">
                       <ArrowLeft className="mr-2 h-4 w-4" /> {t("common.previous")}
@@ -411,33 +436,86 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Step 3: Risk Profile */}
           {step === 3 && (
             <Card className="border-none shadow-2xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" /> {t("onboarding.warmup.title")}
-                </CardTitle>
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  <CardTitle>{t("onboarding.warmup.title")}</CardTitle>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+                  <div className="flex gap-3">
+                    <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-blue-900">
+                        {t("onboarding.warmup.why_title", "Por que preciso aquecer meu e-mail?")}
+                      </p>
+                      <p className="text-xs text-blue-800/80 leading-relaxed">
+                        Provedores monitoram o volume de envios. Se você começar a enviar muitos e-mails subitamente,
+                        sua conta será bloqueada. O warmup simula um comportamento humano natural para garantir que suas
+                        mensagens cheguem na caixa de entrada.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <CardDescription>
+                  {t(
+                    "onboarding.warmup.instruction",
+                    "Selecione a intensidade do aquecimento com base na idade da sua conta:",
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {["conservative", "standard", "aggressive"].map((id) => (
+                {(["conservative", "standard", "aggressive"] as RiskProfile[]).map((id) => (
                   <div
                     key={id}
-                    onClick={() => setRiskProfile(id as RiskProfile)}
+                    onClick={() => setRiskProfile(id)}
                     className={cn(
-                      "p-4 border-2 rounded-xl cursor-pointer transition-all",
-                      riskProfile === id ? "border-primary bg-primary/5" : "border-muted",
+                      "relative p-5 border-2 rounded-2xl cursor-pointer transition-all duration-200 hover:shadow-md",
+                      riskProfile === id ? profileDetails[id].activeColor : "border-slate-100 bg-white",
                     )}
                   >
-                    <p className="font-bold capitalize">{t(`warmup.profiles.${id}.title`)}</p>
-                    <p className="text-xs text-muted-foreground">{t(`warmup.profiles.${id}.description`)}</p>
+                    <div className="flex items-start gap-4">
+                      <div className={cn("p-3 rounded-xl", riskProfile === id ? "bg-white shadow-sm" : "bg-slate-50")}>
+                        {profileDetails[id].icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-bold text-lg capitalize text-slate-900">
+                            {t(`warmup.profiles.${id}.title`)}
+                          </p>
+                          <Badge variant={riskProfile === id ? "default" : "secondary"} className="text-[10px]">
+                            {profileDetails[id].badge}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-3 leading-relaxed">
+                          {t(`warmup.profiles.${id}.description`)}
+                        </p>
+                        <ul className="grid grid-cols-1 gap-2">
+                          {profileDetails[id].items.map((item, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                              <Check className="h-3 w-3 text-primary" /> {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      {riskProfile === id && (
+                        <div className="absolute top-4 right-4 animate-in zoom-in duration-300">
+                          <CheckCircle2 className="h-6 w-6 text-primary" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
-                <div className="flex gap-3 pt-4">
-                  <Button variant="ghost" onClick={() => setStep(2)}>
+                <div className="flex gap-3 pt-6">
+                  <Button variant="ghost" onClick={() => setStep(2)} className="px-8">
                     {t("common.previous")}
                   </Button>
-                  <Button onClick={handleSaveRiskProfile} disabled={!riskProfile || loading} className="flex-1">
+                  <Button
+                    onClick={handleSaveRiskProfile}
+                    disabled={!riskProfile || loading}
+                    className="flex-1 h-12 text-lg font-bold shadow-lg"
+                  >
                     {loading && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
                     {t("onboarding.warmup.continue")}
                   </Button>
@@ -446,7 +524,6 @@ export default function Onboarding() {
             </Card>
           )}
 
-          {/* Step 4: Complete */}
           {step === 4 && (
             <Card className="border-none shadow-2xl text-center p-10">
               <div className="bg-emerald-100 p-5 rounded-full w-fit mx-auto mb-6">
@@ -455,11 +532,9 @@ export default function Onboarding() {
               <CardTitle className="text-3xl font-black uppercase tracking-tighter">
                 {t("onboarding.complete.title")}
               </CardTitle>
-              <CardDescription className="text-base mt-2 mb-8">
-                {t("onboarding.complete.description")}
-              </CardDescription>
+              <CardDescription className="text-base mt-2 mb-8">{t("onboarding.complete.description")}</CardDescription>
               <Button onClick={handleComplete} disabled={loading} className="w-full h-14 font-black text-lg shadow-xl">
-                {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : t("onboarding.complete.go_dashboard")}
+                {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : t("onboarding.complete.go_dashboard")}
               </Button>
             </Card>
           )}
