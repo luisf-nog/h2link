@@ -13,10 +13,24 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, Rocket, Info, Key, Lock, Shield } from "lucide-react";
+import {
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+  Loader2,
+  Rocket,
+  Info,
+  Key,
+  Lock,
+  Shield,
+  AlertTriangle,
+  Globe,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type Provider = "gmail" | "outlook";
+// AJUSTE: Adicionado tipo 'custom'
+type Provider = "gmail" | "outlook" | "custom";
 type RiskProfile = "conservative" | "standard" | "aggressive";
 
 export default function Onboarding() {
@@ -27,15 +41,24 @@ export default function Onboarding() {
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false); // AJUSTE: Estado de teste
   const [checkingSmtp, setCheckingSmtp] = useState(true);
 
   const [provider, setProvider] = useState<Provider>("gmail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // AJUSTE: Campos para SMTP Customizado
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState("465");
+
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
 
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
+
+  // Verificação de Outlook para exibir alerta
+  const isOutlook = email.toLowerCase().endsWith("@outlook.com") || email.toLowerCase().endsWith("@hotmail.com");
 
   useEffect(() => {
     if (!user?.id) return;
@@ -56,7 +79,6 @@ export default function Onboarding() {
     checkStatus();
   }, [user?.id, navigate]);
 
-  // --- TRATAMENTO DE SENHA (16 LETRAS MINÚSCULAS) ---
   const handlePasswordChange = (val: string) => {
     const sanitized = val
       .replace(/[^a-zA-Z]/g, "")
@@ -65,12 +87,51 @@ export default function Onboarding() {
     setPassword(sanitized);
   };
 
-  const handleSaveSmtp = async () => {
-    if (!user?.id) return;
-    if (password.length !== 16) {
-      toast({ title: t("smtp.toasts.password_invalid"), variant: "destructive" });
+  // AJUSTE: Função para testar a conexão antes de salvar definitivamente
+  const handleTestConnection = async () => {
+    if (!email || password.length !== 16) {
+      toast({ title: t("smtp.toasts.fill_fields"), variant: "destructive" });
       return;
     }
+
+    setTestingConnection(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-smtp-connection`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
+        body: JSON.stringify({
+          provider,
+          email: email.trim().toLowerCase(),
+          password,
+          host: provider === "custom" ? host : undefined,
+          port: provider === "custom" ? Number(port) : undefined,
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok || !payload.success) throw new Error(payload.error || "Falha na conexão");
+
+      toast({ title: "Conexão bem-sucedida!", description: "Seu SMTP está configurado corretamente." });
+      return true;
+    } catch (e: any) {
+      toast({
+        title: "Erro de Conexão",
+        description: "Não conseguimos conectar. Verifique se a Senha de App está correta.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSaveSmtp = async () => {
+    if (!user?.id) return;
+
+    // Primeiro testamos a conexão
+    const isOk = await handleTestConnection();
+    if (!isOk) return;
 
     setLoading(true);
     try {
@@ -78,7 +139,13 @@ export default function Onboarding() {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-smtp-credentials`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token}` },
-        body: JSON.stringify({ provider, email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({
+          provider,
+          email: email.trim().toLowerCase(),
+          password,
+          host: provider === "custom" ? host : undefined,
+          port: provider === "custom" ? Number(port) : undefined,
+        }),
       });
 
       const payload = await res.json();
@@ -93,6 +160,7 @@ export default function Onboarding() {
     }
   };
 
+  // ... (handleSaveRiskProfile e handleComplete permanecem iguais)
   const handleSaveRiskProfile = async () => {
     if (!user?.id || !riskProfile) return;
     setLoading(true);
@@ -116,7 +184,6 @@ export default function Onboarding() {
     try {
       await refreshSmtpStatus?.();
       await refreshProfile?.();
-      // Delay de 800ms para garantir que a transação no banco propagou para o cache do Supabase Auth
       await new Promise((r) => setTimeout(r, 800));
       navigate("/dashboard", { replace: true });
     } catch (error) {
@@ -145,6 +212,7 @@ export default function Onboarding() {
 
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Passo 1: Welcome (Igual) */}
           {step === 1 && (
             <Card className="border-none shadow-2xl">
               <CardHeader className="text-center">
@@ -162,6 +230,7 @@ export default function Onboarding() {
             </Card>
           )}
 
+          {/* Passo 2: SMTP Config (AJUSTADO) */}
           {step === 2 && (
             <Card className="border-none shadow-2xl">
               <CardHeader>
@@ -171,13 +240,17 @@ export default function Onboarding() {
                 <CardDescription>{t("onboarding.smtp.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
-                  <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                  <div className="text-xs text-blue-900 leading-relaxed">
-                    <p className="font-bold uppercase tracking-tight">{t("onboarding.smtp.why_app_password_title")}</p>
-                    <p className="mt-1 opacity-80">{t("onboarding.smtp.why_app_password_desc")}</p>
-                  </div>
-                </div>
+                {/* Alerta Preventivo Outlook */}
+                {isOutlook && (
+                  <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="font-bold text-amber-800">Atenção com Outlook/Hotmail</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      Provedores da Microsoft possuem limites rigorosos de envio. Recomendamos usar{" "}
+                      <strong>Gmail</strong> para melhor performance do warmup.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -188,7 +261,8 @@ export default function Onboarding() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="gmail">Gmail</SelectItem>
-                        <SelectItem value="outlook">Outlook</SelectItem>
+                        <SelectItem value="outlook">Outlook / Hotmail</SelectItem>
+                        <SelectItem value="custom">Outro (Customizado)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -202,6 +276,30 @@ export default function Onboarding() {
                     />
                   </div>
                 </div>
+
+                {/* Ajuste: Campos dinâmicos para SMTP Customizado */}
+                {provider === "custom" && (
+                  <div className="grid grid-cols-3 gap-4 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="col-span-2 space-y-2">
+                      <Label className="text-xs font-bold uppercase text-slate-500">Host SMTP</Label>
+                      <Input
+                        value={host}
+                        onChange={(e) => setHost(e.target.value)}
+                        placeholder="smtp.exemplo.com"
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-slate-500">Porta</Label>
+                      <Input
+                        value={port}
+                        onChange={(e) => setPort(e.target.value)}
+                        placeholder="465"
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
@@ -224,6 +322,9 @@ export default function Onboarding() {
                     placeholder="xxxx xxxx xxxx xxxx"
                     className="h-14 text-center text-xl font-mono tracking-[0.4em] lowercase shadow-inner"
                   />
+                  <p className="text-[10px] text-slate-400 text-center italic">
+                    Use a "Senha de App" de 16 dígitos, não sua senha comum.
+                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t">
@@ -232,21 +333,22 @@ export default function Onboarding() {
                   </Button>
                   <Button
                     onClick={handleSaveSmtp}
-                    disabled={loading || password.length !== 16}
+                    disabled={loading || testingConnection || password.length !== 16}
                     className="flex-1 h-11 font-bold shadow-lg"
                   >
-                    {loading ? (
+                    {loading || testingConnection ? (
                       <Loader2 className="animate-spin mr-2 h-4 w-4" />
                     ) : (
                       <CheckCircle2 className="mr-2 h-4 w-4" />
                     )}
-                    {t("onboarding.smtp.continue")}
+                    {testingConnection ? "Testando..." : t("onboarding.smtp.continue")}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
+          {/* Passo 3: Risk Profile (Igual) */}
           {step === 3 && (
             <Card className="border-none shadow-2xl">
               <CardHeader>
@@ -280,6 +382,7 @@ export default function Onboarding() {
             </Card>
           )}
 
+          {/* Passo 4: Complete (Igual) */}
           {step === 4 && (
             <Card className="border-none shadow-2xl text-center p-10">
               <div className="bg-emerald-100 p-5 rounded-full w-fit mx-auto mb-6">
