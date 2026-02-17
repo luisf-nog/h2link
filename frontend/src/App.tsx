@@ -34,8 +34,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const location = useLocation();
 
-  // 1. Se estiver carregando os dados iniciais do Supabase ou SMTP
-  if (loading || !smtpStatus) {
+  // 1. Se estiver carregando a sessão inicial
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -46,6 +46,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // 2. Se não estiver logado
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // 3. Se estiver carregando o status SMTP
+  if (!smtpStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
   }
 
   // 3. Verificação de Onboarding

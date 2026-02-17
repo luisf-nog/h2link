@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -195,7 +196,15 @@ export default function Jobs() {
       .insert({ user_id: profile.id, job_id: job.id, status: "pending" });
     if (!error) {
       await syncQueue();
-      toast({ title: t("jobs.toasts.add_success_title") });
+      toast({
+        title: t("jobs.toasts.add_success_title"),
+        description: t("jobs.toasts.add_success_queue_hint"),
+        action: (
+          <ToastAction altText={t("jobs.toasts.go_to_queue")} onClick={() => navigate("/queue")}>
+            {t("jobs.toasts.go_to_queue")}
+          </ToastAction>
+        ),
+      });
     }
     setProcessingJobIds((prev) => {
       const n = new Set(prev);

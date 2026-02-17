@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppFooter } from "./AppFooter";
+import { SetupBanner } from "@/components/sidebar/SetupBanner";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,6 +117,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </header>
           <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
           <AppFooter />
+          <SetupBanner />
         </main>
       </div>
     </SidebarProvider>

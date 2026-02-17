@@ -1151,6 +1151,8 @@
       "add_error_title": "Add error",
       "add_success_title": "Added to queue!",
       "add_success_desc": "{{jobTitle}} was added to your queue.",
+      "add_success_queue_hint": "Go to Queue to send your emails.",
+      "go_to_queue": "Go to Queue",
       "remove_success_title": "Removed from queue!",
       "remove_success_desc": "{{jobTitle}} was removed from your queue."
     },
@@ -1388,6 +1390,9 @@
   },
   "checklist": {
     "title": "Set up your account",
+    "banner_title": "Complete your setup",
+    "banner_desc": "{{remaining}} step(s) left to start sending applications.",
+    "banner_cta": "View steps",
     "steps": {
       "smtp": "Configure email (SMTP)",
       "resume": "Attach your resume",
