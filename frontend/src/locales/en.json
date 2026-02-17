@@ -1385,5 +1385,15 @@
       "sales": "Sales & Retail",
       "other": "Other General Services"
     }
+  },
+  "checklist": {
+    "title": "Set up your account",
+    "steps": {
+      "smtp": "Configure email (SMTP)",
+      "resume": "Attach your resume",
+      "resume_data": "Extract resume info",
+      "add_queue": "Add a job to queue",
+      "send_email": "Send your first email"
+    }
   }
 }

@@ -1385,5 +1385,15 @@
       "sales": "Vendas e Comércio",
       "other": "Outros Serviços Gerais"
     }
+  },
+  "checklist": {
+    "title": "Configure sua conta",
+    "steps": {
+      "smtp": "Configurar email (SMTP)",
+      "resume": "Anexar currículo",
+      "resume_data": "Extrair dados do currículo",
+      "add_queue": "Adicionar vaga à fila",
+      "send_email": "Enviar primeiro email"
+    }
   }
 }

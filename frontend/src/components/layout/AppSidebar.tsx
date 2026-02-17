@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SetupChecklist } from "@/components/sidebar/SetupChecklist";
 import {
   LayoutDashboard,
   Search,
@@ -263,6 +264,9 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
+
+      {/* Setup Checklist */}
+      <SetupChecklist />
 
       <SidebarFooter className="p-4 border-t border-sidebar-border/50">
         <div className="flex flex-col gap-3">

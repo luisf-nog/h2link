@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPlanLimit } from "@/config/plans.config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +18,6 @@ import {
   Tractor,
   Building2,
   DollarSign,
-  BarChart3,
-  Eye,
-  FileText,
-  Send,
-  MousePointerClick,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,12 +114,6 @@ export default function Dashboard() {
   const [queueCount, setQueueCount] = useState(0);
   const [sentThisMonth, setSentThisMonth] = useState(0);
 
-  // Analytics states
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [totalSent, setTotalSent] = useState(0);
-  const [totalOpened, setTotalOpened] = useState(0);
-  const [totalCVViewed, setTotalCVViewed] = useState(0);
-  const [totalFailed, setTotalFailed] = useState(0);
 
   // 1. Estatísticas Pessoais
   useEffect(() => {
@@ -153,53 +142,6 @@ export default function Dashboard() {
     fetchPersonalStats();
   }, [profile?.id, creditsUsed]);
 
-  // 1b. Analytics de envio
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    const fetchAnalytics = async () => {
-      setAnalyticsLoading(true);
-      try {
-        // Total sent (success)
-        const { count: sentCount } = await supabase
-          .from("queue_send_history")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", profile.id)
-          .eq("status", "success");
-        setTotalSent(sentCount ?? 0);
-
-        // Total failed
-        const { count: failedCount } = await supabase
-          .from("queue_send_history")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", profile.id)
-          .neq("status", "success");
-        setTotalFailed(failedCount ?? 0);
-
-        // Total opened (emails with opened_at set)
-        const { count: openedCount } = await supabase
-          .from("queue_send_history")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", profile.id)
-          .not("opened_at", "is", null);
-        setTotalOpened(openedCount ?? 0);
-
-        // Total CV viewed (queue items with profile_viewed_at set)
-        const { count: cvCount } = await supabase
-          .from("my_queue")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", profile.id)
-          .not("profile_viewed_at", "is", null);
-        setTotalCVViewed(cvCount ?? 0);
-      } catch (e) {
-        console.error("Analytics fetch error:", e);
-      } finally {
-        setAnalyticsLoading(false);
-      }
-    };
-
-    fetchAnalytics();
-  }, [profile?.id]);
 
   // 2. Dados de Mercado (Paginação Robusta)
   useEffect(() => {
@@ -457,98 +399,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* --- SENDING ANALYTICS --- */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
-              <BarChart3 className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">
-                {t("dashboard.analytics.title", "Sending Analytics")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("dashboard.analytics.subtitle", "Track your outreach performance")}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              loading={analyticsLoading}
-              title={t("dashboard.analytics.total_sent", "Emails Sent")}
-              value={totalSent}
-              icon={Send}
-              color="blue"
-              desc={t("dashboard.analytics.total_sent_desc", "All time")}
-            />
-            <StatCard
-              loading={analyticsLoading}
-              title={t("dashboard.analytics.opened", "Emails Opened")}
-              value={totalOpened}
-              icon={Eye}
-              color="emerald"
-              desc={totalSent > 0
-                ? `${((totalOpened / totalSent) * 100).toFixed(1)}% ${t("dashboard.analytics.open_rate", "open rate")}`
-                : t("dashboard.analytics.no_data", "No data yet")}
-            />
-            <StatCard
-              loading={analyticsLoading}
-              title={t("dashboard.analytics.cv_viewed", "CVs Viewed")}
-              value={totalCVViewed}
-              icon={FileText}
-              color="purple"
-              desc={totalSent > 0
-                ? `${((totalCVViewed / totalSent) * 100).toFixed(1)}% ${t("dashboard.analytics.view_rate", "view rate")}`
-                : t("dashboard.analytics.no_data", "No data yet")}
-            />
-            <StatCard
-              loading={analyticsLoading}
-              title={t("dashboard.analytics.failed", "Failed")}
-              value={totalFailed}
-              icon={AlertTriangle}
-              color="amber"
-              desc={totalSent + totalFailed > 0
-                ? `${((totalFailed / (totalSent + totalFailed)) * 100).toFixed(1)}% ${t("dashboard.analytics.fail_rate", "fail rate")}`
-                : t("dashboard.analytics.no_data", "No data yet")}
-            />
-          </div>
-
-          {/* Engagement Funnel */}
-          {!analyticsLoading && totalSent > 0 && (
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MousePointerClick className="h-5 w-5 text-slate-500" />
-                  {t("dashboard.analytics.funnel_title", "Engagement Funnel")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-4">
-                  <FunnelBar
-                    label={t("dashboard.analytics.sent", "Sent")}
-                    value={totalSent}
-                    percent={100}
-                    color="bg-blue-500"
-                  />
-                  <FunnelBar
-                    label={t("dashboard.analytics.opened_label", "Opened")}
-                    value={totalOpened}
-                    percent={totalSent > 0 ? (totalOpened / totalSent) * 100 : 0}
-                    color="bg-emerald-500"
-                  />
-                  <FunnelBar
-                    label={t("dashboard.analytics.cv_viewed_label", "CV Viewed")}
-                    value={totalCVViewed}
-                    percent={totalSent > 0 ? (totalCVViewed / totalSent) * 100 : 0}
-                    color="bg-purple-500"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
         {/* --- MARKET INTELLIGENCE --- */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
@@ -747,21 +597,3 @@ function StatCard({ loading, title, value, icon: Icon, color, desc }: any) {
   );
 }
 
-function FunnelBar({ label, value, percent, color }: { label: string; value: number; percent: number; color: string }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
-        <span className="font-medium text-slate-700">{label}</span>
-        <span className="font-bold text-slate-900">
-          {formatNumber(value)} <span className="text-xs font-normal text-slate-400">({percent.toFixed(1)}%)</span>
-        </span>
-      </div>
-      <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${color}`}
-          style={{ width: `${Math.max(percent, 2)}%` }}
-        />
-      </div>
-    </div>
-  );
-}
