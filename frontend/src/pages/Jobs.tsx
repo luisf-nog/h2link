@@ -27,7 +27,6 @@ import {
 import {
   Search,
   Plus,
-  Zap,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -35,14 +34,12 @@ import {
   Database,
   Briefcase,
   Rocket,
-  X,
   ChevronLeft,
   ChevronRight,
   MapPin,
   Calendar,
   Check,
   Send,
-  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -144,16 +141,14 @@ export default function Jobs() {
   useEffect(() => {
     if (profile?.id) {
       syncQueue();
-      const hasSeenWelcome = localStorage.getItem("h2linker_jobs_welcome_seen");
-      if (!hasSeenWelcome) {
-        setShowWelcome(true);
-      }
+      const hasSeenWelcome = localStorage.getItem("h2linker_hub_welcome_seen");
+      if (!hasSeenWelcome) setShowWelcome(true);
     }
   }, [profile?.id]);
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);
-    localStorage.setItem("h2linker_jobs_welcome_seen", "true");
+    localStorage.setItem("h2linker_hub_welcome_seen", "true");
   };
 
   const fetchJobs = async () => {
@@ -272,7 +267,7 @@ export default function Jobs() {
                 onClick={() => navigate("/admin/importer")}
                 className="w-full sm:w-auto"
               >
-                <Database className="mr-2 h-4 w-4" /> Sync Master
+                <Database className="mr-2 h-4 w-4" /> {t("common.menu")}
               </Button>
               <JobImportDialog />
             </div>
@@ -338,14 +333,14 @@ export default function Jobs() {
               </Select>
               <Input
                 type="number"
-                placeholder={t("jobs.salary.min", "Min $")}
+                placeholder={t("common.loading")} // Reutilizando key de carregamento ou use uma vazia
                 value={minSalary}
                 onChange={(e) => setMinSalary(e.target.value)}
                 className="h-10"
               />
               <Input
                 type="number"
-                placeholder={t("jobs.salary.max", "Max $")}
+                placeholder={t("common.loading")}
                 value={maxSalary}
                 onChange={(e) => setMaxSalary(e.target.value)}
                 className="h-10"
@@ -522,7 +517,7 @@ export default function Jobs() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
-              <ChevronLeft className="h-4 w-4 mr-1" /> {t("jobs.pagination.previous")}
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.previous")}
             </Button>
             <span className="sm:hidden text-sm font-medium">
               {page} / {totalPages}
@@ -533,7 +528,7 @@ export default function Jobs() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >
-              {t("jobs.pagination.next")} <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
@@ -549,42 +544,30 @@ export default function Jobs() {
           onShare={(j: any) => navigate(`/job/${j.id}`)}
         />
 
-        {/* Pop-up Explicativo de Boas-Vindas */}
+        {/* Dialog Explicativo Reativado */}
         <Dialog open={showWelcome} onOpenChange={handleCloseWelcome}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
-                <Rocket className="h-6 w-6 text-primary" /> Bem-vindo ao Jobs Hub!
+                <Rocket className="h-6 w-6 text-primary" /> {t("onboarding.welcome.title")}
               </DialogTitle>
               <DialogDescription className="pt-4 space-y-4 text-slate-700">
-                <p>
-                  Aqui você encontra as melhores oportunidades <strong>H-2A e H-2B</strong> atualizadas em tempo real.
-                </p>
+                <p>{t("onboarding.welcome.description")}</p>
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-3">
                   <div className="flex gap-3">
                     <Check className="h-5 w-5 text-green-600 shrink-0" />
-                    <p className="text-sm">Explore vagas por estado, salário ou categoria.</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <Check className="h-5 w-5 text-green-600 shrink-0" />
-                    <p className="text-sm">
-                      Adicione vagas à sua fila clicando no botão <strong>"+"</strong>.
-                    </p>
+                    <p className="text-sm">{t("jobs.shared.add_to_queue")}</p>
                   </div>
                 </div>
                 <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 flex gap-3">
                   <Send className="h-5 w-5 text-amber-600 shrink-0" />
-                  <p className="text-sm font-semibold text-amber-900">
-                    IMPORTANTE: Após adicionar as vagas desejadas, vá até a aba{" "}
-                    <span className="underline">"Minha Fila" (My Queue)</span> no menu lateral para revisar e realizar
-                    os envios das candidaturas.
-                  </p>
+                  <p className="text-sm font-semibold text-amber-900">{t("onboarding.complete.next_steps")}</p>
                 </div>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
               <Button onClick={handleCloseWelcome} className="w-full font-bold">
-                Entendido, vamos lá!
+                {t("common.ok")}
               </Button>
             </DialogFooter>
           </DialogContent>
