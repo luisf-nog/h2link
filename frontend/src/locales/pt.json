@@ -1151,6 +1151,8 @@
       "add_error_title": "Erro ao adicionar",
       "add_success_title": "Adicionado à fila!",
       "add_success_desc": "{{jobTitle}} foi adicionado à sua fila.",
+      "add_success_queue_hint": "Vá para a Fila para enviar seus emails.",
+      "go_to_queue": "Ir para Fila",
       "remove_success_title": "Removido da fila!",
       "remove_success_desc": "{{jobTitle}} foi removido da sua fila."
     },
@@ -1388,6 +1390,9 @@
   },
   "checklist": {
     "title": "Configure sua conta",
+    "banner_title": "Complete a configuração",
+    "banner_desc": "Faltam {{remaining}} passo(s) para começar a enviar candidaturas.",
+    "banner_cta": "Ver passos",
     "steps": {
       "smtp": "Configurar email (SMTP)",
       "resume": "Anexar currículo",
