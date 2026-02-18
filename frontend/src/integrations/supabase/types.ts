@@ -583,6 +583,7 @@ export type Database = {
           credits_reset_date: string
           credits_used_today: number
           email: string
+          emails_sent_total: number
           full_name: string | null
           id: string
           is_referral_activated: boolean
@@ -612,6 +613,7 @@ export type Database = {
           credits_reset_date?: string
           credits_used_today?: number
           email: string
+          emails_sent_total?: number
           full_name?: string | null
           id: string
           is_referral_activated?: boolean
@@ -641,6 +643,7 @@ export type Database = {
           credits_reset_date?: string
           credits_used_today?: number
           email?: string
+          emails_sent_total?: number
           full_name?: string | null
           id?: string
           is_referral_activated?: boolean

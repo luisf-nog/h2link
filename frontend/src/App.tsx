@@ -120,6 +120,44 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// --- PUBLIC OR PROTECTED ROUTE (accessible without login, but shows full layout when logged in) ---
+function PublicOrProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, smtpStatus } = useAuth();
+  const { t } = useTranslation();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  // If not logged in, show with AppLayout (which has a login button in header)
+  if (!user) {
+    return <AppLayout>{children}</AppLayout>;
+  }
+
+  // If logged in but smtpStatus still loading
+  if (!smtpStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  // If logged in and needs onboarding, redirect
+  const needsOnboarding = !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
+  const isSettingsRoute = location.pathname.startsWith("/settings");
+  if (needsOnboarding && !isSettingsRoute) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <AppLayout>{children}</AppLayout>;
+}
+
 const AppRoutes = () => (
   <Routes>
     {/* AUTH & PUBLIC */}
@@ -158,9 +196,9 @@ const AppRoutes = () => (
     <Route
       path="/jobs"
       element={
-        <ProtectedRoute>
+        <PublicOrProtectedRoute>
           <Jobs />
-        </ProtectedRoute>
+        </PublicOrProtectedRoute>
       }
     />
     <Route
