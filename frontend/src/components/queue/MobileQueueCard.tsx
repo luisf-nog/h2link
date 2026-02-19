@@ -22,6 +22,7 @@ interface QueueItem {
   tracking_id?: string;
   created_at: string;
   send_count: number;
+  email_open_count?: number | null;
   last_error?: string | null;
   public_jobs: {
     id: string;
@@ -185,6 +186,40 @@ export function MobileQueueCard({
         <div className="flex items-center justify-between pt-2 border-t border-border">
           {/* Tracking Icons */}
           <div className="flex items-center gap-3">
+            {/* Email open tracking */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 text-xs">
+                  <Mail
+                    className={cn(
+                      "h-4 w-4",
+                      item.status === "sent" && item.opened_at
+                        ? "text-success"
+                        : "text-muted-foreground"
+                    )}
+                  />
+                  {item.email_open_count != null && item.email_open_count > 0 && (
+                    <span className={item.opened_at ? "text-success font-semibold" : "text-muted-foreground"}>
+                      {item.email_open_count}x
+                    </span>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {item.status === "sent" && item.opened_at ? (
+                  <div className="space-y-1">
+                    <p className="font-semibold">{t("queue.email_tracking.opened", { defaultValue: "Email aberto" })}</p>
+                    <p className="text-xs">{formatOpenedAt(item.opened_at)}</p>
+                    {item.email_open_count != null && item.email_open_count > 0 && (
+                      <p className="text-xs text-muted-foreground">{item.email_open_count}x total</p>
+                    )}
+                  </div>
+                ) : (
+                  <p>{t("queue.email_tracking.not_opened", { defaultValue: "Email não aberto ainda" })}</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+
             {/* Resume/CV View Tracking */}
             <Tooltip>
               <TooltipTrigger asChild>

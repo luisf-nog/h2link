@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail } from "lucide-react";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
@@ -42,6 +42,7 @@ interface QueueItem {
   tracking_id?: string;
   created_at: string;
   send_count: number;
+  email_open_count?: number | null;
   last_error?: string | null;
   public_jobs: {
     id: string;
@@ -223,7 +224,7 @@ export default function Queue() {
       .from("my_queue")
       .select(
         `
-        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, send_count, last_error,
+        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, send_count, email_open_count, last_error,
         public_jobs (id, job_title, company, email, city, state, visa_type),
         manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
@@ -866,7 +867,7 @@ export default function Queue() {
                     <TableHead>{t("queue.table.headers.company")}</TableHead>
                     <TableHead>{t("queue.table.headers.email")}</TableHead>
                     <TableHead>{t("queue.table.headers.status")}</TableHead>
-                    <TableHead className="w-14 text-center">{t("queue.table.headers.resume_view", "CV")}</TableHead>
+                    <TableHead className="w-24 text-center">{t("queue.table.headers.tracking", "Tracking")}</TableHead>
                     <TableHead className="text-right">{t("queue.table.headers.action")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -981,31 +982,62 @@ export default function Queue() {
                         </TableCell>
 
                         <TableCell className="text-center">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex items-center justify-center">
-                                <FileText
-                                  className={
-                                    item.status === "sent" && item.profile_viewed_at
-                                      ? "h-4 w-4 text-success"
-                                      : "h-4 w-4 text-muted-foreground"
-                                  }
-                                />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {item.status === "sent" && item.profile_viewed_at ? (
-                                <p>
-                                  {t("queue.resume_tracking.viewed_at", {
-                                    date: formatOpenedAt(item.profile_viewed_at),
-                                    defaultValue: "CV visualizado em {{date}}",
-                                  })}
-                                </p>
-                              ) : (
-                                <p>{t("queue.resume_tracking.not_viewed", { defaultValue: "CV não visualizado" })}</p>
-                              )}
-                            </TooltipContent>
-                          </Tooltip>
+                          <div className="flex items-center justify-center gap-2">
+                            {/* Email open tracking */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-1 text-xs">
+                                  <Mail
+                                    className={
+                                      item.status === "sent" && item.opened_at
+                                        ? "h-4 w-4 text-success"
+                                        : "h-4 w-4 text-muted-foreground"
+                                    }
+                                  />
+                                  {item.email_open_count != null && item.email_open_count > 0 && (
+                                    <span className={item.opened_at ? "text-success font-semibold" : "text-muted-foreground"}>
+                                      {item.email_open_count}x
+                                    </span>
+                                  )}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {item.status === "sent" && item.opened_at ? (
+                                  <div className="space-y-1">
+                                    <p className="font-semibold">{t("queue.email_tracking.opened", { defaultValue: "Email visualizado" })}</p>
+                                    <p className="text-xs">{formatOpenedAt(item.opened_at)}</p>
+                                    {item.email_open_count != null && item.email_open_count > 0 && (
+                                      <p className="text-xs text-muted-foreground">{t("queue.email_tracking.open_count", { count: item.email_open_count, defaultValue: "{{count}} abertura(s) total" })}</p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p>{t("queue.email_tracking.not_opened", { defaultValue: "Email não visualizado ainda" })}</p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* CV / Profile view tracking */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center justify-center">
+                                  <FileText
+                                    className={
+                                      item.status === "sent" && item.profile_viewed_at
+                                        ? "h-4 w-4 text-success"
+                                        : "h-4 w-4 text-muted-foreground"
+                                    }
+                                  />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {item.status === "sent" && item.profile_viewed_at ? (
+                                  <p>{t("queue.resume_tracking.viewed_at", { date: formatOpenedAt(item.profile_viewed_at), defaultValue: "CV visualizado em {{date}}" })}</p>
+                                ) : (
+                                  <p>{t("queue.resume_tracking.not_viewed", { defaultValue: "CV não visualizado" })}</p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
 
                         <TableCell className="text-right">
