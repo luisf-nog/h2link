@@ -129,21 +129,28 @@ export function JobDetailsDialog({
             <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {job?.visa_type && (
-                  <Badge
-                    className={cn(
-                      "text-[10px] uppercase font-bold border px-2 py-0.5",
-                      job.visa_type === "H-2A" && !job.was_early_access && "bg-green-600 border-green-600 text-white",
-                      job.visa_type === "H-2B" && !job.was_early_access && "bg-blue-600 border-blue-600 text-white",
-                      (job.visa_type.includes("Early Access") || (job.was_early_access && isCurrentlyEarlyAccess)) &&
-                        "bg-amber-50 border-amber-400 text-amber-900",
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className={cn(
+                        "text-[10px] uppercase font-bold border px-2 py-0.5",
+                        job.visa_type === "H-2A" && !job.was_early_access && "bg-green-600 border-green-600 text-white",
+                        job.visa_type === "H-2B" && !job.was_early_access && "bg-blue-600 border-blue-600 text-white",
+                        (job.visa_type.includes("Early Access") || (job.was_early_access && isCurrentlyEarlyAccess)) &&
+                          "bg-amber-50 border-amber-400 text-amber-900",
+                      )}
+                      translate="no"
+                    >
+                      {isCurrentlyEarlyAccess && (
+                        <Zap className="h-3 w-3 mr-1 text-amber-600 fill-amber-600 animate-pulse" />
+                      )}
+                      {job.visa_type}
+                    </Badge>
+                    {job.job_id && (
+                      <span className="text-[10px] font-mono text-slate-400" translate="no">
+                        {job.job_id}
+                      </span>
                     )}
-                    translate="no"
-                  >
-                    {isCurrentlyEarlyAccess && (
-                      <Zap className="h-3 w-3 mr-1 text-amber-600 fill-amber-600 animate-pulse" />
-                    )}
-                    {job.visa_type}
-                  </Badge>
+                  </div>
                 )}
               </div>
               <DialogTitle className="text-xl sm:text-3xl leading-tight text-primary font-bold truncate uppercase sm:normal-case">
@@ -315,6 +322,24 @@ export function JobDetailsDialog({
                         )}
                       </div>
                     </div>
+
+                    {/* CAMPO DO TELEFONE ADICIONADO */}
+                    {hasValidPhone && (
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          {t("jobs.details.phone_label")}
+                        </span>
+                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 flex justify-between items-center">
+                          <span>{canSeeContacts ? job?.phone : "••• ••• ••••"}</span>
+                          {canSeeContacts && (
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCall}>
+                              <Phone className="h-3 w-3 text-slate-500" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {hasValidPhone && canSeeContacts && (
                       <div className="grid grid-cols-3 gap-2 mt-2">
                         <Button
