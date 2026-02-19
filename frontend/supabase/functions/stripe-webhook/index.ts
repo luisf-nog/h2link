@@ -48,26 +48,83 @@ serve(async (req) => {
     return new Response(`Webhook Error: ${errorMessage}`, { status: 400 });
   }
 
+  console.log(`[stripe-webhook] Event received: ${event.type}`);
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
 
+    console.log(`[stripe-webhook] Processing checkout session: ${session.id}, userId: ${userId}, customer: ${session.customer}`);
+
     // checkout.session.completed does NOT include line_items by default.
     // We must retrieve the session with expanded line items.
     let priceId: string | undefined;
+    let customerId: string | undefined;
+    
     try {
       const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-        expand: ["line_items.data.price"],
+        expand: ["line_items.data.price", "customer"],
       });
       priceId = fullSession.line_items?.data?.[0]?.price?.id ?? undefined;
+      
+      // customer may be null for guest checkouts (customer_creation: "if_required")
+      // Try to get customer from the session's customer field first
+      if (fullSession.customer) {
+        customerId = typeof fullSession.customer === "string"
+          ? fullSession.customer
+          : (fullSession.customer as Stripe.Customer).id;
+      }
+      
+      console.log(`[stripe-webhook] Retrieved session - priceId: ${priceId}, customerId: ${customerId}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("Failed to retrieve checkout session line_items:", msg);
       return new Response("Failed to retrieve session", { status: 500 });
     }
 
+    // If still no customer, try to find/create one from payment_intent
+    if (!customerId && session.payment_intent) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        if (pi.customer) {
+          customerId = typeof pi.customer === "string" ? pi.customer : (pi.customer as Stripe.Customer).id;
+          console.log(`[stripe-webhook] Got customerId from payment_intent: ${customerId}`);
+        }
+      } catch (e) {
+        console.warn(`[stripe-webhook] Could not retrieve payment_intent customer: ${e}`);
+      }
+    }
+
+    // If still no customer, try to find by email (guest checkout scenario)
+    if (!customerId && session.customer_details?.email) {
+      try {
+        const customers = await stripe.customers.list({
+          email: session.customer_details.email,
+          limit: 1,
+        });
+        if (customers.data.length > 0) {
+          customerId = customers.data[0].id;
+          console.log(`[stripe-webhook] Found customer by email: ${customerId}`);
+        } else {
+          // Create a customer for this guest so future purchases are linked
+          const newCustomer = await stripe.customers.create({
+            email: session.customer_details.email,
+            name: session.customer_details.name ?? undefined,
+          });
+          customerId = newCustomer.id;
+          console.log(`[stripe-webhook] Created new customer for guest: ${customerId}`);
+        }
+      } catch (e) {
+        console.warn(`[stripe-webhook] Could not find/create customer by email: ${e}`);
+      }
+    }
+
     if (!userId || !priceId) {
-      console.error("Missing user_id or priceId in session metadata/line_items");
+      console.error("Missing user_id or priceId in session metadata/line_items", {
+        userId,
+        priceId,
+        metadata: session.metadata,
+      });
       return new Response("Missing data", { status: 400 });
     }
 
@@ -77,12 +134,14 @@ serve(async (req) => {
       return new Response("Unknown price", { status: 400 });
     }
 
+    const updateData: Record<string, string> = { plan_tier: planTier };
+    if (customerId) {
+      updateData.stripe_customer_id = customerId;
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({
-        plan_tier: planTier,
-        stripe_customer_id: session.customer as string,
-      })
+      .update(updateData)
       .eq("id", userId);
 
     if (error) {
@@ -90,7 +149,7 @@ serve(async (req) => {
       return new Response("Database error", { status: 500 });
     }
 
-    console.log(`User ${userId} upgraded to ${planTier}`);
+    console.log(`[stripe-webhook] User ${userId} upgraded to ${planTier} (customer: ${customerId ?? "none"})`);
   }
 
   return new Response(JSON.stringify({ received: true }), { status: 200 });

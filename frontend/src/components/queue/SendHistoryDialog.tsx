@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, Send, Eye } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Send, Eye, MailOpen } from 'lucide-react';
 
 interface SendHistoryEntry {
   id: string;
@@ -20,6 +20,8 @@ interface SendHistoryEntry {
   status: string;
   error_message: string | null;
   opened_at: string | null;
+  first_opened_at: string | null;
+  open_count: number;
 }
 
 interface SendHistoryDialogProps {
@@ -52,7 +54,7 @@ export function SendHistoryDialog({
       try {
         const { data, error } = await supabase
           .from('queue_send_history')
-          .select('id, sent_at, status, error_message, opened_at')
+          .select('id, sent_at, status, error_message, opened_at, first_opened_at, open_count')
           .eq('queue_id', queueId)
           .order('sent_at', { ascending: false });
 
@@ -103,7 +105,7 @@ export function SendHistoryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-80">
+        <ScrollArea className="max-h-96">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -135,6 +137,13 @@ export function SendHistoryDialog({
                         {getStatusLabel(entry.status)}
                       </Badge>
                     </div>
+                    {/* Open count badge */}
+                    {entry.open_count > 0 && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <MailOpen className="h-3 w-3" />
+                        {entry.open_count}x
+                      </Badge>
+                    )}
                   </div>
                   
                   <div className="flex flex-col gap-1 text-sm">
@@ -144,13 +153,26 @@ export function SendHistoryDialog({
                       <span className="font-medium text-foreground">{formatDate(entry.sent_at)}</span>
                     </div>
                     
+                    {/* First confirmed open (after 60s antivirus delay) */}
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Eye className="h-3.5 w-3.5" />
                       <span>{t('queue.history.opened_at')}:</span>
                       <span className={`font-medium ${entry.opened_at ? 'text-success' : 'text-muted-foreground'}`}>
-                        {entry.opened_at ? formatDate(entry.opened_at) : t('queue.history.not_opened')}
+                        {entry.opened_at
+                          ? formatDate(entry.opened_at)
+                          : entry.open_count > 0
+                            ? t('queue.history.scanner_only', { defaultValue: 'Só scanner (< 60s)' })
+                            : t('queue.history.not_opened')}
                       </span>
                     </div>
+
+                    {/* Total opens info */}
+                    {entry.open_count > 1 && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MailOpen className="h-3.5 w-3.5" />
+                        <span className="text-xs">{entry.open_count} {t('queue.history.total_opens', { defaultValue: 'aberturas no total' })}</span>
+                      </div>
+                    )}
                   </div>
 
                   {entry.error_message && (

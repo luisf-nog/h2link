@@ -472,6 +472,7 @@ export type Database = {
       my_queue: {
         Row: {
           created_at: string
+          email_open_count: number
           id: string
           job_id: string | null
           last_attempt_at: string | null
@@ -489,6 +490,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_open_count?: number
           id?: string
           job_id?: string | null
           last_attempt_at?: string | null
@@ -506,6 +508,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_open_count?: number
           id?: string
           job_id?: string | null
           last_attempt_at?: string | null
@@ -891,7 +894,9 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          first_opened_at: string | null
           id: string
+          open_count: number
           opened_at: string | null
           queue_id: string
           sent_at: string
@@ -902,7 +907,9 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          first_opened_at?: string | null
           id?: string
+          open_count?: number
           opened_at?: string | null
           queue_id: string
           sent_at?: string
@@ -913,7 +920,9 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          first_opened_at?: string | null
           id?: string
+          open_count?: number
           opened_at?: string | null
           queue_id?: string
           sent_at?: string
