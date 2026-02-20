@@ -159,7 +159,13 @@ export function MultiJsonImporter() {
         await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
       }
 
-      toast({ title: "Sincronização V68 Concluída!", description: "Dados e datas atualizados com sucesso." });
+      // After syncing, deactivate jobs whose start_date is within 5 days or past
+      const { data: deactivated } = await supabase.rpc("deactivate_expired_jobs");
+
+      toast({
+        title: "Sincronização Concluída!",
+        description: `${allJobs.length} vagas sincronizadas. ${deactivated ?? 0} vagas expiradas desativadas automaticamente.`,
+      });
       setFiles([]);
     } catch (err: any) {
       toast({ title: "Erro Fatal", description: err.message, variant: "destructive" });

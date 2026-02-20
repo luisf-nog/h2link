@@ -1242,6 +1242,7 @@ export type Database = {
         Returns: number
       }
       deactivate_all_jobs: { Args: never; Returns: undefined }
+      deactivate_expired_jobs: { Args: never; Returns: number }
       downgrade_smtp_warmup: { Args: { p_user_id: string }; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
       get_category_stats_cached: {
