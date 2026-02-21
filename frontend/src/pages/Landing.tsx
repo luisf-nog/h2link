@@ -255,7 +255,7 @@ export default function Landing() {
               justifyContent: "space-between",
             }}
           >
-            <BrandWordmark height={30} />
+            <BrandWordmark height={38} />
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
               <LanguageSwitcher
                 value={isSupportedLanguage(i18n.language) ? i18n.language : "pt"}
@@ -269,13 +269,15 @@ export default function Landing() {
                     background: "#020617",
                     color: "#fff",
                     border: "none",
-                    padding: "9px 20px",
+                    padding: "10px 22px",
                     borderRadius: 6,
                     fontWeight: 600,
                     fontSize: 14,
                     cursor: "pointer",
                     fontFamily: "inherit",
                     transition: "opacity 0.15s",
+                    whiteSpace: "nowrap",
+                    lineHeight: 1.4,
                   }}
                 >
                   Dashboard
@@ -288,13 +290,15 @@ export default function Landing() {
                     background: "#020617",
                     color: "#fff",
                     border: "none",
-                    padding: "9px 20px",
+                    padding: "10px 22px",
                     borderRadius: 6,
                     fontWeight: 600,
                     fontSize: 14,
                     cursor: "pointer",
                     fontFamily: "inherit",
                     transition: "opacity 0.15s",
+                    whiteSpace: "nowrap",
+                    lineHeight: 1.4,
                   }}
                 >
                   Entrar / Criar conta
