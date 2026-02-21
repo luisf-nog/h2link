@@ -21,11 +21,15 @@ import {
   Radar,
   Users,
   MapPin,
-  DollarSign,
   ChevronDown,
-  Sparkles,
-  TrendingUp,
   Globe,
+  Infinity as InfinityIcon,
+  Gift,
+  Crown,
+  Bot,
+  Cpu,
+  X,
+  Check,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -112,38 +116,58 @@ const features = [
   {
     icon: Shield,
     title: "Aquecimento inteligente",
-    desc: "Aumento progressivo do limite de envios que protege a reputação do seu domínio e evita bloqueios.",
+    desc: "Aumento progressivo do limite de envios que protege a reputação do seu domínio e evita bloqueios. Começa conservador e cresce automaticamente.",
+    badge: null,
     wide: true,
   },
   {
     icon: Zap,
-    title: "IA personalizada",
-    desc: "Emails únicos por vaga, passando pelos filtros de spam.",
+    title: "IA personalizada por vaga",
+    desc: "Emails únicos gerados para cada vaga, passando pelos filtros de spam com linguagem natural.",
+    badge: null,
     wide: false,
   },
   {
     icon: Eye,
     title: "Spy pixel avançado",
-    desc: "Filtra scanners de antivírus e mostra apenas aberturas genuínas.",
+    desc: "Filtra scanners de antivírus e mostra apenas aberturas genuínas do empregador.",
+    badge: null,
     wide: false,
   },
   {
-    icon: Radar,
-    title: "Radar de vagas",
-    desc: "Filtros automáticos que adicionam novas vagas à fila sem você precisar buscar.",
+    icon: Send,
+    title: "Auto-send — piloto automático",
+    desc: "O Radar detecta uma vaga que bate com seus filtros e envia a candidatura sozinho. Você não precisa fazer nada.",
+    badge: "Radar",
     wide: false,
   },
   {
     icon: Clock,
     title: "Delay anti-spam",
-    desc: "Intervalos randomizados simulando comportamento humano.",
+    desc: "Intervalos randomizados entre envios simulando comportamento humano para proteger sua conta.",
+    badge: null,
+    wide: false,
+  },
+  {
+    icon: Bot,
+    title: "Preferências de IA avançadas",
+    desc: "Controle total sobre o estilo dos seus emails: formalidade, abertura, saudação, fechamento, tamanho e ênfases como idiomas e disponibilidade.",
+    badge: "Black",
+    wide: true,
+  },
+  {
+    icon: Radar,
+    title: "Radar de vagas",
+    desc: "Configure filtros por setor, estado e salário. Vagas novas entram na sua fila automaticamente, sem busca manual.",
+    badge: null,
     wide: false,
   },
   {
     icon: Users,
     title: "Programa de indicações",
-    desc: "Indique amigos e ganhe créditos de envio extras. Crescimento coletivo.",
-    wide: true,
+    desc: "Indique amigos e ganhe créditos extras de envio. Quanto mais indicações ativas, mais candidaturas por dia — sem pagar nada.",
+    badge: null,
+    wide: false,
   },
 ];
 
@@ -211,19 +235,18 @@ export default function Landing() {
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
-          .hero-grid   { grid-template-columns: 1fr !important; }
-          .hero-left   { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid #E2E8F0; }
-          .hero-right  { padding: 32px 0 56px !important; }
-          .steps-grid  { grid-template-columns: 1fr !important; }
-          .bento-grid  { grid-template-columns: 1fr !important; }
-          .reqs-grid   { grid-template-columns: 1fr !important; }
-          .cta-row     { flex-direction: column !important; align-items: stretch !important; }
-          .footer-row  { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
+          .hero-grid     { grid-template-columns: 1fr !important; }
+          .hero-left     { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid #E2E8F0; }
+          .hero-right    { padding: 32px 0 56px !important; }
+          .steps-grid    { grid-template-columns: 1fr !important; }
+          .bento-grid    { grid-template-columns: 1fr !important; }
+          .lifetime-grid { grid-template-columns: 1fr !important; }
+          .cta-row       { flex-direction: column !important; align-items: stretch !important; }
+          .footer-row    { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
         }
         @media (min-width: 768px) {
           .steps-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .bento-grid { grid-template-columns: repeat(3, 1fr) !important; }
-          .reqs-grid  { grid-template-columns: repeat(2, 1fr) !important; }
         }
         @media (min-width: 1024px) {
           .steps-grid { grid-template-columns: repeat(3, 1fr) !important; }
@@ -696,19 +719,400 @@ export default function Landing() {
                     gridColumn: f.wide ? "span 2" : "span 1",
                     transition: "background 0.15s",
                     cursor: "default",
+                    position: "relative",
                   }}
                 >
+                  {f.badge && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 16,
+                        right: 16,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        background: f.badge === "Black" ? "#020617" : "hsl(199,88%,48%,0.1)",
+                        color: f.badge === "Black" ? "#fff" : "hsl(199,88%,35%)",
+                        border: f.badge === "Black" ? "none" : "1px solid hsl(199,88%,48%,0.3)",
+                        padding: "3px 8px",
+                        borderRadius: 4,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {f.badge === "Black" && <Crown size={9} />}
+                      Plano {f.badge}
+                    </div>
+                  )}
                   <f.icon
                     className="feat-icon"
                     size={22}
                     style={{ color: "#CBD5E1", marginBottom: 16, transition: "color 0.2s" }}
                   />
                   <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{f.title}</h3>
-                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, maxWidth: f.wide ? 480 : "none" }}>
+                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, maxWidth: f.wide ? 520 : "none" }}>
                     {f.desc}
                   </p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── LIFETIME PRICING ────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ maxWidth: 560, marginBottom: 56 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "#D4500A",
+                  marginBottom: 12,
+                }}
+              >
+                Preço
+              </p>
+              <h2
+                style={{
+                  fontSize: "clamp(28px, 4vw, 38px)",
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.15,
+                }}
+              >
+                Pague uma vez.
+                <br />
+                Use para sempre.
+              </h2>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="lifetime-grid">
+              {/* H2 Linker card */}
+              <div
+                style={{
+                  background: "#020617",
+                  borderRadius: 12,
+                  padding: "48px 40px",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Subtle glow */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -80,
+                    right: -80,
+                    width: 240,
+                    height: 240,
+                    borderRadius: "50%",
+                    background: "hsl(199,88%,48%,0.07)",
+                    pointerEvents: "none",
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "hsl(199,88%,48%,0.15)",
+                    border: "1px solid hsl(199,88%,48%,0.3)",
+                    padding: "4px 12px",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    color: "hsl(199,88%,65%)",
+                    textTransform: "uppercase",
+                    marginBottom: 28,
+                  }}
+                >
+                  <InfinityIcon size={12} /> H2 Linker
+                </div>
+
+                <div style={{ marginBottom: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 56,
+                      fontWeight: 700,
+                      color: "#fff",
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1,
+                    }}
+                  >
+                    1x
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.7)",
+                    marginBottom: 36,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Pagamento único.
+                  <br />
+                  Acesso vitalício, sem mensalidade.
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {[
+                    "Acesso a todas as vagas H-2A e H-2B",
+                    "Envios automatizados com IA",
+                    "Radar + auto-send incluídos",
+                    "Rastreamento de abertura e visualização",
+                    "Atualizações gratuitas para sempre",
+                  ].map((item) => (
+                    <div key={item} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: "#15803D",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Check size={11} color="#fff" />
+                      </div>
+                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  className="btn-primary"
+                  onClick={() => navigate("/auth")}
+                  style={{
+                    marginTop: 36,
+                    background: "#D4500A",
+                    color: "#fff",
+                    border: "none",
+                    padding: "13px 24px",
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Ver planos <ArrowRight size={15} />
+                </button>
+              </div>
+
+              {/* Competitors card */}
+              <div
+                style={{
+                  background: "#FAFAFA",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: 12,
+                  padding: "48px 40px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    padding: "4px 12px",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    color: "#DC2626",
+                    textTransform: "uppercase",
+                    marginBottom: 28,
+                  }}
+                >
+                  Concorrência típica
+                </div>
+
+                <div style={{ marginBottom: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 56,
+                      fontWeight: 700,
+                      color: "#94A3B8",
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1,
+                      textDecoration: "line-through",
+                    }}
+                  >
+                    R$100
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 600,
+                    color: "#94A3B8",
+                    marginBottom: 36,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  por mês. Todo mês.
+                  <br />
+                  R$ 1.200 por ano — sem parar.
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {[
+                    "Cobrança mensal recorrente",
+                    "Cancela = perde o acesso imediatamente",
+                    "Sem funcionar? Continua cobrando.",
+                    "Reajustes a qualquer momento",
+                    "Suporte premium bloqueado por plano",
+                  ].map((item) => (
+                    <div key={item} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: "#FEE2E2",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <X size={11} color="#DC2626" />
+                      </div>
+                      <span style={{ fontSize: 14, color: "#94A3B8", fontWeight: 500 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── REFERRAL PROGRAM ────────────────────────────────────────────── */}
+        <section style={{ padding: "72px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 48,
+                flexWrap: "wrap",
+              }}
+            >
+              {/* Left */}
+              <div style={{ flex: "1 1 320px" }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "hsl(142,76%,36%,0.08)",
+                    border: "1px solid hsl(142,76%,36%,0.2)",
+                    padding: "4px 12px",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    color: "#15803D",
+                    textTransform: "uppercase",
+                    marginBottom: 20,
+                  }}
+                >
+                  <Gift size={11} /> Programa de indicações
+                </div>
+                <h2
+                  style={{
+                    fontSize: "clamp(24px, 3.5vw, 34px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.15,
+                    marginBottom: 16,
+                  }}
+                >
+                  Indique amigos.
+                  <br />
+                  Ganhe mais envios por dia.
+                </h2>
+                <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7, maxWidth: 420 }}>
+                  Para usuários do plano gratuito, cada amigo que você indicar e ativar a conta aumenta seu limite
+                  diário de envios — sem pagar nada. É a forma mais rápida de acelerar suas candidaturas sem investir em
+                  um plano pago.
+                </p>
+              </div>
+
+              {/* Right — visual steps */}
+              <div style={{ flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 0 }}>
+                {[
+                  {
+                    n: "01",
+                    title: "Copie seu link único",
+                    desc: "Gerado automaticamente no seu perfil após criar a conta.",
+                  },
+                  {
+                    n: "02",
+                    title: "Compartilhe com amigos",
+                    desc: "WhatsApp, Instagram, grupos — quanto mais, melhor.",
+                  },
+                  {
+                    n: "03",
+                    title: "Eles ativam a conta",
+                    desc: "Assim que o amigo usar o sistema pela primeira vez, o crédito é seu.",
+                  },
+                  {
+                    n: "04",
+                    title: "Você envia mais",
+                    desc: "Cada indicação ativa aumenta seu limite diário de candidaturas.",
+                  },
+                ].map((step, i, arr) => (
+                  <div
+                    key={step.n}
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      padding: "18px 0",
+                      borderBottom: i < arr.length - 1 ? "1px solid #E2E8F0" : "none",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 12,
+                        color: "#CBD5E1",
+                        letterSpacing: "0.03em",
+                        flexShrink: 0,
+                        paddingTop: 2,
+                        minWidth: 24,
+                      }}
+                    >
+                      {step.n}
+                    </span>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#020617", marginBottom: 3 }}>
+                        {step.title}
+                      </div>
+                      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>{step.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
