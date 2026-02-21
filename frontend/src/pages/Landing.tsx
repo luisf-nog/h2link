@@ -40,8 +40,8 @@ const faqs = [
     a: "Não — e qualquer plataforma que prometa isso está mentindo. O H2 Linker não é uma agência de empregos e não tem poder de contratar ninguém. Somos um facilitador: nossa função é colocar o seu currículo na frente do maior número possível de empregadores verificados, no menor tempo possível, com a melhor apresentação possível. O processo H-2A e H-2B é um jogo de tempo e volume. Quem aplica primeiro, com um email profissional e rastreável, sai na frente. Estamos aqui para garantir que você jogue esse jogo com todas as vantagens.",
   },
   {
-    q: "O que é o 'Early Access' nas vagas H-2A?",
-    a: "É o acesso imediato às vagas que acabaram de receber o NOA (Notice of Acceptance). Como o processo H-2A é muito ágil, ser o primeiro a aplicar é crucial.",
+    q: "O que é o 'Early Access' e por que ele é tão importante?",
+    a: "Early Access são vagas H-2A que acabaram de receber o NOA (Notice of Acceptance) do Departamento de Trabalho — aprovadas mas ainda não amplamente divulgadas. É a janela de ouro do processo: o empregador acabou de receber luz verde, ainda está montando o time, e sua candidatura chega antes da concorrência. Em H-2A, a velocidade é tudo. Empregadores recebem centenas de emails à medida que a vaga ganha visibilidade — quem chega primeiro fica na memória. Chegando no Early Access, você não está competindo com a multidão. Está na fila da frente.",
   },
   {
     q: "Como o sistema acessa meu e-mail?",
@@ -95,7 +95,7 @@ const steps = [
     n: "04",
     icon: Search,
     title: "Explore as vagas H-2A/H-2B",
-    desc: "Centenas de vagas atualizadas diariamente do DOL. Filtre por estado, salário e visto.",
+    desc: "Centenas de vagas atualizadas diariamente do DOL. Cada vaga exibe salário completo, horas semanais, data de início da temporada, experiência exigida e educação mínima — informação real para tomar a decisão certa.",
   },
   {
     n: "05",
@@ -106,8 +106,8 @@ const steps = [
   {
     n: "06",
     icon: BarChart3,
-    title: "Acompanhe em tempo real",
-    desc: "Veja aberturas, visualizações do currículo e cliques — dados reais, sem estimativas.",
+    title: "Aguarde o retorno dos empregadores",
+    desc: "Após o envio, fique de olho na sua caixa de entrada. Os empregadores respondem diretamente para o seu email — sem intermediários.",
   },
 ];
 
@@ -138,7 +138,7 @@ const features = [
     icon: Send,
     title: "Auto-send — piloto automático",
     desc: "O Radar detecta uma vaga que bate com seus filtros e envia a candidatura sozinho. Você não precisa fazer nada.",
-    badge: "Radar",
+    badge: null,
     wide: false,
   },
   {
@@ -153,6 +153,13 @@ const features = [
     title: "Preferências de IA avançadas",
     desc: "Controle total sobre o estilo dos seus emails: formalidade, abertura, saudação, fechamento, tamanho e ênfases como idiomas e disponibilidade.",
     badge: "Black",
+    wide: true,
+  },
+  {
+    icon: FileText,
+    title: "Fichas completas de cada vaga",
+    desc: "Salário (faixa mínima e máxima), horas semanais, data de início da temporada, experiência mínima exigida, educação requerida e contato direto com o empregador. Não é uma listagem crua — é tudo que você precisa para decidir antes de aplicar.",
+    badge: null,
     wide: true,
   },
   {
