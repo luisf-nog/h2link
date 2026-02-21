@@ -1,317 +1,1022 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import {
   Upload,
   Mail,
+  FileText,
   Send,
   BarChart3,
   Shield,
   Zap,
+  Search,
+  Clock,
   ArrowRight,
+  CheckCircle2,
+  Eye,
+  Radar,
+  Users,
   MapPin,
   DollarSign,
   ChevronDown,
   Sparkles,
-  Search,
+  TrendingUp,
+  Globe,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-// ─── Design System (SaaS Minimalista) ───────────────────────────────────────
-const Theme = {
-  white: "#FFFFFF",
-  bg: "#FFFFFF",
-  navy: "#020617", // Quase preto (Slate 950)
-  slate: "#64748B", // Texto de suporte
-  border: "#E2E8F0", // Borda fina e elegante
-  orange: "#D4500A", // Laranja da marca (uso cirúrgico)
-  h2a: "#059669",
-  h2b: "#2563EB",
-  early: "#7C3AED",
-};
+// ─── FAQ ────────────────────────────────────────────────────────────────────
+const faqs = [
+  {
+    q: "O que é o 'Early Access' nas vagas H-2A?",
+    a: "É o acesso imediato às vagas que acabaram de receber o NOA (Notice of Acceptance). Como o processo H-2A é muito ágil, ser o primeiro a aplicar é crucial.",
+  },
+  {
+    q: "Como o sistema acessa meu e-mail?",
+    a: "Não acessamos sua senha. Você gera uma 'Senha de App' no Google ou Outlook que permite apenas o envio de mensagens. Você mantém o controle total.",
+  },
+  {
+    q: "As vagas são reais?",
+    a: "Sim, todos os dados são extraídos e processados diretamente dos arquivos oficiais do Department of Labor (DOL) dos EUA.",
+  },
+  {
+    q: "Quantos e-mails posso enviar por dia?",
+    a: "Depende do seu plano e do aquecimento do seu email. O sistema começa com envios conservadores e vai aumentando gradualmente para proteger sua reputação.",
+  },
+  {
+    q: "Preciso de experiência técnica para usar?",
+    a: "Não. A plataforma foi desenhada para ser usada por qualquer pessoa. Temos tutoriais em vídeo para cada etapa do processo.",
+  },
+];
 
-// ─── Componentes Refinados ──────────────────────────────────────────────────
-const JobCard = ({ type, title, location, salary, isEarly }: any) => {
-  // Regra: Early Access somente para H-2A
-  const showEarly = isEarly && type === "H-2A";
+// ─── Jobs ticker data ────────────────────────────────────────────────────────
+const tickerJobs = [
+  { type: "H-2A", title: "Farmworker – Berries", location: "Salinas, CA", salary: "$16.00/h" },
+  { type: "H-2B", title: "Concrete Finisher", location: "Morgantown, WV", salary: "$24.50/h" },
+  { type: "H-2A", title: "Apple Harvester", location: "Yakima, WA", salary: "$17.20/h" },
+  { type: "H-2B", title: "Landscape Laborer", location: "Austin, TX", salary: "$18.00/h" },
+  { type: "H-2A", title: "Equipment Operator", location: "Des Moines, IA", salary: "$19.50/h" },
+  { type: "H-2B", title: "Housekeeper", location: "Mackinaw City, MI", salary: "$15.50/h" },
+  { type: "H-2A", title: "Tobacco Harvester", location: "Wilson, NC", salary: "$14.87/h" },
+  { type: "H-2B", title: "Crab Picker", location: "Crisfield, MD", salary: "$16.54/h" },
+  { type: "H-2A", title: "Nursery Worker", location: "Apopka, FL", salary: "$13.67/h" },
+  { type: "H-2B", title: "Ski Lift Operator", location: "Vail, CO", salary: "$20.00/h" },
+];
 
-  return (
-    <div
-      style={{
-        padding: "20px",
-        border: `1px solid ${Theme.border}`,
-        borderRadius: "4px", // Cantos menos arredondados = mais profissional
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        transition: "border-color 0.2s",
-      }}
-      className="job-card"
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: 800,
-            color: type === "H-2A" ? Theme.h2a : Theme.h2b,
-            letterSpacing: "0.05em",
-          }}
-        >
-          {type}
-        </span>
-        {showEarly && (
-          <div
-            style={{
-              color: Theme.early,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              fontSize: "11px",
-              fontWeight: 700,
-            }}
-          >
-            <Sparkles size={12} /> EARLY ACCESS
-          </div>
-        )}
-      </div>
-      <div>
-        <h4 style={{ fontSize: "15px", fontWeight: 600, color: Theme.navy, marginBottom: "4px" }}>{title}</h4>
-        <div style={{ display: "flex", gap: "12px", fontSize: "13px", color: Theme.slate }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <MapPin size={13} /> {location}
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <DollarSign size={13} /> {salary}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
+// ─── How it works ────────────────────────────────────────────────────────────
+const steps = [
+  {
+    n: "01",
+    icon: Upload,
+    title: "Importe seu currículo",
+    desc: "Upload em PDF ou Word. O sistema extrai seus dados e personaliza cada candidatura.",
+  },
+  {
+    n: "02",
+    icon: Mail,
+    title: "Configure seu email SMTP",
+    desc: 'Conecte Gmail ou Outlook com "Senha de App". Os emails saem da sua caixa, sem intermediários.',
+  },
+  {
+    n: "03",
+    icon: FileText,
+    title: "Personalize templates",
+    desc: "Use templates prontos ou crie os seus. Nossa IA gera textos únicos para cada vaga.",
+  },
+  {
+    n: "04",
+    icon: Search,
+    title: "Explore as vagas H-2A/H-2B",
+    desc: "Centenas de vagas atualizadas diariamente do DOL. Filtre por estado, salário e visto.",
+  },
+  {
+    n: "05",
+    icon: Send,
+    title: "Monte a fila e envie",
+    desc: "Selecione as vagas, adicione à fila e dispare candidaturas em massa com um clique.",
+  },
+  {
+    n: "06",
+    icon: BarChart3,
+    title: "Acompanhe em tempo real",
+    desc: "Veja aberturas, visualizações do currículo e cliques — dados reais, sem estimativas.",
+  },
+];
 
+// ─── Features bento ─────────────────────────────────────────────────────────
+const features = [
+  {
+    icon: Shield,
+    title: "Aquecimento inteligente",
+    desc: "Aumento progressivo do limite de envios que protege a reputação do seu domínio e evita bloqueios.",
+    wide: true,
+  },
+  {
+    icon: Zap,
+    title: "IA personalizada",
+    desc: "Emails únicos por vaga, passando pelos filtros de spam.",
+    wide: false,
+  },
+  {
+    icon: Eye,
+    title: "Spy pixel avançado",
+    desc: "Filtra scanners de antivírus e mostra apenas aberturas genuínas.",
+    wide: false,
+  },
+  {
+    icon: Radar,
+    title: "Radar de vagas",
+    desc: "Filtros automáticos que adicionam novas vagas à fila sem você precisar buscar.",
+    wide: false,
+  },
+  {
+    icon: Clock,
+    title: "Delay anti-spam",
+    desc: "Intervalos randomizados simulando comportamento humano.",
+    wide: false,
+  },
+  {
+    icon: Users,
+    title: "Programa de indicações",
+    desc: "Indique amigos e ganhe créditos de envio extras. Crescimento coletivo.",
+    wide: true,
+  },
+];
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export default function Landing() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
+  const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const handleChangeLanguage = (next: SupportedLanguage) => {
+    i18n.changeLanguage(next);
+    localStorage.setItem("app_language", next);
+  };
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: ${Theme.white}; color: ${Theme.navy}; -webkit-font-smoothing: antialiased; }
-        .job-card:hover { border-color: ${Theme.navy}; }
-        .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
-        .faq-trigger:hover { color: ${Theme.orange}; }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+          background: #ffffff;
+          color: #020617;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Ticker ── */
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .ticker-track {
+          display: flex;
+          width: max-content;
+          animation: ticker 38s linear infinite;
+        }
+        .ticker-track:hover { animation-play-state: paused; }
+
+        /* ── Step number hover ── */
+        .step-card:hover .step-num { color: #020617; }
+        .step-card:hover { border-color: #020617; }
+
+        /* ── Feature card ── */
+        .feat-card:hover { background: #f8fafc; }
+        .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
+
+        /* ── FAQ ── */
+        .faq-row:hover .faq-q { color: #D4500A; }
+
+        /* ── Buttons ── */
+        .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-outline:hover { background: #020617; color: #fff; }
+        .btn-ghost:hover  { color: #020617; }
+
+        /* ── Nav CTA ── */
+        .nav-cta:hover { opacity: 0.85; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+          .hero-title  { font-size: clamp(32px, 8vw, 48px) !important; }
+          .steps-grid  { grid-template-columns: 1fr !important; }
+          .bento-grid  { grid-template-columns: 1fr !important; }
+          .reqs-grid   { grid-template-columns: 1fr !important; }
+          .stats-row   { flex-direction: column !important; gap: 24px !important; }
+          .cta-row     { flex-direction: column !important; align-items: stretch !important; }
+          .footer-row  { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
+        }
+        @media (min-width: 768px) {
+          .steps-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .bento-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .reqs-grid  { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (min-width: 1024px) {
+          .steps-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
       `}</style>
 
-      {/* NAV */}
-      <nav style={{ borderBottom: `1px solid ${Theme.border}`, height: 72, display: "flex", alignItems: "center" }}>
-        <div
+      <div style={{ minHeight: "100vh", background: "#fff" }}>
+        {/* ── NAV ─────────────────────────────────────────────────────────── */}
+        <nav
           style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            width: "100%",
-            padding: "0 24px",
+            position: "sticky",
+            top: 0,
+            zIndex: 50,
+            background: "#fff",
+            borderBottom: "1px solid #E2E8F0",
+            height: 68,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
           }}
         >
-          <BrandWordmark height={28} />
-          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            <LanguageSwitcher value={i18n.language as SupportedLanguage} onChange={(l) => i18n.changeLanguage(l)} />
-            <button
-              onClick={() => navigate("/auth")}
-              style={{
-                background: Theme.navy,
-                color: Theme.white,
-                border: "none",
-                padding: "10px 18px",
-                borderRadius: "4px",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: "13px",
-              }}
-            >
-              Entrar no Sistema
-            </button>
+          <div
+            style={{
+              maxWidth: 1200,
+              margin: "0 auto",
+              width: "100%",
+              padding: "0 24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <BrandWordmark height={30} />
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <LanguageSwitcher
+                value={isSupportedLanguage(i18n.language) ? i18n.language : "pt"}
+                onChange={handleChangeLanguage}
+              />
+              {user ? (
+                <button
+                  className="nav-cta"
+                  onClick={() => navigate("/dashboard")}
+                  style={{
+                    background: "#020617",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 20px",
+                    borderRadius: 6,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  Dashboard
+                </button>
+              ) : (
+                <button
+                  className="nav-cta"
+                  onClick={() => navigate("/auth")}
+                  style={{
+                    background: "#020617",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 20px",
+                    borderRadius: 6,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  Entrar / Criar conta
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* HERO */}
-      <section style={{ padding: "100px 24px 80px", textAlign: "center" }}>
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          <h1
-            style={{
-              fontSize: "clamp(40px, 5vw, 60px)",
-              fontWeight: 700,
-              letterSpacing: "-0.04em",
-              lineHeight: 1.1,
-              marginBottom: "24px",
-            }}
-          >
-            Conectando trabalhadores <br /> à próxima temporada nos EUA.
-          </h1>
-          <p
-            style={{
-              fontSize: "18px",
-              color: Theme.slate,
-              marginBottom: "40px",
-              lineHeight: 1.6,
-              maxWidth: 600,
-              margin: "0 auto 40px",
-            }}
-          >
-            A plataforma inteligente para gestão de candidaturas H-2A e H-2B. Acesse mais de 10.000 vagas processadas
-            diretamente do banco de dados oficial.
-          </p>
-          <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
-            <button
-              className="btn-main"
-              onClick={() => navigate("/auth")}
+        {/* ── HERO ────────────────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px 72px", textAlign: "center" }}>
+          <div style={{ maxWidth: 820, margin: "0 auto" }}>
+            {/* Eyebrow pill */}
+            <div
               style={{
-                background: Theme.orange,
-                color: Theme.white,
-                border: "none",
-                padding: "14px 28px",
-                borderRadius: "4px",
-                fontSize: "15px",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: "8px",
-                transition: "all 0.2s",
+                gap: 8,
+                background: "hsl(199,88%,48%,0.08)",
+                border: "1px solid hsl(199,88%,48%,0.25)",
+                borderRadius: 999,
+                padding: "5px 14px",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "hsl(199,88%,35%)",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                marginBottom: 28,
               }}
             >
-              Criar conta gratuita <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "hsl(199,88%,48%)",
+                  display: "inline-block",
+                }}
+              />
+              Plataforma oficial H-2A &amp; H-2B — DOL integrado
+            </div>
 
-      {/* VITRINE DE VAGAS */}
-      <section style={{ padding: "60px 24px", borderTop: `1px solid ${Theme.border}` }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700 }}>Oportunidades recentes</h2>
-            <div style={{ fontSize: "13px", color: Theme.slate }}>Base de dados atualizada em tempo real</div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
-            {/* H-2B: Sem badge Early Access por regra do negócio */}
-            <JobCard type="H-2B" title="Concrete Finisher" location="Morgantown, WV" salary="$24.50/h" isEarly={true} />
-            <JobCard type="H-2B" title="Landscape Laborer" location="Austin, TX" salary="$18.00/h" isEarly={true} />
-            <JobCard type="H-2B" title="Housekeeper" location="Mackinaw City, MI" salary="$15.50/h" />
+            <h1
+              className="hero-title"
+              style={{
+                fontSize: "clamp(40px, 5.5vw, 64px)",
+                fontWeight: 700,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.08,
+                marginBottom: 24,
+                color: "#020617",
+              }}
+            >
+              Conectando trabalhadores
+              <br />à próxima temporada <span style={{ color: "#D4500A" }}>nos EUA</span>
+            </h1>
 
-            {/* H-2A: Pode ter badge Early Access */}
-            <JobCard type="H-2A" title="Farmworker (Berries)" location="Salinas, CA" salary="$16.00/h" isEarly={true} />
-            <JobCard
-              type="H-2A"
-              title="Equipment Operator"
-              location="Des Moines, IA"
-              salary="$19.50/h"
-              isEarly={true}
-            />
-            <JobCard type="H-2A" title="Apple Harvester" location="Yakima, WA" salary="$17.20/h" />
-          </div>
-        </div>
-      </section>
+            <p
+              style={{
+                fontSize: 18,
+                color: "#64748B",
+                lineHeight: 1.65,
+                maxWidth: 580,
+                margin: "0 auto 40px",
+              }}
+            >
+              A plataforma inteligente para candidaturas H-2A e H-2B. Mais de 10.000 vagas do banco de dados oficial,
+              envios automatizados e rastreamento em tempo real.
+            </p>
 
-      {/* FEATURES (GRID MAIS "SOFTWARE") */}
-      <section style={{ padding: "80px 24px", background: "#fcfcfc", borderTop: `1px solid ${Theme.border}` }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "40px" }}>
-            {[
-              {
-                icon: Zap,
-                title: "Radar de Vagas",
-                desc: "Monitoramento constante do DOL para identificar novas aberturas no minuto que são aprovadas.",
-              },
-              {
-                icon: Mail,
-                title: "Envios Inteligentes",
-                desc: "Automação de e-mails via Senha de App, garantindo que a mensagem saia da sua própria conta.",
-              },
-              {
-                icon: BarChart3,
-                title: "Rastreamento",
-                desc: "Tecnologia de pixel blindado que mostra quando seu currículo foi realmente visualizado.",
-              },
-              {
-                icon: Shield,
-                title: "Segurança",
-                desc: "Proteção contra spam e algoritmos que simulam o comportamento humano nos envios.",
-              },
-            ].map((f, i) => (
-              <div key={i}>
-                <f.icon size={20} color={Theme.orange} style={{ marginBottom: "16px" }} />
-                <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>{f.title}</h3>
-                <p style={{ fontSize: "14px", color: Theme.slate, lineHeight: 1.6 }}>{f.desc}</p>
+            {/* CTA row */}
+            <div className="cta-row" style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 56 }}>
+              <button
+                className="btn-primary"
+                onClick={() => navigate("/auth")}
+                style={{
+                  background: "#D4500A",
+                  color: "#fff",
+                  border: "none",
+                  padding: "14px 28px",
+                  borderRadius: 8,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  transition: "all 0.2s",
+                }}
+              >
+                Criar conta gratuita <ArrowRight size={17} />
+              </button>
+              <button
+                className="btn-outline"
+                onClick={() => navigate("/jobs")}
+                style={{
+                  background: "transparent",
+                  color: "#020617",
+                  border: "1.5px solid #E2E8F0",
+                  padding: "14px 24px",
+                  borderRadius: 8,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  transition: "all 0.2s",
+                }}
+              >
+                <Search size={16} /> Ver vagas
+              </button>
+            </div>
+
+            {/* Stats row */}
+            <div
+              className="stats-row"
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 0,
+                border: "1px solid #E2E8F0",
+                borderRadius: 10,
+                overflow: "hidden",
+                maxWidth: 520,
+                margin: "0 auto",
+              }}
+            >
+              {[
+                { value: "10k+", label: "Vagas no banco" },
+                { value: "DOL", label: "Fonte oficial" },
+                { value: "100%", label: "Grátis para começar" },
+              ].map((s, i) => (
+                <div
+                  key={s.label}
+                  style={{
+                    flex: 1,
+                    padding: "18px 12px",
+                    borderLeft: i > 0 ? "1px solid #E2E8F0" : "none",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#020617", lineHeight: 1, marginBottom: 4 }}>
+                    {s.value}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#94A3B8",
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── JOBS TICKER ─────────────────────────────────────────────────── */}
+        <div
+          style={{
+            borderTop: "1px solid #E2E8F0",
+            borderBottom: "1px solid #E2E8F0",
+            background: "#FAFAFA",
+            overflow: "hidden",
+            padding: "14px 0",
+            position: "relative",
+          }}
+        >
+          {/* Fade edges */}
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 80,
+              background: "linear-gradient(to right, #FAFAFA, transparent)",
+              zIndex: 2,
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: 80,
+              background: "linear-gradient(to left, #FAFAFA, transparent)",
+              zIndex: 2,
+              pointerEvents: "none",
+            }}
+          />
+
+          <div className="ticker-track">
+            {[...tickerJobs, ...tickerJobs].map((job, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "0 28px",
+                  whiteSpace: "nowrap",
+                  fontSize: 13,
+                  color: "#020617",
+                }}
+              >
+                {/* Type badge */}
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    padding: "2px 7px",
+                    borderRadius: 4,
+                    background: job.type === "H-2A" ? "#DCFCE7" : "#DBEAFE",
+                    color: job.type === "H-2A" ? "#15803D" : "#1D4ED8",
+                  }}
+                >
+                  {job.type}
+                </span>
+                <span style={{ fontWeight: 600 }}>{job.title}</span>
+                <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: 3 }}>
+                  <MapPin size={11} /> {job.location}
+                </span>
+                <span style={{ color: "#64748B", fontWeight: 500 }}>{job.salary}</span>
+                {/* Dot separator */}
+                <span style={{ color: "#E2E8F0", fontSize: 20, lineHeight: 1 }}>·</span>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* FAQ */}
-      <section style={{ padding: "80px 24px", borderTop: `1px solid ${Theme.border}` }}>
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "40px", textAlign: "center" }}>
-            Perguntas Frequentes
-          </h2>
-          {/* FAQ ITEMS */}
-          {[
-            {
-              q: "O que é o 'Early Access' nas vagas H-2A?",
-              a: "É o acesso imediato às vagas que acabaram de receber o NOA (Notice of Acceptance). Como o processo H-2A é muito ágil, ser o primeiro a aplicar é crucial.",
-            },
-            {
-              q: "Como o sistema acessa meu e-mail?",
-              a: "Não acessamos sua senha. Você gera uma 'Senha de App' no Google ou Outlook que permite apenas o envio de mensagens. Você mantém o controle total.",
-            },
-            {
-              q: "As vagas são reais?",
-              a: "Sim, todos os dados são extraídos e processados diretamente dos arquivos oficiais do Department of Labor (DOL) dos EUA.",
-            },
-          ].map((item, i) => (
-            <div key={i} style={{ borderBottom: `1px solid ${Theme.border}`, padding: "20px 0" }}>
+        {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            {/* Section header */}
+            <div style={{ maxWidth: 560, marginBottom: 56 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "#D4500A",
+                  marginBottom: 12,
+                }}
+              >
+                Como funciona
+              </p>
+              <h2
+                style={{
+                  fontSize: "clamp(28px, 4vw, 38px)",
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.15,
+                }}
+              >
+                Do zero às candidaturas
+                <br />
+                em 6 passos simples
+              </h2>
+            </div>
+
+            <div className="steps-grid" style={{ display: "grid", gap: 1, background: "#E2E8F0" }}>
+              {steps.map((step) => (
+                <div
+                  key={step.n}
+                  className="step-card"
+                  style={{
+                    background: "#fff",
+                    padding: "32px 28px",
+                    transition: "border-color 0.15s",
+                    border: "1px solid transparent",
+                    cursor: "default",
+                  }}
+                >
+                  {/* Number */}
+                  <div
+                    className="step-num"
+                    style={{
+                      fontSize: 52,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      color: "#F1F5F9",
+                      marginBottom: 20,
+                      transition: "color 0.2s",
+                      letterSpacing: "-0.03em",
+                    }}
+                  >
+                    {step.n}
+                  </div>
+                  <step.icon size={20} color="#D4500A" style={{ marginBottom: 14 }} />
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{step.title}</h3>
+                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FEATURES BENTO ──────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ maxWidth: 560, marginBottom: 56 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "hsl(199,88%,40%)",
+                  marginBottom: 12,
+                }}
+              >
+                Recursos
+              </p>
+              <h2
+                style={{
+                  fontSize: "clamp(28px, 4vw, 38px)",
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.15,
+                }}
+              >
+                Ferramentas que fazem
+                <br />a diferença
+              </h2>
+            </div>
+
+            <div
+              className="bento-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 12,
+              }}
+            >
+              {features.map((f, i) => (
+                <div
+                  key={f.title}
+                  className="feat-card"
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 10,
+                    padding: "28px 24px",
+                    gridColumn: f.wide ? "span 2" : "span 1",
+                    transition: "background 0.15s",
+                    cursor: "default",
+                  }}
+                >
+                  <f.icon
+                    className="feat-icon"
+                    size={22}
+                    style={{ color: "#CBD5E1", marginBottom: 16, transition: "color 0.2s" }}
+                  />
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{f.title}</h3>
+                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, maxWidth: f.wide ? 480 : "none" }}>
+                    {f.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── REQUIREMENTS ────────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 80, alignItems: "start" }}>
+              {/* Left — sticky title */}
+              <div style={{ position: "sticky", top: 88 }}>
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "#D4500A",
+                    marginBottom: 12,
+                  }}
+                >
+                  Pré-requisitos
+                </p>
+                <h2
+                  style={{
+                    fontSize: "clamp(26px, 3.5vw, 34px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.2,
+                    marginBottom: 16,
+                  }}
+                >
+                  O que você precisa para começar
+                </h2>
+                <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7 }}>
+                  Tenha esses itens em mãos. O processo de configuração leva menos de 5 minutos e tem tutorial em vídeo
+                  para cada etapa.
+                </p>
+
+                <button
+                  className="btn-primary"
+                  onClick={() => navigate("/auth")}
+                  style={{
+                    marginTop: 32,
+                    background: "#020617",
+                    color: "#fff",
+                    border: "none",
+                    padding: "12px 22px",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  Criar conta grátis <ArrowRight size={15} />
+                </button>
+              </div>
+
+              {/* Right — checklist */}
+              <div>
+                {[
+                  {
+                    title: "Currículo em PDF ou Word",
+                    desc: "Seu currículo atualizado. O sistema extrai os dados e personaliza cada candidatura automaticamente.",
+                  },
+                  {
+                    title: "Conta Gmail ou Outlook",
+                    desc: "Os emails saem da SUA caixa de saída. Você mantém controle total sobre o que é enviado.",
+                  },
+                  {
+                    title: '"Senha de App" do seu email',
+                    desc: "Uma senha especial (não a sua senha normal) gerada pelo Google ou Microsoft para autorizar envios via SMTP. Tutorial incluso.",
+                  },
+                  {
+                    title: "Alguns minutos para revisar",
+                    desc: "Você escolhe as vagas, monta a fila e define quando enviar. Nada acontece sem seu comando.",
+                  },
+                ].map((item, i, arr) => (
+                  <div
+                    key={item.title}
+                    style={{
+                      display: "flex",
+                      gap: 18,
+                      padding: "26px 0",
+                      borderBottom: i < arr.length - 1 ? "1px solid #E2E8F0" : "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "#DCFCE7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: 2,
+                      }}
+                    >
+                      <CheckCircle2 size={16} color="#15803D" />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#020617" }}>{item.title}</h4>
+                      <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ─────────────────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 56 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "#D4500A",
+                  marginBottom: 12,
+                }}
+              >
+                FAQ
+              </p>
+              <h2 style={{ fontSize: "clamp(26px, 4vw, 36px)", fontWeight: 700, letterSpacing: "-0.02em" }}>
+                Perguntas frequentes
+              </h2>
+            </div>
+
+            <div style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden", background: "#fff" }}>
+              {faqs.map((item, i) => (
+                <div
+                  key={i}
+                  className="faq-row"
+                  style={{ borderBottom: i < faqs.length - 1 ? "1px solid #E2E8F0" : "none" }}
+                >
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "20px 24px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: "#020617",
+                      textAlign: "left",
+                      gap: 16,
+                      transition: "color 0.15s",
+                    }}
+                  >
+                    <span className="faq-q" style={{ transition: "color 0.15s" }}>
+                      {item.q}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        color: "#94A3B8",
+                        flexShrink: 0,
+                        transform: openFaq === i ? "rotate(180deg)" : "none",
+                        transition: "transform 0.22s",
+                      }}
+                    />
+                  </button>
+                  {openFaq === i && (
+                    <div
+                      style={{
+                        padding: "0 24px 20px",
+                        fontSize: 14,
+                        color: "#64748B",
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div
+              style={{
+                background: "#020617",
+                borderRadius: 16,
+                padding: "72px 48px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 40,
+                flexWrap: "wrap",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {/* Decorative accent */}
               <div
-                className="faq-trigger"
+                style={{
+                  position: "absolute",
+                  top: -60,
+                  right: -60,
+                  width: 260,
+                  height: 260,
+                  borderRadius: "50%",
+                  background: "hsl(199,88%,48%,0.08)",
+                  pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -40,
+                  left: "40%",
+                  width: 180,
+                  height: 180,
+                  borderRadius: "50%",
+                  background: "hsl(199,88%,48%,0.05)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "relative" }}>
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "hsl(199,88%,58%)",
+                    marginBottom: 14,
+                  }}
+                >
+                  Comece agora — é grátis
+                </p>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 4vw, 44px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    lineHeight: 1.1,
+                    color: "#fff",
+                    marginBottom: 12,
+                  }}
+                >
+                  Pronto para encontrar
+                  <br />
+                  sua vaga nos EUA?
+                </h2>
+                <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 400 }}>
+                  Crie sua conta em menos de 2 minutos. Sem cartão de crédito.
+                </p>
+              </div>
+
+              <div
+                className="cta-row"
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "15px",
+                  flexDirection: "column",
+                  gap: 12,
+                  alignItems: "stretch",
+                  position: "relative",
+                  minWidth: 220,
                 }}
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
               >
-                {item.q}{" "}
-                <ChevronDown
-                  size={18}
-                  style={{ transform: openFaq === i ? "rotate(180deg)" : "none", transition: "0.2s" }}
-                />
+                <button
+                  className="btn-primary"
+                  onClick={() => navigate("/auth")}
+                  style={{
+                    background: "#D4500A",
+                    color: "#fff",
+                    border: "none",
+                    padding: "14px 28px",
+                    borderRadius: 8,
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Criar conta gratuita <ArrowRight size={16} />
+                </button>
+                <button
+                  onClick={() => navigate("/jobs")}
+                  style={{
+                    background: "transparent",
+                    color: "rgba(255,255,255,0.55)",
+                    border: "none",
+                    padding: "12px 28px",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    transition: "color 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+                >
+                  <Globe size={14} /> Ver vagas disponíveis
+                </button>
               </div>
-              {openFaq === i && (
-                <div style={{ marginTop: "12px", fontSize: "14px", color: Theme.slate, lineHeight: 1.6 }}>{item.a}</div>
-              )}
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* FOOTER LIMPO */}
-      <footer style={{ padding: "60px 24px", borderTop: `1px solid ${Theme.border}`, textAlign: "center" }}>
-        <BrandWordmark height={24} />
-        <p style={{ marginTop: "20px", fontSize: "13px", color: Theme.slate, fontWeight: 500 }}>
-          © 2025 H2 Linker. Smart connections. Real opportunities.
-        </p>
-      </footer>
+        {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+        <footer style={{ borderTop: "1px solid #E2E8F0", padding: "32px 24px" }}>
+          <div
+            className="footer-row"
+            style={{
+              maxWidth: 1200,
+              margin: "0 auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <BrandWordmark height={26} />
+            <p style={{ fontSize: 13, color: "#94A3B8", fontWeight: 500 }}>
+              © {new Date().getFullYear()} H2 Linker — Smart connections. Real opportunities.
+            </p>
+          </div>
+        </footer>
+      </div>
     </>
   );
 }
