@@ -188,6 +188,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_blacklist: {
+        Row: {
+          blocked_until: string
+          created_at: string | null
+          hit_count: number | null
+          id: string
+          ip: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_until: string
+          created_at?: string | null
+          hit_count?: number | null
+          id?: string
+          ip: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_until?: string
+          created_at?: string | null
+          hit_count?: number | null
+          id?: string
+          ip?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       job_reports: {
         Row: {
           created_at: string
@@ -540,6 +567,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pixel_open_events: {
+        Row: {
+          created_at: string | null
+          id: string
+          ip: string | null
+          is_genuine: boolean | null
+          queue_id: string | null
+          reasons: string[] | null
+          suspicion: number | null
+          tracking_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ip?: string | null
+          is_genuine?: boolean | null
+          queue_id?: string | null
+          reasons?: string[] | null
+          suspicion?: number | null
+          tracking_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ip?: string | null
+          is_genuine?: boolean | null
+          queue_id?: string | null
+          reasons?: string[] | null
+          suspicion?: number | null
+          tracking_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       profile_views: {
         Row: {
@@ -1315,6 +1378,7 @@ export type Database = {
         Args: { p_function_type: string; p_user_id: string }
         Returns: undefined
       }
+      increment_blacklist_hit: { Args: { p_ip: string }; Returns: undefined }
       increment_smtp_email_count: {
         Args: { p_user_id: string }
         Returns: undefined
