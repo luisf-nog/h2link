@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
@@ -15,340 +14,353 @@ import {
   Zap,
   Search,
   Clock,
-  TrendingUp,
   ArrowRight,
   CheckCircle2,
   Eye,
   Radar,
   Users,
+  MapPin,
+  DollarSign,
+  Briefcase,
+  ChevronDown,
 } from "lucide-react";
+import { useState } from "react";
+
+// ─── Tokens (Ajustados para o padrão do Sistema) ────────────────────────────
+const C = {
+  white: "#FFFFFF",
+  ghost: "#F8FAFC", // Cinza ultra claro para seções
+  ink: "#0F172A", // Navy bem escuro (Padrão SaaS)
+  inkMid: "#475569",
+  inkLight: "#94A3B8",
+  orange: "#D4500A",
+  orangeHover: "#B84408",
+  navy: "#0A2342", // Cor principal do sistema
+  border: "#E2E8F0",
+};
+
+const font = {
+  display: "'Inter', system-ui, sans-serif", // Troquei para Inter para ser mais "sistema"
+  body: "'Inter', system-ui, sans-serif",
+};
+
+// ─── Componentes Auxiliares ─────────────────────────────────────────────────
+const JobCard = ({ type, title, location, salary }: any) => (
+  <div
+    style={{
+      background: C.white,
+      padding: 20,
+      border: `1px solid ${C.border}`,
+      borderRadius: 8,
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        color: type === "H-2A" ? "#16A34A" : C.orange,
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+      }}
+    >
+      {type} • Early Access
+    </div>
+    <h4 style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{title}</h4>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.inkMid }}>
+        <MapPin size={14} /> {location}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.inkMid }}>
+        <DollarSign size={14} /> {salary}
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Data ───────────────────────────────────────────────────────────────────
+const steps = [
+  {
+    icon: Upload,
+    title: "Importe seu currículo",
+    desc: "Upload em PDF ou Word. O sistema extrai seus dados automaticamente.",
+  },
+  {
+    icon: Mail,
+    title: "Conecte seu email",
+    desc: "Use uma 'Senha de App' segura. Os emails saem da SUA caixa de saída.",
+  },
+  { icon: Search, title: "Explore +10k vagas", desc: "Vagas H-2A/H-2B diretas do DOL, atualizadas a cada hora." },
+  {
+    icon: Radar,
+    title: "Early Access Radar",
+    desc: "Acesse vagas assim que o NOA é emitido, antes de chegarem ao grande público.",
+  },
+  { icon: Send, title: "Envio em Massa", desc: "Monte sua fila e dispare dezenas de candidaturas em um clique." },
+  {
+    icon: BarChart3,
+    title: "Analytics Real",
+    desc: "Saiba exatamente quando o patrão abriu seu email e viu seu currículo.",
+  },
+];
+
+const faqs = [
+  {
+    q: "O H2 Linker garante o meu visto?",
+    a: "Não. Somos uma plataforma de automação e conexão. O visto depende do patrocínio do empregador e da aprovação do consulado americano. Nossa ferramenta aumenta suas chances ao te colocar na frente de milhares de vagas antes da concorrência.",
+  },
+  {
+    q: "O que é o 'Early Access'?",
+    a: "É o nosso maior diferencial. Nosso radar monitora o banco de dados do governo (DOL) e identifica vagas no momento em que o 'Notice of Acceptance' (NOA) é emitido. Isso permite que você aplique enquanto a vaga ainda está 'quente', muitas vezes antes mesmo de ser publicada em sites comuns.",
+  },
+  {
+    q: "É seguro conectar meu e-mail?",
+    a: "Totalmente. O sistema utiliza a tecnologia de 'Senha de App', o que significa que nunca temos acesso à sua senha real. Você pode revogar o acesso a qualquer momento nas configurações da sua conta Google ou Outlook.",
+  },
+  {
+    q: "Como funciona o limite de envios?",
+    a: "Para proteger a reputação do seu e-mail, o sistema utiliza um 'Aquecimento Inteligente'. Começamos com um limite menor e aumentamos gradualmente. Você também ganha mais envios diários ao indicar amigos para a plataforma.",
+  },
+];
 
 export default function Landing() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-
-  const handleChangeLanguage = (next: SupportedLanguage) => {
-    i18n.changeLanguage(next);
-    localStorage.setItem("app_language", next);
-  };
-
-  const goToAuth = () => navigate("/auth");
-  const goToJobs = () => navigate("/jobs");
-
-  const steps = [
-    {
-      icon: Upload,
-      title: "Importe seu currículo",
-      desc: "Faça upload do seu currículo em PDF ou Word. Nosso sistema extrai automaticamente seus dados para personalizar cada candidatura.",
-      color: "hsl(var(--ring))",
-    },
-    {
-      icon: Mail,
-      title: "Configure seu email (SMTP)",
-      desc: 'Conecte seu Gmail ou Outlook com uma "Senha de App" segura. Seus emails são enviados direto da sua caixa de saída, sem intermediários.',
-      color: "hsl(var(--success))",
-    },
-    {
-      icon: FileText,
-      title: "Personalize seus templates",
-      desc: "Crie ou use templates de email prontos. Nossa IA gera assuntos e corpos personalizados para cada vaga automaticamente.",
-      color: "hsl(var(--plan-diamond))",
-    },
-    {
-      icon: Search,
-      title: "Navegue pelas vagas H-2A/H-2B",
-      desc: "Acesse centenas de vagas atualizadas diariamente direto do DOL. Filtre por estado, salário, categoria e tipo de visto.",
-      color: "hsl(var(--warning))",
-    },
-    {
-      icon: Send,
-      title: "Adicione à fila e envie",
-      desc: "Selecione as vagas que interessam, adicione à sua fila e envie candidaturas em massa com um clique — tudo automatizado.",
-      color: "hsl(var(--destructive))",
-    },
-    {
-      icon: BarChart3,
-      title: "Acompanhe seus resultados",
-      desc: "Veja quem abriu seu email, quem visualizou seu currículo e quantas vezes. Dados reais para ajustar sua estratégia.",
-      color: "hsl(var(--ring))",
-    },
-  ];
-
-  const features = [
-    {
-      icon: Shield,
-      title: "Aquecimento inteligente",
-      desc: "Sistema progressivo que protege a reputação do seu email, aumentando o limite de envios gradualmente.",
-    },
-    {
-      icon: Zap,
-      title: "IA personalizada",
-      desc: "Geração automática de emails únicos para cada vaga, evitando filtros de spam e aumentando respostas.",
-    },
-    {
-      icon: Eye,
-      title: "Rastreamento avançado",
-      desc: "Spy pixel inteligente que filtra scanners de antivírus e mostra apenas aberturas genuínas do empregador.",
-    },
-    {
-      icon: Radar,
-      title: "Radar de vagas",
-      desc: "Configure filtros e receba novas vagas automaticamente na sua fila, sem precisar buscar manualmente.",
-    },
-    {
-      icon: Clock,
-      title: "Envio com delay anti-spam",
-      desc: "Intervalos randomizados entre envios para simular comportamento humano e proteger sua conta.",
-    },
-    {
-      icon: Users,
-      title: "Programa de indicações",
-      desc: "Indique amigos e ganhe créditos extras de envio. Quanto mais indicações ativas, mais emails por dia.",
-    },
-  ];
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(215,78%,8%)] via-[hsl(215,60%,12%)] to-[hsl(222,47%,11%)] text-[hsl(var(--primary-foreground))]">
-      {/* NAV */}
-      <nav className="sticky top-0 z-50 border-b border-white/10 bg-[hsl(215,78%,8%)]/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <BrandWordmark height={36} className="[&_span]:text-white [&_span_.text-primary]:text-[hsl(var(--ring))]" />
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher
-              value={isSupportedLanguage(i18n.language) ? i18n.language : "pt"}
-              onChange={handleChangeLanguage}
-            />
-            {user ? (
-              <Button
-                size="sm"
-                onClick={() => navigate("/dashboard")}
-                className="bg-[hsl(var(--ring))] text-white hover:bg-[hsl(var(--ring))]/90"
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: ${font.body}; background: ${C.white}; color: ${C.ink}; }
+        .btn-primary:hover { background: ${C.orangeHover} !important; }
+        .btn-secondary:hover { background: ${C.navy} !important; color: ${C.white} !important; }
+        .faq-item:hover { background: ${C.ghost} !important; }
+      `}</style>
+
+      <div style={{ minHeight: "100vh" }}>
+        {/* NAV */}
+        <nav style={{ sticky: "top", borderBottom: `1px solid ${C.border}`, background: C.white, zIndex: 100 }}>
+          <div
+            style={{
+              maxWidth: 1200,
+              margin: "0 auto",
+              padding: "0 24px",
+              height: 72,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <BrandWordmark height={34} />
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <LanguageSwitcher value={i18n.language as SupportedLanguage} onChange={(l) => i18n.changeLanguage(l)} />
+              <button
+                onClick={() => navigate("/auth")}
+                style={{
+                  background: C.navy,
+                  color: C.white,
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
               >
-                Dashboard
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={goToAuth}
-                className="bg-[hsl(var(--ring))] text-white hover:bg-[hsl(var(--ring))]/90"
-              >
-                Entrar / Criar Conta
-              </Button>
-            )}
+                Entrar
+              </button>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* HERO */}
-      <section className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 lg:pb-24 lg:pt-28">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-[hsl(var(--ring))]/10 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 h-[400px] w-[400px] rounded-full bg-[hsl(var(--plan-diamond))]/8 blur-3xl" />
-        </div>
-
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-sm text-white/70">
-            <Zap className="h-4 w-4 text-[hsl(var(--ring))]" />
-            Plataforma #1 para candidaturas H-2A e H-2B
-          </div>
-
-          <h1 className="font-brand text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Automatize suas candidaturas{" "}
-            <span className="bg-gradient-to-r from-[hsl(var(--ring))] to-[hsl(var(--plan-diamond))] bg-clip-text text-transparent">
-              H-2A & H-2B
-            </span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl">
-            Pare de enviar emails um por um. O H2 Linker conecta você a empregadores
-            verificados dos EUA com candidaturas personalizadas e rastreamento em tempo real.
-          </p>
-
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button
-              size="lg"
-              onClick={goToAuth}
-              className="bg-[hsl(var(--ring))] px-8 text-base font-semibold text-white hover:bg-[hsl(var(--ring))]/90"
+        {/* HERO SECTION */}
+        <section
+          style={{
+            padding: "100px 24px",
+            textAlign: "center",
+            background: `linear-gradient(180deg, ${C.ghost} 0%, ${C.white} 100%)`,
+          }}
+        >
+          <div style={{ maxWidth: 900, margin: "0 auto" }}>
+            <div
+              style={{
+                background: "#D4500A15",
+                color: C.orange,
+                padding: "6px 16px",
+                borderRadius: 100,
+                display: "inline-block",
+                fontSize: 13,
+                fontWeight: 700,
+                marginBottom: 24,
+                letterSpacing: "0.05em",
+              }}
             >
-              Comece Grátis
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={goToJobs}
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              AGORA COM +10.000 VAGAS ATIVAS
+            </div>
+            <h1
+              style={{
+                fontSize: "clamp(40px, 8vw, 64px)",
+                fontWeight: 800,
+                lineHeight: 1.1,
+                marginBottom: 24,
+                color: C.navy,
+              }}
             >
-              <Search className="mr-2 h-5 w-5" />
-              Explorar Vagas
-            </Button>
-          </div>
-
-          <div className="mx-auto mt-12 grid max-w-lg grid-cols-3 gap-6 text-center">
-            {[
-              { value: "500+", label: "Vagas ativas" },
-              { value: "24h", label: "Atualização diária" },
-              { value: "100%", label: "Grátis para começar" },
-            ].map((s) => (
-              <div key={s.label}>
-                <div className="text-2xl font-bold text-[hsl(var(--ring))]">{s.value}</div>
-                <div className="mt-1 text-xs text-white/50">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="relative border-t border-white/5 bg-white/[0.02] px-4 py-20 sm:px-6 lg:py-28">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-16 text-center">
-            <h2 className="font-brand text-3xl font-bold sm:text-4xl">
-              Como funciona?
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-white/50">
-              Em 6 passos simples, você sai do zero para enviar dezenas de candidaturas personalizadas por dia.
+              Sua jornada para os EUA <br /> <span style={{ color: C.orange }}>automatizada e inteligente.</span>
+            </h1>
+            <p style={{ fontSize: 19, color: C.inkMid, marginBottom: 40, maxWidth: 650, margin: "0 auto 40px" }}>
+              Acesse vagas H-2A e H-2B no momento em que são aprovadas. Envie centenas de candidaturas personalizadas
+              com rastreamento real.
             </p>
-          </div>
-
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {steps.map((step, i) => (
-              <div
-                key={step.title}
-                className="group relative rounded-xl border border-white/10 bg-white/[0.03] p-6 transition-all hover:border-white/20 hover:bg-white/[0.06]"
+            <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                className="btn-primary"
+                onClick={() => navigate("/auth")}
+                style={{
+                  background: C.orange,
+                  color: C.white,
+                  border: "none",
+                  padding: "16px 32px",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
               >
-                <div className="mb-4 flex items-center gap-3">
+                Começar agora <ArrowRight size={20} />
+              </button>
+              <button
+                className="btn-secondary"
+                style={{
+                  background: "transparent",
+                  border: `2px solid ${C.navy}`,
+                  padding: "16px 32px",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Ver Vitrine de Vagas
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* VITRINE DE VAGAS */}
+        <section style={{ padding: "80px 24px", background: C.white }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 48 }}>
+              <h2 style={{ fontSize: 32, fontWeight: 800, color: C.navy, marginBottom: 12 }}>Vagas de Hoje no Hub</h2>
+              <p style={{ color: C.inkMid }}>Exemplos reais de oportunidades disponíveis agora para candidatura.</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+              <JobCard type="H-2B" title="Concrete Finisher" location="Morgantown, WV" salary="$24.50/h" />
+              <JobCard type="H-2B" title="Landscape Laborer" location="Austin, TX" salary="$18.00/h" />
+              <JobCard type="H-2B" title="Resort Housekeeper" location="Mackinaw City, MI" salary="$15.50/h" />
+              <JobCard type="H-2A" title="Farmworker (Berries)" location="Salinas, CA" salary="$16.00/h" />
+              <JobCard type="H-2A" title="Equipment Operator" location="Des Moines, IA" salary="$19.50/h" />
+              <JobCard type="H-2A" title="Apple Harvester" location="Yakima, WA" salary="$17.20/h" />
+            </div>
+          </div>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section style={{ padding: "100px 24px", background: C.ghost }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 800, marginBottom: 60 }}>
+              O Sistema H2 Linker
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: 40 }}>
+              {steps.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 20 }}>
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: `${step.color}20` }}
+                    style={{
+                      background: C.white,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      border: `1px solid ${C.border}`,
+                    }}
                   >
-                    <step.icon className="h-5 w-5" style={{ color: step.color }} />
+                    <s.icon size={24} color={C.orange} />
                   </div>
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
-                    {i + 1}
-                  </span>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{s.title}</h3>
+                    <p style={{ color: C.inkMid, fontSize: 15, lineHeight: 1.6 }}>{s.desc}</p>
+                  </div>
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-white">{step.title}</h3>
-                <p className="text-sm leading-relaxed text-white/50">{step.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FEATURES */}
-      <section className="px-4 py-20 sm:px-6 lg:py-28">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-16 text-center">
-            <h2 className="font-brand text-3xl font-bold sm:text-4xl">
-              Recursos que fazem a diferença
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-white/50">
-              Ferramentas profissionais para maximizar suas chances de conseguir uma vaga nos EUA.
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-xl border border-white/10 bg-white/[0.03] p-6 transition-all hover:border-white/20 hover:bg-white/[0.06]"
-              >
-                <f.icon className="mb-3 h-6 w-6 text-[hsl(var(--ring))]" />
-                <h3 className="mb-2 font-semibold text-white">{f.title}</h3>
-                <p className="text-sm leading-relaxed text-white/50">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* WHAT YOU'LL NEED */}
-      <section className="border-t border-white/5 bg-white/[0.02] px-4 py-20 sm:px-6 lg:py-28">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-12 text-center">
-            <h2 className="font-brand text-3xl font-bold sm:text-4xl">
-              O que você precisa para começar
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-white/50">
-              Tudo que você precisa ter em mãos antes de criar sua conta.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              {
-                title: "Um currículo em PDF ou Word",
-                desc: "Seu currículo atualizado para que o sistema personalize cada candidatura.",
-              },
-              {
-                title: "Uma conta Gmail ou Outlook",
-                desc: "Os emails saem da SUA caixa de saída. Você mantém controle total.",
-              },
-              {
-                title: 'A "Senha de App" do seu email',
-                desc: "Uma senha especial (não a sua senha normal) que autoriza o envio de emails pelo sistema. Tem tutorial dentro do app.",
-              },
-              {
-                title: "Disposição para revisar e enviar",
-                desc: "Você escolhe as vagas, monta a fila e controla quando enviar. Nada é enviado sem seu comando.",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-5"
-              >
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[hsl(var(--success))]" />
-                <div>
-                  <h4 className="font-semibold text-white">{item.title}</h4>
-                  <p className="mt-1 text-sm text-white/50">{item.desc}</p>
+        {/* FAQ SECTION */}
+        <section style={{ padding: "100px 24px" }}>
+          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 800, marginBottom: 48 }}>Dúvidas Frequentes</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {faqs.map((f, i) => (
+                <div
+                  key={i}
+                  className="faq-item"
+                  style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", cursor: "pointer" }}
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                >
+                  <div
+                    style={{
+                      padding: "20px 24px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {f.q}{" "}
+                    <ChevronDown
+                      size={20}
+                      style={{ transform: openFaq === i ? "rotate(180deg)" : "none", transition: "0.2s" }}
+                    />
+                  </div>
+                  {openFaq === i && (
+                    <div style={{ padding: "0 24px 20px", color: C.inkMid, fontSize: 15, lineHeight: 1.6 }}>{f.a}</div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FINAL CTA */}
-      <section className="px-4 py-20 sm:px-6 lg:py-28">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-brand text-3xl font-bold sm:text-4xl">
-            Pronto para começar?
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-white/50">
-            Crie sua conta gratuita em menos de 2 minutos e comece a enviar candidaturas profissionais hoje mesmo.
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button
-              size="lg"
-              onClick={goToAuth}
-              className="bg-[hsl(var(--ring))] px-8 text-base font-semibold text-white hover:bg-[hsl(var(--ring))]/90"
-            >
-              Criar Conta Grátis
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={goToJobs}
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-            >
-              Ver Vagas Disponíveis
-            </Button>
+        {/* TESTIMONIALS (PREVISTO) */}
+        {/* <section style={{ padding: "100px 24px", background: C.navy, color: C.white }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: 'center' }}>
+            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 48 }}>Quem já usa o H2 Linker</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+               Cards de depoimentos aqui no futuro 
+            </div>
           </div>
-        </div>
-      </section>
+        </section> 
+        */}
 
-      {/* FOOTER */}
-      <footer className="border-t border-white/5 px-4 py-8 sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          <BrandWordmark height={28} className="[&_span]:text-white/60 [&_span_.text-primary]:text-[hsl(var(--ring))]/60" />
-          <p className="text-sm text-white/30">
-            © {new Date().getFullYear()} H2 Linker. Smart connections. Real opportunities.
+        {/* FOOTER */}
+        <footer style={{ borderTop: `1px solid ${C.border}`, padding: "48px 24px", textAlign: "center" }}>
+          <BrandWordmark height={30} />
+          <p style={{ marginTop: 16, color: C.inkLight, fontSize: 14 }}>
+            © 2026 H2 Linker. Smart Seasonal Connections.
           </p>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
+    </>
   );
 }
