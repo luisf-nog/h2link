@@ -25,6 +25,7 @@ import PublicProfile from "./pages/PublicProfile";
 import SharedJobView from "./pages/SharedJobView";
 import ResumeConverter from "./pages/ResumeConverter";
 import Radar from "./pages/Radar";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -170,7 +171,7 @@ const AppRoutes = () => (
       }
     />
     <Route path="/reset-password" element={<ResetPassword />} />
-    <Route path="/" element={<Navigate to="/jobs" replace />} />
+    <Route path="/" element={<Landing />} />
     <Route path="/job/:jobId" element={<SharedJobView />} />
     <Route path="/v/:token" element={<PublicProfile />} />
 
