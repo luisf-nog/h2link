@@ -32,6 +32,10 @@ import { useState, useEffect } from "react";
 // ─── FAQ ────────────────────────────────────────────────────────────────────
 const faqs = [
   {
+    q: "O H2 Linker garante que vou conseguir a vaga?",
+    a: "Não — e qualquer plataforma que prometa isso está mentindo. O H2 Linker não é uma agência de empregos e não tem poder de contratar ninguém. Somos um facilitador: nossa função é colocar o seu currículo na frente do maior número possível de empregadores verificados, no menor tempo possível, com a melhor apresentação possível. O processo H-2A e H-2B é um jogo de tempo e volume. Quem aplica primeiro, com um email profissional e rastreável, sai na frente. Estamos aqui para garantir que você jogue esse jogo com todas as vantagens.",
+  },
+  {
     q: "O que é o 'Early Access' nas vagas H-2A?",
     a: "É o acesso imediato às vagas que acabaram de receber o NOA (Notice of Acceptance). Como o processo H-2A é muito ágil, ser o primeiro a aplicar é crucial.",
   },
@@ -46,10 +50,6 @@ const faqs = [
   {
     q: "Quantos e-mails posso enviar por dia?",
     a: "Depende do seu plano e do aquecimento do seu email. O sistema começa com envios conservadores e vai aumentando gradualmente para proteger sua reputação.",
-  },
-  {
-    q: "Preciso de experiência técnica para usar?",
-    a: "Não. A plataforma foi desenhada para ser usada por qualquer pessoa. Temos tutoriais em vídeo para cada etapa do processo.",
   },
 ];
 
@@ -211,11 +211,12 @@ export default function Landing() {
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
-          .hero-title  { font-size: clamp(32px, 8vw, 48px) !important; }
+          .hero-grid   { grid-template-columns: 1fr !important; }
+          .hero-left   { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid #E2E8F0; }
+          .hero-right  { padding: 32px 0 56px !important; }
           .steps-grid  { grid-template-columns: 1fr !important; }
           .bento-grid  { grid-template-columns: 1fr !important; }
           .reqs-grid   { grid-template-columns: 1fr !important; }
-          .stats-row   { flex-direction: column !important; gap: 24px !important; }
           .cta-row     { flex-direction: column !important; align-items: stretch !important; }
           .footer-row  { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
         }
@@ -304,156 +305,195 @@ export default function Landing() {
         </nav>
 
         {/* ── HERO ────────────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px 72px", textAlign: "center" }}>
-          <div style={{ maxWidth: 820, margin: "0 auto" }}>
-            {/* Eyebrow pill */}
+        <section style={{ borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
             <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                background: "hsl(199,88%,48%,0.08)",
-                border: "1px solid hsl(199,88%,48%,0.25)",
-                borderRadius: 999,
-                padding: "5px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "hsl(199,88%,35%)",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                marginBottom: 28,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                minHeight: 540,
               }}
+              className="hero-grid"
             >
-              <span
+              {/* Left column — content */}
+              <div
                 style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "hsl(199,88%,48%)",
-                  display: "inline-block",
-                }}
-              />
-              Plataforma oficial H-2A &amp; H-2B — DOL integrado
-            </div>
-
-            <h1
-              className="hero-title"
-              style={{
-                fontSize: "clamp(40px, 5.5vw, 64px)",
-                fontWeight: 700,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.08,
-                marginBottom: 24,
-                color: "#020617",
-              }}
-            >
-              Conectando trabalhadores
-              <br />à próxima temporada <span style={{ color: "#D4500A" }}>nos EUA</span>
-            </h1>
-
-            <p
-              style={{
-                fontSize: 18,
-                color: "#64748B",
-                lineHeight: 1.65,
-                maxWidth: 580,
-                margin: "0 auto 40px",
-              }}
-            >
-              A plataforma inteligente para candidaturas H-2A e H-2B. Mais de 10.000 vagas do banco de dados oficial,
-              envios automatizados e rastreamento em tempo real.
-            </p>
-
-            {/* CTA row */}
-            <div className="cta-row" style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 56 }}>
-              <button
-                className="btn-primary"
-                onClick={() => navigate("/auth")}
-                style={{
-                  background: "#D4500A",
-                  color: "#fff",
-                  border: "none",
-                  padding: "14px 28px",
-                  borderRadius: 8,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
+                  padding: "72px 64px 72px 0",
                   display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  transition: "all 0.2s",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  borderRight: "1px solid #E2E8F0",
                 }}
+                className="hero-left"
               >
-                Criar conta gratuita <ArrowRight size={17} />
-              </button>
-              <button
-                className="btn-outline"
-                onClick={() => navigate("/jobs")}
-                style={{
-                  background: "transparent",
-                  color: "#020617",
-                  border: "1.5px solid #E2E8F0",
-                  padding: "14px 24px",
-                  borderRadius: 8,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  transition: "all 0.2s",
-                }}
-              >
-                <Search size={16} /> Ver vagas
-              </button>
-            </div>
-
-            {/* Stats row */}
-            <div
-              className="stats-row"
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 0,
-                border: "1px solid #E2E8F0",
-                borderRadius: 10,
-                overflow: "hidden",
-                maxWidth: 520,
-                margin: "0 auto",
-              }}
-            >
-              {[
-                { value: "10k+", label: "Vagas no banco" },
-                { value: "DOL", label: "Fonte oficial" },
-                { value: "100%", label: "Grátis para começar" },
-              ].map((s, i) => (
+                {/* Status tag — not a pill, more like a label */}
                 <div
-                  key={s.label}
                   style={{
-                    flex: 1,
-                    padding: "18px 12px",
-                    borderLeft: i > 0 ? "1px solid #E2E8F0" : "none",
-                    textAlign: "center",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 7,
+                    marginBottom: 32,
+                    alignSelf: "flex-start",
                   }}
                 >
-                  <div style={{ fontSize: 22, fontWeight: 700, color: "#020617", lineHeight: 1, marginBottom: 4 }}>
-                    {s.value}
-                  </div>
-                  <div
+                  <span
                     style={{
-                      fontSize: 11,
+                      display: "inline-block",
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "#22C55E",
+                      boxShadow: "0 0 0 3px rgba(34,197,94,0.18)",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 12,
                       fontWeight: 600,
-                      color: "#94A3B8",
+                      color: "#64748B",
                       letterSpacing: "0.04em",
                       textTransform: "uppercase",
                     }}
                   >
-                    {s.label}
-                  </div>
+                    Base DOL atualizada hoje
+                  </span>
                 </div>
-              ))}
+
+                <h1
+                  style={{
+                    fontSize: "clamp(36px, 4vw, 54px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.1,
+                    color: "#020617",
+                    marginBottom: 20,
+                  }}
+                >
+                  A ferramenta que faz
+                  <br />
+                  você chegar primeiro
+                  <br />
+                  <span style={{ color: "#D4500A" }}>nas vagas H-2A e H-2B</span>
+                </h1>
+
+                <p
+                  style={{
+                    fontSize: 16,
+                    color: "#64748B",
+                    lineHeight: 1.7,
+                    marginBottom: 36,
+                    maxWidth: 440,
+                  }}
+                >
+                  Automatize candidaturas, rastreie aberturas em tempo real e aplique para dezenas de empregadores
+                  verificados do DOL — tudo da sua própria caixa de email.
+                </p>
+
+                {/* CTAs */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    className="btn-primary"
+                    onClick={() => navigate("/auth")}
+                    style={{
+                      background: "#D4500A",
+                      color: "#fff",
+                      border: "none",
+                      padding: "13px 24px",
+                      borderRadius: 7,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Criar conta gratuita <ArrowRight size={15} />
+                  </button>
+                  <button
+                    className="btn-outline"
+                    onClick={() => navigate("/jobs")}
+                    style={{
+                      background: "transparent",
+                      color: "#020617",
+                      border: "1.5px solid #E2E8F0",
+                      padding: "13px 20px",
+                      borderRadius: 7,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Search size={15} /> Ver vagas
+                  </button>
+                </div>
+              </div>
+
+              {/* Right column — stats + trust signals */}
+              <div
+                style={{
+                  padding: "72px 0 72px 64px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  gap: 0,
+                }}
+                className="hero-right"
+              >
+                {/* Big stats */}
+                {[
+                  {
+                    value: "10.000+",
+                    label: "Vagas no banco de dados",
+                    sub: "Direto do Department of Labor",
+                    border: true,
+                  },
+                  {
+                    value: "Diário",
+                    label: "Frequência de atualização",
+                    sub: "Vagas novas aparecem assim que aprovadas",
+                    border: true,
+                  },
+                  {
+                    value: "100%",
+                    label: "Grátis para começar",
+                    sub: "Sem cartão de crédito. Sem surpresas.",
+                    border: false,
+                  },
+                ].map((s) => (
+                  <div
+                    key={s.label}
+                    style={{
+                      padding: "28px 0",
+                      borderBottom: s.border ? "1px solid #E2E8F0" : "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 34,
+                        fontWeight: 700,
+                        color: "#020617",
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {s.value}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#020617", marginBottom: 3 }}>{s.label}</div>
+                    <div style={{ fontSize: 13, color: "#94A3B8" }}>{s.sub}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
