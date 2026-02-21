@@ -199,12 +199,12 @@ export default function Landing() {
 
         body {
           font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-          background: #ffffff;
+          background: #FDFCFA;
           color: #020617;
           -webkit-font-smoothing: antialiased;
         }
 
-        /* ── Ticker ── */
+        /* ── Jobs Ticker ── */
         @keyframes ticker {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
@@ -216,13 +216,53 @@ export default function Landing() {
         }
         .ticker-track:hover { animation-play-state: paused; }
 
+        /* ── States Ticker ── */
+        @keyframes states-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .states-track {
+          display: flex;
+          width: max-content;
+          animation: states-scroll 55s linear infinite;
+        }
+
+        /* ── Map dot grid (hero right column) ── */
+        .map-dot-grid {
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(circle, #CBD5E1 1px, transparent 1px);
+          background-size: 22px 22px;
+          opacity: 0.45;
+          pointer-events: none;
+        }
+
+        /* ── Field rows (how it works bg) ── */
+        .field-rows {
+          background-color: #F5F2EC;
+          background-image: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 30px,
+            rgba(180,170,155,0.18) 30px,
+            rgba(180,170,155,0.18) 31px
+          );
+        }
+
+        /* ── Horizon gradient (features bg) ── */
+        .horizon-bg {
+          background: linear-gradient(180deg, #EEF4FB 0%, #F4F8FC 100%);
+        }
+
         /* ── Step number hover ── */
         .step-card:hover .step-num { color: #020617; }
         .step-card:hover { border-color: #020617; }
+        .step-card { background: #FFFEFB !important; }
 
         /* ── Feature card ── */
-        .feat-card:hover { background: #f8fafc; }
+        .feat-card:hover { background: #f0f6ff !important; }
         .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
+        .feat-card { background: #fff !important; }
 
         /* ── FAQ ── */
         .faq-row:hover .faq-q { color: #D4500A; }
@@ -260,14 +300,14 @@ export default function Landing() {
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#fff" }}>
+      <div style={{ minHeight: "100vh", background: "#FDFCFA" }}>
         {/* ── NAV ─────────────────────────────────────────────────────────── */}
         <nav
           style={{
             position: "sticky",
             top: 0,
             zIndex: 50,
-            background: "#fff",
+            background: "#FDFCFA",
             borderBottom: "1px solid #E2E8F0",
             height: 68,
             display: "flex",
@@ -339,7 +379,7 @@ export default function Landing() {
         </nav>
 
         {/* ── HERO ────────────────────────────────────────────────────────── */}
-        <section style={{ borderBottom: "1px solid #E2E8F0" }}>
+        <section style={{ borderBottom: "1px solid #E2E8F0", background: "#FDFCFA" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
             <div
               style={{
@@ -480,53 +520,59 @@ export default function Landing() {
                   flexDirection: "column",
                   justifyContent: "center",
                   gap: 0,
+                  position: "relative",
+                  overflow: "hidden",
                 }}
                 className="hero-right"
               >
+                {/* Map dot grid watermark */}
+                <div className="map-dot-grid" />
                 {/* Big stats */}
-                {[
-                  {
-                    value: "10.000+",
-                    label: "Vagas no banco de dados",
-                    sub: "Direto do Department of Labor",
-                    border: true,
-                  },
-                  {
-                    value: "Diário",
-                    label: "Frequência de atualização",
-                    sub: "Vagas novas aparecem assim que aprovadas",
-                    border: true,
-                  },
-                  {
-                    value: "100%",
-                    label: "Grátis para começar",
-                    sub: "Sem cartão de crédito. Sem surpresas.",
-                    border: false,
-                  },
-                ].map((s) => (
-                  <div
-                    key={s.label}
-                    style={{
-                      padding: "28px 0",
-                      borderBottom: s.border ? "1px solid #E2E8F0" : "none",
-                    }}
-                  >
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  {[
+                    {
+                      value: "10.000+",
+                      label: "Vagas no banco de dados",
+                      sub: "Direto do Department of Labor",
+                      border: true,
+                    },
+                    {
+                      value: "Diário",
+                      label: "Frequência de atualização",
+                      sub: "Vagas novas aparecem assim que aprovadas",
+                      border: true,
+                    },
+                    {
+                      value: "100%",
+                      label: "Grátis para começar",
+                      sub: "Sem cartão de crédito. Sem surpresas.",
+                      border: false,
+                    },
+                  ].map((s) => (
                     <div
+                      key={s.label}
                       style={{
-                        fontSize: 34,
-                        fontWeight: 700,
-                        color: "#020617",
-                        letterSpacing: "-0.02em",
-                        lineHeight: 1,
-                        marginBottom: 6,
+                        padding: "28px 0",
+                        borderBottom: s.border ? "1px solid #E2E8F0" : "none",
                       }}
                     >
-                      {s.value}
+                      <div
+                        style={{
+                          fontSize: 34,
+                          fontWeight: 700,
+                          color: "#020617",
+                          letterSpacing: "-0.02em",
+                          lineHeight: 1,
+                          marginBottom: 6,
+                        }}
+                      >
+                        {s.value}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#020617", marginBottom: 3 }}>{s.label}</div>
+                      <div style={{ fontSize: 13, color: "#94A3B8" }}>{s.sub}</div>
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#020617", marginBottom: 3 }}>{s.label}</div>
-                    <div style={{ fontSize: 13, color: "#94A3B8" }}>{s.sub}</div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -535,9 +581,8 @@ export default function Landing() {
         {/* ── JOBS TICKER ─────────────────────────────────────────────────── */}
         <div
           style={{
-            borderTop: "1px solid #E2E8F0",
-            borderBottom: "1px solid #E2E8F0",
-            background: "#FAFAFA",
+            borderBottom: "1px solid #DDD8CF",
+            background: "#F0EBE2",
             overflow: "hidden",
             padding: "14px 0",
             position: "relative",
@@ -551,7 +596,7 @@ export default function Landing() {
               top: 0,
               bottom: 0,
               width: 80,
-              background: "linear-gradient(to right, #FAFAFA, transparent)",
+              background: "linear-gradient(to right, #F0EBE2, transparent)",
               zIndex: 2,
               pointerEvents: "none",
             }}
@@ -563,7 +608,7 @@ export default function Landing() {
               top: 0,
               bottom: 0,
               width: 80,
-              background: "linear-gradient(to left, #FAFAFA, transparent)",
+              background: "linear-gradient(to left, #F0EBE2, transparent)",
               zIndex: 2,
               pointerEvents: "none",
             }}
@@ -609,8 +654,95 @@ export default function Landing() {
           </div>
         </div>
 
+        {/* ── US STATES BAND ──────────────────────────────────────────────── */}
+        <div
+          style={{
+            borderBottom: "1px solid #E2E8F0",
+            background: "#020617",
+            overflow: "hidden",
+            padding: "10px 0",
+            position: "relative",
+          }}
+        >
+          <div className="states-track">
+            {[...Array(2)].map((_, rep) =>
+              [
+                "Alabama",
+                "Alaska",
+                "Arizona",
+                "Arkansas",
+                "California",
+                "Colorado",
+                "Connecticut",
+                "Delaware",
+                "Florida",
+                "Georgia",
+                "Hawaii",
+                "Idaho",
+                "Illinois",
+                "Indiana",
+                "Iowa",
+                "Kansas",
+                "Kentucky",
+                "Louisiana",
+                "Maine",
+                "Maryland",
+                "Massachusetts",
+                "Michigan",
+                "Minnesota",
+                "Mississippi",
+                "Missouri",
+                "Montana",
+                "Nebraska",
+                "Nevada",
+                "New Hampshire",
+                "New Jersey",
+                "New Mexico",
+                "New York",
+                "North Carolina",
+                "North Dakota",
+                "Ohio",
+                "Oklahoma",
+                "Oregon",
+                "Pennsylvania",
+                "Rhode Island",
+                "South Carolina",
+                "South Dakota",
+                "Tennessee",
+                "Texas",
+                "Utah",
+                "Vermont",
+                "Virginia",
+                "Washington",
+                "West Virginia",
+                "Wisconsin",
+                "Wyoming",
+              ].map((state) => (
+                <span
+                  key={`${rep}-${state}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "0 18px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.35)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {state}
+                  <span style={{ color: "#D4500A", fontSize: 8 }}>◆</span>
+                </span>
+              )),
+            )}
+          </div>
+        </div>
+
         {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+        <section className="field-rows" style={{ padding: "88px 24px", borderBottom: "1px solid #D6CFC4" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             {/* Section header */}
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
@@ -678,7 +810,7 @@ export default function Landing() {
         </section>
 
         {/* ── FEATURES BENTO ──────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
+        <section className="horizon-bg" style={{ padding: "88px 24px", borderBottom: "1px solid #D6E4F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
@@ -769,7 +901,7 @@ export default function Landing() {
         </section>
 
         {/* ── LIFETIME PRICING ────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0", background: "#FDFAF5" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
@@ -926,8 +1058,8 @@ export default function Landing() {
               {/* Competitors card */}
               <div
                 style={{
-                  background: "#FAFAFA",
-                  border: "1px solid #E2E8F0",
+                  background: "#F5F2ED",
+                  border: "1px solid #DDD8CF",
                   borderRadius: 12,
                   padding: "48px 40px",
                 }}
@@ -1013,7 +1145,7 @@ export default function Landing() {
         </section>
 
         {/* ── REFERRAL PROGRAM ────────────────────────────────────────────── */}
-        <section style={{ padding: "72px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
+        <section style={{ padding: "72px 24px", background: "#F2FAF4", borderBottom: "1px solid #C9E8D2" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div
               style={{
@@ -1125,7 +1257,7 @@ export default function Landing() {
         </section>
 
         {/* ── REQUIREMENTS ────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0", background: "#FDFCFA" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 80, alignItems: "start" }}>
               {/* Left — sticky title */}
@@ -1238,7 +1370,7 @@ export default function Landing() {
         </section>
 
         {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
+        <section style={{ padding: "88px 24px", background: "#F5F2EC", borderBottom: "1px solid #D6CFC4" }}>
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 56 }}>
               <p
@@ -1331,6 +1463,8 @@ export default function Landing() {
                 flexWrap: "wrap",
                 position: "relative",
                 overflow: "hidden",
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, transparent, transparent 32px, rgba(255,255,255,0.025) 32px, rgba(255,255,255,0.025) 33px)",
               }}
             >
               {/* Decorative accent */}
@@ -1454,7 +1588,7 @@ export default function Landing() {
         </section>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <footer style={{ borderTop: "1px solid #E2E8F0", padding: "32px 24px" }}>
+        <footer style={{ borderTop: "1px solid #E2E8F0", padding: "32px 24px", background: "#FDFCFA" }}>
           <div
             className="footer-row"
             style={{
