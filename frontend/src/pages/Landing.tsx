@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
@@ -27,11 +26,10 @@ import {
   Gift,
   Crown,
   Bot,
-  Cpu,
   X,
   Check,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 // ─── FAQ ────────────────────────────────────────────────────────────────────
 const faqs = [
@@ -57,7 +55,7 @@ const faqs = [
   },
 ];
 
-// ─── Jobs ticker data ────────────────────────────────────────────────────────
+// ─── Jobs ticker ─────────────────────────────────────────────────────────────
 const tickerJobs = [
   { type: "H-2A", title: "Farmworker – Berries", location: "Salinas, CA", salary: "$16.00/h" },
   { type: "H-2B", title: "Concrete Finisher", location: "Morgantown, WV", salary: "$24.50/h" },
@@ -71,7 +69,7 @@ const tickerJobs = [
   { type: "H-2B", title: "Ski Lift Operator", location: "Vail, CO", salary: "$20.00/h" },
 ];
 
-// ─── How it works ────────────────────────────────────────────────────────────
+// ─── Steps ───────────────────────────────────────────────────────────────────
 const steps = [
   {
     n: "01",
@@ -95,7 +93,7 @@ const steps = [
     n: "04",
     icon: Search,
     title: "Explore as vagas H-2A/H-2B",
-    desc: "Centenas de vagas atualizadas diariamente do DOL. Cada vaga exibe salário completo, horas semanais, data de início da temporada, experiência exigida e educação mínima — informação real para tomar a decisão certa.",
+    desc: "Centenas de vagas atualizadas diariamente do DOL. Cada vaga exibe salário completo, horas semanais, data de início da temporada, experiência exigida e educação mínima.",
   },
   {
     n: "05",
@@ -106,17 +104,17 @@ const steps = [
   {
     n: "06",
     icon: BarChart3,
-    title: "Aguarde o retorno dos empregadores",
-    desc: "Após o envio, fique de olho na sua caixa de entrada. Os empregadores respondem diretamente para o seu email — sem intermediários.",
+    title: "Aguarde o retorno",
+    desc: "Os empregadores respondem diretamente para o seu email — sem intermediários.",
   },
 ];
 
-// ─── Features bento ─────────────────────────────────────────────────────────
+// ─── Features ────────────────────────────────────────────────────────────────
 const features = [
   {
     icon: Shield,
     title: "Aquecimento inteligente",
-    desc: "Aumento progressivo do limite de envios que protege a reputação do seu domínio e evita bloqueios. Começa conservador e cresce automaticamente.",
+    desc: "Aumento progressivo do limite de envios que protege a reputação do seu domínio. Começa conservador e cresce automaticamente.",
     badge: null,
     wide: true,
   },
@@ -151,21 +149,21 @@ const features = [
   {
     icon: Bot,
     title: "Preferências de IA avançadas",
-    desc: "Controle total sobre o estilo dos seus emails: formalidade, abertura, saudação, fechamento, tamanho e ênfases como idiomas e disponibilidade.",
+    desc: "Controle total sobre formalidade, abertura, saudação, fechamento, tamanho e ênfases como idiomas e disponibilidade.",
     badge: "Black",
     wide: true,
   },
   {
     icon: FileText,
     title: "Fichas completas de cada vaga",
-    desc: "Salário (faixa mínima e máxima), horas semanais, data de início da temporada, experiência mínima exigida, educação requerida e contato direto com o empregador. Não é uma listagem crua — é tudo que você precisa para decidir antes de aplicar.",
+    desc: "Salário (faixa mínima e máxima), horas semanais, data de início, experiência exigida, educação requerida e contato direto com o empregador.",
     badge: null,
     wide: true,
   },
   {
     icon: Radar,
     title: "Radar de vagas",
-    desc: "Configure filtros por setor, estado e salário. Vagas novas entram na sua fila automaticamente, sem busca manual.",
+    desc: "Configure filtros por setor, estado e salário. Vagas novas entram na sua fila automaticamente.",
     badge: null,
     wide: false,
   },
@@ -177,6 +175,63 @@ const features = [
     wide: false,
   },
 ];
+
+// ─── US States ───────────────────────────────────────────────────────────────
+const US_STATES = [
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
+];
+
+// ─── Star SVG path (5-pointed) ───────────────────────────────────────────────
+const STAR = "M10 1.5l2.4 7.4H20l-6.2 4.5 2.4 7.4L10 16.4 3.8 20.8l2.4-7.4L0 8.9h7.6z";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function Landing() {
@@ -194,96 +249,110 @@ export default function Landing() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+          --navy:    #020B18;
+          --navy-1:  #06152A;
+          --navy-2:  #0C1F3A;
+          --navy-3:  #112344;
+          --red:     #B22234;
+          --red-lt:  #CC2A40;
+          --white:   #FFFFFF;
+          --off-white: rgba(255,255,255,0.88);
+          --muted:   rgba(255,255,255,0.45);
+          --faint:   rgba(255,255,255,0.12);
+          --border:  rgba(255,255,255,0.10);
+          --orange:  #D4500A;
+          --cyan:    hsl(199,88%,48%);
+        }
 
         body {
           font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-          background: #FDFCFA;
-          color: #020617;
+          background: var(--navy);
+          color: var(--white);
           -webkit-font-smoothing: antialiased;
         }
 
-        /* ── Jobs Ticker ── */
-        @keyframes ticker {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        .ticker-track {
-          display: flex;
-          width: max-content;
-          animation: ticker 38s linear infinite;
-        }
-        .ticker-track:hover { animation-play-state: paused; }
-
-        /* ── States Ticker ── */
-        @keyframes states-scroll {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        .states-track {
-          display: flex;
-          width: max-content;
-          animation: states-scroll 55s linear infinite;
-        }
-
-        /* ── Map dot grid (hero right column) ── */
-        .map-dot-grid {
+        /* ── Stars watermark ── */
+        .stars-bg {
           position: absolute;
           inset: 0;
-          background-image: radial-gradient(circle, #CBD5E1 1px, transparent 1px);
-          background-size: 22px 22px;
-          opacity: 0.45;
           pointer-events: none;
+          overflow: hidden;
+        }
+        .stars-bg::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpolygon points='30,4 35,20 52,20 38,30 43,46 30,36 17,46 22,30 8,20 25,20' fill='white' opacity='0.04'/%3E%3C/svg%3E");
+          background-size: 60px 60px;
         }
 
-        /* ── Field rows (how it works bg) ── */
-        .field-rows {
-          background-color: #F5F2EC;
-          background-image: repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 30px,
-            rgba(180,170,155,0.18) 30px,
-            rgba(180,170,155,0.18) 31px
-          );
+        /* ── Red stripe accent ── */
+        .stripe-top {
+          border-top: 3px solid var(--red);
+        }
+        .stripe-bottom {
+          border-bottom: 3px solid var(--red);
         }
 
-        /* ── Horizon gradient (features bg) ── */
-        .horizon-bg {
-          background: linear-gradient(180deg, #EEF4FB 0%, #F4F8FC 100%);
+        /* ── Ticker animations ── */
+        @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes states-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .ticker-track { display: flex; width: max-content; animation: ticker 38s linear infinite; }
+        .ticker-track:hover { animation-play-state: paused; }
+        .states-track { display: flex; width: max-content; animation: states-scroll 55s linear infinite; }
+
+        /* ── Cards ── */
+        .glass-card {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.10);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border-radius: 10px;
+          transition: background 0.2s, border-color 0.2s;
         }
+        .glass-card:hover {
+          background: rgba(255,255,255,0.07);
+          border-color: rgba(255,255,255,0.18);
+        }
+        .glass-card:hover .feat-icon { color: var(--cyan) !important; }
 
-        /* ── Step number hover ── */
-        .step-card:hover .step-num { color: #020617; }
-        .step-card:hover { border-color: #020617; }
-        .step-card { background: #FFFEFB !important; }
-
-        /* ── Feature card ── */
-        .feat-card:hover { background: #f0f6ff !important; }
-        .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
-        .feat-card { background: #fff !important; }
+        /* ── Step cards ── */
+        .step-card {
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          transition: background 0.2s, border-color 0.2s;
+          cursor: default;
+        }
+        .step-card:hover {
+          background: rgba(255,255,255,0.07);
+          border-color: var(--red) !important;
+        }
+        .step-card:hover .step-num { color: var(--red) !important; }
 
         /* ── FAQ ── */
-        .faq-row:hover .faq-q { color: #D4500A; }
+        .faq-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; overflow: hidden; }
+        .faq-row:hover .faq-q { color: var(--cyan) !important; }
 
         /* ── Buttons ── */
+        .btn-primary { transition: opacity 0.15s, transform 0.15s; }
         .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
-        .btn-outline:hover { background: #020617; color: #fff; }
-        .btn-ghost:hover  { color: #020617; }
-
-        /* ── Nav CTA ── */
+        .btn-outline:hover { background: rgba(255,255,255,0.12) !important; }
         .nav-cta:hover { opacity: 0.85; }
 
-        /* ── Scrollbar ── */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        /* ── Red stripe divider ── */
+        .section-divider {
+          height: 3px;
+          background: linear-gradient(90deg, var(--red) 0%, var(--red-lt) 50%, var(--red) 100%);
+          opacity: 0.7;
+        }
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
           .hero-grid     { grid-template-columns: 1fr !important; }
-          .hero-left     { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid #E2E8F0; }
+          .hero-left     { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.10) !important; }
           .hero-right    { padding: 32px 0 56px !important; }
           .steps-grid    { grid-template-columns: 1fr !important; }
           .bento-grid    { grid-template-columns: 1fr !important; }
@@ -300,20 +369,34 @@ export default function Landing() {
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#FDFCFA" }}>
+      <div style={{ minHeight: "100vh", background: "var(--navy)" }}>
         {/* ── NAV ─────────────────────────────────────────────────────────── */}
         <nav
           style={{
             position: "sticky",
             top: 0,
             zIndex: 50,
-            background: "#FDFCFA",
-            borderBottom: "1px solid #E2E8F0",
+            background: "rgba(2,11,24,0.92)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
             height: 68,
             display: "flex",
             alignItems: "center",
           }}
         >
+          {/* Red top line */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              background: "linear-gradient(90deg,#B22234,#CC2A40,#B22234)",
+              opacity: 0.9,
+            }}
+          />
           <div
             style={{
               maxWidth: 1200,
@@ -336,7 +419,7 @@ export default function Landing() {
                   className="nav-cta"
                   onClick={() => navigate("/dashboard")}
                   style={{
-                    background: "#020617",
+                    background: "var(--orange)",
                     color: "#fff",
                     border: "none",
                     padding: "10px 22px",
@@ -357,7 +440,7 @@ export default function Landing() {
                   className="nav-cta"
                   onClick={() => navigate("/auth")}
                   style={{
-                    background: "#020617",
+                    background: "var(--orange)",
                     color: "#fff",
                     border: "none",
                     padding: "10px 22px",
@@ -379,28 +462,41 @@ export default function Landing() {
         </nav>
 
         {/* ── HERO ────────────────────────────────────────────────────────── */}
-        <section style={{ borderBottom: "1px solid #E2E8F0", background: "#FDFCFA" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                minHeight: 540,
-              }}
-              className="hero-grid"
-            >
-              {/* Left column — content */}
+        <section
+          style={{
+            position: "relative",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--navy-1)",
+            overflow: "hidden",
+          }}
+        >
+          {/* Stars watermark */}
+          <div className="stars-bg" />
+          {/* Red side accent */}
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 4,
+              background: "linear-gradient(180deg, #B22234 0%, rgba(178,34,52,0.2) 100%)",
+            }}
+          />
+
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
+            <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 560 }}>
+              {/* Left */}
               <div
+                className="hero-left"
                 style={{
-                  padding: "72px 64px 72px 0",
+                  padding: "80px 64px 80px 0",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
-                  borderRight: "1px solid #E2E8F0",
+                  borderRight: "1px solid rgba(255,255,255,0.10)",
                 }}
-                className="hero-left"
               >
-                {/* Status tag — not a pill, more like a label */}
                 <div
                   style={{
                     display: "inline-flex",
@@ -417,15 +513,15 @@ export default function Landing() {
                       height: 7,
                       borderRadius: "50%",
                       background: "#22C55E",
-                      boxShadow: "0 0 0 3px rgba(34,197,94,0.18)",
+                      boxShadow: "0 0 0 3px rgba(34,197,94,0.25)",
                     }}
                   />
                   <span
                     style={{
                       fontSize: 12,
                       fontWeight: 600,
-                      color: "#64748B",
-                      letterSpacing: "0.04em",
+                      color: "rgba(255,255,255,0.55)",
+                      letterSpacing: "0.06em",
                       textTransform: "uppercase",
                     }}
                   >
@@ -435,66 +531,64 @@ export default function Landing() {
 
                 <h1
                   style={{
-                    fontSize: "clamp(36px, 4vw, 54px)",
+                    fontSize: "clamp(36px, 4vw, 56px)",
                     fontWeight: 700,
                     letterSpacing: "-0.03em",
-                    lineHeight: 1.1,
-                    color: "#020617",
-                    marginBottom: 20,
+                    lineHeight: 1.08,
+                    color: "#fff",
+                    marginBottom: 22,
                   }}
                 >
                   A ferramenta que faz
                   <br />
                   você chegar primeiro
                   <br />
-                  <span style={{ color: "#D4500A" }}>nas vagas H-2A e H-2B</span>
+                  <span style={{ color: "var(--orange)" }}>nas vagas H-2A e H-2B</span>
                 </h1>
 
                 <p
                   style={{
                     fontSize: 16,
-                    color: "#64748B",
-                    lineHeight: 1.7,
-                    marginBottom: 36,
+                    color: "rgba(255,255,255,0.60)",
+                    lineHeight: 1.75,
+                    marginBottom: 40,
                     maxWidth: 440,
                   }}
                 >
-                  Automatize candidaturas, rastreie aberturas em tempo real e aplique para dezenas de empregadores
-                  verificados do DOL — tudo da sua própria caixa de email.
+                  Automatize candidaturas e aplique para dezenas de empregadores verificados do DOL — tudo da sua
+                  própria caixa de email.
                 </p>
 
-                {/* CTAs */}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <button
                     className="btn-primary"
                     onClick={() => navigate("/auth")}
                     style={{
-                      background: "#D4500A",
+                      background: "var(--orange)",
                       color: "#fff",
                       border: "none",
-                      padding: "13px 24px",
+                      padding: "14px 26px",
                       borderRadius: 7,
-                      fontSize: 14,
-                      fontWeight: 600,
+                      fontSize: 15,
+                      fontWeight: 700,
                       cursor: "pointer",
                       fontFamily: "inherit",
                       display: "flex",
                       alignItems: "center",
-                      gap: 7,
-                      transition: "all 0.2s",
+                      gap: 8,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Criar conta gratuita <ArrowRight size={15} />
+                    Criar conta gratuita <ArrowRight size={16} />
                   </button>
                   <button
                     className="btn-outline"
                     onClick={() => navigate("/jobs")}
                     style={{
                       background: "transparent",
-                      color: "#020617",
-                      border: "1.5px solid #E2E8F0",
-                      padding: "13px 20px",
+                      color: "rgba(255,255,255,0.8)",
+                      border: "1.5px solid rgba(255,255,255,0.20)",
+                      padding: "14px 22px",
                       borderRadius: 7,
                       fontSize: 14,
                       fontWeight: 600,
@@ -503,8 +597,8 @@ export default function Landing() {
                       display: "flex",
                       alignItems: "center",
                       gap: 7,
-                      transition: "all 0.2s",
                       whiteSpace: "nowrap",
+                      transition: "background 0.15s",
                     }}
                   >
                     <Search size={15} /> Ver vagas
@@ -512,83 +606,82 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Right column — stats + trust signals */}
+              {/* Right — stats */}
               <div
+                className="hero-right"
                 style={{
-                  padding: "72px 0 72px 64px",
+                  padding: "80px 0 80px 64px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
                   gap: 0,
-                  position: "relative",
-                  overflow: "hidden",
                 }}
-                className="hero-right"
               >
-                {/* Map dot grid watermark */}
-                <div className="map-dot-grid" />
-                {/* Big stats */}
-                <div style={{ position: "relative", zIndex: 1 }}>
-                  {[
-                    {
-                      value: "10.000+",
-                      label: "Vagas no banco de dados",
-                      sub: "Direto do Department of Labor",
-                      border: true,
-                    },
-                    {
-                      value: "Diário",
-                      label: "Frequência de atualização",
-                      sub: "Vagas novas aparecem assim que aprovadas",
-                      border: true,
-                    },
-                    {
-                      value: "100%",
-                      label: "Grátis para começar",
-                      sub: "Sem cartão de crédito. Sem surpresas.",
-                      border: false,
-                    },
-                  ].map((s) => (
+                {[
+                  {
+                    value: "10.000+",
+                    label: "Vagas no banco de dados",
+                    sub: "Direto do Department of Labor",
+                    border: true,
+                  },
+                  {
+                    value: "Diário",
+                    label: "Frequência de atualização",
+                    sub: "Vagas novas aparecem assim que aprovadas",
+                    border: true,
+                  },
+                  {
+                    value: "100%",
+                    label: "Grátis para começar",
+                    sub: "Sem cartão de crédito. Sem surpresas.",
+                    border: false,
+                  },
+                ].map((s) => (
+                  <div
+                    key={s.label}
+                    style={{ padding: "30px 0", borderBottom: s.border ? "1px solid rgba(255,255,255,0.10)" : "none" }}
+                  >
                     <div
-                      key={s.label}
                       style={{
-                        padding: "28px 0",
-                        borderBottom: s.border ? "1px solid #E2E8F0" : "none",
+                        fontSize: 38,
+                        fontWeight: 700,
+                        color: "#fff",
+                        letterSpacing: "-0.025em",
+                        lineHeight: 1,
+                        marginBottom: 6,
                       }}
                     >
-                      <div
-                        style={{
-                          fontSize: 34,
-                          fontWeight: 700,
-                          color: "#020617",
-                          letterSpacing: "-0.02em",
-                          lineHeight: 1,
-                          marginBottom: 6,
-                        }}
-                      >
-                        {s.value}
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#020617", marginBottom: 3 }}>{s.label}</div>
-                      <div style={{ fontSize: 13, color: "#94A3B8" }}>{s.sub}</div>
+                      {s.value}
                     </div>
-                  ))}
-                </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.80)", marginBottom: 3 }}>
+                      {s.label}
+                    </div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.38)" }}>{s.sub}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
+        {/* ── RED STRIPE ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            height: 4,
+            background: "linear-gradient(90deg, var(--red) 0%, #D42B3F 33%, var(--red) 66%, var(--red-lt) 100%)",
+          }}
+        />
+
         {/* ── JOBS TICKER ─────────────────────────────────────────────────── */}
         <div
           style={{
-            borderBottom: "1px solid #DDD8CF",
-            background: "#F0EBE2",
+            background: "var(--navy-2)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
             overflow: "hidden",
             padding: "14px 0",
             position: "relative",
           }}
         >
-          {/* Fade edges */}
           <div
             style={{
               position: "absolute",
@@ -596,7 +689,7 @@ export default function Landing() {
               top: 0,
               bottom: 0,
               width: 80,
-              background: "linear-gradient(to right, #F0EBE2, transparent)",
+              background: "linear-gradient(to right, var(--navy-2), transparent)",
               zIndex: 2,
               pointerEvents: "none",
             }}
@@ -608,12 +701,11 @@ export default function Landing() {
               top: 0,
               bottom: 0,
               width: 80,
-              background: "linear-gradient(to left, #F0EBE2, transparent)",
+              background: "linear-gradient(to left, var(--navy-2), transparent)",
               zIndex: 2,
               pointerEvents: "none",
             }}
           />
-
           <div className="ticker-track">
             {[...tickerJobs, ...tickerJobs].map((job, i) => (
               <div
@@ -625,30 +717,29 @@ export default function Landing() {
                   padding: "0 28px",
                   whiteSpace: "nowrap",
                   fontSize: 13,
-                  color: "#020617",
+                  color: "rgba(255,255,255,0.75)",
                 }}
               >
-                {/* Type badge */}
                 <span
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    letterSpacing: "0.06em",
+                    letterSpacing: "0.07em",
                     padding: "2px 7px",
                     borderRadius: 4,
-                    background: job.type === "H-2A" ? "#DCFCE7" : "#DBEAFE",
-                    color: job.type === "H-2A" ? "#15803D" : "#1D4ED8",
+                    background: job.type === "H-2A" ? "rgba(34,197,94,0.15)" : "rgba(59,130,246,0.15)",
+                    color: job.type === "H-2A" ? "#4ADE80" : "#60A5FA",
+                    border: `1px solid ${job.type === "H-2A" ? "rgba(34,197,94,0.25)" : "rgba(59,130,246,0.25)"}`,
                   }}
                 >
                   {job.type}
                 </span>
-                <span style={{ fontWeight: 600 }}>{job.title}</span>
-                <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: 3 }}>
+                <span style={{ fontWeight: 600, color: "#fff" }}>{job.title}</span>
+                <span style={{ color: "rgba(255,255,255,0.40)", display: "flex", alignItems: "center", gap: 3 }}>
                   <MapPin size={11} /> {job.location}
                 </span>
-                <span style={{ color: "#64748B", fontWeight: 500 }}>{job.salary}</span>
-                {/* Dot separator */}
-                <span style={{ color: "#E2E8F0", fontSize: 20, lineHeight: 1 }}>·</span>
+                <span style={{ color: "var(--orange)", fontWeight: 600 }}>{job.salary}</span>
+                <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 18 }}>·</span>
               </div>
             ))}
           </div>
@@ -657,102 +748,57 @@ export default function Landing() {
         {/* ── US STATES BAND ──────────────────────────────────────────────── */}
         <div
           style={{
-            borderBottom: "1px solid #E2E8F0",
-            background: "#020617",
+            background: "var(--red)",
             overflow: "hidden",
-            padding: "10px 0",
+            padding: "9px 0",
             position: "relative",
+            borderBottom: "1px solid rgba(0,0,0,0.2)",
           }}
         >
           <div className="states-track">
-            {[...Array(2)].map((_, rep) =>
-              [
-                "Alabama",
-                "Alaska",
-                "Arizona",
-                "Arkansas",
-                "California",
-                "Colorado",
-                "Connecticut",
-                "Delaware",
-                "Florida",
-                "Georgia",
-                "Hawaii",
-                "Idaho",
-                "Illinois",
-                "Indiana",
-                "Iowa",
-                "Kansas",
-                "Kentucky",
-                "Louisiana",
-                "Maine",
-                "Maryland",
-                "Massachusetts",
-                "Michigan",
-                "Minnesota",
-                "Mississippi",
-                "Missouri",
-                "Montana",
-                "Nebraska",
-                "Nevada",
-                "New Hampshire",
-                "New Jersey",
-                "New Mexico",
-                "New York",
-                "North Carolina",
-                "North Dakota",
-                "Ohio",
-                "Oklahoma",
-                "Oregon",
-                "Pennsylvania",
-                "Rhode Island",
-                "South Carolina",
-                "South Dakota",
-                "Tennessee",
-                "Texas",
-                "Utah",
-                "Vermont",
-                "Virginia",
-                "Washington",
-                "West Virginia",
-                "Wisconsin",
-                "Wyoming",
-              ].map((state) => (
-                <span
-                  key={`${rep}-${state}`}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "0 18px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.35)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {state}
-                  <span style={{ color: "#D4500A", fontSize: 8 }}>◆</span>
-                </span>
-              )),
-            )}
+            {[...US_STATES, ...US_STATES].map((state, i) => (
+              <span
+                key={i}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "0 18px",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.75)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {state}
+                <span style={{ color: "rgba(255,255,255,0.40)", fontSize: 7 }}>★</span>
+              </span>
+            ))}
           </div>
         </div>
 
         {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-        <section className="field-rows" style={{ padding: "88px 24px", borderBottom: "1px solid #D6CFC4" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            {/* Section header */}
+        <section
+          style={{
+            position: "relative",
+            padding: "88px 24px",
+            background: "var(--navy-1)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            overflow: "hidden",
+          }}
+        >
+          <div className="stars-bg" />
+          <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  letterSpacing: "0.1em",
+                  letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  color: "#D4500A",
+                  color: "var(--red-lt)",
                   marginBottom: 12,
                 }}
               >
@@ -764,6 +810,7 @@ export default function Landing() {
                   fontWeight: 700,
                   letterSpacing: "-0.02em",
                   lineHeight: 1.15,
+                  color: "#fff",
                 }}
               >
                 Do zero às candidaturas
@@ -772,27 +819,20 @@ export default function Landing() {
               </h2>
             </div>
 
-            <div className="steps-grid" style={{ display: "grid", gap: 1, background: "#E2E8F0" }}>
+            <div className="steps-grid" style={{ display: "grid", gap: 1, background: "rgba(255,255,255,0.06)" }}>
               {steps.map((step) => (
                 <div
                   key={step.n}
                   className="step-card"
-                  style={{
-                    background: "#fff",
-                    padding: "32px 28px",
-                    transition: "border-color 0.15s",
-                    border: "1px solid transparent",
-                    cursor: "default",
-                  }}
+                  style={{ padding: "32px 28px", border: "1px solid transparent", cursor: "default" }}
                 >
-                  {/* Number */}
                   <div
                     className="step-num"
                     style={{
                       fontSize: 52,
                       fontWeight: 700,
                       lineHeight: 1,
-                      color: "#F1F5F9",
+                      color: "rgba(255,255,255,0.07)",
                       marginBottom: 20,
                       transition: "color 0.2s",
                       letterSpacing: "-0.03em",
@@ -800,26 +840,40 @@ export default function Landing() {
                   >
                     {step.n}
                   </div>
-                  <step.icon size={20} color="#D4500A" style={{ marginBottom: 14 }} />
-                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{step.title}</h3>
-                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{step.desc}</p>
+                  <step.icon size={20} color="var(--orange)" style={{ marginBottom: 14 }} />
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#fff" }}>{step.title}</h3>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.50)", lineHeight: 1.65 }}>{step.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
+        {/* ── RED STRIPE ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            height: 4,
+            background: "linear-gradient(90deg, var(--red) 0%, #D42B3F 33%, var(--red) 66%, var(--red-lt) 100%)",
+          }}
+        />
+
         {/* ── FEATURES BENTO ──────────────────────────────────────────────── */}
-        <section className="horizon-bg" style={{ padding: "88px 24px", borderBottom: "1px solid #D6E4F0" }}>
+        <section
+          style={{
+            padding: "88px 24px",
+            background: "var(--navy-2)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  letterSpacing: "0.1em",
+                  letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  color: "hsl(199,88%,40%)",
+                  color: "var(--cyan)",
                   marginBottom: 12,
                 }}
               >
@@ -831,6 +885,7 @@ export default function Landing() {
                   fontWeight: 700,
                   letterSpacing: "-0.02em",
                   lineHeight: 1.15,
+                  color: "#fff",
                 }}
               >
                 Ferramentas que fazem
@@ -838,28 +893,12 @@ export default function Landing() {
               </h2>
             </div>
 
-            <div
-              className="bento-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 12,
-              }}
-            >
-              {features.map((f, i) => (
+            <div className="bento-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {features.map((f) => (
                 <div
                   key={f.title}
-                  className="feat-card"
-                  style={{
-                    background: "#fff",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: 10,
-                    padding: "28px 24px",
-                    gridColumn: f.wide ? "span 2" : "span 1",
-                    transition: "background 0.15s",
-                    cursor: "default",
-                    position: "relative",
-                  }}
+                  className="glass-card"
+                  style={{ padding: "28px 24px", gridColumn: f.wide ? "span 2" : "span 1", position: "relative" }}
                 >
                   {f.badge && (
                     <div
@@ -870,28 +909,34 @@ export default function Landing() {
                         display: "flex",
                         alignItems: "center",
                         gap: 4,
-                        background: f.badge === "Black" ? "#020617" : "hsl(199,88%,48%,0.1)",
-                        color: f.badge === "Black" ? "#fff" : "hsl(199,88%,35%)",
-                        border: f.badge === "Black" ? "none" : "1px solid hsl(199,88%,48%,0.3)",
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.15)",
                         padding: "3px 8px",
                         borderRadius: 4,
                         fontSize: 10,
                         fontWeight: 700,
                         letterSpacing: "0.06em",
                         textTransform: "uppercase",
+                        color: "rgba(255,255,255,0.65)",
                       }}
                     >
-                      {f.badge === "Black" && <Crown size={9} />}
-                      Plano {f.badge}
+                      <Crown size={9} /> Plano {f.badge}
                     </div>
                   )}
                   <f.icon
                     className="feat-icon"
                     size={22}
-                    style={{ color: "#CBD5E1", marginBottom: 16, transition: "color 0.2s" }}
+                    style={{ color: "rgba(255,255,255,0.20)", marginBottom: 16, transition: "color 0.2s" }}
                   />
-                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{f.title}</h3>
-                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, maxWidth: f.wide ? 520 : "none" }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#fff" }}>{f.title}</h3>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      color: "rgba(255,255,255,0.50)",
+                      lineHeight: 1.65,
+                      maxWidth: f.wide ? 520 : "none",
+                    }}
+                  >
                     {f.desc}
                   </p>
                 </div>
@@ -901,16 +946,25 @@ export default function Landing() {
         </section>
 
         {/* ── LIFETIME PRICING ────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0", background: "#FDFAF5" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <section
+          style={{
+            position: "relative",
+            padding: "88px 24px",
+            background: "var(--navy-1)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            overflow: "hidden",
+          }}
+        >
+          <div className="stars-bg" />
+          <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  letterSpacing: "0.1em",
+                  letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  color: "#D4500A",
+                  color: "var(--orange)",
                   marginBottom: 12,
                 }}
               >
@@ -922,6 +976,7 @@ export default function Landing() {
                   fontWeight: 700,
                   letterSpacing: "-0.02em",
                   lineHeight: 1.15,
+                  color: "#fff",
                 }}
               >
                 Pague uma vez.
@@ -930,60 +985,52 @@ export default function Landing() {
               </h2>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="lifetime-grid">
+            <div className="lifetime-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {/* H2 Linker card */}
               <div
                 style={{
-                  background: "#020617",
+                  background: "rgba(210,76,10,0.10)",
+                  border: "1px solid rgba(210,76,10,0.35)",
                   borderRadius: 12,
                   padding: "48px 40px",
                   position: "relative",
                   overflow: "hidden",
                 }}
               >
-                {/* Subtle glow */}
                 <div
                   style={{
                     position: "absolute",
-                    top: -80,
-                    right: -80,
-                    width: 240,
-                    height: 240,
+                    top: -60,
+                    right: -60,
+                    width: 200,
+                    height: 200,
                     borderRadius: "50%",
-                    background: "hsl(199,88%,48%,0.07)",
+                    background: "rgba(210,76,10,0.08)",
                     pointerEvents: "none",
                   }}
                 />
-
                 <div
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    background: "hsl(199,88%,48%,0.15)",
-                    border: "1px solid hsl(199,88%,48%,0.3)",
+                    background: "rgba(210,76,10,0.15)",
+                    border: "1px solid rgba(210,76,10,0.35)",
                     padding: "4px 12px",
                     borderRadius: 4,
                     fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: "0.07em",
-                    color: "hsl(199,88%,65%)",
+                    color: "var(--orange)",
                     textTransform: "uppercase",
                     marginBottom: 28,
                   }}
                 >
                   <InfinityIcon size={12} /> H2 Linker
                 </div>
-
                 <div style={{ marginBottom: 8 }}>
                   <span
-                    style={{
-                      fontSize: 56,
-                      fontWeight: 700,
-                      color: "#fff",
-                      letterSpacing: "-0.03em",
-                      lineHeight: 1,
-                    }}
+                    style={{ fontSize: 56, fontWeight: 700, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1 }}
                   >
                     1x
                   </span>
@@ -992,7 +1039,7 @@ export default function Landing() {
                   style={{
                     fontSize: 18,
                     fontWeight: 600,
-                    color: "rgba(255,255,255,0.7)",
+                    color: "rgba(255,255,255,0.65)",
                     marginBottom: 36,
                     lineHeight: 1.4,
                   }}
@@ -1001,7 +1048,6 @@ export default function Landing() {
                   <br />
                   Acesso vitalício, sem mensalidade.
                 </div>
-
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {[
                     "Acesso a todas as vagas H-2A e H-2B",
@@ -1025,29 +1071,27 @@ export default function Landing() {
                       >
                         <Check size={11} color="#fff" />
                       </div>
-                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{item}</span>
+                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.80)", fontWeight: 500 }}>{item}</span>
                     </div>
                   ))}
                 </div>
-
                 <button
                   className="btn-primary"
                   onClick={() => navigate("/auth")}
                   style={{
                     marginTop: 36,
-                    background: "#D4500A",
+                    background: "var(--orange)",
                     color: "#fff",
                     border: "none",
                     padding: "13px 24px",
                     borderRadius: 7,
                     fontSize: 14,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
                     fontFamily: "inherit",
                     display: "flex",
                     alignItems: "center",
                     gap: 7,
-                    transition: "all 0.2s",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -1058,8 +1102,8 @@ export default function Landing() {
               {/* Competitors card */}
               <div
                 style={{
-                  background: "#F5F2ED",
-                  border: "1px solid #DDD8CF",
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 12,
                   padding: "48px 40px",
                 }}
@@ -1069,27 +1113,26 @@ export default function Landing() {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    background: "#FEF2F2",
-                    border: "1px solid #FECACA",
+                    background: "rgba(178,34,52,0.12)",
+                    border: "1px solid rgba(178,34,52,0.30)",
                     padding: "4px 12px",
                     borderRadius: 4,
                     fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: "0.07em",
-                    color: "#DC2626",
+                    color: "#F87171",
                     textTransform: "uppercase",
                     marginBottom: 28,
                   }}
                 >
                   Concorrência típica
                 </div>
-
                 <div style={{ marginBottom: 8 }}>
                   <span
                     style={{
                       fontSize: 56,
                       fontWeight: 700,
-                      color: "#94A3B8",
+                      color: "rgba(255,255,255,0.25)",
                       letterSpacing: "-0.03em",
                       lineHeight: 1,
                       textDecoration: "line-through",
@@ -1102,7 +1145,7 @@ export default function Landing() {
                   style={{
                     fontSize: 18,
                     fontWeight: 600,
-                    color: "#94A3B8",
+                    color: "rgba(255,255,255,0.35)",
                     marginBottom: 36,
                     lineHeight: 1.4,
                   }}
@@ -1111,7 +1154,6 @@ export default function Landing() {
                   <br />
                   R$ 1.200 por ano — sem parar.
                 </div>
-
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {[
                     "Cobrança mensal recorrente",
@@ -1126,16 +1168,16 @@ export default function Landing() {
                           width: 20,
                           height: 20,
                           borderRadius: "50%",
-                          background: "#FEE2E2",
+                          background: "rgba(178,34,52,0.20)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           flexShrink: 0,
                         }}
                       >
-                        <X size={11} color="#DC2626" />
+                        <X size={11} color="#F87171" />
                       </div>
-                      <span style={{ fontSize: 14, color: "#94A3B8", fontWeight: 500 }}>{item}</span>
+                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>{item}</span>
                     </div>
                   ))}
                 </div>
@@ -1144,32 +1186,38 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ── RED STRIPE ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            height: 4,
+            background: "linear-gradient(90deg, var(--red) 0%, #D42B3F 33%, var(--red) 66%, var(--red-lt) 100%)",
+          }}
+        />
+
         {/* ── REFERRAL PROGRAM ────────────────────────────────────────────── */}
-        <section style={{ padding: "72px 24px", background: "#F2FAF4", borderBottom: "1px solid #C9E8D2" }}>
+        <section
+          style={{
+            padding: "72px 24px",
+            background: "var(--navy-2)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 48,
-                flexWrap: "wrap",
-              }}
-            >
-              {/* Left */}
+            <div style={{ display: "flex", alignItems: "center", gap: 56, flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 320px" }}>
                 <div
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    background: "hsl(142,76%,36%,0.08)",
-                    border: "1px solid hsl(142,76%,36%,0.2)",
+                    background: "rgba(34,197,94,0.10)",
+                    border: "1px solid rgba(34,197,94,0.22)",
                     padding: "4px 12px",
                     borderRadius: 4,
                     fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: "0.07em",
-                    color: "#15803D",
+                    color: "#4ADE80",
                     textTransform: "uppercase",
                     marginBottom: 20,
                   }}
@@ -1183,20 +1231,18 @@ export default function Landing() {
                     letterSpacing: "-0.02em",
                     lineHeight: 1.15,
                     marginBottom: 16,
+                    color: "#fff",
                   }}
                 >
                   Indique amigos.
                   <br />
                   Ganhe mais envios por dia.
                 </h2>
-                <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7, maxWidth: 420 }}>
+                <p style={{ fontSize: 15, color: "rgba(255,255,255,0.50)", lineHeight: 1.7, maxWidth: 420 }}>
                   Para usuários do plano gratuito, cada amigo que você indicar e ativar a conta aumenta seu limite
-                  diário de envios — sem pagar nada. É a forma mais rápida de acelerar suas candidaturas sem investir em
-                  um plano pago.
+                  diário de envios — sem pagar nada. É a forma mais rápida de acelerar suas candidaturas.
                 </p>
               </div>
-
-              {/* Right — visual steps */}
               <div style={{ flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 0 }}>
                 {[
                   {
@@ -1226,7 +1272,7 @@ export default function Landing() {
                       display: "flex",
                       gap: 16,
                       padding: "18px 0",
-                      borderBottom: i < arr.length - 1 ? "1px solid #E2E8F0" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none",
                       alignItems: "flex-start",
                     }}
                   >
@@ -1234,7 +1280,7 @@ export default function Landing() {
                       style={{
                         fontWeight: 700,
                         fontSize: 12,
-                        color: "#CBD5E1",
+                        color: "rgba(255,255,255,0.20)",
                         letterSpacing: "0.03em",
                         flexShrink: 0,
                         paddingTop: 2,
@@ -1244,10 +1290,8 @@ export default function Landing() {
                       {step.n}
                     </span>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#020617", marginBottom: 3 }}>
-                        {step.title}
-                      </div>
-                      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>{step.desc}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 3 }}>{step.title}</div>
+                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>{step.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -1257,18 +1301,23 @@ export default function Landing() {
         </section>
 
         {/* ── REQUIREMENTS ────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0", background: "#FDFCFA" }}>
+        <section
+          style={{
+            padding: "88px 24px",
+            background: "var(--navy-3)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 80, alignItems: "start" }}>
-              {/* Left — sticky title */}
               <div style={{ position: "sticky", top: 88 }}>
                 <p
                   style={{
                     fontSize: 11,
                     fontWeight: 700,
-                    letterSpacing: "0.1em",
+                    letterSpacing: "0.12em",
                     textTransform: "uppercase",
-                    color: "#D4500A",
+                    color: "var(--orange)",
                     marginBottom: 12,
                   }}
                 >
@@ -1281,40 +1330,37 @@ export default function Landing() {
                     letterSpacing: "-0.02em",
                     lineHeight: 1.2,
                     marginBottom: 16,
+                    color: "#fff",
                   }}
                 >
                   O que você precisa para começar
                 </h2>
-                <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7 }}>
+                <p style={{ fontSize: 15, color: "rgba(255,255,255,0.50)", lineHeight: 1.7 }}>
                   Tenha esses itens em mãos. O processo de configuração leva menos de 5 minutos e tem tutorial em vídeo
                   para cada etapa.
                 </p>
-
                 <button
                   className="btn-primary"
                   onClick={() => navigate("/auth")}
                   style={{
                     marginTop: 32,
-                    background: "#020617",
+                    background: "var(--orange)",
                     color: "#fff",
                     border: "none",
                     padding: "12px 22px",
                     borderRadius: 8,
                     fontSize: 14,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
                     fontFamily: "inherit",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 8,
-                    transition: "all 0.2s",
                   }}
                 >
                   Criar conta grátis <ArrowRight size={15} />
                 </button>
               </div>
-
-              {/* Right — checklist */}
               <div>
                 {[
                   {
@@ -1327,7 +1373,7 @@ export default function Landing() {
                   },
                   {
                     title: '"Senha de App" do seu email',
-                    desc: "Uma senha especial (não a sua senha normal) gerada pelo Google ou Microsoft para autorizar envios via SMTP. Tutorial incluso.",
+                    desc: "Uma senha especial gerada pelo Google ou Microsoft para autorizar envios via SMTP. Tutorial incluso.",
                   },
                   {
                     title: "Alguns minutos para revisar",
@@ -1340,7 +1386,7 @@ export default function Landing() {
                       display: "flex",
                       gap: 18,
                       padding: "26px 0",
-                      borderBottom: i < arr.length - 1 ? "1px solid #E2E8F0" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none",
                     }}
                   >
                     <div
@@ -1348,7 +1394,8 @@ export default function Landing() {
                         width: 28,
                         height: 28,
                         borderRadius: "50%",
-                        background: "#DCFCE7",
+                        background: "rgba(34,197,94,0.15)",
+                        border: "1px solid rgba(34,197,94,0.25)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1356,11 +1403,11 @@ export default function Landing() {
                         marginTop: 2,
                       }}
                     >
-                      <CheckCircle2 size={16} color="#15803D" />
+                      <CheckCircle2 size={15} color="#4ADE80" />
                     </div>
                     <div>
-                      <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#020617" }}>{item.title}</h4>
-                      <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{item.desc}</p>
+                      <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#fff" }}>{item.title}</h4>
+                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.50)", lineHeight: 1.65 }}>{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -1370,32 +1417,43 @@ export default function Landing() {
         </section>
 
         {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", background: "#F5F2EC", borderBottom: "1px solid #D6CFC4" }}>
-          <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <section
+          style={{
+            position: "relative",
+            padding: "88px 24px",
+            background: "var(--navy-1)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            overflow: "hidden",
+          }}
+        >
+          <div className="stars-bg" />
+          <div style={{ maxWidth: 720, margin: "0 auto", position: "relative", zIndex: 1 }}>
             <div style={{ textAlign: "center", marginBottom: 56 }}>
               <p
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  letterSpacing: "0.1em",
+                  letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  color: "#D4500A",
+                  color: "var(--red-lt)",
                   marginBottom: 12,
                 }}
               >
                 FAQ
               </p>
-              <h2 style={{ fontSize: "clamp(26px, 4vw, 36px)", fontWeight: 700, letterSpacing: "-0.02em" }}>
+              <h2
+                style={{ fontSize: "clamp(26px, 4vw, 36px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}
+              >
                 Perguntas frequentes
               </h2>
             </div>
 
-            <div style={{ border: "1px solid #E2E8F0", borderRadius: 10, overflow: "hidden", background: "#fff" }}>
+            <div className="faq-card">
               {faqs.map((item, i) => (
                 <div
                   key={i}
                   className="faq-row"
-                  style={{ borderBottom: i < faqs.length - 1 ? "1px solid #E2E8F0" : "none" }}
+                  style={{ borderBottom: i < faqs.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}
                 >
                   <button
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
@@ -1411,10 +1469,9 @@ export default function Landing() {
                       fontFamily: "inherit",
                       fontSize: 15,
                       fontWeight: 600,
-                      color: "#020617",
+                      color: "#fff",
                       textAlign: "left",
                       gap: 16,
-                      transition: "color 0.15s",
                     }}
                   >
                     <span className="faq-q" style={{ transition: "color 0.15s" }}>
@@ -1423,7 +1480,7 @@ export default function Landing() {
                     <ChevronDown
                       size={18}
                       style={{
-                        color: "#94A3B8",
+                        color: "rgba(255,255,255,0.30)",
                         flexShrink: 0,
                         transform: openFaq === i ? "rotate(180deg)" : "none",
                         transition: "transform 0.22s",
@@ -1435,8 +1492,8 @@ export default function Landing() {
                       style={{
                         padding: "0 24px 20px",
                         fontSize: 14,
-                        color: "#64748B",
-                        lineHeight: 1.7,
+                        color: "rgba(255,255,255,0.55)",
+                        lineHeight: 1.75,
                       }}
                     >
                       {item.a}
@@ -1448,147 +1505,145 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ── RED STRIPE ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            height: 4,
+            background: "linear-gradient(90deg, var(--red) 0%, #D42B3F 33%, var(--red) 66%, var(--red-lt) 100%)",
+          }}
+        />
+
         {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <section
+          style={{ position: "relative", padding: "96px 24px", background: "var(--navy-2)", overflow: "hidden" }}
+        >
+          <div className="stars-bg" />
+          {/* Big decorative star */}
+          <div
+            style={{
+              position: "absolute",
+              right: -80,
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              opacity: 0.04,
+            }}
+          >
+            <svg width="400" height="400" viewBox="0 0 20 20">
+              <polygon
+                points="10,1 12.4,7.4 19,7.4 13.8,11.9 16.2,18.3 10,14.5 3.8,18.3 6.2,11.9 1,7.4 7.6,7.4"
+                fill="white"
+              />
+            </svg>
+          </div>
+
+          <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
             <div
               style={{
-                background: "#020617",
-                borderRadius: 16,
-                padding: "72px 48px",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "space-between",
-                gap: 40,
-                flexWrap: "wrap",
-                position: "relative",
-                overflow: "hidden",
-                backgroundImage:
-                  "repeating-linear-gradient(0deg, transparent, transparent 32px, rgba(255,255,255,0.025) 32px, rgba(255,255,255,0.025) 33px)",
+                gap: 8,
+                background: "rgba(178,34,52,0.12)",
+                border: "1px solid rgba(178,34,52,0.28)",
+                padding: "5px 14px",
+                borderRadius: 4,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.10em",
+                color: "#F87171",
+                textTransform: "uppercase",
+                marginBottom: 28,
               }}
             >
-              {/* Decorative accent */}
-              <div
+              ★ ★ ★ &nbsp; Comece agora — é grátis &nbsp; ★ ★ ★
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(32px, 5vw, 52px)",
+                fontWeight: 700,
+                letterSpacing: "-0.028em",
+                lineHeight: 1.08,
+                color: "#fff",
+                marginBottom: 16,
+              }}
+            >
+              Pronto para encontrar
+              <br />
+              sua vaga nos EUA?
+            </h2>
+            <p
+              style={{
+                fontSize: 17,
+                color: "rgba(255,255,255,0.50)",
+                lineHeight: 1.65,
+                maxWidth: 440,
+                margin: "0 auto 44px",
+              }}
+            >
+              Crie sua conta em menos de 2 minutos. Sem cartão de crédito.
+            </p>
+            <div
+              className="cta-row"
+              style={{ display: "flex", gap: 12, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}
+            >
+              <button
+                className="btn-primary"
+                onClick={() => navigate("/auth")}
                 style={{
-                  position: "absolute",
-                  top: -60,
-                  right: -60,
-                  width: 260,
-                  height: 260,
-                  borderRadius: "50%",
-                  background: "hsl(199,88%,48%,0.08)",
-                  pointerEvents: "none",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: -40,
-                  left: "40%",
-                  width: 180,
-                  height: 180,
-                  borderRadius: "50%",
-                  background: "hsl(199,88%,48%,0.05)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "relative" }}>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "hsl(199,88%,58%)",
-                    marginBottom: 14,
-                  }}
-                >
-                  Comece agora — é grátis
-                </p>
-                <h2
-                  style={{
-                    fontSize: "clamp(28px, 4vw, 44px)",
-                    fontWeight: 700,
-                    letterSpacing: "-0.025em",
-                    lineHeight: 1.1,
-                    color: "#fff",
-                    marginBottom: 12,
-                  }}
-                >
-                  Pronto para encontrar
-                  <br />
-                  sua vaga nos EUA?
-                </h2>
-                <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 400 }}>
-                  Crie sua conta em menos de 2 minutos. Sem cartão de crédito.
-                </p>
-              </div>
-
-              <div
-                className="cta-row"
-                style={{
+                  background: "var(--orange)",
+                  color: "#fff",
+                  border: "none",
+                  padding: "15px 32px",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  alignItems: "stretch",
-                  position: "relative",
-                  minWidth: 220,
+                  alignItems: "center",
+                  gap: 8,
+                  whiteSpace: "nowrap",
                 }}
               >
-                <button
-                  className="btn-primary"
-                  onClick={() => navigate("/auth")}
-                  style={{
-                    background: "#D4500A",
-                    color: "#fff",
-                    border: "none",
-                    padding: "14px 28px",
-                    borderRadius: 8,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    transition: "all 0.2s",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Criar conta gratuita <ArrowRight size={16} />
-                </button>
-                <button
-                  onClick={() => navigate("/jobs")}
-                  style={{
-                    background: "transparent",
-                    color: "rgba(255,255,255,0.55)",
-                    border: "none",
-                    padding: "12px 28px",
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    transition: "color 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
-                >
-                  <Globe size={14} /> Ver vagas disponíveis
-                </button>
-              </div>
+                Criar conta gratuita <ArrowRight size={17} />
+              </button>
+              <button
+                onClick={() => navigate("/jobs")}
+                style={{
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.55)",
+                  border: "1.5px solid rgba(255,255,255,0.15)",
+                  padding: "15px 28px",
+                  borderRadius: 8,
+                  fontSize: 15,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  transition: "color 0.15s, border-color 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#fff";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                }}
+              >
+                <Globe size={15} /> Ver vagas disponíveis
+              </button>
             </div>
           </div>
         </section>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <footer style={{ borderTop: "1px solid #E2E8F0", padding: "32px 24px", background: "#FDFCFA" }}>
+        <footer
+          style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "32px 24px", background: "var(--navy)" }}
+        >
           <div
             className="footer-row"
             style={{
@@ -1600,7 +1655,7 @@ export default function Landing() {
             }}
           >
             <BrandWordmark height={26} />
-            <p style={{ fontSize: 13, color: "#94A3B8", fontWeight: 500 }}>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", fontWeight: 500 }}>
               © {new Date().getFullYear()} H2 Linker — Smart connections. Real opportunities.
             </p>
           </div>
