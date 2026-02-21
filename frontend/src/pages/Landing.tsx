@@ -30,6 +30,7 @@ import {
   Cpu,
   X,
   Check,
+  Quote,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -178,6 +179,16 @@ const features = [
   },
 ];
 
+// ─── Testimonials ────────────────────────────────────────────────────────────
+const testimonials = [
+  {
+    name: "Cassiano Andrade",
+    flag: "🇧🇷",
+    quote:
+      "Eu vi o H2 Linker nascer da necessidade real. Eu era o cara que passava horas na frente do monitor anotando e-mails e mandando um por um. Era lento, cansativo e eu mal conseguia enviar 20 candidaturas por dia. Hoje, minha produtividade foi pro espaço: mando mais de 200 e-mails só no meu horário de almoço. O app tirou o peso do trabalho manual e me deu tempo para focar no que realmente importa: me preparar para as entrevistas.",
+  },
+];
+
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function Landing() {
   const navigate = useNavigate();
@@ -224,6 +235,10 @@ export default function Landing() {
         .feat-card:hover { background: #f8fafc; }
         .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
 
+        /* ── Testimonial card ── */
+        .t-card:hover { background: #f8fafc; }
+        .t-quoteMark { user-select: none; }
+
         /* ── FAQ ── */
         .faq-row:hover .faq-q { color: #D4500A; }
 
@@ -248,12 +263,14 @@ export default function Landing() {
           .steps-grid    { grid-template-columns: 1fr !important; }
           .bento-grid    { grid-template-columns: 1fr !important; }
           .lifetime-grid { grid-template-columns: 1fr !important; }
+          .testi-grid    { grid-template-columns: 1fr !important; }
           .cta-row       { flex-direction: column !important; align-items: stretch !important; }
           .footer-row    { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
         }
         @media (min-width: 768px) {
           .steps-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .bento-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .testi-grid { grid-template-columns: repeat(3, 1fr) !important; }
         }
         @media (min-width: 1024px) {
           .steps-grid { grid-template-columns: repeat(3, 1fr) !important; }
@@ -360,7 +377,7 @@ export default function Landing() {
                 }}
                 className="hero-left"
               >
-                {/* Status tag — not a pill, more like a label */}
+                {/* Status tag */}
                 <div
                   style={{
                     display: "inline-flex",
@@ -472,7 +489,7 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Right column — stats + trust signals */}
+              {/* Right column — stats */}
               <div
                 style={{
                   padding: "72px 0 72px 64px",
@@ -483,7 +500,6 @@ export default function Landing() {
                 }}
                 className="hero-right"
               >
-                {/* Big stats */}
                 {[
                   {
                     value: "10.000+",
@@ -543,7 +559,6 @@ export default function Landing() {
             position: "relative",
           }}
         >
-          {/* Fade edges */}
           <div
             style={{
               position: "absolute",
@@ -583,7 +598,6 @@ export default function Landing() {
                   color: "#020617",
                 }}
               >
-                {/* Type badge */}
                 <span
                   style={{
                     fontSize: 10,
@@ -602,7 +616,6 @@ export default function Landing() {
                   <MapPin size={11} /> {job.location}
                 </span>
                 <span style={{ color: "#64748B", fontWeight: 500 }}>{job.salary}</span>
-                {/* Dot separator */}
                 <span style={{ color: "#E2E8F0", fontSize: 20, lineHeight: 1 }}>·</span>
               </div>
             ))}
@@ -612,7 +625,6 @@ export default function Landing() {
         {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            {/* Section header */}
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
                 style={{
@@ -653,7 +665,6 @@ export default function Landing() {
                     cursor: "default",
                   }}
                 >
-                  {/* Number */}
                   <div
                     className="step-num"
                     style={{
@@ -706,15 +717,8 @@ export default function Landing() {
               </h2>
             </div>
 
-            <div
-              className="bento-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 12,
-              }}
-            >
-              {features.map((f, i) => (
+            <div className="bento-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {features.map((f) => (
                 <div
                   key={f.title}
                   className="feat-card"
@@ -768,6 +772,147 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ maxWidth: 560, marginBottom: 56 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "#D4500A",
+                  marginBottom: 12,
+                }}
+              >
+                Depoimentos
+              </p>
+              <h2
+                style={{
+                  fontSize: "clamp(28px, 4vw, 38px)",
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.15,
+                }}
+              >
+                Resultados reais,
+                <br />
+                de quem usa na prática
+              </h2>
+            </div>
+
+            <div className="testi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {testimonials.map((t) => (
+                <div
+                  key={t.name}
+                  className="t-card"
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 12,
+                    padding: "28px 24px",
+                    transition: "background 0.15s",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Flag (small) */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      fontSize: 16,
+                      lineHeight: 1,
+                      opacity: 0.9,
+                    }}
+                    aria-label="País de origem"
+                    title="País de origem"
+                  >
+                    {t.flag}
+                  </div>
+
+                  {/* Big quote mark */}
+                  <div
+                    className="t-quoteMark"
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      left: 16,
+                      fontSize: 72,
+                      fontWeight: 700,
+                      color: "#E2E8F0",
+                      lineHeight: 1,
+                      letterSpacing: "-0.04em",
+                    }}
+                    aria-hidden="true"
+                  >
+                    “
+                  </div>
+
+                  <div style={{ position: "relative", paddingTop: 28 }}>
+                    <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.75 }}>{t.quote}</p>
+
+                    <div
+                      style={{
+                        marginTop: 18,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#020617" }}>{t.name}</span>
+                        <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 600 }}>Usuário H2 Linker</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Optional: placeholders to keep a nice 3-col grid when you have 1 testimonial */}
+              {testimonials.length === 1 && (
+                <>
+                  <div
+                    style={{
+                      background: "#FAFAFA",
+                      border: "1px dashed #E2E8F0",
+                      borderRadius: 12,
+                      padding: "28px 24px",
+                      color: "#94A3B8",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: 220,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Próximo depoimento em breve
+                  </div>
+                  <div
+                    style={{
+                      background: "#FAFAFA",
+                      border: "1px dashed #E2E8F0",
+                      borderRadius: 12,
+                      padding: "28px 24px",
+                      color: "#94A3B8",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: 220,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Próximo depoimento em breve
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* ── LIFETIME PRICING ────────────────────────────────────────────── */}
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -799,7 +944,6 @@ export default function Landing() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="lifetime-grid">
-              {/* H2 Linker card */}
               <div
                 style={{
                   background: "#020617",
@@ -809,7 +953,6 @@ export default function Landing() {
                   overflow: "hidden",
                 }}
               >
-                {/* Subtle glow */}
                 <div
                   style={{
                     position: "absolute",
@@ -845,13 +988,7 @@ export default function Landing() {
 
                 <div style={{ marginBottom: 8 }}>
                   <span
-                    style={{
-                      fontSize: 56,
-                      fontWeight: 700,
-                      color: "#fff",
-                      letterSpacing: "-0.03em",
-                      lineHeight: 1,
-                    }}
+                    style={{ fontSize: 56, fontWeight: 700, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1 }}
                   >
                     1x
                   </span>
@@ -923,7 +1060,6 @@ export default function Landing() {
                 </button>
               </div>
 
-              {/* Competitors card */}
               <div
                 style={{
                   background: "#FAFAFA",
@@ -1015,15 +1151,7 @@ export default function Landing() {
         {/* ── REFERRAL PROGRAM ────────────────────────────────────────────── */}
         <section style={{ padding: "72px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 48,
-                flexWrap: "wrap",
-              }}
-            >
-              {/* Left */}
+            <div style={{ display: "flex", alignItems: "center", gap: 48, flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 320px" }}>
                 <div
                   style={{
@@ -1064,7 +1192,6 @@ export default function Landing() {
                 </p>
               </div>
 
-              {/* Right — visual steps */}
               <div style={{ flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 0 }}>
                 {[
                   {
@@ -1128,7 +1255,6 @@ export default function Landing() {
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 80, alignItems: "start" }}>
-              {/* Left — sticky title */}
               <div style={{ position: "sticky", top: 88 }}>
                 <p
                   style={{
@@ -1182,7 +1308,6 @@ export default function Landing() {
                 </button>
               </div>
 
-              {/* Right — checklist */}
               <div>
                 {[
                   {
@@ -1299,14 +1424,7 @@ export default function Landing() {
                     />
                   </button>
                   {openFaq === i && (
-                    <div
-                      style={{
-                        padding: "0 24px 20px",
-                        fontSize: 14,
-                        color: "#64748B",
-                        lineHeight: 1.7,
-                      }}
-                    >
+                    <div style={{ padding: "0 24px 20px", fontSize: 14, color: "#64748B", lineHeight: 1.7 }}>
                       {item.a}
                     </div>
                   )}
@@ -1333,7 +1451,6 @@ export default function Landing() {
                 overflow: "hidden",
               }}
             >
-              {/* Decorative accent */}
               <div
                 style={{
                   position: "absolute",
