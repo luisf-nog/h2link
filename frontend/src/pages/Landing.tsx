@@ -607,7 +607,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── TESTIMONIALS (Updated: Dynamic + Improved Country Marker) ── */}
+        {/* ── TESTIMONIALS (Fixed Flag Implementation) ── */}
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
@@ -651,7 +651,7 @@ export default function Landing() {
                   width: "100%",
                 }}
               >
-                {/* Subtle Country Indicator */}
+                {/* Improved Country Badge with Reliable Image Icon */}
                 <div
                   style={{
                     position: "absolute",
@@ -659,25 +659,26 @@ export default function Landing() {
                     right: 24,
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
-                    padding: "4px 10px",
-                    background: "#F1F5F9",
-                    borderRadius: 6,
+                    gap: 8,
+                    padding: "5px 12px",
+                    background: "#F8FAFC",
+                    borderRadius: 8,
                     border: "1px solid #E2E8F0",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
                   }}
                 >
-                  <span style={{ fontSize: 14 }}>🇧🇷</span>
-                  <span
+                  <div
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "#475569",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.02em",
+                      width: 18,
+                      height: 13,
+                      background: `url('https://flagcdn.com/br.svg')`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      borderRadius: 2,
                     }}
-                  >
-                    BR
-                  </span>
+                    aria-hidden="true"
+                  />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", letterSpacing: "0.02em" }}>BR</span>
                 </div>
 
                 <div
