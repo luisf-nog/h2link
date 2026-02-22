@@ -21,6 +21,7 @@ import {
   Plus,
   Minus,
   ArrowLeft,
+  ArrowRight, // Adicionado aqui para corrigir o erro
   X,
   FileText,
   ExternalLink,
@@ -51,9 +52,7 @@ export function JobDetailsDialog({
   const canSaveJob = isRegistered;
 
   // ─── Lógica de Early Access (Restrita a H-2A) ─────────────────────────────
-  // Regra: Só é considerado Early Access se for H-2A.
   const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access") && job?.visa_type?.includes("H-2A");
-  const isCertifiedOpportunity = job?.was_early_access && !isCurrentlyEarlyAccess;
 
   // Identificador oficial (Fallback para caseNumber do DOL)
   const officialCaseId = job?.caseNumber || job?.job_id;
@@ -141,7 +140,6 @@ export function JobDetailsDialog({
                       {isCurrentlyEarlyAccess && (
                         <Zap className="h-3 w-3 mr-1 text-amber-600 fill-amber-600 animate-pulse" />
                       )}
-                      {/* Mostra o tipo simplificado se for H-2B para evitar confusão */}
                       {job.visa_type.includes("H-2B") ? "H-2B" : job.visa_type}
                     </Badge>
                     {officialCaseId && (
@@ -232,7 +230,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* ── SEÇÃO JOB ORDER (FIXED) ── */}
+                {/* ── SEÇÃO JOB ORDER ── */}
                 {officialCaseId && (
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
                     <h4 className="font-bold text-slate-800 flex items-center gap-2 text-[10px] uppercase tracking-widest">
