@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
@@ -14,6 +13,7 @@ import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import { getBaseUrl } from "@/config/app.config";
 import { supabase } from "@/integrations/supabase/client";
+import { BrandWordmark } from "@/components/brand/BrandWordmark";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,27 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// ─── Inline logo — full control over colors on dark bg ───────────────────────
-function H2Logo({ size = 52 }: { size?: number }) {
-  const fs = Math.round(size * 0.55);
-  return (
-    <div style={{ display: "flex", alignItems: "center", userSelect: "none", height: size }}>
-      <span
-        style={{
-          fontFamily: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif",
-          fontWeight: 700,
-          fontSize: fs,
-          letterSpacing: "-0.02em",
-          lineHeight: 1,
-        }}
-      >
-        <span style={{ color: "#D4500A" }}>H2</span>
-        <span style={{ color: "#ffffff" }}> Linker</span>
-      </span>
-    </div>
-  );
-}
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +101,7 @@ export default function Auth() {
         ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "password_mismatch" });
     });
 
+  // ─── URL confirmation flow (email confirm, recovery, etc.) ─────────────
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -206,9 +186,7 @@ export default function Auth() {
       }
     };
     run();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [navigate, t]);
 
   const handleChangeLanguage = (next: SupportedLanguage) => {
@@ -216,6 +194,7 @@ export default function Auth() {
     localStorage.setItem("app_language", next);
   };
 
+  // ─── Handlers ──────────────────────────────────────────────────────────
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -359,9 +338,7 @@ export default function Auth() {
               },
               body: JSON.stringify({ code: normalizedReferral }),
             });
-          } catch {
-            /* ignore */
-          }
+          } catch { /* ignore */ }
         }
         navigate("/dashboard");
       } else {
@@ -373,39 +350,20 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-  // ─── Confirmation overlay ─────────────────────────────────────────────────
+  // ─── Confirmation overlay ─────────────────────────────────────────────
   if (confirmFlow.active) {
     return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "#020617",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 400,
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 16,
-            padding: "40px 36px",
-          }}
-        >
-          <H2Logo size={44} />
-          <div style={{ marginTop: 32, marginBottom: 12 }}>
+      <div className="fixed inset-0 bg-primary flex items-center justify-center p-6">
+        <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-10">
+          <BrandWordmark height={44} className="[&_span]:text-primary-foreground [&_span_.text-primary]:text-ring" />
+          <div className="mt-8 mb-3">
             {confirmFlow.state === "processing" && (
-              <Loader2 size={20} style={{ color: "#D4500A", animation: "spin 1s linear infinite" }} />
+              <Loader2 size={20} className="text-ring animate-spin" />
             )}
-            {confirmFlow.state === "success" && <CheckCircle2 size={20} color="#22C55E" />}
-            {confirmFlow.state === "error" && <AlertTriangle size={20} color="#EF4444" />}
+            {confirmFlow.state === "success" && <CheckCircle2 size={20} className="text-success" />}
+            {confirmFlow.state === "error" && <AlertTriangle size={20} className="text-destructive" />}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>
+          <div className="text-lg font-bold text-primary-foreground mb-1.5">
             {confirmKind === "recovery"
               ? confirmFlow.state === "success"
                 ? t("auth.recovery.confirmation.success_title")
@@ -418,7 +376,7 @@ export default function Auth() {
                   ? t("auth.confirmation.processing_title")
                   : t("auth.confirmation.error_title")}
           </div>
-          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+          <div className="text-sm text-primary-foreground/50 leading-relaxed">
             {confirmKind === "recovery"
               ? confirmFlow.state === "success"
                 ? t("auth.recovery.confirmation.success_desc")
@@ -436,209 +394,10 @@ export default function Auth() {
     );
   }
 
-  // ─── Shared field style ────────────────────────────────────────────────────
-  const S = {
-    field: { display: "flex", flexDirection: "column", gap: 5 } as React.CSSProperties,
-    label: {
-      fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: "0.07em",
-      textTransform: "uppercase",
-      color: "#94A3B8",
-    } as React.CSSProperties,
-    submit: {
-      width: "100%",
-      background: "#D4500A",
-      color: "#fff",
-      border: "none",
-      borderRadius: 8,
-      padding: "13px 20px",
-      fontSize: 14,
-      fontWeight: 700,
-      fontFamily: "inherit",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      marginTop: 8,
-      transition: "background 0.15s",
-    } as React.CSSProperties,
-    ghost: {
-      width: "100%",
-      background: "transparent",
-      color: "#64748B",
-      border: "1px solid #E2E8F0",
-      borderRadius: 8,
-      padding: "11px 20px",
-      fontSize: 13,
-      fontWeight: 500,
-      fontFamily: "inherit",
-      cursor: "pointer",
-      transition: "all 0.15s",
-    } as React.CSSProperties,
-    notice: {
-      padding: "12px 14px",
-      background: "#F0FDF4",
-      border: "1px solid #BBF7D0",
-      borderRadius: 8,
-      marginBottom: 20,
-    } as React.CSSProperties,
-  };
-
-  // ─── Main render ──────────────────────────────────────────────────────────
+  // ─── Main render ──────────────────────────────────────────────────────
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-          font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-          -webkit-font-smoothing: antialiased;
-        }
-
-        .auth-page {
-          min-height: 100vh;
-          background: #020617;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 0 24px 60px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        /* ── Diagonal stripe texture ── */
-        .auth-page::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background-image: repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 40px,
-            rgba(255,255,255,0.012) 40px,
-            rgba(255,255,255,0.012) 41px
-          );
-          pointer-events: none;
-        }
-
-        /* ── Orange glow — top center ── */
-        .auth-page::after {
-          content: '';
-          position: absolute;
-          top: -120px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 600px;
-          height: 300px;
-          background: radial-gradient(ellipse, rgba(212,80,10,0.18) 0%, transparent 70%);
-          pointer-events: none;
-        }
-
-        /* ── Top bar ── */
-        .auth-topbar {
-          width: 100%;
-          max-width: 960px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 28px 0 0;
-          position: relative;
-          z-index: 2;
-        }
-
-        /* ── Hero logo area ── */
-        .auth-hero {
-          position: relative;
-          z-index: 2;
-          text-align: center;
-          padding: 56px 0 48px;
-        }
-
-        /* ── Divider line under tagline ── */
-        .auth-divider {
-          width: 40px;
-          height: 2px;
-          background: #D4500A;
-          margin: 20px auto 0;
-        }
-
-        /* ── Form card ── */
-        .auth-card {
-          position: relative;
-          z-index: 2;
-          width: 100%;
-          max-width: 440px;
-          background: #ffffff;
-          border-radius: 16px;
-          padding: 40px 36px;
-          box-shadow:
-            0 0 0 1px rgba(255,255,255,0.08),
-            0 24px 48px rgba(0,0,0,0.4),
-            0 8px 16px rgba(0,0,0,0.3);
-        }
-
-        /* ── Custom tabs ── */
-        .auth-tabs {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          background: #F1F5F9;
-          border-radius: 8px;
-          padding: 3px;
-          margin-bottom: 28px;
-          gap: 0;
-        }
-        .auth-tab {
-          padding: 9px 16px;
-          border: none;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          font-family: 'Space Grotesk', ui-sans-serif;
-          cursor: pointer;
-          transition: all 0.15s;
-          color: #64748B;
-          background: transparent;
-        }
-        .auth-tab.active {
-          background: #020617;
-          color: #ffffff;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        }
-        .auth-tab:not(.active):hover { color: #020617; }
-
-        /* ── Input override ── */
-        .auth-card input:not([type='checkbox']) {
-          font-family: 'Space Grotesk', ui-sans-serif !important;
-          font-size: 14px !important;
-          border-color: #E2E8F0 !important;
-          border-radius: 7px !important;
-          height: 40px !important;
-        }
-        .auth-card input:focus {
-          border-color: #020617 !important;
-          box-shadow: 0 0 0 2px rgba(2,6,23,0.08) !important;
-          outline: none !important;
-        }
-
-        /* ── Footer link ── */
-        .auth-footer-link {
-          background: none; border: none; cursor: pointer;
-          font-size: 12px; color: rgba(255,255,255,0.25);
-          font-family: 'Space Grotesk', ui-sans-serif;
-          margin-top: 24px;
-          position: relative; z-index: 2;
-          transition: color 0.15s;
-        }
-        .auth-footer-link:hover { color: rgba(255,255,255,0.5); }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
-
-      {/* ── Error dialog ───────────────────────────────────────────────── */}
+      {/* Error dialog */}
       <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((p) => ({ ...p, open }))}>
         <AlertDialogContent className="border-destructive/40 shadow-2xl">
           <AlertDialogHeader className="space-y-0 text-left">
@@ -660,278 +419,333 @@ export default function Auth() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Page ───────────────────────────────────────────────────────── */}
-      <div className="auth-page">
-        {/* Top bar: back link + language */}
-        <div className="auth-topbar">
-          <button
-            onClick={() => navigate("/")}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 13,
-              color: "rgba(255,255,255,0.35)",
-              fontFamily: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              transition: "color 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
-          >
-            ← Voltar ao site
-          </button>
-          <LanguageSwitcher
-            value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
-            onChange={handleChangeLanguage}
-            className="h-9 w-[130px] border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-          />
+      <div className="min-h-screen bg-primary relative overflow-hidden flex">
+        {/* ── Decorative background patterns (US-inspired) ── */}
+        {/* Diagonal stripes */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 28px,
+              white 28px,
+              white 29px
+            )`,
+          }}
+        />
+        {/* Stars pattern — top area */}
+        <div className="absolute top-8 left-8 opacity-[0.06] pointer-events-none hidden lg:block">
+          <div className="grid grid-cols-5 gap-4">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <Star key={i} size={12} className="text-white fill-white" />
+            ))}
+          </div>
         </div>
+        {/* Glow accent */}
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse, hsl(199 88% 48% / 0.12) 0%, transparent 70%)" }}
+        />
 
-        {/* ── HERO ── */}
-        <div className="auth-hero">
-          {/* THE logo — big and proud */}
-          <H2Logo size={72} />
-
-          <p
-            style={{
-              marginTop: 14,
-              fontSize: 15,
-              color: "rgba(255,255,255,0.45)",
-              letterSpacing: "0.01em",
-              fontWeight: 400,
-            }}
-          >
-            Vagas H-2A e H-2B · Do DOL direto pra você
-          </p>
-
-          <div className="auth-divider" />
-        </div>
-
-        {/* ── FORM CARD ── */}
-        <div className="auth-card">
-          {/* Tabs */}
-          <div className="auth-tabs">
-            <button className={`auth-tab ${tab === "signin" ? "active" : ""}`} onClick={() => setTab("signin")}>
-              {t("auth.tabs.signin")}
-            </button>
-            <button className={`auth-tab ${tab === "signup" ? "active" : ""}`} onClick={() => setTab("signup")}>
-              {t("auth.tabs.signup")}
-            </button>
+        {/* ── Left panel — branding (desktop only) ── */}
+        <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 relative z-10">
+          <div>
+            <BrandWordmark height={48} className="[&_span]:text-primary-foreground [&_span_.text-primary]:text-ring" />
+            <p className="mt-6 text-primary-foreground/40 text-sm max-w-xs leading-relaxed">
+              Vagas H-2A e H-2B · Do DOL direto pra você
+            </p>
+            <div className="mt-4 w-10 h-0.5 bg-ring/60 rounded-full" />
           </div>
 
-          {/* ── SIGN IN ── */}
-          {tab === "signin" && (
-            <div>
-              {signupNotice.visible && (
-                <div style={S.notice}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    <CheckCircle2 size={15} color="#15803D" style={{ marginTop: 1, flexShrink: 0 }} />
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#14532D" }}>{t("auth.signup_notice.title")}</p>
-                      <p style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
-                        {t("auth.signup_notice.desc", { email: signupNotice.email ?? "" })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {signinPanel === "signin" && (
-                <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div style={S.field}>
-                    <label style={S.label}>{t("auth.fields.email")}</label>
-                    <Input name="email" type="email" placeholder={t("auth.placeholders.email")} required />
-                  </div>
-                  <div style={S.field}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <label style={S.label}>{t("auth.fields.password")}</label>
-                      <button
-                        type="button"
-                        onClick={() => setSigninPanel("forgot")}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: 12,
-                          color: "#D4500A",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        {t("auth.recovery.link")}
-                      </button>
-                    </div>
-                    <Input name="password" type="password" required />
-                  </div>
-                  <button
-                    type="submit"
-                    style={S.submit}
-                    disabled={isLoading}
-                    onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = "#bf4209")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "#D4500A")}
-                  >
-                    {isLoading && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
-                    {t("auth.actions.signin")}
-                  </button>
-                </form>
-              )}
-
-              {signinPanel === "forgot" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: "#020617" }}>
-                      {t("auth.recovery.request_title")}
-                    </p>
-                    <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>{t("auth.recovery.request_desc")}</p>
-                  </div>
-                  {forgotState.sent && (
-                    <div style={S.notice}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#14532D" }}>{t("auth.recovery.sent_title")}</p>
-                      <p style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
-                        {t("auth.recovery.sent_desc", { email: forgotState.email })}
-                      </p>
-                    </div>
-                  )}
-                  <form
-                    onSubmit={handleRequestPasswordReset}
-                    style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                  >
-                    <div style={S.field}>
-                      <label style={S.label}>{t("auth.fields.email")}</label>
-                      <Input
-                        name="recoveryEmail"
-                        type="email"
-                        value={forgotState.email}
-                        onChange={(e) => setForgotState((p) => ({ ...p, email: e.target.value }))}
-                        required
-                      />
-                    </div>
-                    <button type="submit" style={S.submit} disabled={isLoading}>
-                      {isLoading && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
-                      {t("auth.recovery.actions.send_link")}
-                    </button>
-                    <button type="button" style={S.ghost} onClick={() => setSigninPanel("signin")}>
-                      {t("auth.recovery.actions.back_to_login")}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {signinPanel === "reset" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: "#020617" }}>{t("auth.recovery.reset_title")}</p>
-                    <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>{t("auth.recovery.reset_desc")}</p>
-                  </div>
-                  <form onSubmit={handleUpdatePassword} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={S.field}>
-                      <label style={S.label}>{t("auth.recovery.fields.new_password")}</label>
-                      <Input
-                        type="password"
-                        value={resetState.password}
-                        required
-                        minLength={6}
-                        onChange={(e) => setResetState((p) => ({ ...p, password: e.target.value }))}
-                      />
-                    </div>
-                    <div style={S.field}>
-                      <label style={S.label}>{t("auth.recovery.fields.confirm_new_password")}</label>
-                      <Input
-                        type="password"
-                        value={resetState.confirmPassword}
-                        required
-                        minLength={6}
-                        onChange={(e) => setResetState((p) => ({ ...p, confirmPassword: e.target.value }))}
-                      />
-                    </div>
-                    <button type="submit" style={S.submit} disabled={isLoading}>
-                      {isLoading && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
-                      {t("auth.recovery.actions.save_new_password")}
-                    </button>
-                  </form>
-                </div>
-              )}
+          {/* Decorative visa badges */}
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-primary-foreground/60 tracking-wide">
+                <Star size={10} className="text-ring fill-ring" /> H-2A Agricultural
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-primary-foreground/60 tracking-wide">
+                <Star size={10} className="text-ring fill-ring" /> H-2B Non-Agricultural
+              </span>
             </div>
-          )}
-
-          {/* ── SIGN UP ── */}
-          {tab === "signup" && (
-            <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={S.field}>
-                <label style={S.label}>{t("auth.fields.full_name")}</label>
-                <Input name="fullName" required />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div style={S.field}>
-                  <label style={S.label}>{t("auth.fields.age")}</label>
-                  <Input name="age" type="number" min={14} max={90} required />
-                </div>
-                <div style={S.field}>
-                  <label style={S.label}>{t("auth.fields.phone")}</label>
-                  <PhoneE164Input name="phone" defaultCountry="BR" required />
-                </div>
-              </div>
-
-              <div style={S.field}>
-                <label style={S.label}>{t("auth.fields.email")}</label>
-                <Input name="email" type="email" required />
-              </div>
-
-              <div style={S.field}>
-                <label style={S.label}>{t("auth.fields.contact_email")}</label>
-                <Input name="contactEmail" type="email" required />
-              </div>
-
-              <div style={S.field}>
-                <label style={S.label}>{t("auth.fields.referral_code")}</label>
-                <Input name="referralCode" maxLength={12} />
-              </div>
-
-              <div style={S.field}>
-                <label style={S.label}>{t("auth.fields.password")}</label>
-                <Input name="password" type="password" minLength={6} required />
-              </div>
-
-              <div style={S.field}>
-                <label style={S.label}>{t("auth.fields.confirm_password")}</label>
-                <Input name="confirmPassword" type="password" minLength={6} required />
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4 }}>
-                <p style={{ fontSize: 11, color: "#94A3B8", lineHeight: 1.6 }}>{t("auth.disclaimer")}</p>
-                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                  <Checkbox id="accept" checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(v === true)} />
-                  <input type="hidden" name="acceptTerms" value={acceptTerms ? "on" : ""} />
-                  <label
-                    htmlFor="accept"
-                    style={{ fontSize: 11, color: "#64748B", lineHeight: 1.5, cursor: "pointer" }}
-                  >
-                    {t("auth.accept_terms")}
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                style={S.submit}
-                disabled={isLoading}
-                onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = "#bf4209")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "#D4500A")}
-              >
-                {isLoading && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
-                {t("auth.actions.signup")}
-              </button>
-            </form>
-          )}
+            <p className="text-[11px] text-primary-foreground/20 max-w-xs">
+              U.S. Department of Labor · Temporary Employment Certification
+            </p>
+          </div>
         </div>
 
-        {/* Footer link */}
-        <button className="auth-footer-link" onClick={() => navigate("/jobs")}>
-          Ver vagas sem criar conta →
-        </button>
+        {/* ── Right panel — form ── */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 relative z-10">
+          {/* Top bar (mobile logo + language) */}
+          <div className="w-full max-w-md flex items-center justify-between mb-8 lg:mb-0 lg:absolute lg:top-8 lg:right-12 lg:w-auto">
+            <div className="lg:hidden">
+              <BrandWordmark height={36} className="[&_span]:text-primary-foreground [&_span_.text-primary]:text-ring" />
+            </div>
+            <LanguageSwitcher
+              value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+              onChange={handleChangeLanguage}
+              className="h-9 w-[130px] border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+            />
+          </div>
+
+          {/* Form card */}
+          <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border/50 p-8 sm:p-10">
+            {/* Tabs */}
+            <div className="grid grid-cols-2 bg-muted rounded-lg p-1 mb-7 gap-0">
+              <button
+                className={`py-2.5 px-4 rounded-md text-sm font-semibold font-brand transition-all ${
+                  tab === "signin"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setTab("signin")}
+              >
+                {t("auth.tabs.signin")}
+              </button>
+              <button
+                className={`py-2.5 px-4 rounded-md text-sm font-semibold font-brand transition-all ${
+                  tab === "signup"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setTab("signup")}
+              >
+                {t("auth.tabs.signup")}
+              </button>
+            </div>
+
+            {/* ── SIGN IN ── */}
+            {tab === "signin" && (
+              <div>
+                {signupNotice.visible && (
+                  <div className="p-3 bg-success/10 border border-success/30 rounded-lg mb-5">
+                    <div className="flex gap-2 items-start">
+                      <CheckCircle2 size={15} className="text-success mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-success">{t("auth.signup_notice.title")}</p>
+                        <p className="text-xs text-success/80 mt-0.5">
+                          {t("auth.signup_notice.desc", { email: signupNotice.email ?? "" })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {signinPanel === "signin" && (
+                  <form onSubmit={handleSignIn} className="flex flex-col gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {t("auth.fields.email")}
+                      </label>
+                      <Input name="email" type="email" placeholder={t("auth.placeholders.email")} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {t("auth.fields.password")}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setSigninPanel("forgot")}
+                          className="text-xs text-ring hover:text-ring/80 font-medium bg-transparent border-none cursor-pointer"
+                        >
+                          {t("auth.recovery.link")}
+                        </button>
+                      </div>
+                      <Input name="password" type="password" required />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full mt-2 bg-ring hover:bg-ring/90 text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isLoading && <Loader2 size={15} className="animate-spin" />}
+                      {t("auth.actions.signin")}
+                    </button>
+                  </form>
+                )}
+
+                {signinPanel === "forgot" && (
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <p className="text-base font-semibold text-foreground">{t("auth.recovery.request_title")}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{t("auth.recovery.request_desc")}</p>
+                    </div>
+                    {forgotState.sent && (
+                      <div className="p-3 bg-success/10 border border-success/30 rounded-lg">
+                        <p className="text-sm font-semibold text-success">{t("auth.recovery.sent_title")}</p>
+                        <p className="text-xs text-success/80 mt-0.5">
+                          {t("auth.recovery.sent_desc", { email: forgotState.email })}
+                        </p>
+                      </div>
+                    )}
+                    <form onSubmit={handleRequestPasswordReset} className="flex flex-col gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {t("auth.fields.email")}
+                        </label>
+                        <Input
+                          name="recoveryEmail"
+                          type="email"
+                          value={forgotState.email}
+                          onChange={(e) => setForgotState((p) => ({ ...p, email: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-ring hover:bg-ring/90 text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {isLoading && <Loader2 size={15} className="animate-spin" />}
+                        {t("auth.recovery.actions.send_link")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSigninPanel("signin")}
+                        className="w-full border border-border text-muted-foreground hover:text-foreground font-medium py-2.5 rounded-lg text-sm transition-colors bg-transparent cursor-pointer"
+                      >
+                        {t("auth.recovery.actions.back_to_login")}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {signinPanel === "reset" && (
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <p className="text-base font-semibold text-foreground">{t("auth.recovery.reset_title")}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{t("auth.recovery.reset_desc")}</p>
+                    </div>
+                    <form onSubmit={handleUpdatePassword} className="flex flex-col gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {t("auth.recovery.fields.new_password")}
+                        </label>
+                        <Input
+                          type="password"
+                          value={resetState.password}
+                          required
+                          minLength={6}
+                          onChange={(e) => setResetState((p) => ({ ...p, password: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {t("auth.recovery.fields.confirm_new_password")}
+                        </label>
+                        <Input
+                          type="password"
+                          value={resetState.confirmPassword}
+                          required
+                          minLength={6}
+                          onChange={(e) => setResetState((p) => ({ ...p, confirmPassword: e.target.value }))}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-ring hover:bg-ring/90 text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {isLoading && <Loader2 size={15} className="animate-spin" />}
+                        {t("auth.recovery.actions.save_new_password")}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── SIGN UP ── */}
+            {tab === "signup" && (
+              <form onSubmit={handleSignUp} className="flex flex-col gap-3.5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t("auth.fields.full_name")}
+                  </label>
+                  <Input name="fullName" required />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {t("auth.fields.age")}
+                    </label>
+                    <Input name="age" type="number" min={14} max={90} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {t("auth.fields.phone")}
+                    </label>
+                    <PhoneE164Input id="phone" name="phone" defaultCountry="BR" required />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t("auth.fields.email")}
+                  </label>
+                  <Input name="email" type="email" required />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t("auth.fields.contact_email")}
+                  </label>
+                  <Input name="contactEmail" type="email" required />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t("auth.fields.referral_code")}
+                  </label>
+                  <Input name="referralCode" maxLength={12} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t("auth.fields.password")}
+                  </label>
+                  <Input name="password" type="password" minLength={6} required />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t("auth.fields.confirm_password")}
+                  </label>
+                  <Input name="confirmPassword" type="password" minLength={6} required />
+                </div>
+
+                <div className="flex flex-col gap-2.5 pt-1">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{t("auth.disclaimer")}</p>
+                  <div className="flex gap-2 items-start">
+                    <Checkbox id="accept" checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(v === true)} />
+                    <input type="hidden" name="acceptTerms" value={acceptTerms ? "on" : ""} />
+                    <label htmlFor="accept" className="text-[11px] text-muted-foreground leading-snug cursor-pointer">
+                      {t("auth.accept_terms")}
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full mt-2 bg-ring hover:bg-ring/90 text-white font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isLoading && <Loader2 size={15} className="animate-spin" />}
+                  {t("auth.actions.signup")}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Footer link */}
+          <button
+            onClick={() => navigate("/jobs")}
+            className="mt-6 text-xs text-primary-foreground/25 hover:text-primary-foreground/50 transition-colors bg-transparent border-none cursor-pointer font-brand"
+          >
+            Ver vagas sem criar conta →
+          </button>
+        </div>
       </div>
     </>
   );
