@@ -54,15 +54,14 @@ export function JobDetailsDialog({
   // ─── Lógica de Early Access (Restrita a H-2A) ─────────────────────────────
   const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access") && job?.visa_type?.includes("H-2A");
 
-  // Converte job_id interno (JO-A-300-... ou JO-B-300-...) para case number do DOL (H-300-...)
-  const toDolCaseNumber = (jobId: string | null | undefined): string | null => {
+  // H-2A (H-300-...) e H-2B (H-400-...) já usam case number válido do DOL
+  // Early Access (JO-A-...) NÃO tem link no DOL pois ainda está em processamento
+  const getDolCaseNumber = (jobId: string | null | undefined): string | null => {
     if (!jobId) return null;
-    // JO-A-300-XXXXX-YYYYYY → H-300-XXXXX-YYYYYY
-    if (jobId.startsWith("JO-A-")) return jobId.replace("JO-A-", "H-");
-    if (jobId.startsWith("JO-B-")) return jobId.replace("JO-B-", "H-");
-    return null; // formato desconhecido, não exibir links
+    if (jobId.startsWith("H-")) return jobId;
+    return null;
   };
-  const dolCaseNumber = toDolCaseNumber(job?.job_id);
+  const dolCaseNumber = getDolCaseNumber(job?.job_id);
 
   const hasValidPhone =
     job?.phone && job.phone !== "N/A" && job.phone !== "n/a" && job.phone.trim() !== "" && job.phone !== "0";
