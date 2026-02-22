@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -14,12 +14,9 @@ import {
   DollarSign,
   Phone,
   Rocket,
-  Clock,
   Lock,
   MessageCircle,
   CheckCircle2,
-  GraduationCap,
-  Info,
   Zap,
   Plus,
   Minus,
@@ -27,6 +24,7 @@ import {
   X,
   FileText,
   ExternalLink,
+  Globe,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -46,14 +44,24 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // ─── Configurações de Acesso ──────────────────────────────────────────────
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = ["gold", "diamond", "black"].includes(planTier);
   const canSaveJob = isRegistered;
 
+  // ─── Lógica de Early Access (Restrita a H-2A) ─────────────────────────────
+  // Regra: Só é considerado Early Access se for H-2A.
+  const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access") && job?.visa_type?.includes("H-2A");
+  const isCertifiedOpportunity = job?.was_early_access && !isCurrentlyEarlyAccess;
+
+  // Identificador oficial (Fallback para caseNumber do DOL)
+  const officialCaseId = job?.caseNumber || job?.job_id;
+
   const hasValidPhone =
     job?.phone && job.phone !== "N/A" && job.phone !== "n/a" && job.phone.trim() !== "" && job.phone !== "0";
 
+  // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleGoToPlans = () => {
     onOpenChange(false);
     navigate("/plans");
@@ -88,19 +96,6 @@ export function JobDetailsDialog({
     return t("jobs.details.view_details");
   };
 
-  const formatExperience = (months: number | null | undefined) => {
-    if (!months || months <= 0) return t("jobs.details.no_experience");
-    if (months < 12) return t("jobs.table.experience_months", { count: months });
-    const years = Math.floor(months / 12);
-    const rem = months % 12;
-    return rem === 0
-      ? t("jobs.table.experience_years", { count: years })
-      : t("jobs.table.experience_years_months", { years, months: rem });
-  };
-
-  const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access");
-  const isCertifiedOpportunity = job?.was_early_access && !isCurrentlyEarlyAccess;
-
   const getMessageBody = () => {
     return t("jobs.details.contact_msg_template", {
       jobTitle: job?.job_title,
@@ -125,7 +120,7 @@ export function JobDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
-        {/* HEADER RESTAURADO */}
+        {/* HEADER */}
         <div className="p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0">
           <div className="flex justify-between items-start gap-4">
             <div className="flex flex-col gap-1 w-full min-w-0">
@@ -135,21 +130,23 @@ export function JobDetailsDialog({
                     <Badge
                       className={cn(
                         "text-[10px] uppercase font-bold border px-2 py-0.5",
-                        job.visa_type === "H-2A" && !job.was_early_access && "bg-green-600 border-green-600 text-white",
-                        job.visa_type === "H-2B" && !job.was_early_access && "bg-blue-600 border-blue-600 text-white",
-                        (job.visa_type.includes("Early Access") || (job.was_early_access && isCurrentlyEarlyAccess)) &&
-                          "bg-amber-50 border-amber-400 text-amber-900",
+                        job.visa_type.includes("H-2A") &&
+                          !isCurrentlyEarlyAccess &&
+                          "bg-green-600 border-green-600 text-white",
+                        job.visa_type.includes("H-2B") && "bg-blue-600 border-blue-600 text-white",
+                        isCurrentlyEarlyAccess && "bg-amber-50 border-amber-400 text-amber-900",
                       )}
                       translate="no"
                     >
                       {isCurrentlyEarlyAccess && (
                         <Zap className="h-3 w-3 mr-1 text-amber-600 fill-amber-600 animate-pulse" />
                       )}
-                      {job.visa_type}
+                      {/* Mostra o tipo simplificado se for H-2B para evitar confusão */}
+                      {job.visa_type.includes("H-2B") ? "H-2B" : job.visa_type}
                     </Badge>
-                    {job.job_id && (
+                    {officialCaseId && (
                       <span className="text-[10px] font-mono text-slate-400" translate="no">
-                        {job.job_id}
+                        {officialCaseId}
                       </span>
                     )}
                   </div>
@@ -168,7 +165,6 @@ export function JobDetailsDialog({
               </DialogDescription>
             </div>
 
-            {/* Ações Desktop Restauradas */}
             <div className="hidden sm:flex items-center gap-2 shrink-0">
               <Button variant="outline" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" /> {t("jobs.details.share")}
@@ -190,7 +186,6 @@ export function JobDetailsDialog({
               </Button>
             </div>
 
-            {/* Botão Fechar Mobile */}
             <Button
               variant="ghost"
               size="icon"
@@ -205,37 +200,23 @@ export function JobDetailsDialog({
         <div className="flex-1 overflow-y-auto bg-slate-50/30 touch-auto text-left">
           <div className="p-4 sm:p-6 space-y-6 pb-32 sm:pb-6">
             {/* Status Cards */}
-            <div className="space-y-4">
-              {isCurrentlyEarlyAccess && (
-                <div className="w-full p-5 rounded-2xl border border-violet-200 bg-violet-50/60 flex gap-4 items-center shadow-sm">
-                  <div className="bg-violet-600 p-3 rounded-xl text-white shrink-0">
-                    <Zap className="h-7 w-7 fill-white animate-pulse" />
-                  </div>
-                  <div>
-                    <p className="text-base font-black text-violet-900 uppercase tracking-tight">
-                      {t("jobs.details.active_early_title")}
-                    </p>
-                    <p className="text-sm text-violet-700 font-medium">{t("jobs.details.active_early_desc")}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {isCertifiedOpportunity && (
-              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
-                <div className="bg-amber-500 p-2.5 rounded-xl text-white shadow-lg">
-                  <Rocket className="h-6 w-6 animate-bounce" />
+            {isCurrentlyEarlyAccess && (
+              <div className="w-full p-5 rounded-2xl border border-violet-200 bg-violet-50/60 flex gap-4 items-center shadow-sm">
+                <div className="bg-violet-600 p-3 rounded-xl text-white shrink-0">
+                  <Zap className="h-7 w-7 fill-white animate-pulse" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-amber-900 text-sm">{t("jobs.details.early_access_evolution_title")}</h4>
-                  <p className="text-amber-800 text-xs font-medium">{t("jobs.details.early_access_evolution_text")}</p>
+                  <p className="text-base font-black text-violet-900 uppercase tracking-tight">
+                    {t("jobs.details.active_early_title")}
+                  </p>
+                  <p className="text-sm text-violet-700 font-medium">{t("jobs.details.active_early_desc")}</p>
                 </div>
               </div>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-4 space-y-6">
-                {/* Datas Maiores */}
+                {/* Datas */}
                 <div className="grid grid-cols-3 gap-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div>
                     <span className="block text-[10px] font-bold text-slate-400 mb-1">{t("jobs.details.posted")}</span>
@@ -251,34 +232,43 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* DOL Job Order Links - only when job_id exists */}
-                {job?.job_id && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-2">
+                {/* ── SEÇÃO JOB ORDER (FIXED) ── */}
+                {officialCaseId && (
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
                     <h4 className="font-bold text-slate-800 flex items-center gap-2 text-[10px] uppercase tracking-widest">
-                      <FileText className="h-4 w-4 text-indigo-500" /> {t("jobs.details.job_order", "Official Job Order")}
+                      <FileText className="h-4 w-4 text-indigo-500" />{" "}
+                      {t("jobs.details.job_order", "Official Job Order")}
                     </h4>
                     <div className="flex flex-col gap-2">
                       <a
-                        href={`https://seasonaljobs.dol.gov/job-order/${job.job_id}`}
+                        href={`https://seasonaljobs.dol.gov/job-order/${officialCaseId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                        className="flex items-center justify-between w-full p-3 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all group"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" /> {t("jobs.details.view_job_order", "View on SeasonalJobs.dol.gov")}
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-indigo-500" />
+                          <span>{t("jobs.details.view_job_order", "View on DOL Portal")}</span>
+                        </div>
+                        <ExternalLink className="h-4 w-4 opacity-40 group-hover:opacity-100 transition-opacity" />
                       </a>
                       <a
-                        href={`https://seasonaljobs.dol.gov/api/job-order/pdf/${job.job_id}`}
+                        href={`https://seasonaljobs.dol.gov/api/job-order/pdf/${officialCaseId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-800 hover:underline transition-colors"
+                        className="flex items-center justify-between w-full p-3 text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg transition-all group"
                       >
-                        <FileText className="h-3.5 w-3.5" /> {t("jobs.details.download_pdf", "Download PDF (ETA Form)")}
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>{t("jobs.details.download_pdf", "Download PDF (ETA Form)")}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 opacity-40 group-hover:opacity-100 transition-opacity" />
                       </a>
                     </div>
                   </div>
                 )}
 
-                {/* Financeiro Restaurado e Organizado */}
+                {/* Financeiro */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
                   <div className="flex justify-between items-center border-b pb-4">
                     <span className="font-semibold text-sm text-slate-600">
@@ -294,29 +284,9 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
-                  {job?.wage_additional && (
-                    <div className="mt-4 pt-4 border-t border-dashed border-green-200">
-                      <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-green-600 mb-2">
-                        <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label")}
-                      </h5>
-                      <p className="text-xs text-green-800 font-medium bg-green-50/50 p-2 rounded">
-                        <span>{job.wage_additional}</span>
-                      </p>
-                    </div>
-                  )}
-                  {job?.rec_pay_deductions && (
-                    <div className="mt-4 pt-4 border-t border-dashed border-red-200">
-                      <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-red-600 mb-2">
-                        <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label")}
-                      </h5>
-                      <p className="text-xs text-red-800 font-medium bg-red-50/50 p-2 rounded">
-                        <span>{job.rec_pay_deductions}</span>
-                      </p>
-                    </div>
-                  )}
                 </div>
 
-                {/* Contatos Dinâmicos */}
+                {/* Contatos */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative overflow-hidden">
                   {!canSeeContacts && (
                     <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
@@ -333,42 +303,19 @@ export function JobDetailsDialog({
                     <Mail className="h-4 w-4 text-blue-500" /> {t("jobs.details.company_contacts")}
                   </h4>
                   <div className="space-y-4 mt-4">
-                    <div>
-                      <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                        {t("jobs.details.email_label")}
-                      </span>
-                      <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 flex justify-between items-center">
-                        <span>{canSeeContacts ? job?.email : "••••••••@•••••••.com"}</span>
-                        {canSeeContacts && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6"
-                            onClick={() => (window.location.href = `mailto:${job.email}`)}
-                          >
-                            <Mail className="h-3 w-3 text-slate-500" />
-                          </Button>
-                        )}
-                      </div>
+                    <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 flex justify-between items-center">
+                      <span>{canSeeContacts ? job?.email : "••••••••@•••••••.com"}</span>
+                      {canSeeContacts && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => (window.location.href = `mailto:${job.email}`)}
+                        >
+                          <Mail className="h-3 w-3 text-slate-500" />
+                        </Button>
+                      )}
                     </div>
-
-                    {/* CAMPO DO TELEFONE ADICIONADO */}
-                    {hasValidPhone && (
-                      <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                          {t("jobs.details.phone_label")}
-                        </span>
-                        <div className="font-mono text-sm bg-slate-50 p-2 rounded border border-slate-100 flex justify-between items-center">
-                          <span>{canSeeContacts ? job?.phone : "••• ••• ••••"}</span>
-                          {canSeeContacts && (
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCall}>
-                              <Phone className="h-3 w-3 text-slate-500" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
                     {hasValidPhone && canSeeContacts && (
                       <div className="grid grid-cols-3 gap-2 mt-2">
                         <Button
@@ -439,13 +386,6 @@ export function JobDetailsDialog({
               <Share2 className="h-5 w-5 text-slate-600" />
             </Button>
           </div>
-          <Button
-            variant="ghost"
-            className="w-full text-slate-500 font-bold h-10 flex items-center justify-center gap-2"
-            onClick={() => onOpenChange(false)}
-          >
-            <ArrowLeft className="h-4 w-4" /> {t("jobs.details.back_to_list")}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
