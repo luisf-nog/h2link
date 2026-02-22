@@ -209,19 +209,75 @@ serve(async (req) => {
           const matched = matchCount ?? 0;
           radarMatches += matched;
 
-          // If auto_send is on and there are new matches, trigger process-queue
+          // NEW: Move matches from radar_matched_jobs → my_queue
           if (radar.auto_send && matched > 0) {
             try {
-              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-queue`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                },
-                body: JSON.stringify({ user_id: radar.user_id }),
+              // 1. Get daily limit
+              const { data: dailyLimit } = await supabase.rpc("get_effective_daily_limit", {
+                p_user_id: radar.user_id,
               });
+              const limit = dailyLimit ?? 5;
+
+              // 2. Check how many already used today
+              const todayStart = new Date();
+              todayStart.setUTCHours(0, 0, 0, 0);
+              const { count: usedToday } = await supabase
+                .from("my_queue")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", radar.user_id)
+                .gte("created_at", todayStart.toISOString());
+
+              const remaining = Math.max(0, limit - (usedToday ?? 0));
+
+              if (remaining > 0) {
+                // 3. Fetch new matches NOT yet in my_queue
+                const { data: newMatches } = await supabase
+                  .from("radar_matched_jobs")
+                  .select("job_id")
+                  .eq("user_id", radar.user_id)
+                  .eq("auto_queued", false)
+                  .limit(remaining);
+
+                const jobIds = (newMatches || []).map((m: any) => m.job_id);
+
+                if (jobIds.length > 0) {
+                  // 4. Insert into my_queue
+                  const { error: queueError } = await supabase.from("my_queue").insert(
+                    jobIds.map((jobId: string) => ({
+                      user_id: radar.user_id,
+                      job_id: jobId,
+                      status: "pending",
+                    }))
+                  );
+
+                  if (!queueError) {
+                    // 5. Mark as auto_queued
+                    await supabase
+                      .from("radar_matched_jobs")
+                      .update({ auto_queued: true })
+                      .eq("user_id", radar.user_id)
+                      .in("job_id", jobIds);
+
+                    console.log(`[AUTO-IMPORT] Enfileirou ${jobIds.length} vagas para ${radar.user_id}`);
+
+                    // 6. Trigger process-queue
+                    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-queue`, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                      },
+                      body: JSON.stringify({ user_id: radar.user_id }),
+                    });
+                  } else {
+                    console.error(`[AUTO-IMPORT] Erro ao enfileirar para ${radar.user_id}:`, queueError.message);
+                  }
+                }
+              } else {
+                console.log(`[AUTO-IMPORT] Limite diário atingido para ${radar.user_id}`);
+              }
             } catch (e) {
-              console.error(`[AUTO-IMPORT] Erro ao disparar process-queue para ${radar.user_id}:`, e);
+              console.error(`[AUTO-IMPORT] Erro auto-send para ${radar.user_id}:`, e);
             }
           }
 
