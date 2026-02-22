@@ -537,104 +537,210 @@ export default function Auth() {
   return (
     <>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
         .auth-root {
           min-height: 100vh;
           display: grid;
           grid-template-columns: 1fr;
-          background: #fff;
+          font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
         }
         @media (min-width: 1024px) {
-          .auth-root { grid-template-columns: 1fr 1fr; }
+          .auth-root { grid-template-columns: 480px 1fr; }
         }
 
-        /* Left panel — dark brand side */
+        /* ── LEFT PANEL ── */
         .auth-left {
           display: none;
           background: #020617;
           position: relative;
           overflow: hidden;
           flex-direction: column;
-          justify-content: space-between;
-          padding: 48px 56px;
+          padding: 44px 48px;
         }
         @media (min-width: 1024px) {
           .auth-left { display: flex; }
         }
 
-        /* Dot grid texture */
-        .auth-left::before {
-          content: '';
+        /* Large decorative "H2" watermark */
+        .auth-left-watermark {
           position: absolute;
-          inset: 0;
-          background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
-          background-size: 28px 28px;
+          bottom: -40px;
+          right: -30px;
+          font-size: 280px;
+          font-weight: 800;
+          color: rgba(255,255,255,0.025);
+          line-height: 1;
           pointer-events: none;
+          letter-spacing: -0.04em;
+          font-family: 'Space Grotesk', ui-sans-serif;
+          user-select: none;
         }
 
-        /* Orange accent line top */
-        .auth-left::after {
-          content: '';
+        /* Vertical orange bar — left edge accent */
+        .auth-left-bar {
           position: absolute;
-          top: 0; left: 56px; right: 56px;
-          height: 2px;
-          background: #D4500A;
-          opacity: 0.7;
+          top: 0; left: 0; bottom: 0;
+          width: 3px;
+          background: linear-gradient(to bottom, #D4500A 0%, rgba(212,80,10,0.2) 60%, transparent 100%);
         }
 
-        /* Right panel — form */
+        /* ── RIGHT PANEL ── */
         .auth-right {
           display: flex;
           flex-direction: column;
           min-height: 100vh;
-          background: #fff;
+          background: #F8FAFC;
+          position: relative;
         }
 
-        /* Subtle top bar on mobile */
+        /* Subtle pattern on right bg */
+        .auth-right::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(2,6,23,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(2,6,23,0.025) 1px, transparent 1px);
+          background-size: 48px 48px;
+          pointer-events: none;
+        }
+
+        /* Mobile top bar */
         .auth-mobile-bar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px 24px;
-          border-bottom: 1px solid #E2E8F0;
+          padding: 18px 24px;
+          background: #020617;
+          position: relative;
+          z-index: 1;
         }
         @media (min-width: 1024px) {
           .auth-mobile-bar { display: none; }
         }
 
+        /* Form area */
         .auth-form-wrap {
           flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 32px 24px;
-        }
-        @media (min-width: 640px) {
-          .auth-form-wrap { padding: 48px 32px; }
+          padding: 40px 24px;
+          position: relative;
+          z-index: 1;
         }
 
+        /* The white card */
         .auth-card {
           width: 100%;
-          max-width: 440px;
+          max-width: 420px;
+          background: #fff;
+          border: 1px solid #E2E8F0;
+          border-radius: 12px;
+          padding: 36px 32px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.04);
         }
 
-        /* Highlight items on left panel */
+        /* Highlight items */
         .hl-item {
           display: flex;
-          gap: 16px;
+          gap: 14px;
           align-items: flex-start;
+          padding: 16px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .hl-icon {
-          width: 36px;
-          height: 36px;
+        .hl-item:last-child { border-bottom: none; }
+
+        .hl-num {
+          font-size: 11px;
+          font-weight: 700;
+          color: #D4500A;
+          letter-spacing: 0.05em;
+          padding-top: 2px;
+          flex-shrink: 0;
+          min-width: 20px;
+        }
+
+        /* Custom tab styling */
+        .auth-tabs-list {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0;
+          border: 1px solid #E2E8F0;
           border-radius: 8px;
-          background: rgba(212,80,10,0.15);
-          border: 1px solid rgba(212,80,10,0.3);
+          overflow: hidden;
+          margin-bottom: 28px;
+          background: #F8FAFC;
+        }
+        .auth-tab-btn {
+          padding: 10px 16px;
+          font-size: 13px;
+          font-weight: 600;
+          font-family: inherit;
+          color: #64748B;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .auth-tab-btn.active {
+          background: #020617;
+          color: #fff;
+        }
+        .auth-tab-btn:not(.active):hover { background: #F1F5F9; }
+
+        /* Input overrides */
+        .auth-card input {
+          font-family: 'Space Grotesk', ui-sans-serif !important;
+          font-size: 14px !important;
+        }
+        .auth-card label {
+          font-family: 'Space Grotesk', ui-sans-serif !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.03em !important;
+          text-transform: uppercase !important;
+          color: #475569 !important;
+        }
+
+        /* Submit button */
+        .auth-submit {
+          width: 100%;
+          background: #020617;
+          color: #fff;
+          border: none;
+          border-radius: 7px;
+          padding: 12px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
-          margin-top: 1px;
+          gap: 8px;
+          transition: background 0.15s;
+          margin-top: 4px;
         }
+        .auth-submit:hover { background: #0f172a; }
+        .auth-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Ghost button */
+        .auth-ghost {
+          width: 100%;
+          background: transparent;
+          color: #64748B;
+          border: 1px solid #E2E8F0;
+          border-radius: 7px;
+          padding: 11px 20px;
+          font-size: 13px;
+          font-weight: 500;
+          font-family: inherit;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .auth-ghost:hover { background: #F8FAFC; color: #020617; }
       `}</style>
 
       {/* Error dialog */}
@@ -666,135 +772,139 @@ export default function Auth() {
       <div className="auth-root">
         {/* ── LEFT PANEL ────────────────────────────────────────────────── */}
         <div className="auth-left">
-          {/* Logo */}
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <BrandWordmark height={40} />
+          <div className="auth-left-bar" />
+          <div className="auth-left-watermark">H2</div>
+
+          {/* Logo — large and prominent */}
+          <div style={{ position: "relative", zIndex: 1, marginBottom: "auto" }}>
+            <BrandWordmark height={48} />
           </div>
 
-          {/* Center content */}
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div
+          {/* Main content */}
+          <div style={{ position: "relative", zIndex: 1, paddingTop: 56 }}>
+            <p
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(212,80,10,0.12)",
-                border: "1px solid rgba(212,80,10,0.3)",
-                padding: "4px 12px",
-                borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: "0.08em",
-                color: "#F97316",
+                letterSpacing: "0.1em",
                 textTransform: "uppercase",
+                color: "#D4500A",
                 marginBottom: 20,
               }}
             >
-              <Zap size={10} />
-              Vagas H-2A e H-2B
-            </div>
+              Vagas H-2A · H-2B
+            </p>
 
             <h1
               style={{
-                fontSize: "clamp(26px, 3vw, 36px)",
+                fontSize: "clamp(28px, 2.8vw, 38px)",
                 fontWeight: 700,
                 color: "#fff",
-                letterSpacing: "-0.02em",
+                letterSpacing: "-0.025em",
                 lineHeight: 1.15,
-                marginBottom: 40,
+                marginBottom: 48,
               }}
             >
               Chegar primeiro
-              <br />
-              é a maior vantagem
+              <br />é a maior vantagem
               <br />
               no processo H-2.
             </h1>
 
-            {/* Highlight items */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-              {highlights.map((h) => (
+            {/* Highlights as numbered list */}
+            <div>
+              {highlights.map((h, i) => (
                 <div key={h.label} className="hl-item">
-                  <div className="hl-icon">
-                    <h.icon size={15} color="#D4500A" />
-                  </div>
+                  <span className="hl-num">0{i + 1}</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 3 }}>{h.label}</div>
-                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>{h.desc}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 3, lineHeight: 1.3 }}>
+                      {h.label}
+                    </div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.65 }}>{h.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Bottom footer */}
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div
-              style={{
-                width: "100%",
-                height: 1,
-                background: "rgba(255,255,255,0.08)",
-                marginBottom: 20,
-              }}
-            />
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
-              © {new Date().getFullYear()} H2 Linker — Smart connections. Real opportunities.
+          {/* Footer */}
+          <div style={{ position: "relative", zIndex: 1, marginTop: 48 }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontWeight: 500, letterSpacing: "0.03em" }}>
+              © {new Date().getFullYear()} H2 Linker
             </p>
           </div>
         </div>
 
         {/* ── RIGHT PANEL ───────────────────────────────────────────────── */}
         <div className="auth-right">
-          {/* Mobile top bar */}
+          {/* Mobile bar — dark, consistent with left panel */}
           <div className="auth-mobile-bar">
-            <BrandWordmark height={34} />
+            <BrandWordmark height={36} />
             <LanguageSwitcher
               value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
               onChange={handleChangeLanguage}
-              className="h-9 w-[120px]"
+              className="h-9 w-[120px] border-white/20 bg-white/10 text-white"
             />
           </div>
 
-          {/* Form area */}
+          {/* Form */}
           <div className="auth-form-wrap">
             <div className="auth-card">
-              {/* Desktop: language switcher sits above card */}
+              {/* Desktop: language switcher top-right of card */}
               <div
-                style={{
-                  display: "none",
-                  justifyContent: "flex-end",
-                  marginBottom: 16,
-                }}
-                className="lg-lang"
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}
+                className="auth-card-header"
               >
-                <LanguageSwitcher
-                  value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
-                  onChange={handleChangeLanguage}
-                  className="h-9 w-[130px]"
-                />
-              </div>
-              <style>{`@media(min-width:1024px){.lg-lang{display:flex!important;}}`}</style>
-
-              <Tabs value={tab} onValueChange={(v) => setTab(v === "signup" ? "signup" : "signin")}>
-                <TabsList className="grid h-11 w-full grid-cols-2 bg-muted mb-6">
-                  <TabsTrigger value="signin">{t("auth.tabs.signin")}</TabsTrigger>
-                  <TabsTrigger value="signup">{t("auth.tabs.signup")}</TabsTrigger>
-                </TabsList>
-
-                {/* ── SIGN IN ── */}
-                <TabsContent value="signin" className="mt-0">
-                  <div className="space-y-1 mb-6">
-                    <h2 className="text-xl font-semibold text-slate-900">{t("auth.signin.title")}</h2>
-                    <p className="text-sm text-slate-500">{t("auth.signin.description")}</p>
+                <style>{`
+                  @media(max-width:1023px){.auth-card-header .desktop-lang{display:none!important;}}
+                `}</style>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#020617", letterSpacing: "-0.01em" }}>
+                    {tab === "signin" ? t("auth.signin.title") : t("auth.signup.title")}
                   </div>
+                  <div style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>
+                    {tab === "signin" ? t("auth.signin.description") : t("auth.signup.description")}
+                  </div>
+                </div>
+                <div className="desktop-lang" style={{ flexShrink: 0, marginLeft: 16 }}>
+                  <LanguageSwitcher
+                    value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+                    onChange={handleChangeLanguage}
+                    className="h-9 w-[120px]"
+                  />
+                </div>
+              </div>
 
+              {/* Custom tabs */}
+              <div className="auth-tabs-list">
+                <button className={`auth-tab-btn ${tab === "signin" ? "active" : ""}`} onClick={() => setTab("signin")}>
+                  {t("auth.tabs.signin")}
+                </button>
+                <button className={`auth-tab-btn ${tab === "signup" ? "active" : ""}`} onClick={() => setTab("signup")}>
+                  {t("auth.tabs.signup")}
+                </button>
+              </div>
+
+              {/* ── SIGN IN ── */}
+              {tab === "signin" && (
+                <div>
                   {signupNotice.visible && (
-                    <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 p-3">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <div className="text-sm">
-                          <p className="font-semibold">{t("auth.signup_notice.title")}</p>
-                          <p className="mt-1 text-muted-foreground">
+                    <div
+                      style={{
+                        marginBottom: 20,
+                        padding: "12px 14px",
+                        background: "#F0FDF4",
+                        border: "1px solid #BBF7D0",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <CheckCircle2 size={15} color="#15803D" style={{ marginTop: 1, flexShrink: 0 }} />
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#14532D" }}>
+                            {t("auth.signup_notice.title")}
+                          </p>
+                          <p style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
                             {t("auth.signup_notice.desc", { email: signupNotice.email ?? "" })}
                           </p>
                         </div>
@@ -803,8 +913,8 @@ export default function Auth() {
                   )}
 
                   {signinPanel === "signin" && (
-                    <form onSubmit={handleSignIn} className="space-y-4">
-                      <div className="space-y-2">
+                    <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         <Label htmlFor="signin-email">{t("auth.fields.email")}</Label>
                         <Input
                           id="signin-email"
@@ -814,12 +924,20 @@ export default function Auth() {
                           required
                         />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <Label htmlFor="signin-password">{t("auth.fields.password")}</Label>
                           <button
                             type="button"
-                            className="text-sm text-primary hover:underline"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              color: "#D4500A",
+                              fontFamily: "inherit",
+                              fontWeight: 500,
+                            }}
                             onClick={() => setSigninPanel("forgot")}
                           >
                             {t("auth.recovery.link")}
@@ -827,29 +945,45 @@ export default function Auth() {
                         </div>
                         <Input id="signin-password" name="password" type="password" required />
                       </div>
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <button type="submit" className="auth-submit" disabled={isLoading} style={{ marginTop: 8 }}>
+                        {isLoading && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
                         {t("auth.actions.signin")}
-                      </Button>
+                      </button>
                     </form>
                   )}
 
                   {signinPanel === "forgot" && (
-                    <div className="space-y-4">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                       <div>
-                        <p className="font-semibold">{t("auth.recovery.request_title")}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{t("auth.recovery.request_desc")}</p>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "#020617" }}>
+                          {t("auth.recovery.request_title")}
+                        </p>
+                        <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
+                          {t("auth.recovery.request_desc")}
+                        </p>
                       </div>
                       {forgotState.sent && (
-                        <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
-                          <p className="text-sm font-semibold">{t("auth.recovery.sent_title")}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
+                        <div
+                          style={{
+                            padding: "12px 14px",
+                            background: "#F0FDF4",
+                            border: "1px solid #BBF7D0",
+                            borderRadius: 8,
+                          }}
+                        >
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#14532D" }}>
+                            {t("auth.recovery.sent_title")}
+                          </p>
+                          <p style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
                             {t("auth.recovery.sent_desc", { email: forgotState.email })}
                           </p>
                         </div>
                       )}
-                      <form onSubmit={handleRequestPasswordReset} className="space-y-3">
-                        <div className="space-y-2">
+                      <form
+                        onSubmit={handleRequestPasswordReset}
+                        style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                           <Label htmlFor="recovery-email">{t("auth.fields.email")}</Label>
                           <Input
                             id="recovery-email"
@@ -860,30 +994,30 @@ export default function Auth() {
                             required
                           />
                         </div>
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <button type="submit" className="auth-submit" disabled={isLoading}>
+                          {isLoading && <Loader2 size={15} />}
                           {t("auth.recovery.actions.send_link")}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="w-full"
-                          onClick={() => setSigninPanel("signin")}
-                        >
+                        </button>
+                        <button type="button" className="auth-ghost" onClick={() => setSigninPanel("signin")}>
                           {t("auth.recovery.actions.back_to_login")}
-                        </Button>
+                        </button>
                       </form>
                     </div>
                   )}
 
                   {signinPanel === "reset" && (
-                    <div className="space-y-4">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                       <div>
-                        <p className="font-semibold">{t("auth.recovery.reset_title")}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{t("auth.recovery.reset_desc")}</p>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "#020617" }}>
+                          {t("auth.recovery.reset_title")}
+                        </p>
+                        <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>{t("auth.recovery.reset_desc")}</p>
                       </div>
-                      <form onSubmit={handleUpdatePassword} className="space-y-3">
-                        <div className="space-y-2">
+                      <form
+                        onSubmit={handleUpdatePassword}
+                        style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                           <Label htmlFor="reset-password">{t("auth.recovery.fields.new_password")}</Label>
                           <Input
                             id="reset-password"
@@ -894,7 +1028,7 @@ export default function Auth() {
                             minLength={6}
                           />
                         </div>
-                        <div className="space-y-2">
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                           <Label htmlFor="reset-confirm">{t("auth.recovery.fields.confirm_new_password")}</Label>
                           <Input
                             id="reset-confirm"
@@ -905,131 +1039,111 @@ export default function Auth() {
                             minLength={6}
                           />
                         </div>
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <button type="submit" className="auth-submit" disabled={isLoading}>
+                          {isLoading && <Loader2 size={15} />}
                           {t("auth.recovery.actions.save_new_password")}
-                        </Button>
+                        </button>
                       </form>
                     </div>
                   )}
-                </TabsContent>
+                </div>
+              )}
 
-                {/* ── SIGN UP ── */}
-                <TabsContent value="signup" className="mt-0">
-                  <div className="space-y-1 mb-6">
-                    <h2 className="text-xl font-semibold text-slate-900">{t("auth.signup.title")}</h2>
-                    <p className="text-sm text-slate-500">{t("auth.signup.description")}</p>
+              {/* ── SIGN UP ── */}
+              {tab === "signup" && (
+                <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Label htmlFor="signup-name">{t("auth.fields.full_name")}</Label>
+                    <Input id="signup-name" name="fullName" required />
                   </div>
 
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">{t("auth.fields.full_name")}</Label>
-                      <Input id="signup-name" name="fullName" required />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <Label htmlFor="signup-age">{t("auth.fields.age")}</Label>
+                      <Input id="signup-age" name="age" type="number" min={14} max={90} required />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-age">{t("auth.fields.age")}</Label>
-                        <Input id="signup-age" name="age" type="number" min={14} max={90} required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-phone">{t("auth.fields.phone")}</Label>
-                        <PhoneE164Input id="signup-phone" name="phone" defaultCountry="BR" required />
-                      </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <Label htmlFor="signup-phone">{t("auth.fields.phone")}</Label>
+                      <PhoneE164Input id="signup-phone" name="phone" defaultCountry="BR" required />
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">{t("auth.fields.email")}</Label>
-                      <Input id="signup-email" name="email" type="email" required />
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Label htmlFor="signup-email">{t("auth.fields.email")}</Label>
+                    <Input id="signup-email" name="email" type="email" required />
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-contact-email">{t("auth.fields.contact_email")}</Label>
-                      <Input id="signup-contact-email" name="contactEmail" type="email" required />
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Label htmlFor="signup-contact-email">{t("auth.fields.contact_email")}</Label>
+                    <Input id="signup-contact-email" name="contactEmail" type="email" required />
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-referral">{t("auth.fields.referral_code")}</Label>
-                      <Input id="signup-referral" name="referralCode" maxLength={12} />
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Label htmlFor="signup-referral">{t("auth.fields.referral_code")}</Label>
+                    <Input id="signup-referral" name="referralCode" maxLength={12} />
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">{t("auth.fields.password")}</Label>
-                      <Input id="signup-password" name="password" type="password" minLength={6} required />
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Label htmlFor="signup-password">{t("auth.fields.password")}</Label>
+                    <Input id="signup-password" name="password" type="password" minLength={6} required />
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-confirm-password">{t("auth.fields.confirm_password")}</Label>
-                      <Input
-                        id="signup-confirm-password"
-                        name="confirmPassword"
-                        type="password"
-                        minLength={6}
-                        required
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <Label htmlFor="signup-confirm-password">{t("auth.fields.confirm_password")}</Label>
+                    <Input id="signup-confirm-password" name="confirmPassword" type="password" minLength={6} required />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <p style={{ fontSize: 11, color: "#94A3B8", lineHeight: 1.6 }}>{t("auth.disclaimer")}</p>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <Checkbox
+                        id="signup-accept"
+                        checked={acceptTerms}
+                        onCheckedChange={(v) => setAcceptTerms(v === true)}
                       />
+                      <input type="hidden" name="acceptTerms" value={acceptTerms ? "on" : ""} />
+                      <Label
+                        htmlFor="signup-accept"
+                        style={{
+                          textTransform: "none",
+                          fontSize: "11px",
+                          fontWeight: "400",
+                          letterSpacing: 0,
+                          color: "#64748B",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {t("auth.accept_terms")}
+                      </Label>
                     </div>
+                  </div>
 
-                    <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground">{t("auth.disclaimer")}</p>
-                      <div className="flex items-start gap-2">
-                        <Checkbox
-                          id="signup-accept"
-                          checked={acceptTerms}
-                          onCheckedChange={(v) => setAcceptTerms(v === true)}
-                        />
-                        <input type="hidden" name="acceptTerms" value={acceptTerms ? "on" : ""} />
-                        <Label htmlFor="signup-accept" className="text-xs leading-snug">
-                          {t("auth.accept_terms")}
-                        </Label>
-                      </div>
-                    </div>
+                  <button type="submit" className="auth-submit" disabled={isLoading} style={{ marginTop: 4 }}>
+                    {isLoading && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
+                    {t("auth.actions.signup")}
+                  </button>
+                </form>
+              )}
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {t("auth.actions.signup")}
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
-
-              {/* Footer link */}
-              <p
-                style={{
-                  marginTop: 24,
-                  textAlign: "center",
-                  fontSize: 12,
-                  color: "#94A3B8",
-                }}
-              >
+              {/* Browse jobs link */}
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F1F5F9", textAlign: "center" }}>
                 <button
                   onClick={() => navigate("/jobs")}
                   style={{
                     background: "none",
                     border: "none",
                     cursor: "pointer",
-                    color: "#64748B",
                     fontSize: 12,
-                    textDecoration: "underline",
-                    textDecorationColor: "#CBD5E1",
+                    color: "#94A3B8",
+                    fontFamily: "inherit",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#64748B")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#94A3B8")}
                 >
                   Ver vagas sem criar conta →
                 </button>
-              </p>
+              </div>
             </div>
-          </div>
-
-          {/* Right panel footer */}
-          <div
-            style={{
-              padding: "16px 32px",
-              borderTop: "1px solid #E2E8F0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <p style={{ fontSize: 12, color: "#94A3B8" }}>help@h2linker.com</p>
           </div>
         </div>
       </div>
