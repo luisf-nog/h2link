@@ -607,7 +607,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── TESTIMONIALS (Fixed Flag Implementation) ── */}
+        {/* ── TESTIMONIALS (Updated for Text-based Localization) ── */}
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
@@ -651,36 +651,6 @@ export default function Landing() {
                   width: "100%",
                 }}
               >
-                {/* Improved Country Badge with Reliable Image Icon */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 20,
-                    right: 24,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "5px 12px",
-                    background: "#F8FAFC",
-                    borderRadius: 8,
-                    border: "1px solid #E2E8F0",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 18,
-                      height: 13,
-                      background: `url('https://flagcdn.com/br.svg')`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      borderRadius: 2,
-                    }}
-                    aria-hidden="true"
-                  />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", letterSpacing: "0.02em" }}>BR</span>
-                </div>
-
                 <div
                   className="t-quoteMark"
                   style={{
@@ -700,9 +670,14 @@ export default function Landing() {
 
                 <div style={{ position: "relative", paddingTop: 28 }}>
                   <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.75 }}>{t("landing.testimonial1_quote")}</p>
-                  <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ marginTop: 24 }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#020617" }}>Cassiano Andrade</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#020617" }}>Cassiano Andrade</span>
+                        <span style={{ fontSize: 14, color: "#64748B", fontWeight: 500 }}>
+                          {t("landing.testimonial_from_brazil")}
+                        </span>
+                      </div>
                       <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 600 }}>
                         {t("landing.testimonial_user_label")}
                       </span>
