@@ -144,7 +144,7 @@ export default function Landing() {
         .step-card:hover { border-color: #020617; }
         .feat-card:hover { background: #f8fafc; }
         .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
-        .t-card:hover { border-color: #D4500A; background: #fffcfb; }
+        .t-card:hover { background: #f8fafc; border-color: #cbd5e1; }
         .t-quoteMark { user-select: none; }
         .faq-row:hover .faq-q { color: #D4500A; }
         .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
@@ -162,7 +162,6 @@ export default function Landing() {
           .steps-grid    { grid-template-columns: 1fr !important; }
           .bento-grid    { grid-template-columns: 1fr !important; }
           .lifetime-grid { grid-template-columns: 1fr !important; }
-          .testi-container { grid-template-columns: 1fr !important; }
           .cta-row       { flex-direction: column !important; align-items: stretch !important; }
           .footer-row    { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
           .req-grid      { grid-template-columns: 1fr !important; gap: 0 !important; }
@@ -608,10 +607,10 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── TESTIMONIALS (Updated for 1 Centered Card) ── */}
+        {/* ── TESTIMONIALS (Updated: Dynamic + Improved Country Marker) ── */}
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 56 }}>
+            <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <p
                 style={{
                   fontSize: 11,
@@ -642,24 +641,52 @@ export default function Landing() {
               <div
                 className="t-card"
                 style={{
-                  maxWidth: 600,
                   background: "#fff",
-                  border: "1.5px solid #E2E8F0",
-                  borderRadius: 16,
-                  padding: "40px 32px",
-                  transition: "all 0.2s",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: 12,
+                  padding: "32px 28px",
                   position: "relative",
                   overflow: "hidden",
-                  boxShadow: "0 10px 30px -15px rgba(0,0,0,0.05)",
+                  maxWidth: 640,
+                  width: "100%",
                 }}
               >
+                {/* Subtle Country Indicator */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 20,
+                    right: 24,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "4px 10px",
+                    background: "#F1F5F9",
+                    borderRadius: 6,
+                    border: "1px solid #E2E8F0",
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>🇧🇷</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#475569",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    BR
+                  </span>
+                </div>
+
                 <div
                   className="t-quoteMark"
                   style={{
                     position: "absolute",
                     top: 10,
-                    left: 24,
-                    fontSize: 80,
+                    left: 16,
+                    fontSize: 72,
                     fontWeight: 700,
                     color: "#F1F5F9",
                     lineHeight: 1,
@@ -670,70 +697,14 @@ export default function Landing() {
                   "
                 </div>
 
-                <div style={{ position: "relative", paddingTop: 20 }}>
-                  <p style={{ fontSize: 16, color: "#334155", lineHeight: 1.8, fontStyle: "italic", marginBottom: 32 }}>
-                    "Eu vi o H2 Linker nascer da necessidade real. Eu era o cara que passava horas na frente do monitor
-                    anotando e-mails e mandando um por um. Era lento, cansativo e eu mal conseguia enviar 20
-                    candidaturas por dia. Hoje, minha produtividade foi pro espaço: mando mais de 200 e-mails só no meu
-                    horário de almoço. O app tirou o peso do trabalho manual e me deu tempo para focar no que realmente
-                    importa: me preparar para as entrevistas."
-                  </p>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      borderTop: "1px solid #F1F5F9",
-                      paddingTop: 24,
-                    }}
-                  >
+                <div style={{ position: "relative", paddingTop: 28 }}>
+                  <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.75 }}>{t("landing.testimonial1_quote")}</p>
+                  <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: "#020617" }}>Cassiano Andrade</span>
-                        {/* New Country Badge Design */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            background: "linear-gradient(135deg, #22C55E 0%, #15803D 100%)",
-                            padding: "2px 8px",
-                            borderRadius: 100,
-                            border: "1px solid rgba(255,255,255,0.2)",
-                          }}
-                        >
-                          <span style={{ fontSize: 10 }}>🇧🇷</span>
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 800,
-                              color: "#fff",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.02em",
-                            }}
-                          >
-                            Brasil
-                          </span>
-                        </div>
-                      </div>
-                      <span style={{ fontSize: 13, color: "#94A3B8", fontWeight: 600 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#020617" }}>Cassiano Andrade</span>
+                      <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 600 }}>
                         {t("landing.testimonial_user_label")}
                       </span>
-                    </div>
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "50%",
-                        background: "#F8FAF8",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        border: "1px solid #E2E8F0",
-                      }}
-                    >
-                      <Users size={20} color="#D4500A" />
                     </div>
                   </div>
                 </div>
@@ -776,7 +747,6 @@ export default function Landing() {
               className="lifetime-grid"
               style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "stretch" }}
             >
-              {/* H2 Linker side */}
               <div
                 style={{
                   background: "#020617",
@@ -907,7 +877,6 @@ export default function Landing() {
                 </button>
               </div>
 
-              {/* Competitor side */}
               <div
                 style={{ background: "#FAFAFA", border: "1px solid #E2E8F0", borderRadius: 12, padding: "48px 40px" }}
               >
