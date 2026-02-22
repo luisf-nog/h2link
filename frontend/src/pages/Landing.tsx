@@ -31,155 +31,157 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-// ─── FAQ ────────────────────────────────────────────────────────────────────
-const faqs = [
+/** ─────────────────────────────────────────────────────────────────────────
+ *  Flag: Brazil (melhor visual, “premium”, sem depender de imagem externa)
+ *  ──────────────────────────────────────────────────────────────────────── */
+function BRFlagMark({ size = 24 }: { size?: number }) {
+  const s = size;
+  return (
+    <span
+      aria-label="Brazil"
+      title="Brazil"
+      style={{
+        width: s,
+        height: s,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 999,
+        background: "#fff",
+        border: "1px solid #E2E8F0",
+        boxShadow: "0 1px 2px rgba(2,6,23,0.10)",
+      }}
+    >
+      <svg width={Math.round(s * 0.78)} height={Math.round(s * 0.78)} viewBox="0 0 64 64" style={{ display: "block" }}>
+        <circle cx="32" cy="32" r="30" fill="#1F8B3A" />
+        <path d="M32 10 L54 32 L32 54 L10 32 Z" fill="#F7C600" />
+        <circle cx="32" cy="32" r="12" fill="#1E4AA8" />
+        <path
+          d="M19 31.5 C26 26, 38 26, 45 31.5"
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          opacity="0.95"
+        />
+        <path
+          d="M14 22 C18 15, 25 11, 32 11"
+          fill="none"
+          stroke="rgba(255,255,255,0.35)"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/** ─────────────────────────────────────────────────────────────────────────
+ *  Data (tudo via i18n: nenhum texto visível hardcoded)
+ *  ──────────────────────────────────────────────────────────────────────── */
+type FaqItem = { qKey: string; aKey: string };
+type StepItem = { n: string; icon: any; titleKey: string; descKey: string };
+type FeatureItem = { icon: any; titleKey: string; descKey: string; badge: "Black" | null; wide: boolean };
+type TickerJob = { typeKey: string; titleKey: string; locationKey: string; salaryKey: string };
+
+const faqs: FaqItem[] = [
+  { qKey: "landing.faq.0.q", aKey: "landing.faq.0.a" },
+  { qKey: "landing.faq.1.q", aKey: "landing.faq.1.a" },
+  { qKey: "landing.faq.2.q", aKey: "landing.faq.2.a" },
+  { qKey: "landing.faq.3.q", aKey: "landing.faq.3.a" },
+  { qKey: "landing.faq.4.q", aKey: "landing.faq.4.a" },
+];
+
+const tickerJobs: TickerJob[] = [
   {
-    q: "O H2 Linker garante que vou conseguir a vaga?",
-    a: "Não — e qualquer plataforma que prometa isso está mentindo. O H2 Linker não é uma agência de empregos e não tem poder de contratar ninguém. Somos um facilitador: nossa função é colocar o seu currículo na frente do maior número possível de empregadores verificados, no menor tempo possível, com a melhor apresentação possível. O processo H-2A e H-2B é um jogo de tempo e volume. Quem aplica primeiro, com um email profissional e rastreável, sai na frente. Estamos aqui para garantir que você jogue esse jogo com todas as vantagens.",
+    typeKey: "landing.ticker.0.type",
+    titleKey: "landing.ticker.0.title",
+    locationKey: "landing.ticker.0.location",
+    salaryKey: "landing.ticker.0.salary",
   },
   {
-    q: "O que é o 'Early Access' e por que ele é tão importante?",
-    a: "Early Access são vagas H-2A que acabaram de receber o NOA (Notice of Acceptance) do Departamento de Trabalho — aprovadas mas ainda não amplamente divulgadas. É a janela de ouro do processo: o empregador acabou de receber luz verde, ainda está montando o time, e sua candidatura chega antes da concorrência. Em H-2A, a velocidade é tudo. Empregadores recebem centenas de emails à medida que a vaga ganha visibilidade — quem chega primeiro fica na memória. Chegando no Early Access, você não está competindo com a multidão. Está na fila da frente.",
+    typeKey: "landing.ticker.1.type",
+    titleKey: "landing.ticker.1.title",
+    locationKey: "landing.ticker.1.location",
+    salaryKey: "landing.ticker.1.salary",
   },
   {
-    q: "Como o sistema acessa meu e-mail?",
-    a: "Não acessamos sua senha. Você gera uma 'Senha de App' no Google ou Outlook que permite apenas o envio de mensagens. Você mantém o controle total.",
+    typeKey: "landing.ticker.2.type",
+    titleKey: "landing.ticker.2.title",
+    locationKey: "landing.ticker.2.location",
+    salaryKey: "landing.ticker.2.salary",
   },
   {
-    q: "As vagas são reais?",
-    a: "Sim, todos os dados são extraídos e processados diretamente dos arquivos oficiais do Department of Labor (DOL) dos EUA.",
+    typeKey: "landing.ticker.3.type",
+    titleKey: "landing.ticker.3.title",
+    locationKey: "landing.ticker.3.location",
+    salaryKey: "landing.ticker.3.salary",
   },
   {
-    q: "Quantos e-mails posso enviar por dia?",
-    a: "Depende do seu plano e do aquecimento do seu email. O sistema começa com envios conservadores e vai aumentando gradualmente para proteger sua reputação.",
+    typeKey: "landing.ticker.4.type",
+    titleKey: "landing.ticker.4.title",
+    locationKey: "landing.ticker.4.location",
+    salaryKey: "landing.ticker.4.salary",
+  },
+  {
+    typeKey: "landing.ticker.5.type",
+    titleKey: "landing.ticker.5.title",
+    locationKey: "landing.ticker.5.location",
+    salaryKey: "landing.ticker.5.salary",
+  },
+  {
+    typeKey: "landing.ticker.6.type",
+    titleKey: "landing.ticker.6.title",
+    locationKey: "landing.ticker.6.location",
+    salaryKey: "landing.ticker.6.salary",
+  },
+  {
+    typeKey: "landing.ticker.7.type",
+    titleKey: "landing.ticker.7.title",
+    locationKey: "landing.ticker.7.location",
+    salaryKey: "landing.ticker.7.salary",
+  },
+  {
+    typeKey: "landing.ticker.8.type",
+    titleKey: "landing.ticker.8.title",
+    locationKey: "landing.ticker.8.location",
+    salaryKey: "landing.ticker.8.salary",
+  },
+  {
+    typeKey: "landing.ticker.9.type",
+    titleKey: "landing.ticker.9.title",
+    locationKey: "landing.ticker.9.location",
+    salaryKey: "landing.ticker.9.salary",
   },
 ];
 
-// ─── Jobs ticker data ────────────────────────────────────────────────────────
-const tickerJobs = [
-  { type: "H-2A", title: "Farmworker – Berries", location: "Salinas, CA", salary: "$16.00/h" },
-  { type: "H-2B", title: "Concrete Finisher", location: "Morgantown, WV", salary: "$24.50/h" },
-  { type: "H-2A", title: "Apple Harvester", location: "Yakima, WA", salary: "$17.20/h" },
-  { type: "H-2B", title: "Landscape Laborer", location: "Austin, TX", salary: "$18.00/h" },
-  { type: "H-2A", title: "Equipment Operator", location: "Des Moines, IA", salary: "$19.50/h" },
-  { type: "H-2B", title: "Housekeeper", location: "Mackinaw City, MI", salary: "$15.50/h" },
-  { type: "H-2A", title: "Tobacco Harvester", location: "Wilson, NC", salary: "$14.87/h" },
-  { type: "H-2B", title: "Crab Picker", location: "Crisfield, MD", salary: "$16.54/h" },
-  { type: "H-2A", title: "Nursery Worker", location: "Apopka, FL", salary: "$13.67/h" },
-  { type: "H-2B", title: "Ski Lift Operator", location: "Vail, CO", salary: "$20.00/h" },
+const steps: StepItem[] = [
+  { n: "01", icon: Upload, titleKey: "landing.steps.0.title", descKey: "landing.steps.0.desc" },
+  { n: "02", icon: Mail, titleKey: "landing.steps.1.title", descKey: "landing.steps.1.desc" },
+  { n: "03", icon: FileText, titleKey: "landing.steps.2.title", descKey: "landing.steps.2.desc" },
+  { n: "04", icon: Search, titleKey: "landing.steps.3.title", descKey: "landing.steps.3.desc" },
+  { n: "05", icon: Send, titleKey: "landing.steps.4.title", descKey: "landing.steps.4.desc" },
+  { n: "06", icon: BarChart3, titleKey: "landing.steps.5.title", descKey: "landing.steps.5.desc" },
 ];
 
-// ─── How it works ────────────────────────────────────────────────────────────
-const steps = [
-  {
-    n: "01",
-    icon: Upload,
-    title: "Importe seu currículo",
-    desc: "Upload em PDF ou Word. O sistema extrai seus dados e personaliza cada candidatura.",
-  },
-  {
-    n: "02",
-    icon: Mail,
-    title: "Configure seu email SMTP",
-    desc: 'Conecte Gmail ou Outlook com "Senha de App". Os emails saem da sua caixa, sem intermediários.',
-  },
-  {
-    n: "03",
-    icon: FileText,
-    title: "Personalize templates",
-    desc: "Use templates prontos ou crie os seus. Nossa IA gera textos únicos para cada vaga.",
-  },
-  {
-    n: "04",
-    icon: Search,
-    title: "Explore as vagas H-2A/H-2B",
-    desc: "Centenas de vagas atualizadas diariamente do DOL. Cada vaga exibe salário completo, horas semanais, data de início da temporada, experiência exigida e educação mínima — informação real para tomar a decisão certa.",
-  },
-  {
-    n: "05",
-    icon: Send,
-    title: "Monte a fila e envie",
-    desc: "Selecione as vagas, adicione à fila e dispare candidaturas em massa com um clique.",
-  },
-  {
-    n: "06",
-    icon: BarChart3,
-    title: "Aguarde o retorno dos empregadores",
-    desc: "Após o envio, fique de olho na sua caixa de entrada. Os empregadores respondem diretamente para o seu email — sem intermediários.",
-  },
+const features: FeatureItem[] = [
+  { icon: Shield, titleKey: "landing.features.0.title", descKey: "landing.features.0.desc", badge: null, wide: true },
+  { icon: Zap, titleKey: "landing.features.1.title", descKey: "landing.features.1.desc", badge: null, wide: false },
+  { icon: Eye, titleKey: "landing.features.2.title", descKey: "landing.features.2.desc", badge: null, wide: false },
+  { icon: Send, titleKey: "landing.features.3.title", descKey: "landing.features.3.desc", badge: null, wide: false },
+  { icon: Clock, titleKey: "landing.features.4.title", descKey: "landing.features.4.desc", badge: null, wide: false },
+  { icon: Bot, titleKey: "landing.features.5.title", descKey: "landing.features.5.desc", badge: "Black", wide: true },
+  { icon: FileText, titleKey: "landing.features.6.title", descKey: "landing.features.6.desc", badge: null, wide: true },
+  { icon: Radar, titleKey: "landing.features.7.title", descKey: "landing.features.7.desc", badge: null, wide: false },
+  { icon: Users, titleKey: "landing.features.8.title", descKey: "landing.features.8.desc", badge: null, wide: false },
 ];
 
-// ─── Features bento ─────────────────────────────────────────────────────────
-const features = [
-  {
-    icon: Shield,
-    title: "Aquecimento inteligente",
-    desc: "Aumento progressivo do limite de envios que protege a reputação do seu domínio e evita bloqueios. Começa conservador e cresce automaticamente.",
-    badge: null,
-    wide: true,
-  },
-  {
-    icon: Zap,
-    title: "IA personalizada por vaga",
-    desc: "Emails únicos gerados para cada vaga, passando pelos filtros de spam com linguagem natural.",
-    badge: null,
-    wide: false,
-  },
-  {
-    icon: Eye,
-    title: "Spy pixel avançado",
-    desc: "Filtra scanners de antivírus e mostra apenas aberturas genuínas do empregador.",
-    badge: null,
-    wide: false,
-  },
-  {
-    icon: Send,
-    title: "Auto-send — piloto automático",
-    desc: "O Radar detecta uma vaga que bate com seus filtros e envia a candidatura sozinho. Você não precisa fazer nada.",
-    badge: null,
-    wide: false,
-  },
-  {
-    icon: Clock,
-    title: "Delay anti-spam",
-    desc: "Intervalos randomizados entre envios simulando comportamento humano para proteger sua conta.",
-    badge: null,
-    wide: false,
-  },
-  {
-    icon: Bot,
-    title: "Preferências de IA avançadas",
-    desc: "Controle total sobre o estilo dos seus emails: formalidade, abertura, saudação, fechamento, tamanho e ênfases como idiomas e disponibilidade.",
-    badge: "Black",
-    wide: true,
-  },
-  {
-    icon: FileText,
-    title: "Fichas completas de cada vaga",
-    desc: "Salário (faixa mínima e máxima), horas semanais, data de início da temporada, experiência mínima exigida, educação requerida e contato direto com o empregador. Não é uma listagem crua — é tudo que você precisa para decidir antes de aplicar.",
-    badge: null,
-    wide: true,
-  },
-  {
-    icon: Radar,
-    title: "Radar de vagas",
-    desc: "Configure filtros por setor, estado e salário. Vagas novas entram na sua fila automaticamente, sem busca manual.",
-    badge: null,
-    wide: false,
-  },
-  {
-    icon: Users,
-    title: "Programa de indicações",
-    desc: "Indique amigos e ganhe créditos extras de envio. Quanto mais indicações ativas, mais candidaturas por dia — sem pagar nada.",
-    badge: null,
-    wide: false,
-  },
-];
-
-// ─── Component ───────────────────────────────────────────────────────────────
+/** ─────────────────────────────────────────────────────────────────────────
+ *  Component
+ *  ──────────────────────────────────────────────────────────────────────── */
 export default function Landing() {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -192,7 +194,6 @@ export default function Landing() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -202,43 +203,27 @@ export default function Landing() {
           -webkit-font-smoothing: antialiased;
         }
 
-        /* ── Ticker ── */
-        @keyframes ticker {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        .ticker-track {
-          display: flex;
-          width: max-content;
-          animation: ticker 38s linear infinite;
-        }
+        @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .ticker-track { display: flex; width: max-content; animation: ticker 38s linear infinite; }
         .ticker-track:hover { animation-play-state: paused; }
 
-        /* ── Step number hover ── */
         .step-card:hover .step-num { color: #020617; }
         .step-card:hover { border-color: #020617; }
 
-        /* ── Feature card ── */
         .feat-card:hover { background: #f8fafc; }
         .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
 
-        /* ── FAQ ── */
         .faq-row:hover .faq-q { color: #D4500A; }
 
-        /* ── Buttons ── */
         .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
         .btn-outline:hover { background: #020617; color: #fff; }
-        .btn-ghost:hover  { color: #020617; }
 
-        /* ── Nav CTA ── */
         .nav-cta:hover { opacity: 0.85; }
 
-        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-        /* ── Responsive ── */
         @media (max-width: 768px) {
           .hero-grid     { grid-template-columns: 1fr !important; }
           .hero-left     { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid #E2E8F0; }
@@ -248,13 +233,16 @@ export default function Landing() {
           .lifetime-grid { grid-template-columns: 1fr !important; }
           .cta-row       { flex-direction: column !important; align-items: stretch !important; }
           .footer-row    { flex-direction: column !important; gap: 16px !important; align-items: center !important; text-align: center !important; }
+          .testi-grid    { grid-template-columns: 1fr !important; }
         }
         @media (min-width: 768px) {
           .steps-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .bento-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .testi-grid { grid-template-columns: 1fr !important; }
         }
         @media (min-width: 1024px) {
           .steps-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .testi-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -289,6 +277,7 @@ export default function Landing() {
                 value={isSupportedLanguage(i18n.language) ? i18n.language : "pt"}
                 onChange={handleChangeLanguage}
               />
+
               {user ? (
                 <button
                   className="nav-cta"
@@ -308,7 +297,7 @@ export default function Landing() {
                     lineHeight: 1.4,
                   }}
                 >
-                  Dashboard
+                  {t("landing.nav.dashboard")}
                 </button>
               ) : (
                 <button
@@ -329,7 +318,7 @@ export default function Landing() {
                     lineHeight: 1.4,
                   }}
                 >
-                  Entrar / Criar conta
+                  {t("landing.nav.loginOrCreate")}
                 </button>
               )}
             </div>
@@ -347,7 +336,7 @@ export default function Landing() {
               }}
               className="hero-grid"
             >
-              {/* Left column — content */}
+              {/* Left column */}
               <div
                 style={{
                   padding: "72px 64px 72px 0",
@@ -386,7 +375,7 @@ export default function Landing() {
                       textTransform: "uppercase",
                     }}
                   >
-                    Base DOL atualizada hoje
+                    {t("landing.hero.status")}
                   </span>
                 </div>
 
@@ -400,11 +389,11 @@ export default function Landing() {
                     marginBottom: 20,
                   }}
                 >
-                  A ferramenta que faz
+                  {t("landing.hero.h1.line1")}
                   <br />
-                  você chegar primeiro
+                  {t("landing.hero.h1.line2")}
                   <br />
-                  <span style={{ color: "#D4500A" }}>nas vagas H-2A e H-2B</span>
+                  <span style={{ color: "#D4500A" }}>{t("landing.hero.h1.highlight")}</span>
                 </h1>
 
                 <p
@@ -416,8 +405,7 @@ export default function Landing() {
                     maxWidth: 440,
                   }}
                 >
-                  Automatize candidaturas, rastreie aberturas em tempo real e aplique para dezenas de empregadores
-                  verificados do DOL — tudo da sua própria caixa de email.
+                  {t("landing.hero.sub")}
                 </p>
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -441,8 +429,9 @@ export default function Landing() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Criar conta gratuita <ArrowRight size={15} />
+                    {t("landing.hero.ctaPrimary")} <ArrowRight size={15} />
                   </button>
+
                   <button
                     className="btn-outline"
                     onClick={() => navigate("/jobs")}
@@ -463,12 +452,12 @@ export default function Landing() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <Search size={15} /> Ver vagas
+                    <Search size={15} /> {t("landing.hero.ctaSecondary")}
                   </button>
                 </div>
               </div>
 
-              {/* Right column — stats */}
+              {/* Right column */}
               <div
                 style={{
                   padding: "72px 0 72px 64px",
@@ -481,30 +470,27 @@ export default function Landing() {
               >
                 {[
                   {
-                    value: "10.000+",
-                    label: "Vagas no banco de dados",
-                    sub: "Direto do Department of Labor",
+                    valueKey: "landing.hero.stats.0.value",
+                    labelKey: "landing.hero.stats.0.label",
+                    subKey: "landing.hero.stats.0.sub",
                     border: true,
                   },
                   {
-                    value: "Diário",
-                    label: "Frequência de atualização",
-                    sub: "Vagas novas aparecem assim que aprovadas",
+                    valueKey: "landing.hero.stats.1.value",
+                    labelKey: "landing.hero.stats.1.label",
+                    subKey: "landing.hero.stats.1.sub",
                     border: true,
                   },
                   {
-                    value: "100%",
-                    label: "Grátis para começar",
-                    sub: "Sem cartão de crédito. Sem surpresas.",
+                    valueKey: "landing.hero.stats.2.value",
+                    labelKey: "landing.hero.stats.2.label",
+                    subKey: "landing.hero.stats.2.sub",
                     border: false,
                   },
                 ].map((s) => (
                   <div
-                    key={s.label}
-                    style={{
-                      padding: "28px 0",
-                      borderBottom: s.border ? "1px solid #E2E8F0" : "none",
-                    }}
+                    key={s.labelKey}
+                    style={{ padding: "28px 0", borderBottom: s.border ? "1px solid #E2E8F0" : "none" }}
                   >
                     <div
                       style={{
@@ -516,10 +502,12 @@ export default function Landing() {
                         marginBottom: 6,
                       }}
                     >
-                      {s.value}
+                      {t(s.valueKey)}
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#020617", marginBottom: 3 }}>{s.label}</div>
-                    <div style={{ fontSize: 13, color: "#94A3B8" }}>{s.sub}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#020617", marginBottom: 3 }}>
+                      {t(s.labelKey)}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#94A3B8" }}>{t(s.subKey)}</div>
                   </div>
                 ))}
               </div>
@@ -564,40 +552,49 @@ export default function Landing() {
           />
 
           <div className="ticker-track">
-            {[...tickerJobs, ...tickerJobs].map((job, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "0 28px",
-                  whiteSpace: "nowrap",
-                  fontSize: 13,
-                  color: "#020617",
-                }}
-              >
-                <span
+            {[...tickerJobs, ...tickerJobs].map((job, i) => {
+              const type = t(job.typeKey);
+              const isH2A = String(type).toLowerCase().includes("h-2a");
+              return (
+                <div
+                  key={i}
                   style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.06em",
-                    padding: "2px 7px",
-                    borderRadius: 4,
-                    background: job.type === "H-2A" ? "#DCFCE7" : "#DBEAFE",
-                    color: job.type === "H-2A" ? "#15803D" : "#1D4ED8",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "0 28px",
+                    whiteSpace: "nowrap",
+                    fontSize: 13,
+                    color: "#020617",
                   }}
                 >
-                  {job.type}
-                </span>
-                <span style={{ fontWeight: 600 }}>{job.title}</span>
-                <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: 3 }}>
-                  <MapPin size={11} /> {job.location}
-                </span>
-                <span style={{ color: "#64748B", fontWeight: 500 }}>{job.salary}</span>
-                <span style={{ color: "#E2E8F0", fontSize: 20, lineHeight: 1 }}>·</span>
-              </div>
-            ))}
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      background: isH2A ? "#DCFCE7" : "#DBEAFE",
+                      color: isH2A ? "#15803D" : "#1D4ED8",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {type}
+                  </span>
+
+                  <span style={{ fontWeight: 600 }}>{t(job.titleKey)}</span>
+
+                  <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: 3 }}>
+                    <MapPin size={11} /> {t(job.locationKey)}
+                  </span>
+
+                  <span style={{ color: "#64748B", fontWeight: 500 }}>{t(job.salaryKey)}</span>
+
+                  <span style={{ color: "#E2E8F0", fontSize: 20, lineHeight: 1 }}>·</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -615,7 +612,7 @@ export default function Landing() {
                   marginBottom: 12,
                 }}
               >
-                Como funciona
+                {t("landing.how.kicker")}
               </p>
               <h2
                 style={{
@@ -625,9 +622,9 @@ export default function Landing() {
                   lineHeight: 1.15,
                 }}
               >
-                Do zero às candidaturas
+                {t("landing.how.h2.line1")}
                 <br />
-                em 6 passos simples
+                {t("landing.how.h2.line2")}
               </h2>
             </div>
 
@@ -658,16 +655,20 @@ export default function Landing() {
                   >
                     {step.n}
                   </div>
+
                   <step.icon size={20} color="#D4500A" style={{ marginBottom: 14 }} />
-                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{step.title}</h3>
-                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{step.desc}</p>
+
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>
+                    {t(step.titleKey)}
+                  </h3>
+                  <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{t(step.descKey)}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── FEATURES BENTO ──────────────────────────────────────────────── */}
+        {/* ── FEATURES ────────────────────────────────────────────────────── */}
         <section style={{ padding: "88px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
@@ -681,7 +682,7 @@ export default function Landing() {
                   marginBottom: 12,
                 }}
               >
-                Recursos
+                {t("landing.features.kicker")}
               </p>
               <h2
                 style={{
@@ -691,15 +692,16 @@ export default function Landing() {
                   lineHeight: 1.15,
                 }}
               >
-                Ferramentas que fazem
-                <br />a diferença
+                {t("landing.features.h2.line1")}
+                <br />
+                {t("landing.features.h2.line2")}
               </h2>
             </div>
 
             <div className="bento-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
               {features.map((f) => (
                 <div
-                  key={f.title}
+                  key={f.titleKey}
                   className="feat-card"
                   style={{
                     background: "#fff",
@@ -721,9 +723,9 @@ export default function Landing() {
                         display: "flex",
                         alignItems: "center",
                         gap: 4,
-                        background: f.badge === "Black" ? "#020617" : "hsl(199,88%,48%,0.1)",
-                        color: f.badge === "Black" ? "#fff" : "hsl(199,88%,35%)",
-                        border: f.badge === "Black" ? "none" : "1px solid hsl(199,88%,48%,0.3)",
+                        background: "#020617",
+                        color: "#fff",
+                        border: "none",
                         padding: "3px 8px",
                         borderRadius: 4,
                         fontSize: 10,
@@ -732,17 +734,135 @@ export default function Landing() {
                         textTransform: "uppercase",
                       }}
                     >
-                      {f.badge === "Black" && <Crown size={9} />}
-                      Plano {f.badge}
+                      <Crown size={9} />
+                      {t("landing.features.badge.black")}
                     </div>
                   )}
-                  <f.icon className="feat-icon" size={22} style={{ color: "#CBD5E1", marginBottom: 16 }} />
-                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{f.title}</h3>
+
+                  <f.icon
+                    className="feat-icon"
+                    size={22}
+                    style={{ color: "#CBD5E1", marginBottom: 16, transition: "color 0.2s" }}
+                  />
+
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{t(f.titleKey)}</h3>
                   <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, maxWidth: f.wide ? 520 : "none" }}>
-                    {f.desc}
+                    {t(f.descKey)}
                   </p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── TESTIMONIALS (1 card centralizado + bandeira bonita + aspas grande + Diamond) ── */}
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ maxWidth: 680, marginBottom: 56 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "#D4500A",
+                  marginBottom: 12,
+                }}
+              >
+                {t("landing.testimonials.kicker")}
+              </p>
+              <h2
+                style={{
+                  fontSize: "clamp(28px, 4vw, 38px)",
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.15,
+                }}
+              >
+                {t("landing.testimonials.h2.line1")}
+                <br />
+                {t("landing.testimonials.h2.line2")}
+              </h2>
+            </div>
+
+            <div className="testi-grid" style={{ display: "grid", justifyItems: "center" }}>
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: 760,
+                  background: "#fff",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: 14,
+                  padding: "34px 34px 28px",
+                  position: "relative",
+                  boxShadow: "0 1px 2px rgba(2,6,23,0.06)",
+                }}
+              >
+                {/* Big quote */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: 18,
+                    left: 22,
+                    fontSize: 64,
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    color: "#E2E8F0",
+                    userSelect: "none",
+                  }}
+                >
+                  “
+                </div>
+
+                {/* Flag top-right */}
+                <div style={{ position: "absolute", top: 14, right: 14 }}>
+                  <BRFlagMark size={24} />
+                </div>
+
+                <p
+                  style={{
+                    fontSize: 15,
+                    color: "#334155",
+                    lineHeight: 1.95,
+                    marginTop: 28,
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {t("landing.testimonials.items.0.quote")}
+                </p>
+
+                <div style={{ marginTop: 22 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#020617", marginBottom: 10 }}>
+                    {t("landing.testimonials.items.0.name")}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "7px 12px",
+                      borderRadius: 999,
+                      border: "1px solid #E2E8F0",
+                      background: "#F8FAFC",
+                    }}
+                  >
+                    <Crown size={14} style={{ color: "#0F172A" }} />
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: "0.08em",
+                        color: "#0F172A",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {t("landing.testimonials.items.0.badge")}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -761,7 +881,7 @@ export default function Landing() {
                   marginBottom: 12,
                 }}
               >
-                Preço
+                {t("landing.pricing.kicker")}
               </p>
               <h2
                 style={{
@@ -771,9 +891,9 @@ export default function Landing() {
                   lineHeight: 1.15,
                 }}
               >
-                Pague uma vez.
+                {t("landing.pricing.h2.line1")}
                 <br />
-                Use para sempre.
+                {t("landing.pricing.h2.line2")}
               </h2>
             </div>
 
@@ -817,22 +937,17 @@ export default function Landing() {
                     marginBottom: 28,
                   }}
                 >
-                  <InfinityIcon size={12} /> H2 Linker
+                  <InfinityIcon size={12} /> {t("landing.pricing.cardA.tag")}
                 </div>
 
                 <div style={{ marginBottom: 8 }}>
                   <span
-                    style={{
-                      fontSize: 56,
-                      fontWeight: 700,
-                      color: "#fff",
-                      letterSpacing: "-0.03em",
-                      lineHeight: 1,
-                    }}
+                    style={{ fontSize: 56, fontWeight: 700, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1 }}
                   >
-                    1x
+                    {t("landing.pricing.cardA.price")}
                   </span>
                 </div>
+
                 <div
                   style={{
                     fontSize: 18,
@@ -842,20 +957,12 @@ export default function Landing() {
                     lineHeight: 1.4,
                   }}
                 >
-                  Pagamento único.
-                  <br />
-                  Acesso vitalício, sem mensalidade.
+                  {t("landing.pricing.cardA.sub")}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[
-                    "Acesso a todas as vagas H-2A e H-2B",
-                    "Envios automatizados com IA",
-                    "Radar + auto-send incluídos",
-                    "Rastreamento de abertura e visualização",
-                    "Atualizações gratuitas para sempre",
-                  ].map((item) => (
-                    <div key={item} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div
                         style={{
                           width: 20,
@@ -870,7 +977,9 @@ export default function Landing() {
                       >
                         <Check size={11} color="#fff" />
                       </div>
-                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{item}</span>
+                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
+                        {t(`landing.pricing.cardA.bullets.${idx}`)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -896,17 +1005,12 @@ export default function Landing() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Ver planos <ArrowRight size={15} />
+                  {t("landing.pricing.cardA.cta")} <ArrowRight size={15} />
                 </button>
               </div>
 
               <div
-                style={{
-                  background: "#FAFAFA",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: 12,
-                  padding: "48px 40px",
-                }}
+                style={{ background: "#FAFAFA", border: "1px solid #E2E8F0", borderRadius: 12, padding: "48px 40px" }}
               >
                 <div
                   style={{
@@ -925,7 +1029,7 @@ export default function Landing() {
                     marginBottom: 28,
                   }}
                 >
-                  Concorrência típica
+                  {t("landing.pricing.cardB.tag")}
                 </div>
 
                 <div style={{ marginBottom: 8 }}>
@@ -939,32 +1043,17 @@ export default function Landing() {
                       textDecoration: "line-through",
                     }}
                   >
-                    R$100
+                    {t("landing.pricing.cardB.price")}
                   </span>
                 </div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 600,
-                    color: "#94A3B8",
-                    marginBottom: 36,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  por mês. Todo mês.
-                  <br />
-                  R$ 1.200 por ano — sem parar.
+
+                <div style={{ fontSize: 18, fontWeight: 600, color: "#94A3B8", marginBottom: 36, lineHeight: 1.4 }}>
+                  {t("landing.pricing.cardB.sub")}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[
-                    "Cobrança mensal recorrente",
-                    "Cancela = perde o acesso imediatamente",
-                    "Sem funcionar? Continua cobrando.",
-                    "Reajustes a qualquer momento",
-                    "Suporte premium bloqueado por plano",
-                  ].map((item) => (
-                    <div key={item} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div
                         style={{
                           width: 20,
@@ -979,7 +1068,9 @@ export default function Landing() {
                       >
                         <X size={11} color="#DC2626" />
                       </div>
-                      <span style={{ fontSize: 14, color: "#94A3B8", fontWeight: 500 }}>{item}</span>
+                      <span style={{ fontSize: 14, color: "#94A3B8", fontWeight: 500 }}>
+                        {t(`landing.pricing.cardB.bullets.${idx}`)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1010,8 +1101,9 @@ export default function Landing() {
                     marginBottom: 20,
                   }}
                 >
-                  <Gift size={11} /> Programa de indicações
+                  <Gift size={11} /> {t("landing.referral.kicker")}
                 </div>
+
                 <h2
                   style={{
                     fontSize: "clamp(24px, 3.5vw, 34px)",
@@ -1021,42 +1113,20 @@ export default function Landing() {
                     marginBottom: 16,
                   }}
                 >
-                  Indique amigos.
+                  {t("landing.referral.h2.line1")}
                   <br />
-                  Ganhe mais envios por dia.
+                  {t("landing.referral.h2.line2")}
                 </h2>
+
                 <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7, maxWidth: 420 }}>
-                  Para usuários do plano gratuito, cada amigo que você indicar e ativar a conta aumenta seu limite
-                  diário de envios — sem pagar nada. É a forma mais rápida de acelerar suas candidaturas sem investir em
-                  um plano pago.
+                  {t("landing.referral.sub")}
                 </p>
               </div>
 
               <div style={{ flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 0 }}>
-                {[
-                  {
-                    n: "01",
-                    title: "Copie seu link único",
-                    desc: "Gerado automaticamente no seu perfil após criar a conta.",
-                  },
-                  {
-                    n: "02",
-                    title: "Compartilhe com amigos",
-                    desc: "WhatsApp, Instagram, grupos — quanto mais, melhor.",
-                  },
-                  {
-                    n: "03",
-                    title: "Eles ativam a conta",
-                    desc: "Assim que o amigo usar o sistema pela primeira vez, o crédito é seu.",
-                  },
-                  {
-                    n: "04",
-                    title: "Você envia mais",
-                    desc: "Cada indicação ativa aumenta seu limite diário de candidaturas.",
-                  },
-                ].map((step, i, arr) => (
+                {[0, 1, 2, 3].map((idx, i, arr) => (
                   <div
-                    key={step.n}
+                    key={idx}
                     style={{
                       display: "flex",
                       gap: 16,
@@ -1076,13 +1146,15 @@ export default function Landing() {
                         minWidth: 24,
                       }}
                     >
-                      {step.n}
+                      {t(`landing.referral.steps.${idx}.n`)}
                     </span>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "#020617", marginBottom: 3 }}>
-                        {step.title}
+                        {t(`landing.referral.steps.${idx}.title`)}
                       </div>
-                      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>{step.desc}</div>
+                      <div style={{ fontSize: 13, color: "#64748B", lineHeight: 1.6 }}>
+                        {t(`landing.referral.steps.${idx}.desc`)}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1106,7 +1178,7 @@ export default function Landing() {
                     marginBottom: 12,
                   }}
                 >
-                  Pré-requisitos
+                  {t("landing.requirements.kicker")}
                 </p>
                 <h2
                   style={{
@@ -1117,12 +1189,9 @@ export default function Landing() {
                     marginBottom: 16,
                   }}
                 >
-                  O que você precisa para começar
+                  {t("landing.requirements.h2")}
                 </h2>
-                <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7 }}>
-                  Tenha esses itens em mãos. O processo de configuração leva menos de 5 minutos e tem tutorial em vídeo
-                  para cada etapa.
-                </p>
+                <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.7 }}>{t("landing.requirements.sub")}</p>
 
                 <button
                   className="btn-primary"
@@ -1144,31 +1213,14 @@ export default function Landing() {
                     transition: "all 0.2s",
                   }}
                 >
-                  Criar conta grátis <ArrowRight size={15} />
+                  {t("landing.requirements.cta")} <ArrowRight size={15} />
                 </button>
               </div>
 
               <div>
-                {[
-                  {
-                    title: "Currículo em PDF ou Word",
-                    desc: "Seu currículo atualizado. O sistema extrai os dados e personaliza cada candidatura automaticamente.",
-                  },
-                  {
-                    title: "Conta Gmail ou Outlook",
-                    desc: "Os emails saem da SUA caixa de saída. Você mantém controle total sobre o que é enviado.",
-                  },
-                  {
-                    title: '"Senha de App" do seu email',
-                    desc: "Uma senha especial (não a sua senha normal) gerada pelo Google ou Microsoft para autorizar envios via SMTP. Tutorial incluso.",
-                  },
-                  {
-                    title: "Alguns minutos para revisar",
-                    desc: "Você escolhe as vagas, monta a fila e define quando enviar. Nada acontece sem seu comando.",
-                  },
-                ].map((item, i, arr) => (
+                {[0, 1, 2, 3].map((idx, i, arr) => (
                   <div
-                    key={item.title}
+                    key={idx}
                     style={{
                       display: "flex",
                       gap: 18,
@@ -1191,138 +1243,17 @@ export default function Landing() {
                     >
                       <CheckCircle2 size={16} color="#15803D" />
                     </div>
+
                     <div>
-                      <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#020617" }}>{item.title}</h4>
-                      <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{item.desc}</p>
+                      <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#020617" }}>
+                        {t(`landing.requirements.items.${idx}.title`)}
+                      </h4>
+                      <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>
+                        {t(`landing.requirements.items.${idx}.desc`)}
+                      </p>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── TESTIMONIALS (AJUSTADO) ─────────────────────────────────────── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            <div style={{ maxWidth: 560, marginBottom: 56 }}>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "#D4500A",
-                  marginBottom: 12,
-                }}
-              >
-                Depoimentos
-              </p>
-              <h2
-                style={{
-                  fontSize: "clamp(28px, 4vw, 38px)",
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1.15,
-                }}
-              >
-                Resultados reais,
-                <br />
-                de quem usa na prática
-              </h2>
-            </div>
-
-            {/* Single centered card */}
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <div
-                style={{
-                  width: "min(560px, 100%)",
-                  background: "#fff",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: 12,
-                  padding: "36px 28px",
-                  position: "relative",
-                }}
-              >
-                {/* Big quote */}
-                <div
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    top: 10,
-                    left: 18,
-                    fontSize: 90,
-                    fontWeight: 700,
-                    color: "#E2E8F0",
-                    lineHeight: 1,
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                >
-                  “
-                </div>
-
-                {/* Brazil flag (inline SVG, always renders) */}
-                <div style={{ position: "absolute", top: 18, right: 18 }}>
-                  <span
-                    title="Brasil"
-                    aria-label="Brasil"
-                    style={{
-                      width: 20,
-                      height: 20,
-                      display: "inline-flex",
-                      borderRadius: 999,
-                      overflow: "hidden",
-                      border: "1px solid #E2E8F0",
-                    }}
-                  >
-                    <svg viewBox="0 0 28 28" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="28" height="28" fill="#229E45" />
-                      <polygon points="14,3 25,14 14,25 3,14" fill="#F7D116" />
-                      <circle cx="14" cy="14" r="6" fill="#1F4AA8" />
-                      <path
-                        d="M8.5 13.2c2.3 1.6 4.6 2.3 7 2.3s4.7-.7 7-2.3"
-                        fill="none"
-                        stroke="#fff"
-                        strokeWidth="1.3"
-                      />
-                    </svg>
-                  </span>
-                </div>
-
-                <div style={{ paddingTop: 40 }}>
-                  <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.75 }}>
-                    Eu vi o H2 Linker nascer da necessidade real. Eu era o cara que passava horas na frente do monitor
-                    anotando e-mails e mandando um por um. Era lento, cansativo e eu mal conseguia enviar 20
-                    candidaturas por dia. Hoje, minha produtividade foi pro espaço: mando mais de 200 e-mails só no meu
-                    horário de almoço. O app tirou o peso do trabalho manual e me deu tempo para focar no que realmente
-                    importa: me preparar para as entrevistas.
-                  </p>
-
-                  <div style={{ marginTop: 22 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#020617" }}>Cassiano Andrade</div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 11,
-                        fontWeight: 800,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        color: "#0F172A",
-                        background: "#F1F5F9",
-                        border: "1px solid #E2E8F0",
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                      }}
-                    >
-                      <Crown size={12} />
-                      Usuário H2 Linker Diamond
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1342,10 +1273,10 @@ export default function Landing() {
                   marginBottom: 12,
                 }}
               >
-                FAQ
+                {t("landing.faq.kicker")}
               </p>
               <h2 style={{ fontSize: "clamp(26px, 4vw, 36px)", fontWeight: 700, letterSpacing: "-0.02em" }}>
-                Perguntas frequentes
+                {t("landing.faq.title")}
               </h2>
             </div>
 
@@ -1377,7 +1308,7 @@ export default function Landing() {
                     }}
                   >
                     <span className="faq-q" style={{ transition: "color 0.15s" }}>
-                      {item.q}
+                      {t(item.qKey)}
                     </span>
                     <ChevronDown
                       size={18}
@@ -1389,9 +1320,10 @@ export default function Landing() {
                       }}
                     />
                   </button>
+
                   {openFaq === i && (
                     <div style={{ padding: "0 24px 20px", fontSize: 14, color: "#64748B", lineHeight: 1.7 }}>
-                      {item.a}
+                      {t(item.aKey)}
                     </div>
                   )}
                 </div>
@@ -1453,8 +1385,9 @@ export default function Landing() {
                     marginBottom: 14,
                   }}
                 >
-                  Comece agora — é grátis
+                  {t("landing.finalCta.kicker")}
                 </p>
+
                 <h2
                   style={{
                     fontSize: "clamp(28px, 4vw, 44px)",
@@ -1465,12 +1398,13 @@ export default function Landing() {
                     marginBottom: 12,
                   }}
                 >
-                  Pronto para encontrar
+                  {t("landing.finalCta.h2.line1")}
                   <br />
-                  sua vaga nos EUA?
+                  {t("landing.finalCta.h2.line2")}
                 </h2>
+
                 <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 400 }}>
-                  Crie sua conta em menos de 2 minutos. Sem cartão de crédito.
+                  {t("landing.finalCta.sub")}
                 </p>
               </div>
 
@@ -1506,8 +1440,9 @@ export default function Landing() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Criar conta gratuita <ArrowRight size={16} />
+                  {t("landing.finalCta.ctaPrimary")} <ArrowRight size={16} />
                 </button>
+
                 <button
                   onClick={() => navigate("/jobs")}
                   style={{
@@ -1529,7 +1464,7 @@ export default function Landing() {
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
                 >
-                  <Globe size={14} /> Ver vagas disponíveis
+                  <Globe size={14} /> {t("landing.finalCta.ctaSecondary")}
                 </button>
               </div>
             </div>
@@ -1550,7 +1485,7 @@ export default function Landing() {
           >
             <BrandWordmark height={26} />
             <p style={{ fontSize: 13, color: "#94A3B8", fontWeight: 500 }}>
-              © {new Date().getFullYear()} H2 Linker — Smart connections. Real opportunities.
+              {t("landing.footer.copy", { year: new Date().getFullYear() })}
             </p>
           </div>
         </footer>
