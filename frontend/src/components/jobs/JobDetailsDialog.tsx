@@ -54,8 +54,15 @@ export function JobDetailsDialog({
   // ─── Lógica de Early Access (Restrita a H-2A) ─────────────────────────────
   const isCurrentlyEarlyAccess = job?.visa_type?.includes("Early Access") && job?.visa_type?.includes("H-2A");
 
-  // Identificador oficial (Fallback para caseNumber do DOL)
-  const officialCaseId = job?.caseNumber || job?.job_id;
+  // Converte job_id interno (JO-A-300-... ou JO-B-300-...) para case number do DOL (H-300-...)
+  const toDolCaseNumber = (jobId: string | null | undefined): string | null => {
+    if (!jobId) return null;
+    // JO-A-300-XXXXX-YYYYYY → H-300-XXXXX-YYYYYY
+    if (jobId.startsWith("JO-A-")) return jobId.replace("JO-A-", "H-");
+    if (jobId.startsWith("JO-B-")) return jobId.replace("JO-B-", "H-");
+    return null; // formato desconhecido, não exibir links
+  };
+  const dolCaseNumber = toDolCaseNumber(job?.job_id);
 
   const hasValidPhone =
     job?.phone && job.phone !== "N/A" && job.phone !== "n/a" && job.phone.trim() !== "" && job.phone !== "0";
@@ -142,9 +149,9 @@ export function JobDetailsDialog({
                       )}
                       {job.visa_type.includes("H-2B") ? "H-2B" : job.visa_type}
                     </Badge>
-                    {officialCaseId && (
+                    {job?.job_id && (
                       <span className="text-[10px] font-mono text-slate-400" translate="no">
-                        {officialCaseId}
+                        {job.job_id}
                       </span>
                     )}
                   </div>
@@ -231,7 +238,7 @@ export function JobDetailsDialog({
                 </div>
 
                 {/* ── SEÇÃO JOB ORDER ── */}
-                {officialCaseId && (
+                {dolCaseNumber && (
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
                     <h4 className="font-bold text-slate-800 flex items-center gap-2 text-[10px] uppercase tracking-widest">
                       <FileText className="h-4 w-4 text-indigo-500" />{" "}
@@ -239,7 +246,7 @@ export function JobDetailsDialog({
                     </h4>
                     <div className="flex flex-col gap-2">
                       <a
-                        href={`https://seasonaljobs.dol.gov/job-order/${officialCaseId}`}
+                        href={`https://seasonaljobs.dol.gov/job-order/${dolCaseNumber}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-between w-full p-3 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all group"
@@ -251,7 +258,7 @@ export function JobDetailsDialog({
                         <ExternalLink className="h-4 w-4 opacity-40 group-hover:opacity-100 transition-opacity" />
                       </a>
                       <a
-                        href={`https://seasonaljobs.dol.gov/api/job-order/pdf/${officialCaseId}`}
+                        href={`https://seasonaljobs.dol.gov/api/job-order/pdf/${dolCaseNumber}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-between w-full p-3 text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg transition-all group"
