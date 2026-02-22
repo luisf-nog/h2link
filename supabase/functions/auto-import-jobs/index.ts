@@ -8,12 +8,12 @@ const corsHeaders = {
 };
 
 const DOL_SOURCES = [
-  { url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/jo", visaType: "H-2A (Early Access)" },
-  { url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2a", visaType: "H-2A" },
-  { url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2b", visaType: "H-2B" },
+  { key: "jo", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/jo", visaType: "H-2A (Early Access)" },
+  { key: "h2a", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2a", visaType: "H-2A" },
+  { key: "h2b", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2b", visaType: "H-2B" },
 ];
 
-// --- Helpers (mirrored from MultiJsonImporter) ---
+// --- Helpers ---
 function calculateFinalWage(rawVal: any, hours: any): number | null {
   if (!rawVal) return null;
   let val = parseFloat(String(rawVal).replace(/[$,]/g, ""));
@@ -33,9 +33,7 @@ function formatToStaticDate(dateStr: any): string | null {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
     return d.toISOString().split("T")[0];
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function getCaseBody(id: string): string {
@@ -74,21 +72,16 @@ function processJobList(list: any[], visaType: string, jobsMap: Map<string, any>
 
     const rawId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
     if (!rawId) continue;
-
     const email = getVal(flat, ["recApplyEmail", "email"]);
     if (!email || email === "N/A") continue;
 
     const fingerprint = getCaseBody(rawId);
     const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
-
-    const postedDate =
-      formatToStaticDate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"])) || nyToday;
+    const postedDate = formatToStaticDate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"])) || nyToday;
 
     jobsMap.set(fingerprint, {
       job_id: rawId.split("-GHOST")[0].trim(),
-      visa_type: visaType,
-      fingerprint,
-      is_active: true,
+      visa_type: visaType, fingerprint, is_active: true,
       job_title: getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]),
       company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
       email: email.toLowerCase(),
@@ -105,53 +98,58 @@ function processJobList(list: any[], visaType: string, jobsMap: Map<string, any>
       wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo", "wageAddinfo"]),
       rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction", "deductionsInfo"]),
       weekly_hours: hours,
-      category:
-        getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle", "socCodeTitle", "SOC_TITLE"]) ||
-        "General Application",
+      category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle", "socCodeTitle", "SOC_TITLE"]) || "General Application",
       openings: parseInt(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"),
       experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || "0"),
       education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
-      transport_provided:
-        getVal(flat, ["transportation", "transportProvided", "recIsDailyTransport"])
-          ?.toLowerCase()
-          .includes("yes") || false,
+      transport_provided: getVal(flat, ["transportation", "transportProvided", "recIsDailyTransport"])?.toLowerCase().includes("yes") || false,
       source_url: getVal(flat, ["sourceUrl", "url", "recApplyUrl"]),
-      housing_info:
-        getVal(flat, ["housingInfo", "housingDescription"]) ||
-        (visaType.includes("H-2A") ? "Housing Provided (H-2A Standard)" : null),
+      housing_info: getVal(flat, ["housingInfo", "housingDescription"]) || (visaType.includes("H-2A") ? "Housing Provided (H-2A Standard)" : null),
       was_early_access: isEarly,
     });
   }
 }
 
+// Process a single source independently
+async function processSource(source: typeof DOL_SOURCES[0], supabase: any): Promise<number> {
+  const today = getTodayNY();
+  const apiUrl = `${source.url}/${today}`;
+  console.log(`[AUTO-IMPORT] Baixando: ${apiUrl}`);
+
+  const response = await fetch(apiUrl);
+  if (!response.ok) {
+    console.error(`[AUTO-IMPORT] HTTP ${response.status} para ${source.visaType}`);
+    return 0;
+  }
+
+  const zipBuffer = await response.arrayBuffer();
+  const zip = new JSZip();
+  await zip.loadAsync(zipBuffer);
+
+  const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
+  console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs`);
+
+  const jobsMap = new Map<string, any>();
+  for (const fileName of jsonFiles) {
+    const content = await zip.files[fileName].async("string");
+    const list = JSON.parse(content);
+    processJobList(list, source.visaType, jobsMap);
+  }
+
+  const allJobs = Array.from(jobsMap.values());
+  const BATCH_SIZE = 200;
+  for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
+    const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
+    if (error) console.error(`[AUTO-IMPORT] Erro lote:`, error.message);
+  }
+
+  console.log(`[AUTO-IMPORT] ${source.visaType}: ${allJobs.length} vagas processadas`);
+  return allJobs.length;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  // Validate cron secret
-  const authHeader = req.headers.get("authorization") || "";
-  const cronSecret = Deno.env.get("CRON_SECRET");
-
-  // Allow both Bearer token and service role key
-  const token = authHeader.replace("Bearer ", "");
-  const isAuthorized =
-    token === cronSecret ||
-    token === Deno.env.get("SUPABASE_ANON_KEY") ||
-    token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  // For cron jobs via pg_net, also check body
-  let bodyCronToken: string | null = null;
-  try {
-    if (req.method === "POST") {
-      const body = await req.clone().json();
-      bodyCronToken = body?.cron_token;
-    }
-  } catch { /* ignore */ }
-
-  if (!isAuthorized && bodyCronToken !== cronSecret) {
-    // Allow if called from pg_net (no auth header check for cron)
-    console.log("[AUTO-IMPORT] Proceeding (cron call assumed)");
   }
 
   try {
@@ -160,62 +158,41 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Check which source to process (or "all" for sequential calls)
+    let sourceKey = "all";
+    try {
+      const body = await req.json();
+      if (body?.source) sourceKey = body.source;
+    } catch { /* no body */ }
+
     const today = getTodayNY();
-    console.log(`[AUTO-IMPORT] Iniciando importação automática - ${today}`);
+    console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${today}`);
 
-    const jobsMap = new Map<string, any>();
+    let totalProcessed = 0;
 
-    for (const source of DOL_SOURCES) {
-      const apiUrl = `${source.url}/${today}`;
-      console.log(`[AUTO-IMPORT] Baixando: ${apiUrl}`);
-
-      try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-          console.error(`[AUTO-IMPORT] Erro HTTP ${response.status} para ${source.visaType}`);
-          continue;
+    if (sourceKey === "all") {
+      // Process each source one by one to stay within limits
+      for (const source of DOL_SOURCES) {
+        try {
+          totalProcessed += await processSource(source, supabase);
+        } catch (err) {
+          console.error(`[AUTO-IMPORT] Erro ${source.visaType}:`, err.message);
         }
-
-        const zipBuffer = await response.arrayBuffer();
-        const zip = new JSZip();
-        await zip.loadAsync(zipBuffer);
-
-        const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
-        console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} arquivos JSON no ZIP`);
-
-        for (const fileName of jsonFiles) {
-          const content = await zip.files[fileName].async("string");
-          const list = JSON.parse(content);
-          processJobList(list, source.visaType, jobsMap);
-        }
-      } catch (err) {
-        console.error(`[AUTO-IMPORT] Erro ao processar ${source.visaType}:`, err.message);
       }
-    }
-
-    const allJobs = Array.from(jobsMap.values());
-    console.log(`[AUTO-IMPORT] Total de vagas processadas: ${allJobs.length}`);
-
-    // Insert in batches
-    const BATCH_SIZE = 500;
-    for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
-      const batch = allJobs.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: batch });
-      if (error) {
-        console.error(`[AUTO-IMPORT] Erro no lote ${i / BATCH_SIZE + 1}:`, error.message);
+    } else {
+      const source = DOL_SOURCES.find((s) => s.key === sourceKey);
+      if (!source) {
+        return new Response(JSON.stringify({ error: `Source inválida: ${sourceKey}` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      totalProcessed = await processSource(source, supabase);
     }
 
     // Deactivate expired jobs
     const { data: deactivated } = await supabase.rpc("deactivate_expired_jobs");
 
-    const summary = {
-      success: true,
-      date: today,
-      total_processed: allJobs.length,
-      expired_deactivated: deactivated ?? 0,
-    };
-
+    const summary = { success: true, date: today, total_processed: totalProcessed, expired_deactivated: deactivated ?? 0 };
     console.log(`[AUTO-IMPORT] Concluído:`, JSON.stringify(summary));
 
     return new Response(JSON.stringify(summary), {
@@ -224,8 +201,7 @@ serve(async (req) => {
   } catch (err) {
     console.error("[AUTO-IMPORT] Erro fatal:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
