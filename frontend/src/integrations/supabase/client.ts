@@ -1,4 +1,4 @@
-/ src/aegiinnorstt / supabase / client.ts;
+// src/integrations/supabase/client.ts
 import { createClient } from "@supabase/supabase-js";
 
 // Tentamos pegar das variáveis de ambiente primeiro (boa prática)
