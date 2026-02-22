@@ -192,6 +192,51 @@ serve(async (req) => {
     // Deactivate expired jobs
     const { data: deactivated } = await supabase.rpc("deactivate_expired_jobs");
 
+    // Trigger radar matching for all active profiles after import
+    if (totalProcessed > 0) {
+      console.log(`[AUTO-IMPORT] Disparando radar para perfis ativos...`);
+      const { data: activeRadars } = await supabase
+        .from("radar_profiles")
+        .select("user_id, auto_send")
+        .eq("is_active", true);
+
+      let radarMatches = 0;
+      for (const radar of (activeRadars || [])) {
+        try {
+          const { data: matchCount } = await supabase.rpc("trigger_immediate_radar", {
+            target_user_id: radar.user_id,
+          });
+          const matched = matchCount ?? 0;
+          radarMatches += matched;
+
+          // If auto_send is on and there are new matches, trigger process-queue
+          if (radar.auto_send && matched > 0) {
+            try {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-queue`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({ user_id: radar.user_id }),
+              });
+            } catch (e) {
+              console.error(`[AUTO-IMPORT] Erro ao disparar process-queue para ${radar.user_id}:`, e);
+            }
+          }
+
+          // Update last_scan_at
+          await supabase
+            .from("radar_profiles")
+            .update({ last_scan_at: new Date().toISOString() })
+            .eq("user_id", radar.user_id);
+        } catch (e) {
+          console.error(`[AUTO-IMPORT] Erro radar para ${radar.user_id}:`, e);
+        }
+      }
+      console.log(`[AUTO-IMPORT] Radar: ${radarMatches} matches em ${(activeRadars || []).length} perfis`);
+    }
+
     const summary = { success: true, date: today, total_processed: totalProcessed, expired_deactivated: deactivated ?? 0 };
     console.log(`[AUTO-IMPORT] Concluído:`, JSON.stringify(summary));
 
