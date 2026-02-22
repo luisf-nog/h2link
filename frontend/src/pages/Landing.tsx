@@ -607,7 +607,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── TESTIMONIALS (Fixed: Single Hardcoded Version) ── */}
+        {/* ── TESTIMONIALS (Updated: Name & Country Hardcoded) ── */}
         <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
@@ -621,7 +621,7 @@ export default function Landing() {
                   marginBottom: 12,
                 }}
               >
-                TESTIMONIALS
+                {t("landing.testimonials_tag")}
               </p>
               <h2
                 style={{
@@ -631,9 +631,9 @@ export default function Landing() {
                   lineHeight: 1.15,
                 }}
               >
-                Real results,
+                {t("landing.testimonials_title_1")}
                 <br />
-                from actual users
+                {t("landing.testimonials_title_2")}
               </h2>
             </div>
 
@@ -669,20 +669,16 @@ export default function Landing() {
                 </div>
 
                 <div style={{ position: "relative", paddingTop: 28 }}>
-                  <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.75 }}>
-                    I saw H2 Linker born from a real need. I was the guy spending hours in front of the screen writing
-                    down emails and sending them one by one. It was slow, exhausting, and I could barely send 20
-                    applications a day. Today, my productivity went through the roof: I send over 200 emails just during
-                    my lunch break. The app took the weight of manual work off me and gave me time to focus on what
-                    really matters: preparing for interviews.
-                  </p>
+                  <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.75 }}>{t("landing.testimonial1_quote")}</p>
                   <div style={{ marginTop: 24 }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: "#020617" }}>Cassiano Andrade</span>
                         <span style={{ fontSize: 14, color: "#64748B", fontWeight: 500 }}>, from Brazil</span>
                       </div>
-                      <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 600 }}>H2 Linker User</span>
+                      <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 600 }}>
+                        {t("landing.testimonial_user_label")}
+                      </span>
                     </div>
                   </div>
                 </div>
