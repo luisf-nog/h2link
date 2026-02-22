@@ -32,7 +32,7 @@ import {
 import { useState } from "react";
 
 /** ─────────────────────────────────────────────────────────────────────────
- *  Flag: Brazil (melhor visual, “premium”, sem depender de imagem externa)
+ *  Flag: Brazil (mais bonita e consistente)
  *  ──────────────────────────────────────────────────────────────────────── */
 function BRFlagMark({ size = 24 }: { size?: number }) {
   const s = size;
@@ -53,7 +53,14 @@ function BRFlagMark({ size = 24 }: { size?: number }) {
       }}
     >
       <svg width={Math.round(s * 0.78)} height={Math.round(s * 0.78)} viewBox="0 0 64 64" style={{ display: "block" }}>
-        <circle cx="32" cy="32" r="30" fill="#1F8B3A" />
+        <defs>
+          <radialGradient id="g" cx="30%" cy="25%" r="80%">
+            <stop offset="0%" stopColor="#28C76F" stopOpacity="1" />
+            <stop offset="100%" stopColor="#1F8B3A" stopOpacity="1" />
+          </radialGradient>
+        </defs>
+
+        <circle cx="32" cy="32" r="30" fill="url(#g)" />
         <path d="M32 10 L54 32 L32 54 L10 32 Z" fill="#F7C600" />
         <circle cx="32" cy="32" r="12" fill="#1E4AA8" />
         <path
@@ -77,12 +84,12 @@ function BRFlagMark({ size = 24 }: { size?: number }) {
 }
 
 /** ─────────────────────────────────────────────────────────────────────────
- *  Data (tudo via i18n: nenhum texto visível hardcoded)
+ *  i18n keys (sem texto hardcoded)
  *  ──────────────────────────────────────────────────────────────────────── */
 type FaqItem = { qKey: string; aKey: string };
+type TickerJob = { typeKey: string; titleKey: string; locationKey: string; salaryKey: string };
 type StepItem = { n: string; icon: any; titleKey: string; descKey: string };
 type FeatureItem = { icon: any; titleKey: string; descKey: string; badge: "Black" | null; wide: boolean };
-type TickerJob = { typeKey: string; titleKey: string; locationKey: string; salaryKey: string };
 
 const faqs: FaqItem[] = [
   { qKey: "landing.faq.0.q", aKey: "landing.faq.0.a" },
@@ -176,9 +183,6 @@ const features: FeatureItem[] = [
   { icon: Users, titleKey: "landing.features.8.title", descKey: "landing.features.8.desc", badge: null, wide: false },
 ];
 
-/** ─────────────────────────────────────────────────────────────────────────
- *  Component
- *  ──────────────────────────────────────────────────────────────────────── */
 export default function Landing() {
   const navigate = useNavigate();
   const { i18n, t } = useTranslation();
@@ -194,6 +198,7 @@ export default function Landing() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -203,27 +208,43 @@ export default function Landing() {
           -webkit-font-smoothing: antialiased;
         }
 
-        @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .ticker-track { display: flex; width: max-content; animation: ticker 38s linear infinite; }
+        /* ── Ticker ── */
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .ticker-track {
+          display: flex;
+          width: max-content;
+          animation: ticker 38s linear infinite;
+        }
         .ticker-track:hover { animation-play-state: paused; }
 
+        /* ── Step number hover ── */
         .step-card:hover .step-num { color: #020617; }
         .step-card:hover { border-color: #020617; }
 
+        /* ── Feature card ── */
         .feat-card:hover { background: #f8fafc; }
         .feat-card:hover .feat-icon { color: hsl(199,88%,48%); }
 
+        /* ── FAQ ── */
         .faq-row:hover .faq-q { color: #D4500A; }
 
+        /* ── Buttons ── */
         .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
         .btn-outline:hover { background: #020617; color: #fff; }
+        .btn-ghost:hover  { color: #020617; }
 
+        /* ── Nav CTA ── */
         .nav-cta:hover { opacity: 0.85; }
 
+        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
+        /* ── Responsive ── */
         @media (max-width: 768px) {
           .hero-grid     { grid-template-columns: 1fr !important; }
           .hero-left     { padding: 56px 0 32px !important; border-right: none !important; border-bottom: 1px solid #E2E8F0; }
@@ -577,20 +598,16 @@ export default function Landing() {
                       borderRadius: 4,
                       background: isH2A ? "#DCFCE7" : "#DBEAFE",
                       color: isH2A ? "#15803D" : "#1D4ED8",
-                      textTransform: "uppercase",
                     }}
                   >
                     {type}
                   </span>
 
                   <span style={{ fontWeight: 600 }}>{t(job.titleKey)}</span>
-
                   <span style={{ color: "#94A3B8", display: "flex", alignItems: "center", gap: 3 }}>
                     <MapPin size={11} /> {t(job.locationKey)}
                   </span>
-
                   <span style={{ color: "#64748B", fontWeight: 500 }}>{t(job.salaryKey)}</span>
-
                   <span style={{ color: "#E2E8F0", fontSize: 20, lineHeight: 1 }}>·</span>
                 </div>
               );
@@ -655,9 +672,7 @@ export default function Landing() {
                   >
                     {step.n}
                   </div>
-
                   <step.icon size={20} color="#D4500A" style={{ marginBottom: 14 }} />
-
                   <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>
                     {t(step.titleKey)}
                   </h3>
@@ -668,7 +683,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── FEATURES ────────────────────────────────────────────────────── */}
+        {/* ── FEATURES BENTO ──────────────────────────────────────────────── */}
         <section style={{ padding: "88px 24px", background: "#FAFAFA", borderBottom: "1px solid #E2E8F0" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
@@ -744,7 +759,6 @@ export default function Landing() {
                     size={22}
                     style={{ color: "#CBD5E1", marginBottom: 16, transition: "color 0.2s" }}
                   />
-
                   <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>{t(f.titleKey)}</h3>
                   <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65, maxWidth: f.wide ? 520 : "none" }}>
                     {t(f.descKey)}
@@ -755,8 +769,8 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── TESTIMONIALS (1 card centralizado + bandeira bonita + aspas grande + Diamond) ── */}
-        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0" }}>
+        {/* ── TESTIMONIALS (1 card centralizado + bandeira + aspas grande + Diamond) ── */}
+        <section style={{ padding: "88px 24px", borderBottom: "1px solid #E2E8F0", background: "#fff" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ maxWidth: 680, marginBottom: 56 }}>
               <p
@@ -798,7 +812,7 @@ export default function Landing() {
                   boxShadow: "0 1px 2px rgba(2,6,23,0.06)",
                 }}
               >
-                {/* Big quote */}
+                {/* Aspas grande */}
                 <div
                   aria-hidden="true"
                   style={{
@@ -815,7 +829,7 @@ export default function Landing() {
                   “
                 </div>
 
-                {/* Flag top-right */}
+                {/* Bandeira (sem texto "Brazil") */}
                 <div style={{ position: "absolute", top: 14, right: 14 }}>
                   <BRFlagMark size={24} />
                 </div>
@@ -837,6 +851,7 @@ export default function Landing() {
                     {t("landing.testimonials.items.0.name")}
                   </div>
 
+                  {/* Badge Diamond */}
                   <div
                     style={{
                       display: "inline-flex",
@@ -1243,7 +1258,6 @@ export default function Landing() {
                     >
                       <CheckCircle2 size={16} color="#15803D" />
                     </div>
-
                     <div>
                       <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#020617" }}>
                         {t(`landing.requirements.items.${idx}.title`)}
@@ -1387,7 +1401,6 @@ export default function Landing() {
                 >
                   {t("landing.finalCta.kicker")}
                 </p>
-
                 <h2
                   style={{
                     fontSize: "clamp(28px, 4vw, 44px)",
@@ -1402,7 +1415,6 @@ export default function Landing() {
                   <br />
                   {t("landing.finalCta.h2.line2")}
                 </h2>
-
                 <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 400 }}>
                   {t("landing.finalCta.sub")}
                 </p>
