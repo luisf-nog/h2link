@@ -25,6 +25,8 @@ import {
   Minus,
   ArrowLeft,
   X,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -248,6 +250,33 @@ export function JobDetailsDialog({
                     <span className="text-base font-bold text-red-700">{formatDate(job?.end_date)}</span>
                   </div>
                 </div>
+
+                {/* DOL Job Order Links - only when job_id exists */}
+                {job?.job_id && (
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-2">
+                    <h4 className="font-bold text-slate-800 flex items-center gap-2 text-[10px] uppercase tracking-widest">
+                      <FileText className="h-4 w-4 text-indigo-500" /> {t("jobs.details.job_order", "Official Job Order")}
+                    </h4>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={`https://seasonaljobs.dol.gov/job-order/${job.job_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> {t("jobs.details.view_job_order", "View on SeasonalJobs.dol.gov")}
+                      </a>
+                      <a
+                        href={`https://seasonaljobs.dol.gov/api/job-order/pdf/${job.job_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-800 hover:underline transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5" /> {t("jobs.details.download_pdf", "Download PDF (ETA Form)")}
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 {/* Financeiro Restaurado e Organizado */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
