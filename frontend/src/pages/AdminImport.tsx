@@ -89,22 +89,27 @@ export default function AdminImport() {
   const runManualImport = async (source: string) => {
     setImportingSource(source);
     try {
-      const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
-        body: { source, skip_radar: true },
-      });
-      if (error) throw error;
-
       if (source === 'all') {
-        const jobIds = data?.job_ids as string[];
-        if (!jobIds?.length) throw new Error('No job_ids returned');
-        startPolling(jobIds.map((id, i) => ({
-          jobId: id,
-          source: ['jo', 'h2a', 'h2b'][i],
-          status: 'processing',
-          processedRows: 0,
-          totalRows: 0,
-        })));
+        // Call each source SEPARATELY to avoid CPU limit in a single worker
+        const sources = ['jo', 'h2a', 'h2b'];
+        const allJobs: ImportJobStatus[] = [];
+
+        for (const s of sources) {
+          const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
+            body: { source: s, skip_radar: s !== 'h2b' }, // radar only on last
+          });
+          if (error) throw error;
+          const jobId = data?.job_id;
+          if (!jobId) throw new Error(`No job_id for ${s}`);
+          allJobs.push({ jobId, source: s, status: 'processing', processedRows: 0, totalRows: 0 });
+        }
+
+        startPolling(allJobs);
       } else {
+        const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
+          body: { source, skip_radar: true },
+        });
+        if (error) throw error;
         const jobId = data?.job_id;
         if (!jobId) throw new Error('No job_id returned');
         startPolling([{ jobId, source, status: 'processing', processedRows: 0, totalRows: 0 }]);
