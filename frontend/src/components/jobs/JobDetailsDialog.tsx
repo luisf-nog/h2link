@@ -164,7 +164,7 @@ export function JobDetailsDialog({
                   <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
                 </span>
                 {job?.category && (
-                  <span className="flex items-center gap-1 text-xs text-slate-400 font-mono">
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                     <Info className="h-3 w-3" /> {job.category}
                   </span>
                 )}
