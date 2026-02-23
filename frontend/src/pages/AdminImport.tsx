@@ -9,7 +9,7 @@ import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2 } from
 import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 
-interface ImportStatus {
+interface ImportJobStatus {
   jobId: string;
   source: string;
   status: 'processing' | 'completed' | 'failed';
@@ -23,81 +23,95 @@ export default function AdminImport() {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ updated: number; notFound: number } | null>(null);
   const [importingSource, setImportingSource] = useState<string | null>(null);
-  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
+  const [activeJobs, setActiveJobs] = useState<ImportJobStatus[]>([]);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, []);
 
-  const pollJobStatus = async (jobId: string, source: string) => {
-    const { data, error } = await supabase
-      .from('import_jobs')
-      .select('status, processed_rows, total_rows, error_message')
-      .eq('id', jobId)
-      .maybeSingle();
+  const startPolling = (jobs: ImportJobStatus[]) => {
+    setActiveJobs(jobs);
+    if (pollingRef.current) clearInterval(pollingRef.current);
 
-    if (error || !data) return;
+    const jobIds = jobs.map(j => j.jobId);
 
-    setImportStatus({
-      jobId,
-      source,
-      status: data.status as ImportStatus['status'],
-      processedRows: data.processed_rows ?? 0,
-      totalRows: data.total_rows ?? 0,
-      error: data.error_message ?? undefined,
-    });
+    pollingRef.current = setInterval(async () => {
+      const { data, error } = await supabase
+        .from('import_jobs')
+        .select('id, source, status, processed_rows, total_rows, error_message')
+        .in('id', jobIds);
 
-    if (data.status === 'completed' || data.status === 'failed') {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
+      if (error || !data) return;
+
+      const updated = data.map(d => ({
+        jobId: d.id,
+        source: d.source,
+        status: d.status as ImportJobStatus['status'],
+        processedRows: d.processed_rows ?? 0,
+        totalRows: d.total_rows ?? 0,
+        error: d.error_message ?? undefined,
+      }));
+
+      setActiveJobs(updated);
+
+      const allDone = updated.every(j => j.status === 'completed' || j.status === 'failed');
+      if (allDone) {
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+        setImportingSource(null);
+
+        const completed = updated.filter(j => j.status === 'completed');
+        const failed = updated.filter(j => j.status === 'failed');
+        if (completed.length > 0) {
+          const totalProcessed = completed.reduce((sum, j) => sum + j.processedRows, 0);
+          toast({
+            title: `Importação concluída`,
+            description: `${totalProcessed} vagas processadas (${completed.map(j => j.source.toUpperCase()).join(', ')})`,
+          });
+        }
+        if (failed.length > 0) {
+          toast({
+            title: `Importação falhou`,
+            description: failed.map(j => `${j.source.toUpperCase()}: ${j.error || 'Erro'}`).join('; '),
+            variant: 'destructive',
+          });
+        }
       }
-      setImportingSource(null);
-
-      if (data.status === 'completed') {
-        toast({
-          title: `Importação ${source.toUpperCase()} concluída`,
-          description: `${data.processed_rows} vagas processadas`,
-        });
-      } else {
-        toast({
-          title: `Importação ${source.toUpperCase()} falhou`,
-          description: data.error_message || 'Erro desconhecido',
-          variant: 'destructive',
-        });
-      }
-    }
+    }, 2000);
   };
 
   const runManualImport = async (source: string) => {
     setImportingSource(source);
-    setImportStatus({ jobId: '', source, status: 'processing', processedRows: 0, totalRows: 0 });
-
     try {
       const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
         body: { source, skip_radar: true },
       });
       if (error) throw error;
 
-      const jobId = data?.job_id;
-      if (!jobId) throw new Error('No job_id returned');
-
-      setImportStatus(prev => prev ? { ...prev, jobId } : null);
-
-      // Start polling every 3 seconds
-      if (pollingRef.current) clearInterval(pollingRef.current);
-      pollingRef.current = setInterval(() => pollJobStatus(jobId, source), 3000);
-      // Also poll immediately
-      pollJobStatus(jobId, source);
+      if (source === 'all') {
+        const jobIds = data?.job_ids as string[];
+        if (!jobIds?.length) throw new Error('No job_ids returned');
+        startPolling(jobIds.map((id, i) => ({
+          jobId: id,
+          source: ['jo', 'h2a', 'h2b'][i],
+          status: 'processing',
+          processedRows: 0,
+          totalRows: 0,
+        })));
+      } else {
+        const jobId = data?.job_id;
+        if (!jobId) throw new Error('No job_id returned');
+        startPolling([{ jobId, source, status: 'processing', processedRows: 0, totalRows: 0 }]);
+      }
     } catch (err: any) {
       toast({ title: 'Erro na importação', description: err.message, variant: 'destructive' });
       setImportingSource(null);
-      setImportStatus(null);
     }
   };
 
@@ -161,10 +175,6 @@ export default function AdminImport() {
       setProcessing(false);
     }
   };
-
-  const progressPercent = importStatus?.totalRows
-    ? Math.round((importStatus.processedRows / importStatus.totalRows) * 100)
-    : 0;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -264,6 +274,18 @@ export default function AdminImport() {
               <CardDescription>Dispare manualmente a importação de cada fonte. O cron roda automaticamente às 06:00 UTC.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Import All button */}
+              <Button
+                onClick={() => runManualImport('all')}
+                disabled={!!importingSource}
+                className="w-full justify-between h-12 font-bold"
+              >
+                <span>🚀 Importar Todas (JO + H2A + H2B)</span>
+                {importingSource === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+              </Button>
+
+              <div className="border-t my-2" />
+
               {(['jo', 'h2a', 'h2b'] as const).map((source) => (
                 <Button
                   key={source}
@@ -273,42 +295,48 @@ export default function AdminImport() {
                   className="w-full justify-between h-12"
                 >
                   <span className="font-semibold">{source === 'jo' ? 'JO / Seasonal Jobs' : source.toUpperCase()}</span>
-                  {importingSource === source ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                  {importingSource === source || importingSource === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
                 </Button>
               ))}
 
-              {/* Import progress */}
-              {importStatus && importStatus.status === 'processing' && (
-                <div className="mt-4 space-y-2 p-4 rounded-lg border bg-muted/50">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Importando {importStatus.source.toUpperCase()}...</span>
-                    <span className="text-muted-foreground">
-                      {importStatus.processedRows} / {importStatus.totalRows || '?'}
-                    </span>
+              {/* Active jobs progress */}
+              {activeJobs.filter(j => j.status === 'processing').map(job => {
+                const pct = job.totalRows ? Math.round((job.processedRows / job.totalRows) * 100) : 0;
+                return (
+                  <div key={job.jobId} className="mt-2 space-y-2 p-4 rounded-lg border bg-muted/50">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Importando {job.source.toUpperCase()}...</span>
+                      <span className="text-muted-foreground">
+                        {job.processedRows} / {job.totalRows || '?'}
+                      </span>
+                    </div>
+                    <Progress value={job.totalRows ? pct : undefined} className="h-2" />
                   </div>
-                  <Progress value={importStatus.totalRows ? progressPercent : undefined} className="h-2" />
-                  <p className="text-xs text-muted-foreground">Processando em background. Esta página atualiza automaticamente.</p>
-                </div>
+                );
+              })}
+
+              {activeJobs.length > 0 && activeJobs.some(j => j.status === 'processing') && (
+                <p className="text-xs text-muted-foreground">Processando em background. Atualiza a cada 2s.</p>
               )}
 
-              {importStatus && importStatus.status === 'completed' && (
-                <div className="mt-4 flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+              {activeJobs.filter(j => j.status === 'completed').map(job => (
+                <div key={job.jobId} className="mt-2 flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="font-medium text-green-800">
-                      Importação {importStatus.source.toUpperCase()} concluída
+                      {job.source.toUpperCase()} concluída
                     </p>
-                    <p className="text-sm text-green-600">{importStatus.processedRows} vagas processadas</p>
+                    <p className="text-sm text-green-600">{job.processedRows} vagas processadas</p>
                   </div>
                 </div>
-              )}
+              ))}
 
-              {importStatus && importStatus.status === 'failed' && (
-                <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-                  <p className="font-medium text-destructive">Importação falhou</p>
-                  <p className="text-sm text-destructive/80">{importStatus.error}</p>
+              {activeJobs.filter(j => j.status === 'failed').map(job => (
+                <div key={job.jobId} className="mt-2 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="font-medium text-destructive">{job.source.toUpperCase()} falhou</p>
+                  <p className="text-sm text-destructive/80">{job.error}</p>
                 </div>
-              )}
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
