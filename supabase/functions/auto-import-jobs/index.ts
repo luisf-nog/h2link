@@ -148,7 +148,7 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
     console.log(`[AUTO-IMPORT] ${source.visaType}: JSON string ${jsonStr.length} chars`);
 
     // Step 3: Split JSON string into chunks WITHOUT parsing (zero CPU for JSON.parse)
-    const CHUNK_SIZE = 50;
+    const CHUNK_SIZE = 25;
     const { chunks, totalItems } = splitJsonArrayString(jsonStr, CHUNK_SIZE);
     jsonStr = null; // FREE the full JSON string
 
@@ -159,7 +159,7 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
 
     // Step 4: Send each chunk sequentially with delay to avoid overloading the database
     let totalProcessed = 0;
-    const DELAY_MS = 800; // delay between batches to let DB breathe
+    const DELAY_MS = 1500; // delay between batches to let DB breathe
     for (let i = 0; i < chunks.length; i++) {
       let retries = 2;
       while (retries >= 0) {
