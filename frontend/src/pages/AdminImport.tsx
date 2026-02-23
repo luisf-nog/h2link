@@ -12,7 +12,26 @@ export default function AdminImport() {
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ updated: number; notFound: number } | null>(null);
+  const [importingSource, setImportingSource] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const runManualImport = async (source: string) => {
+    setImportingSource(source);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
+        body: { source },
+      });
+      if (error) throw error;
+      toast({
+        title: `Importação ${source.toUpperCase()} concluída`,
+        description: `Inseridos: ${data?.inserted ?? 0} | Atualizados: ${data?.updated ?? 0}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Erro na importação', description: err.message, variant: 'destructive' });
+    } finally {
+      setImportingSource(null);
+    }
+  };
 
   const processGroupXlsx = async () => {
     if (!xlsxFile) return;
@@ -173,11 +192,22 @@ export default function AdminImport() {
         <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Configurações de Importação</CardTitle>
-              <CardDescription>Ajuste as configurações do processo de importação</CardDescription>
+              <CardTitle>Importação Manual do DOL</CardTitle>
+              <CardDescription>Dispare manualmente a importação de cada fonte. O cron roda automaticamente às 06:00 UTC.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Configurações em desenvolvimento...</p>
+            <CardContent className="space-y-3">
+              {(['jo', 'h2a', 'h2b'] as const).map((source) => (
+                <Button
+                  key={source}
+                  onClick={() => runManualImport(source)}
+                  disabled={!!importingSource}
+                  variant="outline"
+                  className="w-full justify-between h-12"
+                >
+                  <span className="font-semibold">{source === 'jo' ? 'JO / Seasonal Jobs' : source.toUpperCase()}</span>
+                  {importingSource === source ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                </Button>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
