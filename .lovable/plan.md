@@ -1,61 +1,89 @@
 
-# Fix: Sistema de Rastreamento de Abertura de Email (Pixel Tracking)
+# Plano: Arquitetura "Lean Edge + Heavy SQL"
 
-## Diagnostico
-
-Apos analise detalhada, foram identificados os seguintes problemas:
-
-1. **A funcao `track-email-open` NAO esta deployada** -- ao chamar a URL do pixel, retorna erro 404. Isso significa que NENHUM evento de abertura real esta sendo registrado.
-2. **Tabela `pixel_open_events` tem 0 registros** -- consequencia direta do deploy faltante.
-3. **Tabela `ip_blacklist` tem 0 registros** -- idem, nunca foi populada pois a funcao nunca executou.
-4. **`my_queue.opened_at` tem dados inconsistentes** -- 790 de 835 itens enviados mostram como "abertos", mas com `email_open_count = 0`. Esses dados sao legados/corrompidos, nao vieram do pixel.
-5. **`queue_send_history.open_count` e sempre 0** -- confirma que o pixel nunca funcionou.
+## Problema
+A Edge Function `auto-import-jobs` continua estourando o limite de CPU (WORKER_LIMIT) porque faz processamento pesado de dados em TypeScript: flatten de objetos, mapeamento de aliases, calculo de salarios, formatacao de datas, deduplicacao por fingerprint. Tudo isso consome muita RAM e CPU do Deno.
 
 ## Solucao
+Mover toda a logica de transformacao para uma funcao PostgreSQL. A Edge Function vira um simples "motoboy" que:
+1. Baixa o ZIP
+2. Descompacta os JSONs
+3. Envia o JSON bruto para o banco via RPC em batches
 
-### 1. Deploy da Edge Function `track-email-open`
+## Etapas
 
-A funcao ja existe em `frontend/supabase/functions/track-email-open/index.ts` com toda a logica necessaria (suspicion score, blacklist, debounce, bot detection). So precisa ser deployada.
+### 1. Criar funcao SQL `process_dol_raw_batch`
 
-### 2. Limpar dados corrompidos de `opened_at`
+Uma funcao `plpgsql` que recebe:
+- `p_raw_items jsonb` - array de objetos JSON brutos do DOL  
+- `p_visa_type text` - tipo de visto (H-2A, H-2B, H-2A (Early Access))
 
-Resetar `my_queue.opened_at` para NULL nos registros onde `email_open_count = 0`, para que o sistema parta de um estado limpo e confiavel. Isso evita falsos positivos na interface.
+A funcao fara internamente:
 
-```sql
-UPDATE my_queue
-SET opened_at = NULL
-WHERE opened_at IS NOT NULL
-AND email_open_count = 0;
+- **getVal** (fallback de campos): usando `COALESCE` com os mesmos aliases
+- **getCaseBody** (fingerprint): usando `SPLIT_PART`, `TRIM`, `REPLACE`
+- **calculateFinalWage**: usando `CASE WHEN` com logica numerica
+- **formatToStaticDate**: usando cast `::date` nativo do Postgres
+- **Flatten**: usando `||` para merge de objetos JSONB (`item || item->'clearanceOrder' || ...`)
+- **Filtro de email valido**: `WHERE email IS NOT NULL AND email != 'N/A'`
+- **INSERT ... ON CONFLICT (fingerprint) DO UPDATE**: upsert direto
+
+Campos mapeados (todos os 20+ campos que o TypeScript faz hoje):
+
+```text
+job_id, fingerprint, visa_type, job_title, company, email, phone,
+city, state, zip_code, salary, start_date, posted_date, end_date,
+job_duties, job_min_special_req, wage_additional, rec_pay_deductions,
+weekly_hours, category, openings, experience_months, education_required,
+transport_provided, source_url, housing_info, was_early_access, is_active
 ```
 
-### 3. Adicionar RLS na tabela `pixel_open_events`
+### 2. Simplificar a Edge Function
 
-A tabela `pixel_open_events` nao tem RLS configurada. Precisamos adicionar politicas para que usuarios vejam apenas seus proprios eventos (via join com `queue_send_history`).
+O novo `auto-import-jobs/index.ts` fica drasticamente menor:
 
-### 4. Adicionar RLS na tabela `ip_blacklist`
+```text
+1. Baixa o ZIP via fetch
+2. Descompacta com JSZip
+3. Para cada JSON no ZIP:
+   - Parse do JSON
+   - Envia em batches de 500 itens via supabase.rpc('process_dol_raw_batch', { p_raw_items, p_visa_type })
+4. Atualiza import_jobs com progresso
+5. Chama deactivate_expired_jobs
+6. Se nao for skip_radar, dispara radar (mesma logica atual)
+```
 
-Similarmente, `ip_blacklist` precisa de protecao. Apenas a service role deve ler/escrever nela.
+Beneficios chave:
+- O Edge nao cria Map, nao faz loop de transformacao, nao calcula salarios
+- Batch de 500 (em vez de 50) porque o SQL processa em massa
+- Menos chamadas RPC = menos I/O overhead
 
-### 5. Timestamp de envio (`s` parameter) no link do pixel
+### 3. Manter a UI de polling inalterada
 
-Atualmente o pixel no `process-queue` NAO inclui o parametro `s` (timestamp de envio) na URL. Embora o `track-email-open` use o `sent_at` da `queue_send_history` para o calculo de antivirus delay (que funciona corretamente), garantir consistencia e importante.
+A pagina AdminImport.tsx continua igual, fazendo polling na tabela `import_jobs`.
 
-## Resumo das Mudancas
+---
 
-| Arquivo/Recurso | Acao |
-|---|---|
-| `track-email-open` | Deploy (ja existe, so falta deploy) |
-| Migration SQL | Limpar `opened_at` corrompidos + RLS em `pixel_open_events` e `ip_blacklist` |
-| Nenhuma mudanca de codigo | A logica do pixel e do `send-email-custom`/`process-queue` ja estao corretas |
+## Detalhes Tecnicos
 
-## Resultado Esperado
+### Funcao SQL completa (campos e aliases)
 
-Apos o deploy, o fluxo completo sera:
-1. Email enviado com pixel (URL do `track-email-open` com `tracking_id`)
-2. Empregador abre o email, pixel dispara
-3. `track-email-open` calcula suspicion score, filtra bots
-4. Aberturas genuinas atualizam `queue_send_history.open_count` e `my_queue.email_open_count`
-5. Bots sao registrados em `pixel_open_events` com `is_genuine = false` e IPs suspeitos vao para `ip_blacklist`
-6. Interface mostra dados de abertura confiaveis
+A funcao ira usar CTEs para:
+1. Flatten dos objetos (merge de sub-objetos como `clearanceOrder`, `employer`, `jobRequirements.qualification`)
+2. Extrair valores com COALESCE nos mesmos aliases usados hoje
+3. Calcular fingerprint com a mesma logica de `getCaseBody`
+4. Calcular salario com a mesma logica de `calculateFinalWage`
+5. Filtrar registros sem email
+6. Upsert com ON CONFLICT (fingerprint)
 
-Com isso funcionando, sera possivel calcular o percentual real de entrega/abertura e decidir se faz sentido focar no curriculo (Smart Profile) quando abaixo de 80%.
+### Edge Function simplificada
+
+- Remove: `processJobList`, `calculateFinalWage`, `formatToStaticDate`, `getCaseBody`, `getVal`
+- Mantem: download ZIP, JSZip, `EdgeRuntime.waitUntil`, tracking via `import_jobs`, logica de radar
+- Batch size sobe de 50 para 500 (o SQL faz o trabalho pesado)
+
+### Migracao SQL
+
+Uma unica migracao que:
+1. Cria a funcao `process_dol_raw_batch(p_raw_items jsonb, p_visa_type text)`
+2. Retorna `integer` (numero de registros processados)
