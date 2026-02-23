@@ -30,7 +30,7 @@ const TIER_RESUME_LIMITS: Record<PlanTier, { max: number; label: string }> = {
   free: { max: 0, label: "Upgrade to unlock" },
   gold: { max: 1, label: "1 Optimized Resume (H-2A or H-2B)" },
   diamond: { max: 2, label: "2 Optimized Resumes (H-2A + H-2B)" },
-  black: { max: 5, label: "Multi-Sector Resume Engine (up to 5)" },
+  black: { max: 5, label: "5 Sector Resumes + H-2A/H-2B Fallbacks" },
 };
 
 // Normalized sector categories that map to public_jobs categories via get_normalized_category
@@ -388,20 +388,19 @@ export default function ResumeConverter() {
         setH2aResume(data.h2a);
         setH2bResume(data.h2b);
       } else if (planTier === "black") {
-        // Black: sector resumes
+        // Black: sector resumes + H-2A/H-2B fallbacks
         if (data.sector_resumes?.length) {
           setSectorResumes(data.sector_resumes);
         }
-        // Black doesn't generate generic H-2A/H-2B
-        setH2aResume(null);
-        setH2bResume(null);
+        if (data.h2a) setH2aResume(data.h2a);
+        if (data.h2b) setH2bResume(data.h2b);
       }
 
       setHasSavedResumes(true);
       setStep("done");
 
       const resumeCount = planTier === "black" 
-        ? (data.sector_resumes?.length || 0)
+        ? (data.sector_resumes?.length || 0) + (data.h2a ? 1 : 0) + (data.h2b ? 1 : 0)
         : planTier === "gold" ? 1 : 2;
       toast.success(`${resumeCount} optimized resume(s) generated and saved!`);
     } catch (err: any) {
