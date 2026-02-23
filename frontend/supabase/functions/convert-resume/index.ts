@@ -67,55 +67,147 @@ const TOOL_SCHEMA = {
 
 // Sector category mapping (mirrors frontend SECTOR_CATEGORIES)
 const SECTOR_FOCUS: Record<string, { name: string; focus: string; keywords: string[] }> = {
-  campo_colheita: {
+  agricultura_colheita: {
     name: "Agriculture & Harvesting",
-    focus: "Crop harvesting, planting, livestock care, greenhouse/nursery, forestry, irrigation, soil management, farm equipment operation",
+    focus: "Crop harvesting, planting, livestock care, greenhouse/nursery, forestry, irrigation, soil management, farm equipment support",
     keywords: ["farming", "harvesting", "livestock", "agriculture", "crop", "nursery", "greenhouse"],
   },
-  construcao_manutencao: {
-    name: "Construction & Maintenance",
-    focus: "Building construction, heavy labor, masonry, concrete, roofing, framing, general maintenance, equipment operation",
-    keywords: ["construction", "building", "masonry", "concrete", "roofing", "carpentry", "maintenance"],
+  equipamentos_agricolas: {
+    name: "Farm Equipment",
+    focus: "Tractor operation support, agricultural machinery handling, preventive checks, field equipment readiness",
+    keywords: ["tractor", "equipment", "farm machinery", "ag equipment", "maintenance"],
   },
-  paisagismo_jardinagem: {
-    name: "Landscaping & Gardening",
-    focus: "Grounds maintenance, mowing, tree trimming, irrigation systems, hardscaping, pesticide application",
-    keywords: ["landscaping", "gardening", "groundskeeping", "tree", "mowing", "irrigation"],
+  construcao_geral: {
+    name: "General Construction",
+    focus: "Building construction, heavy labor, masonry, concrete, framing, site prep, general maintenance",
+    keywords: ["construction", "building", "masonry", "concrete", "labor", "site"],
   },
-  hotelaria_limpeza: {
-    name: "Hospitality & Cleaning",
-    focus: "Hotel housekeeping, janitorial, deep cleaning, laundry, guest services, room attendant duties",
-    keywords: ["hotel", "housekeeping", "cleaning", "janitorial", "hospitality"],
+  carpintaria_telhados: {
+    name: "Carpentry & Roofing",
+    focus: "Wood framing, roof installation/repair, finishing carpentry, measuring/cutting, structure assembly",
+    keywords: ["carpentry", "roofer", "roofing", "wood", "framing", "cabinet"],
   },
-  cozinha_restaurante: {
-    name: "Kitchen & Restaurant",
-    focus: "Food preparation, cooking, dishwashing, kitchen sanitation, line cooking, baking, food safety compliance",
-    keywords: ["cooking", "kitchen", "restaurant", "food prep", "chef", "baker", "dishwasher"],
-  },
-  logistica_transporte: {
-    name: "Logistics & Transport",
-    focus: "Driving, delivery, warehousing, forklift operation, inventory management, loading/unloading",
-    keywords: ["driving", "transport", "warehouse", "logistics", "forklift", "delivery"],
-  },
-  industria_producao: {
-    name: "Manufacturing & Production",
-    focus: "Assembly line, quality control, machine operation, packaging, meat/seafood processing, production line work",
-    keywords: ["factory", "manufacturing", "production", "assembly", "processing", "packaging"],
+  instalacao_eletrica: {
+    name: "Installation & Electrical",
+    focus: "Electrical/plumbing installation support, piping, system setup, troubleshooting assistance, safe tool usage",
+    keywords: ["electric", "electrical", "plumbing", "installation", "pipe", "wiring"],
   },
   mecanica_reparo: {
     name: "Mechanics & Repair",
-    focus: "Vehicle maintenance, engine repair, equipment troubleshooting, welding, electrical systems",
-    keywords: ["mechanic", "repair", "automotive", "welding", "technician"],
+    focus: "Vehicle and equipment maintenance, diagnostics support, parts replacement, repair workflows",
+    keywords: ["mechanic", "repair", "automotive", "diesel", "technician", "maintenance"],
+  },
+  limpeza_zeladoria: {
+    name: "Cleaning & Janitorial",
+    focus: "Commercial/residential cleaning, sanitization, housekeeping standards, janitorial routines",
+    keywords: ["cleaning", "janitorial", "housekeeping", "sanitation", "maid", "cleaner"],
+  },
+  cozinha_preparacao: {
+    name: "Kitchen & Food Prep",
+    focus: "Food preparation, cooking support, kitchen organization, food safety, prep-line efficiency",
+    keywords: ["kitchen", "cook", "food prep", "chef", "baker", "prep"],
+  },
+  servico_mesa: {
+    name: "Dining & Table Service",
+    focus: "Guest service, table setup, order support, dining room workflow, fast and attentive service",
+    keywords: ["waiter", "waitress", "server", "dining", "host", "dishwasher"],
+  },
+  hotelaria_recepcao: {
+    name: "Hospitality & Front Desk",
+    focus: "Front desk operations, guest assistance, check-in/out support, hotel workflow and service quality",
+    keywords: ["hotel", "hospitality", "front desk", "concierge", "lodging", "reception"],
+  },
+  bar_bebidas: {
+    name: "Bar & Beverages",
+    focus: "Beverage prep, bar support, station organization, customer service, cleanliness and safety",
+    keywords: ["bar", "barista", "bartender", "beverages", "drink"],
+  },
+  logistica_estoque: {
+    name: "Logistics & Warehousing",
+    focus: "Inventory movement, loading/unloading, stock control, warehouse organization, shipping/receiving",
+    keywords: ["logistics", "warehouse", "inventory", "freight", "loading", "stock"],
+  },
+  transporte_motorista: {
+    name: "Transport & Driving",
+    focus: "Commercial driving support, route discipline, safe transport, delivery operations, fleet routines",
+    keywords: ["driver", "transport", "delivery", "truck", "shuttle", "driving"],
+  },
+  manufatura_montagem: {
+    name: "Manufacturing & Assembly",
+    focus: "Assembly line production, machine support, process discipline, quality-oriented repetitive tasks",
+    keywords: ["manufacturing", "assembly", "production", "operator", "fabrication", "factory"],
+  },
+  soldagem_corte: {
+    name: "Welding & Cutting",
+    focus: "Welding/cutting support, metal preparation, torch/tool handling, safety-first execution",
+    keywords: ["welding", "welder", "cutting", "metal", "brazer", "solder"],
+  },
+  marcenaria_madeira: {
+    name: "Woodworking",
+    focus: "Wood processing, finishing, machine-assisted cutting, precision in wood fabrication tasks",
+    keywords: ["woodworking", "sawmill", "wood", "carpentry", "wood machine"],
+  },
+  carnes_frigorifico: {
+    name: "Meat Processing",
+    focus: "Meat/poultry processing workflows, sanitation discipline, cutting/packing support, cold-chain readiness",
+    keywords: ["meat", "poultry", "processing", "butcher", "slaughter", "packing"],
+  },
+  textil_lavanderia: {
+    name: "Textile & Laundry",
+    focus: "Laundry operations, textile handling, garment processing, pressing/folding workflow quality",
+    keywords: ["textile", "laundry", "garment", "sewing", "pressing"],
+  },
+  paisagismo_jardinagem: {
+    name: "Landscaping & Gardening",
+    focus: "Grounds maintenance, mowing, pruning, irrigation support, outdoor service quality",
+    keywords: ["landscaping", "gardening", "groundskeeping", "tree", "mowing", "irrigation"],
+  },
+  vendas_atendimento: {
+    name: "Sales & Customer Service",
+    focus: "Customer-facing service, retail operations, cashier support, communication and attention to detail",
+    keywords: ["sales", "retail", "cashier", "customer service", "reception"],
+  },
+
+  // Legacy aliases (backward compatibility)
+  campo_colheita: {
+    name: "Agriculture & Harvesting",
+    focus: "Crop harvesting, planting, livestock care, greenhouse/nursery, forestry, irrigation, soil management, farm equipment support",
+    keywords: ["farming", "harvesting", "livestock", "agriculture", "crop", "nursery", "greenhouse"],
+  },
+  construcao_manutencao: {
+    name: "General Construction",
+    focus: "Building construction, heavy labor, masonry, concrete, framing, site prep, general maintenance",
+    keywords: ["construction", "building", "masonry", "concrete", "labor", "site"],
+  },
+  hotelaria_limpeza: {
+    name: "Cleaning & Janitorial",
+    focus: "Commercial/residential cleaning, sanitization, housekeeping standards, janitorial routines",
+    keywords: ["cleaning", "janitorial", "housekeeping", "sanitation", "maid", "cleaner"],
+  },
+  cozinha_restaurante: {
+    name: "Kitchen & Food Prep",
+    focus: "Food preparation, cooking support, kitchen organization, food safety, prep-line efficiency",
+    keywords: ["kitchen", "cook", "food prep", "chef", "baker", "prep"],
+  },
+  logistica_transporte: {
+    name: "Logistics & Warehousing",
+    focus: "Inventory movement, loading/unloading, stock control, warehouse organization, shipping/receiving",
+    keywords: ["logistics", "warehouse", "inventory", "freight", "loading", "stock"],
+  },
+  industria_producao: {
+    name: "Manufacturing & Assembly",
+    focus: "Assembly line production, machine support, process discipline, quality-oriented repetitive tasks",
+    keywords: ["manufacturing", "assembly", "production", "operator", "fabrication", "factory"],
   },
   vendas_escritorio: {
-    name: "Sales & Office",
-    focus: "Retail, cashier, customer service, inventory tracking, reception, administrative support",
-    keywords: ["sales", "retail", "cashier", "customer service", "office", "reception"],
+    name: "Sales & Customer Service",
+    focus: "Customer-facing service, retail operations, cashier support, communication and attention to detail",
+    keywords: ["sales", "retail", "cashier", "customer service", "reception"],
   },
   lazer_servicos: {
     name: "Leisure & Services",
-    focus: "Amusement parks, recreation, tour operations, childcare, fitness, lifeguarding, personal services",
-    keywords: ["recreation", "amusement", "tour", "lifeguard", "fitness", "childcare"],
+    focus: "Amusement/recreation routines, service consistency, client interaction, adaptable operational support",
+    keywords: ["recreation", "amusement", "tour", "lifeguard", "fitness", "service"],
   },
 };
 
