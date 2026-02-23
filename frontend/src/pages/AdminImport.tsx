@@ -27,7 +27,17 @@ export default function AdminImport() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
+  // Cleanup stale "processing" jobs on mount
   useEffect(() => {
+    const cleanupStaleJobs = async () => {
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      await supabase
+        .from('import_jobs')
+        .update({ status: 'failed', error_message: 'Timeout: job ficou preso por mais de 5 minutos' } as any)
+        .eq('status', 'processing')
+        .lt('created_at', fiveMinAgo);
+    };
+    cleanupStaleJobs();
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
@@ -86,10 +96,34 @@ export default function AdminImport() {
     }, 2000);
   };
 
-  // Wait for a single job to complete by polling
+  // Wait for a single job to complete by polling (with 5-minute timeout)
   const waitForJob = (jobId: string): Promise<ImportJobStatus> => {
+    const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+    const POLL_INTERVAL = 2000;
+
     return new Promise((resolve) => {
+      const startTime = Date.now();
+
       const interval = setInterval(async () => {
+        // Check timeout
+        if (Date.now() - startTime > TIMEOUT_MS) {
+          clearInterval(interval);
+          // Mark as failed in DB
+          await supabase
+            .from('import_jobs')
+            .update({ status: 'failed', error_message: 'Timeout: processamento excedeu 5 minutos' } as any)
+            .eq('id', jobId)
+            .eq('status', 'processing');
+
+          const timedOut: ImportJobStatus = {
+            jobId, source: '', status: 'failed', processedRows: 0, totalRows: 0,
+            error: 'Timeout: processamento excedeu 5 minutos',
+          };
+          setActiveJobs(prev => prev.map(j => j.jobId === jobId ? timedOut : j));
+          resolve(timedOut);
+          return;
+        }
+
         const { data } = await supabase
           .from('import_jobs')
           .select('id, source, status, processed_rows, total_rows, error_message')
@@ -114,7 +148,7 @@ export default function AdminImport() {
           clearInterval(interval);
           resolve(job);
         }
-      }, 2000);
+      }, POLL_INTERVAL);
     });
   };
 

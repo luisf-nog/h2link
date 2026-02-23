@@ -20,12 +20,13 @@ function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-// ─── BACKGROUND PROCESSING ──────────────────────────────────────────────────
+// ─── MEMORY-SAFE PROCESSING ────────────────────────────────────────────────
 async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
   try {
     const today = getTodayNY();
     const apiUrl = `${source.url}/${today}`;
 
+    console.log(`[AUTO-IMPORT] Baixando: ${apiUrl}`);
     const response = await fetch(apiUrl);
     if (!response.ok) {
       await supabase
@@ -35,23 +36,45 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
       return 0;
     }
 
-    let zipBuffer: any = await response.arrayBuffer();
-    const zip = new JSZip();
+    // Step 1: Download ZIP into ArrayBuffer
+    let zipBuffer: ArrayBuffer | null = await response.arrayBuffer();
+
+    // Step 2: Load into JSZip
+    let zip: JSZip | null = new JSZip();
     await zip.loadAsync(zipBuffer);
-    zipBuffer = null; // Libera o buffer original imediatamente
+
+    // Step 3: FREE the ArrayBuffer immediately
+    zipBuffer = null;
 
     const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs no ZIP`);
+
     let totalProcessedInSource = 0;
 
     for (const fileName of jsonFiles) {
-      let content: any = await zip.files[fileName].async("string");
-      let list: any = JSON.parse(content);
-      content = null; // Libera a string pesada
+      // Step 4: Extract JSON string from zip
+      let content: string | null = await zip!.files[fileName].async("string");
 
-      if (Array.isArray(list)) {
-        const BATCH_SIZE = 100; // Lote menor para segurança de memória
-        for (let i = 0; i < list.length; i += BATCH_SIZE) {
-          const batch = list.slice(i, i + BATCH_SIZE);
+      // Step 5: FREE the zip object entirely after extracting (only 1 JSON per ZIP typically)
+      zip = null;
+
+      // Step 6: Parse JSON
+      let list: any[] | null = JSON.parse(content!);
+
+      // Step 7: FREE the raw JSON string
+      content = null;
+
+      if (Array.isArray(list) && list.length > 0) {
+        console.log(`[AUTO-IMPORT] ${source.visaType}: ${list.length} itens brutos para processar via SQL`);
+
+        // Set total_rows immediately so UI can show progress
+        await supabase.from("import_jobs").update({ total_rows: list.length }).eq("id", jobId);
+
+        // Step 8: Process using splice() to free memory as we go
+        const BATCH_SIZE = 50;
+        while (list!.length > 0) {
+          const batch = list!.splice(0, BATCH_SIZE); // Mutates array, frees processed items
+
           const { data, error } = await supabase.rpc("process_dol_raw_batch", {
             p_raw_items: batch,
             p_visa_type: source.visaType,
@@ -59,25 +82,29 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
 
           if (!error) {
             totalProcessedInSource += data ?? batch.length;
-            // Atualiza progresso parcial para feedback no dashboard
             await supabase.from("import_jobs").update({ processed_rows: totalProcessedInSource }).eq("id", jobId);
           } else {
             console.error(`[BATCH ERROR] ${source.key}:`, error.message);
           }
         }
       }
-      list = null; // Limpa a lista do arquivo atual antes de ir para o próximo
+
+      // Ensure list is freed
+      list = null;
     }
 
-    // Marca como completado
+    // Mark completed
     await supabase
       .from("import_jobs")
       .update({ status: "completed", processed_rows: totalProcessedInSource })
       .eq("id", jobId);
     return totalProcessedInSource;
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[FATAL ERROR] ${source.key}:`, err.message);
-    await supabase.from("import_jobs").update({ status: "failed", error_message: err.message }).eq("id", jobId);
+    await supabase
+      .from("import_jobs")
+      .update({ status: "failed", error_message: err.message?.slice(0, 500) || "Unknown error" })
+      .eq("id", jobId);
     return 0;
   }
 }
@@ -96,7 +123,6 @@ async function runRadarMatching(supabase: any) {
       const matched = matchCount ?? 0;
 
       if (radar.auto_send && matched > 0) {
-        // Lógica de enfileiramento automático (Auto-Queue)
         const { data: dailyLimit } = await supabase.rpc("get_effective_daily_limit", { p_user_id: radar.user_id });
         const limit = dailyLimit ?? 5;
 
@@ -124,14 +150,13 @@ async function runRadarMatching(supabase: any) {
           if (jobIds.length > 0) {
             const { error: qErr } = await supabase
               .from("my_queue")
-              .insert(jobIds.map((id) => ({ user_id: radar.user_id, job_id: id, status: "pending" })));
+              .insert(jobIds.map((id: string) => ({ user_id: radar.user_id, job_id: id, status: "pending" })));
             if (!qErr) {
               await supabase
                 .from("radar_matched_jobs")
                 .update({ auto_queued: true })
                 .eq("user_id", radar.user_id)
                 .in("job_id", jobIds);
-              // Dispara processamento da fila
               fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-queue`, {
                 method: "POST",
                 headers: {
@@ -139,7 +164,7 @@ async function runRadarMatching(supabase: any) {
                   Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                 },
                 body: JSON.stringify({ user_id: radar.user_id }),
-              }).catch(() => {}); // Silent catch para não travar o loop
+              }).catch(() => {});
             }
           }
         }
@@ -162,35 +187,60 @@ Deno.serve(async (req) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     let { source: sourceKey = "all", skip_radar = false } = await req.json().catch(() => ({}));
 
-    console.log(`[AUTO-IMPORT] Start: ${sourceKey} | SkipRadar: ${skip_radar}`);
+    console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${getTodayNY()} skipRadar=${skip_radar}`);
 
-    // Execução em background
+    // For sequential frontend control: process ONE source, return job_id
+    if (sourceKey !== "all") {
+      const source = DOL_SOURCES.find((s) => s.key === sourceKey);
+      if (!source) {
+        return new Response(JSON.stringify({ error: `Source "${sourceKey}" not found` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: job } = await supabase
+        .from("import_jobs")
+        .insert({ source: sourceKey, status: "processing" })
+        .select("id")
+        .single();
+
+      if (!job) {
+        return new Response(JSON.stringify({ error: "Failed to create import_job" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Background processing
+      EdgeRuntime.waitUntil(
+        (async () => {
+          const total = await processSourceWithTracking(source, supabase, job.id);
+          if (total > 0 && !skip_radar) {
+            await supabase.rpc("deactivate_expired_jobs");
+            await runRadarMatching(supabase);
+          }
+          console.log(`[AUTO-IMPORT] ${sourceKey} finished. Total: ${total} rows.`);
+        })(),
+      );
+
+      return new Response(JSON.stringify({ success: true, job_id: job.id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // "all" mode: sequential in background (used by cron)
     EdgeRuntime.waitUntil(
       (async () => {
         let grandTotal = 0;
-
-        if (sourceKey === "all") {
-          for (const source of DOL_SOURCES) {
-            const { data: job } = await supabase
-              .from("import_jobs")
-              .insert({ source: source.key, status: "processing" })
-              .select("id")
-              .single();
-            if (job) grandTotal += await processSourceWithTracking(source, supabase, job.id);
-          }
-        } else {
-          const source = DOL_SOURCES.find((s) => s.key === sourceKey);
-          if (source) {
-            const { data: job } = await supabase
-              .from("import_jobs")
-              .insert({ source: sourceKey, status: "processing" })
-              .select("id")
-              .single();
-            if (job) grandTotal += await processSourceWithTracking(source, supabase, job.id);
-          }
+        for (const source of DOL_SOURCES) {
+          const { data: job } = await supabase
+            .from("import_jobs")
+            .insert({ source: source.key, status: "processing" })
+            .select("id")
+            .single();
+          if (job) grandTotal += await processSourceWithTracking(source, supabase, job.id);
         }
-
-        // Finalização Global
         if (grandTotal > 0) {
           await supabase.rpc("deactivate_expired_jobs");
           if (!skip_radar) await runRadarMatching(supabase);
@@ -202,7 +252,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, message: "Importação processando em background." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
