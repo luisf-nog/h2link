@@ -187,6 +187,32 @@ export default function Plans() {
       }
     }
 
+    // Resume tier features
+    if (planId === "black") {
+      features.push({
+        key: t("plans.features.resume_black") as string,
+        icon: FileText,
+        highlight: true,
+        tooltipKey: "plans.features.resume_black_tooltip",
+      });
+    } else if (planId === "diamond") {
+      features.push({
+        key: t("plans.features.resume_diamond") as string,
+        icon: FileText,
+        highlight: true,
+        tooltipKey: "plans.features.resume_diamond_tooltip",
+      });
+    } else if (planId === "gold") {
+      features.push({
+        key: t("plans.features.resume_gold") as string,
+        icon: FileText,
+        highlight: true,
+        tooltipKey: "plans.features.resume_gold_tooltip",
+      });
+    } else {
+      features.push({ key: t("plans.features.resume_starter") as string, icon: FileText });
+    }
+
     if (config.features.resume_view_tracking) {
       features.push({
         key: t("plans.features.resume_view_tracking") as string,
@@ -198,14 +224,6 @@ export default function Plans() {
 
     if (config.features.cloud_sending) {
       features.push({ key: t("plans.features.cloud_sending") as string, icon: Cloud });
-    }
-
-    if (config.features.resume_parsing) {
-      if (planId === "black") {
-        features.push({ key: t("plans.features.resume_advanced") as string, icon: FileText });
-      } else {
-        features.push({ key: t("plans.features.resume_basic") as string, icon: FileText });
-      }
     }
 
     if (planId === "black") {
