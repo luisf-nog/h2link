@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import JSZip from "https://esm.sh/jszip@3.10.1";
+import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +20,15 @@ function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
+// ─── LIGHTWEIGHT ZIP EXTRACTION (fflate instead of JSZip) ──────────────────
+function extractJsonFromZip(zipBytes: Uint8Array): string | null {
+  const unzipped = unzipSync(zipBytes);
+  const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
+  if (!jsonFileName) return null;
+  const jsonBytes = unzipped[jsonFileName];
+  return new TextDecoder().decode(jsonBytes);
+}
+
 // ─── MEMORY-SAFE PROCESSING ────────────────────────────────────────────────
 async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
   try {
@@ -36,62 +45,67 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
       return 0;
     }
 
-    // Step 1: Download ZIP into ArrayBuffer
-    let zipBuffer: ArrayBuffer | null = await response.arrayBuffer();
+    // Step 1: Download ZIP into Uint8Array
+    let zipBytes: Uint8Array | null = new Uint8Array(await response.arrayBuffer());
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ZIP ${zipBytes.byteLength} bytes`);
 
-    // Step 2: Load into JSZip
-    let zip: JSZip | null = new JSZip();
-    await zip.loadAsync(zipBuffer);
+    // Step 2: Extract JSON string using fflate (lightweight, ~2MB vs JSZip ~15MB)
+    let content: string | null = extractJsonFromZip(zipBytes);
 
-    // Step 3: FREE the ArrayBuffer immediately
-    zipBuffer = null;
+    // Step 3: FREE ZIP bytes immediately
+    zipBytes = null;
 
-    const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs no ZIP`);
+    if (!content) {
+      await supabase
+        .from("import_jobs")
+        .update({ status: "failed", error_message: "No JSON found in ZIP" })
+        .eq("id", jobId);
+      return 0;
+    }
 
+    // Step 4: Parse JSON
+    let list: any[] | null = JSON.parse(content);
+
+    // Step 5: FREE the raw JSON string
+    content = null;
+
+    if (!Array.isArray(list) || list.length === 0) {
+      await supabase
+        .from("import_jobs")
+        .update({ status: "completed", processed_rows: 0 })
+        .eq("id", jobId);
+      return 0;
+    }
+
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${list.length} itens para processar`);
+
+    // Set total_rows immediately so UI can show progress
+    await supabase.from("import_jobs").update({ total_rows: list.length }).eq("id", jobId);
+
+    // Step 6: Process using splice() with LARGE batches to reduce RPC calls
+    // 2081 items / 200 = ~11 calls instead of 42 calls with batch=50
+    const BATCH_SIZE = 200;
     let totalProcessedInSource = 0;
 
-    for (const fileName of jsonFiles) {
-      // Step 4: Extract JSON string from zip
-      let content: string | null = await zip!.files[fileName].async("string");
+    while (list!.length > 0) {
+      const batch = list!.splice(0, BATCH_SIZE);
 
-      // Step 5: FREE the zip object entirely after extracting (only 1 JSON per ZIP typically)
-      zip = null;
+      const { data, error } = await supabase.rpc("process_dol_raw_batch", {
+        p_raw_items: batch,
+        p_visa_type: source.visaType,
+      });
 
-      // Step 6: Parse JSON
-      let list: any[] | null = JSON.parse(content!);
-
-      // Step 7: FREE the raw JSON string
-      content = null;
-
-      if (Array.isArray(list) && list.length > 0) {
-        console.log(`[AUTO-IMPORT] ${source.visaType}: ${list.length} itens brutos para processar via SQL`);
-
-        // Set total_rows immediately so UI can show progress
-        await supabase.from("import_jobs").update({ total_rows: list.length }).eq("id", jobId);
-
-        // Step 8: Process using splice() to free memory as we go
-        const BATCH_SIZE = 50;
-        while (list!.length > 0) {
-          const batch = list!.splice(0, BATCH_SIZE); // Mutates array, frees processed items
-
-          const { data, error } = await supabase.rpc("process_dol_raw_batch", {
-            p_raw_items: batch,
-            p_visa_type: source.visaType,
-          });
-
-          if (!error) {
-            totalProcessedInSource += data ?? batch.length;
-            await supabase.from("import_jobs").update({ processed_rows: totalProcessedInSource }).eq("id", jobId);
-          } else {
-            console.error(`[BATCH ERROR] ${source.key}:`, error.message);
-          }
-        }
+      if (!error) {
+        totalProcessedInSource += data ?? batch.length;
+        await supabase.from("import_jobs").update({ processed_rows: totalProcessedInSource }).eq("id", jobId);
+        console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalProcessedInSource} processados`);
+      } else {
+        console.error(`[BATCH ERROR] ${source.key}:`, error.message);
       }
-
-      // Ensure list is freed
-      list = null;
     }
+
+    // Ensure list is freed
+    list = null;
 
     // Mark completed
     await supabase
@@ -109,7 +123,7 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
   }
 }
 
-// ─── RADAR LOGIC (EXTRACTED) ────────────────────────────────────────────────
+// ─── RADAR LOGIC ────────────────────────────────────────────────────────────
 async function runRadarMatching(supabase: any) {
   console.log(`[RADAR] Iniciando cruzamento de perfis ativos...`);
   const { data: activeRadars } = await supabase
@@ -189,7 +203,6 @@ Deno.serve(async (req) => {
 
     console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${getTodayNY()} skipRadar=${skip_radar}`);
 
-    // For sequential frontend control: process ONE source, return job_id
     if (sourceKey !== "all") {
       const source = DOL_SOURCES.find((s) => s.key === sourceKey);
       if (!source) {
@@ -212,7 +225,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Background processing
       EdgeRuntime.waitUntil(
         (async () => {
           const total = await processSourceWithTracking(source, supabase, job.id);
