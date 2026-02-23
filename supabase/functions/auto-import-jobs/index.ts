@@ -157,18 +157,35 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
     // Set total_rows immediately
     await supabase.from("import_jobs").update({ total_rows: totalItems }).eq("id", jobId);
 
-    // Step 4: Send each chunk directly to PostgreSQL via raw fetch (no JSON.parse ever!)
+    // Step 4: Send each chunk sequentially with delay to avoid overloading the database
     let totalProcessed = 0;
+    const DELAY_MS = 800; // delay between batches to let DB breathe
     for (let i = 0; i < chunks.length; i++) {
-      try {
-        const processed = await sendRawChunkToPostgres(chunks[i], source.visaType, supabaseUrl, serviceRoleKey);
-        totalProcessed += processed;
-        // Free the chunk string after sending
-        chunks[i] = "";
-        await supabase.from("import_jobs").update({ processed_rows: totalProcessed }).eq("id", jobId);
-        console.log(`[AUTO-IMPORT] ${source.visaType}: chunk ${i + 1}/${chunks.length} → ${totalProcessed} processados`);
-      } catch (err: any) {
-        console.error(`[CHUNK ERROR] ${source.key} chunk ${i}:`, err.message);
+      let retries = 2;
+      while (retries >= 0) {
+        try {
+          const processed = await sendRawChunkToPostgres(chunks[i], source.visaType, supabaseUrl, serviceRoleKey);
+          totalProcessed += processed;
+          chunks[i] = ""; // free memory
+          // Update progress every 5 chunks to reduce DB writes
+          if (i % 5 === 0 || i === chunks.length - 1) {
+            await supabase.from("import_jobs").update({ processed_rows: totalProcessed }).eq("id", jobId);
+          }
+          console.log(`[AUTO-IMPORT] ${source.visaType}: chunk ${i + 1}/${chunks.length} → ${totalProcessed}`);
+          break; // success, exit retry loop
+        } catch (err: any) {
+          retries--;
+          if (retries < 0) {
+            console.error(`[CHUNK FAIL] ${source.key} chunk ${i}: ${err.message}`);
+          } else {
+            console.warn(`[CHUNK RETRY] ${source.key} chunk ${i}, retries left: ${retries}`);
+            await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
+          }
+        }
+      }
+      // Delay between batches
+      if (i < chunks.length - 1) {
+        await new Promise(r => setTimeout(r, DELAY_MS));
       }
     }
 
