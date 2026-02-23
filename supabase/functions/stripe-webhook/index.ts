@@ -15,15 +15,21 @@ const supabase = createClient(
 const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
   // TEST (R$1,00) - upgrades to gold for testing
   "price_1Suek1KliiuLyRPmSG0MMBGH": "gold",
-  // Gold BRL / USD
+  // Gold BRL (original) / USD (original)
   "price_1SueZyKliiuLyRPmL9R7Sdxm": "gold",
   "price_1Suea8KliiuLyRPmQjhJrZdA": "gold",
-  // Diamond BRL / USD
+  // Gold USD (promotional $9.99)
+  "price_1Sv6f3KliiuLyRPmXpH9Tuhq": "gold",
+  // Diamond BRL (original) / USD (original)
   "price_1Suea9KliiuLyRPmrRCXm6TP": "diamond",
   "price_1SueaAKliiuLyRPmo48RI0R9": "diamond",
-  // Black BRL / USD
+  // Diamond USD (promotional $19.99)
+  "price_1Sv6f4KliiuLyRPmONdH2NOt": "diamond",
+  // Black BRL (original) / USD (original)
   "price_1SueaCKliiuLyRPmevGCARiq": "black",
   "price_1SueaDKliiuLyRPmjqiMMWAs": "black",
+  // Black USD (promotional $49.99)
+  "price_1Sv6f5KliiuLyRPmoMTWZXyT": "black",
 };
 
 serve(async (req) => {
