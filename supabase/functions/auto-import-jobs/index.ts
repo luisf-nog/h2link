@@ -20,17 +20,104 @@ function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-// ─── LIGHTWEIGHT ZIP EXTRACTION (fflate instead of JSZip) ──────────────────
-function extractJsonFromZip(zipBytes: Uint8Array): string | null {
+// ─── ZERO-PARSE JSON CHUNKING ──────────────────────────────────────────────
+// Splits a JSON array string into smaller JSON array strings WITHOUT calling JSON.parse
+// This avoids the ~2s CPU spike from parsing 25MB of JSON
+function splitJsonArrayString(jsonStr: string, chunkSize: number): { chunks: string[]; totalItems: number } {
+  const trimmed = jsonStr.trim();
+  // Remove outer [ and ]
+  const inner = trimmed.slice(1, trimmed.length - 1);
+
+  const chunks: string[] = [];
+  let depth = 0;
+  let itemCount = 0;
+  let chunkStartIdx = 0;
+  let lastItemEndIdx = 0;
+
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === '"') {
+      // Skip strings (handle escaped quotes)
+      i++;
+      while (i < inner.length) {
+        if (inner[i] === '\\') { i++; } // skip escaped char
+        else if (inner[i] === '"') { break; }
+        i++;
+      }
+    } else if (ch === '{' || ch === '[') {
+      depth++;
+    } else if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0) {
+        itemCount++;
+        lastItemEndIdx = i + 1;
+        if (itemCount % chunkSize === 0) {
+          chunks.push('[' + inner.slice(chunkStartIdx, lastItemEndIdx) + ']');
+          // Find start of next item (skip comma and whitespace)
+          let nextStart = lastItemEndIdx;
+          while (nextStart < inner.length && (inner[nextStart] === ',' || inner[nextStart] === ' ' || inner[nextStart] === '\n' || inner[nextStart] === '\r')) {
+            nextStart++;
+          }
+          chunkStartIdx = nextStart;
+        }
+      }
+    }
+  }
+
+  // Remaining items
+  if (chunkStartIdx < inner.length) {
+    const remaining = inner.slice(chunkStartIdx, lastItemEndIdx).trim();
+    if (remaining) {
+      chunks.push('[' + remaining + ']');
+    }
+  }
+
+  return { chunks, totalItems: itemCount };
+}
+
+// ─── LIGHTWEIGHT ZIP EXTRACTION ────────────────────────────────────────────
+function extractJsonStringFromZip(zipBytes: Uint8Array): string | null {
   const unzipped = unzipSync(zipBytes);
   const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
   if (!jsonFileName) return null;
-  const jsonBytes = unzipped[jsonFileName];
-  return new TextDecoder().decode(jsonBytes);
+  return new TextDecoder().decode(unzipped[jsonFileName]);
 }
 
-// ─── MEMORY-SAFE PROCESSING ────────────────────────────────────────────────
+// ─── SEND RAW JSON CHUNK TO POSTGRESQL (no JSON.parse/stringify overhead) ──
+async function sendRawChunkToPostgres(
+  chunkJsonStr: string,
+  visaType: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<number> {
+  // Build the RPC body as a raw string to avoid JSON.parse + JSON.stringify
+  const body = `{"p_raw_items":${chunkJsonStr},"p_visa_type":"${visaType}"}`;
+
+  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/process_dol_raw_batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Prefer: "return=representation",
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`RPC failed (${res.status}): ${errText.slice(0, 200)}`);
+  }
+
+  const result = await res.json();
+  return typeof result === "number" ? result : 0;
+}
+
+// ─── MEMORY + CPU SAFE PROCESSING ──────────────────────────────────────────
 async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
   try {
     const today = getTodayNY();
     const apiUrl = `${source.url}/${today}`;
@@ -49,70 +136,47 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
     let zipBytes: Uint8Array | null = new Uint8Array(await response.arrayBuffer());
     console.log(`[AUTO-IMPORT] ${source.visaType}: ZIP ${zipBytes.byteLength} bytes`);
 
-    // Step 2: Extract JSON string using fflate (lightweight, ~2MB vs JSZip ~15MB)
-    let content: string | null = extractJsonFromZip(zipBytes);
+    // Step 2: Extract JSON string using fflate (lightweight)
+    let jsonStr: string | null = extractJsonStringFromZip(zipBytes);
+    zipBytes = null; // FREE ZIP
 
-    // Step 3: FREE ZIP bytes immediately
-    zipBytes = null;
-
-    if (!content) {
-      await supabase
-        .from("import_jobs")
-        .update({ status: "failed", error_message: "No JSON found in ZIP" })
-        .eq("id", jobId);
+    if (!jsonStr) {
+      await supabase.from("import_jobs").update({ status: "failed", error_message: "No JSON in ZIP" }).eq("id", jobId);
       return 0;
     }
 
-    // Step 4: Parse JSON
-    let list: any[] | null = JSON.parse(content);
+    console.log(`[AUTO-IMPORT] ${source.visaType}: JSON string ${jsonStr.length} chars`);
 
-    // Step 5: FREE the raw JSON string
-    content = null;
+    // Step 3: Split JSON string into chunks WITHOUT parsing (zero CPU for JSON.parse)
+    const CHUNK_SIZE = 200;
+    const { chunks, totalItems } = splitJsonArrayString(jsonStr, CHUNK_SIZE);
+    jsonStr = null; // FREE the full JSON string
 
-    if (!Array.isArray(list) || list.length === 0) {
-      await supabase
-        .from("import_jobs")
-        .update({ status: "completed", processed_rows: 0 })
-        .eq("id", jobId);
-      return 0;
-    }
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalItems} itens em ${chunks.length} chunks`);
 
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ${list.length} itens para processar`);
+    // Set total_rows immediately
+    await supabase.from("import_jobs").update({ total_rows: totalItems }).eq("id", jobId);
 
-    // Set total_rows immediately so UI can show progress
-    await supabase.from("import_jobs").update({ total_rows: list.length }).eq("id", jobId);
-
-    // Step 6: Process using splice() with LARGE batches to reduce RPC calls
-    // 2081 items / 200 = ~11 calls instead of 42 calls with batch=50
-    const BATCH_SIZE = 200;
-    let totalProcessedInSource = 0;
-
-    while (list!.length > 0) {
-      const batch = list!.splice(0, BATCH_SIZE);
-
-      const { data, error } = await supabase.rpc("process_dol_raw_batch", {
-        p_raw_items: batch,
-        p_visa_type: source.visaType,
-      });
-
-      if (!error) {
-        totalProcessedInSource += data ?? batch.length;
-        await supabase.from("import_jobs").update({ processed_rows: totalProcessedInSource }).eq("id", jobId);
-        console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalProcessedInSource} processados`);
-      } else {
-        console.error(`[BATCH ERROR] ${source.key}:`, error.message);
+    // Step 4: Send each chunk directly to PostgreSQL via raw fetch (no JSON.parse ever!)
+    let totalProcessed = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      try {
+        const processed = await sendRawChunkToPostgres(chunks[i], source.visaType, supabaseUrl, serviceRoleKey);
+        totalProcessed += processed;
+        // Free the chunk string after sending
+        chunks[i] = "";
+        await supabase.from("import_jobs").update({ processed_rows: totalProcessed }).eq("id", jobId);
+        console.log(`[AUTO-IMPORT] ${source.visaType}: chunk ${i + 1}/${chunks.length} → ${totalProcessed} processados`);
+      } catch (err: any) {
+        console.error(`[CHUNK ERROR] ${source.key} chunk ${i}:`, err.message);
       }
     }
 
-    // Ensure list is freed
-    list = null;
-
-    // Mark completed
     await supabase
       .from("import_jobs")
-      .update({ status: "completed", processed_rows: totalProcessedInSource })
+      .update({ status: "completed", processed_rows: totalProcessed })
       .eq("id", jobId);
-    return totalProcessedInSource;
+    return totalProcessed;
   } catch (err: any) {
     console.error(`[FATAL ERROR] ${source.key}:`, err.message);
     await supabase
@@ -139,18 +203,14 @@ async function runRadarMatching(supabase: any) {
       if (radar.auto_send && matched > 0) {
         const { data: dailyLimit } = await supabase.rpc("get_effective_daily_limit", { p_user_id: radar.user_id });
         const limit = dailyLimit ?? 5;
-
         const todayStart = new Date();
         todayStart.setUTCHours(0, 0, 0, 0);
-
         const { count: usedToday } = await supabase
           .from("my_queue")
           .select("id", { count: "exact", head: true })
           .eq("user_id", radar.user_id)
           .gte("created_at", todayStart.toISOString());
-
         const remaining = Math.max(0, limit - (usedToday ?? 0));
-
         if (remaining > 0) {
           const { data: newMatches } = await supabase
             .from("radar_matched_jobs")
@@ -158,9 +218,7 @@ async function runRadarMatching(supabase: any) {
             .eq("user_id", radar.user_id)
             .eq("auto_queued", false)
             .limit(remaining);
-
           const jobIds = (newMatches || []).map((m: any) => m.job_id);
-
           if (jobIds.length > 0) {
             const { error: qErr } = await supabase
               .from("my_queue")
@@ -241,7 +299,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // "all" mode: sequential in background (used by cron)
+    // "all" mode
     EdgeRuntime.waitUntil(
       (async () => {
         let grandTotal = 0;
