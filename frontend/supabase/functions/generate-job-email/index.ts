@@ -108,6 +108,66 @@ const defaultPreferences: AIPreferences = {
   custom_instructions: null,
 };
 
+
+const LEGACY_SECTOR_CATEGORY_MAP: Record<string, string> = {
+  campo_colheita: "agricultura_colheita",
+  construcao_manutencao: "construcao_geral",
+  cozinha_restaurante: "cozinha_preparacao",
+  industria_producao: "manufatura_montagem",
+};
+
+function normalizeSectorCategory(value: string | null | undefined): string | null {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return null;
+  return LEGACY_SECTOR_CATEGORY_MAP[normalized] ?? normalized;
+}
+
+function getFallbackResumeData(profile: any, visaType: string): unknown | null {
+  const isH2A = String(visaType || "").startsWith("H-2A");
+  if (isH2A) return profile?.resume_data_h2a || profile?.resume_data || null;
+  return profile?.resume_data_h2b || profile?.resume_data || null;
+}
+
+async function resolveResumeDataForQueue(params: {
+  profile: any;
+  queueRow: any;
+  serviceClient: ReturnType<typeof createClient>;
+  userId: string;
+}): Promise<unknown | null> {
+  const { profile, queueRow, serviceClient, userId } = params;
+  const visaType = String((queueRow?.public_jobs as any)?.visa_type ?? "H-2B").trim() || "H-2B";
+  let selectedResume = getFallbackResumeData(profile, visaType);
+
+  const manualPreferredCategory = normalizeSectorCategory((queueRow?.manual_jobs as any)?.preferred_resume_category);
+
+  let categoryFromJob: string | null = null;
+  if (!manualPreferredCategory) {
+    const rawCategory = String((queueRow?.public_jobs as any)?.category ?? "").trim();
+    if (rawCategory) {
+      const { data: normalizedCategory } = await serviceClient.rpc("get_normalized_category", {
+        raw_cat: rawCategory,
+      });
+      categoryFromJob = normalizeSectorCategory(String(normalizedCategory ?? rawCategory));
+    }
+  }
+
+  const targetCategory = manualPreferredCategory || categoryFromJob;
+  if (targetCategory) {
+    const { data: sectorResume } = await serviceClient
+      .from("sector_resumes")
+      .select("resume_data")
+      .eq("user_id", userId)
+      .eq("category", targetCategory)
+      .maybeSingle();
+
+    if (sectorResume?.resume_data) {
+      selectedResume = sectorResume.resume_data;
+    }
+  }
+
+  return selectedResume;
+}
+
 function buildDynamicPrompt(prefs: AIPreferences, fullName: string, phone: string, email: string): string {
   // Greeting variations based on preference
   const greetingInstructions = {
@@ -347,17 +407,12 @@ serve(async (req) => {
 
     const { data: profile, error: profileErr } = await serviceClient
       .from("profiles")
-      .select("plan_tier,resume_data,full_name,phone_e164,contact_email,email")
+      .select("plan_tier,resume_data,resume_data_h2a,resume_data_h2b,full_name,phone_e164,contact_email,email")
       .eq("id", userId)
       .maybeSingle();
     if (profileErr) throw profileErr;
     if ((profile as any)?.plan_tier !== "black") {
       return json(403, { success: false, error: "Black plan only" });
-    }
-
-    const resumeData = (profile as any)?.resume_data;
-    if (!resumeData) {
-      return json(400, { success: false, error: "resume_data_missing" });
     }
 
     // Fetch user's AI preferences
@@ -369,17 +424,13 @@ serve(async (req) => {
     
     const prefs: AIPreferences = prefsRow ? { ...defaultPreferences, ...prefsRow } : defaultPreferences;
 
-    // Signature sources of truth
-    const fullName = String((profile as any)?.full_name ?? (resumeData as any)?.full_name ?? (resumeData as any)?.name ?? "").trim();
-    const phone = normalizePhone((profile as any)?.phone_e164 ?? (resumeData as any)?.phone_e164 ?? (resumeData as any)?.phone ?? "");
-    const email = normalizeEmail((profile as any)?.contact_email ?? (profile as any)?.email ?? (resumeData as any)?.email ?? "");
 
     const { data: queueRow, error: qErr } = await serviceClient
       .from("my_queue")
       .select(
         `id, user_id, job_id, manual_job_id,
-         public_jobs (company, job_title, visa_type, description, requirements, weekly_hours, salary, start_date, end_date, housing_info, job_duties, job_min_special_req, wage_additional, rec_pay_deductions),
-         manual_jobs (company, job_title)`
+         public_jobs (company, job_title, visa_type, category, description, requirements, weekly_hours, salary, start_date, end_date, housing_info, job_duties, job_min_special_req, wage_additional, rec_pay_deductions),
+         manual_jobs (company, job_title, preferred_resume_category)`
       )
       .eq("id", payload.data.queueId)
       .eq("user_id", userId)
@@ -388,6 +439,22 @@ serve(async (req) => {
 
     const job = (queueRow as any)?.public_jobs ?? (queueRow as any)?.manual_jobs;
     if (!job) return json(404, { success: false, error: "Queue item not found" });
+
+    const resumeData = await resolveResumeDataForQueue({
+      profile,
+      queueRow,
+      serviceClient,
+      userId,
+    });
+
+    if (!resumeData) {
+      return json(400, { success: false, error: "resume_data_missing" });
+    }
+
+    // Signature sources of truth
+    const fullName = String((profile as any)?.full_name ?? (resumeData as any)?.full_name ?? (resumeData as any)?.name ?? "").trim();
+    const phone = normalizePhone((profile as any)?.phone_e164 ?? (resumeData as any)?.phone_e164 ?? (resumeData as any)?.phone ?? "");
+    const email = normalizeEmail((profile as any)?.contact_email ?? (profile as any)?.email ?? (resumeData as any)?.email ?? "");
 
     const jobDescription = String((job as any)?.description ?? "").trim();
     const jobRequirements = String((job as any)?.requirements ?? "").trim();

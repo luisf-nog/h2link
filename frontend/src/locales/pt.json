@@ -642,6 +642,7 @@
         "company": "Name *",
         "email": "Email *",
         "job_title": "Vaga",
+        "resume_category": "Categoria do currículo (AI Resumer)",
         "eta_number": "ETA Number",
         "phone": "Telefone"
       },
@@ -649,6 +650,8 @@
         "company": "Company name",
         "email": "email@company.com",
         "job_title": "e.g. Landscaper",
+        "resume_category": "Selecione a categoria para esse envio",
+        "resume_category_none": "Usar fallback padrão (H-2A/H-2B)",
         "eta_number": "e.g. H-300-12345",
         "phone": "e.g. +1 (555) 123-4567"
       },
