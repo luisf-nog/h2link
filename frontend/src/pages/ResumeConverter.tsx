@@ -21,6 +21,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { Lock, Crown } from "lucide-react";
+import { PlanTier } from "@/config/plans.config";
+
+const TIER_RESUME_LIMITS: Record<PlanTier, { max: number; label: string }> = {
+  free: { max: 0, label: "Upgrade to unlock" },
+  gold: { max: 1, label: "1 Optimized Resume (H-2A or H-2B)" },
+  diamond: { max: 2, label: "2 Optimized Resumes (H-2A + H-2B)" },
+  black: { max: 5, label: "Multi-Sector Resume Engine (up to 5)" },
+};
 
 // --- Duration options ---
 const DURATION_OPTIONS = [
@@ -90,6 +101,8 @@ const PHYSICAL_SKILLS = [
 type Step = "loading" | "form" | "uploading" | "generating" | "done" | "error";
 
 export default function ResumeConverter() {
+  const { profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("loading");
 
   // Practical experience with duration
@@ -342,7 +355,39 @@ export default function ResumeConverter() {
     );
   }
 
-  // RESULT VIEW
+  // FREE TIER GATE
+  const planTier = profile?.plan_tier || "free";
+  const tierConfig = TIER_RESUME_LIMITS[planTier];
+
+  if (!authLoading && planTier === "free") {
+    return (
+      <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[50vh] text-center gap-6">
+        <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+          <Lock className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-foreground">Resume Builder — Paid Plans Only</h2>
+          <p className="text-sm text-muted-foreground max-w-md">
+            Upgrade to <strong>Gold</strong> or higher to unlock AI-optimized resumes tailored for H-2 visa employers.
+          </p>
+        </div>
+        <div className="grid gap-2 text-left text-xs max-w-xs w-full">
+          {(["gold", "diamond", "black"] as PlanTier[]).map((t) => (
+            <div key={t} className="flex items-center gap-2 p-2 rounded-lg border border-border">
+              <Crown className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <span className="font-medium capitalize">{t}:</span>
+              <span className="text-muted-foreground">{TIER_RESUME_LIMITS[t].label}</span>
+            </div>
+          ))}
+        </div>
+        <Button onClick={() => navigate("/plans")} className="gap-2">
+          <Crown className="h-4 w-4" /> View Plans & Upgrade
+        </Button>
+      </div>
+    );
+  }
+
+
   if (step === "done" && h2aResume && h2bResume) {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">

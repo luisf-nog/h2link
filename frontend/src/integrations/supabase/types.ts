@@ -1181,6 +1181,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sector_resumes: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          resume_data: Json
+          resume_url: string | null
+          updated_at: string
+          user_id: string
+          visa_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          resume_data: Json
+          resume_url?: string | null
+          updated_at?: string
+          user_id: string
+          visa_type?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          resume_data?: Json
+          resume_url?: string | null
+          updated_at?: string
+          user_id?: string
+          visa_type?: string
+        }
+        Relationships: []
+      }
       smtp_credentials: {
         Row: {
           created_at: string
