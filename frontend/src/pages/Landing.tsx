@@ -788,7 +788,12 @@ export default function Landing() {
                     marginBottom: 8,
                   }}
                 >
-                  $19<span style={{ fontSize: 28, fontWeight: 500, color: "rgba(255,255,255,0.4)" }}>.99</span>
+                  {(() => {
+                    const lang = (i18n.language ?? "").toLowerCase();
+                    if (lang.startsWith("pt")) return <>R$47<span style={{ fontSize: 28, fontWeight: 500, color: "rgba(255,255,255,0.4)" }}>,99</span></>;
+                    if (lang.startsWith("es")) return <>US$9<span style={{ fontSize: 28, fontWeight: 500, color: "rgba(255,255,255,0.4)" }}>.99</span></>;
+                    return <>$9<span style={{ fontSize: 28, fontWeight: 500, color: "rgba(255,255,255,0.4)" }}>.99</span></>;
+                  })()}
                 </div>
                 <div
                   style={{
