@@ -66,29 +66,60 @@ const TOOL_SCHEMA = {
 };
 
 function buildPrompt(rawText: string, visaType: "H-2A" | "H-2B", context: any): string {
-  const { practical_experience, physical_skills, migration_status, availability, extra_notes } = context || {};
+  const { practical_experience, physical_skills, migration_status, availability, extra_notes, languages } = context || {};
 
   let industryFocus = "";
   if (visaType === "H-2A") {
-    industryFocus = `This resume is for H-2A (AGRICULTURAL) visa positions. Focus on:
-- Farm work, crop harvesting, livestock, nursery, greenhouse, forestry
-- Outdoor work endurance, physical stamina
-- Equipment operation (tractors, combines, irrigation systems)
-- Seasonal work experience and reliability`;
+    industryFocus = `This resume is for H-2A (AGRICULTURAL) visa positions.
+
+FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
+- Crop harvesting & planting
+- Livestock care & feeding
+- Greenhouse & nursery operations
+- Forestry & logging
+- Irrigation & soil management
+- Farm equipment operation
+
+CRITICAL TONE GUIDELINES:
+- Be SPECIFIC, not generic. Instead of "eager to contribute to farm work, crop harvesting, livestock, nursery, greenhouse, or forestry" → pick the 2-3 areas that best match the candidate's experience.
+- For equipment/machinery skills: if the candidate has NO direct experience, write "Familiar with [equipment] (training-based knowledge)" instead of implying hands-on operation.
+- MUST include a strong Availability Signal in the Summary:
+  ✔ "Fully available for the entire contract season"
+  ✔ "Open to relocation within the U.S."
+  ✔ "Willing to work overtime, weekends, and holidays"
+- Emphasize outdoor endurance, extreme weather tolerance, and physical stamina.`;
   } else {
-    industryFocus = `This resume is for H-2B (NON-AGRICULTURAL TEMPORARY) visa positions. Focus on:
-- Construction, landscaping, hospitality, food service, warehouse, manufacturing
-- Customer service, teamwork, reliability
-- Technical/trade skills relevant to the industry
-- Adaptability to temporary seasonal positions`;
+    industryFocus = `This resume is for H-2B (NON-AGRICULTURAL TEMPORARY) visa positions.
+
+FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
+- Construction & heavy labor
+- Landscaping & groundskeeping
+- Hospitality & housekeeping
+- Food service & kitchen operations
+- Warehouse & logistics
+- Manufacturing & production
+- Seafood processing
+
+CRITICAL TONE GUIDELINES:
+- The Professional Summary MUST be direct and assertive, American-style. 
+  BAD: "H-2B Visa Candidate with a strong background in various industries..."
+  GOOD: "Reliable H-2B visa candidate with hands-on experience in [specific areas]. Physically capable, safety-focused, and ready for immediate seasonal employment."
+- Be SPECIFIC about the candidate's strongest 2-3 sectors, don't list everything.
+- For equipment/machinery skills: if the candidate has NO direct experience, write "Familiar with [equipment] (training-based knowledge)" instead of implying hands-on operation.
+- MUST include availability signal: "Ready for immediate deployment" or "Available for full seasonal contract".
+- Emphasize safety compliance, teamwork, and reliability.`;
   }
 
   const practicalLines = practical_experience?.length
-    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE (from questionnaire):\n${practical_experience.map((e: string) => `- ${e}`).join("\n")}`
+    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE (from questionnaire):\n${practical_experience.map((e: any) => typeof e === 'string' ? `- ${e}` : `- ${e.area} (${e.duration})`).join("\n")}`
     : "";
 
   const physicalLines = physical_skills?.length
-    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: string) => `- ${s}`).join("\n")}`
+    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: any) => typeof s === 'string' ? `- ${s}` : `- ${s.skill}${s.detail ? ` (${s.detail})` : ''}`).join("\n")}`
+    : "";
+
+  const langLines = languages
+    ? `\nLANGUAGE PROFICIENCY:\n- English: ${languages.english || 'not specified'}\n- Spanish: ${languages.spanish || 'not specified'}`
     : "";
 
   const migrationLines = migration_status
@@ -106,7 +137,7 @@ function buildPrompt(rawText: string, visaType: "H-2A" | "H-2B", context: any): 
 
   const extraLines = extra_notes ? `\nADDITIONAL NOTES FROM CANDIDATE: ${extra_notes}` : "";
 
-  return `You are an expert US Recruiter specializing in ${visaType} visa worker placement.
+  return `You are an expert US Recruiter specializing in ${visaType} visa worker placement. You write resumes that GET INTERVIEWS — direct, assertive, American-style.
 
 ${industryFocus}
 
@@ -114,13 +145,17 @@ RULES:
 1. Translate everything to English
 2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
-4. The Summary section MUST mention: visa type readiness, key relevant skills, and work authorization context
+4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
 5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
 6. If the candidate has office/desk experience but is applying for manual labor, REFRAME their skills (e.g., "project management" → "team coordination", "data entry" → "attention to detail and precision")
 7. Add relevant certifications section if applicable (safety training, equipment operation, food handling, etc.)
 8. Keep it professional, 1-2 pages maximum
+9. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
+10. For skills the candidate learned via training (not hands-on), use "Familiar with X (training-based)" wording
+11. Include an Availability section or integrate availability signals into the Summary
 ${practicalLines}
 ${physicalLines}
+${langLines}
 ${migrationLines}
 ${availLines}
 ${extraLines}
@@ -136,7 +171,6 @@ function parseToolResponse(aiData: any): any {
   if (toolCall?.function?.name === "format_resume") {
     return JSON.parse(toolCall.function.arguments);
   }
-  // Fallback to content parsing
   const content = aiData?.choices?.[0]?.message?.content || "";
   const clean = content.replace(/```json/g, "").replace(/```/g, "").trim();
   return JSON.parse(clean);
@@ -168,6 +202,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json(500, { error: "AI Key not configured." });
 
+    console.log("Starting dual resume generation for user:", user.id);
+
     // Generate H-2A resume
     console.log("Generating H-2A resume...");
     const h2aPrompt = buildPrompt(raw_text, "H-2A", context);
@@ -186,13 +222,12 @@ serve(async (req) => {
     if (!h2aResp.ok) {
       const errText = await h2aResp.text();
       console.error("H-2A AI error:", h2aResp.status, errText);
-      if (h2aResp.status === 429) return json(429, { error: "Rate limited, try again shortly" });
-      if (h2aResp.status === 402) return json(402, { error: "AI credits exhausted" });
-      return json(500, { error: "AI failed for H-2A resume" });
+      return json(500, { error: `AI failed for H-2A resume: ${h2aResp.status}` });
     }
 
     const h2aData = await h2aResp.json();
     const h2aResume = parseToolResponse(h2aData);
+    console.log("H-2A resume generated successfully");
 
     // Generate H-2B resume
     console.log("Generating H-2B resume...");
@@ -212,24 +247,28 @@ serve(async (req) => {
     if (!h2bResp.ok) {
       const errText = await h2bResp.text();
       console.error("H-2B AI error:", h2bResp.status, errText);
-      if (h2bResp.status === 429) return json(429, { error: "Rate limited, try again shortly" });
-      if (h2bResp.status === 402) return json(402, { error: "AI credits exhausted" });
-      return json(500, { error: "AI failed for H-2B resume" });
+      return json(500, { error: `AI failed for H-2B resume: ${h2bResp.status}` });
     }
 
     const h2bData = await h2bResp.json();
     const h2bResume = parseToolResponse(h2bData);
+    console.log("H-2B resume generated successfully");
 
-    // Save both resumes to profile using service role
+    // Save both resumes + context to profile
+    console.log("Saving to profile...");
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     
-    await serviceClient.from("profiles").update({
-      resume_data: h2aResume, // Keep original field for AI summary compatibility
+    const { error: updateError } = await serviceClient.from("profiles").update({
       resume_data_h2a: h2aResume,
       resume_data_h2b: h2bResume,
       resume_extra_context: context || null,
-      ai_summary: null, // Clear cached AI summary so it regenerates
     }).eq("id", user.id);
+
+    if (updateError) {
+      console.error("Profile update error:", updateError);
+    } else {
+      console.log("Profile updated successfully");
+    }
 
     // Track AI usage
     await serviceClient.rpc("increment_ai_usage", { p_user_id: user.id, p_function_type: "resume" });
