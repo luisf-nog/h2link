@@ -73,10 +73,8 @@ async function processSourceWithTracking(
         totalProcessed += (data ?? batch.length);
       }
 
-      // Update progress every 5 batches or at the end
-      if (i % (BATCH_SIZE * 5) === 0 || i + BATCH_SIZE >= allRawItems.length) {
-        await supabase.from("import_jobs").update({ processed_rows: Math.min(i + BATCH_SIZE, totalRows) }).eq("id", jobId);
-      }
+    // Update progress every batch
+      await supabase.from("import_jobs").update({ processed_rows: totalProcessed }).eq("id", jobId);
     }
 
     console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalProcessed} registros processados pelo SQL`);
@@ -171,13 +169,15 @@ Deno.serve(async (req) => {
     console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${today} skipRadar=${skipRadar}`);
 
     if (sourceKey === "all") {
+      const jobIds: string[] = [];
       for (const source of DOL_SOURCES) {
         const { data: job } = await supabase.from("import_jobs").insert({ source: source.key, status: "processing" }).select("id").single();
         if (job) {
+          jobIds.push(job.id);
           EdgeRuntime.waitUntil(processSourceWithTracking(source, supabase, job.id, skipRadar));
         }
       }
-      return new Response(JSON.stringify({ success: true, message: "Importação iniciada em background" }), {
+      return new Response(JSON.stringify({ success: true, job_ids: jobIds, message: "Importação iniciada em background" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
