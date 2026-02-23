@@ -49,17 +49,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // 3. Se estiver carregando o status SMTP
-  if (!smtpStatus) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
-      </div>
-    );
-  }
-
-  // 3. Verificação de Onboarding
-  const needsOnboarding = !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
+  // 3. Verificação de Onboarding (treat missing smtpStatus as needs onboarding)
+  const needsOnboarding = !smtpStatus || !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
   const isSettingsRoute = location.pathname.startsWith("/settings");
 
   // Se precisa de onboarding e NÃO está tentando acessar as configurações
@@ -76,7 +67,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
 
-  if (loading || !smtpStatus) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -87,7 +78,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   if (!user) return <Navigate to="/auth" replace />;
 
   // Se já completou tudo, não deixa ficar no onboarding
-  if (smtpStatus.hasPassword && smtpStatus.hasRiskProfile) {
+  if (smtpStatus?.hasPassword && smtpStatus?.hasRiskProfile) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -140,17 +131,8 @@ function PublicOrProtectedRoute({ children }: { children: React.ReactNode }) {
     return <AppLayout>{children}</AppLayout>;
   }
 
-  // If logged in but smtpStatus still loading
-  if (!smtpStatus) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
-      </div>
-    );
-  }
-
   // If logged in and needs onboarding, redirect
-  const needsOnboarding = !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
+  const needsOnboarding = !smtpStatus || !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
   const isSettingsRoute = location.pathname.startsWith("/settings");
   if (needsOnboarding && !isSettingsRoute) {
     return <Navigate to="/onboarding" replace />;
