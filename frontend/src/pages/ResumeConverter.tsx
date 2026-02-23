@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Upload, Loader2, Download, CheckCircle, Sparkles, AlertCircle,
   HardHat, Tractor, Utensils, Hammer, Package, ShieldCheck, Info,
   Truck, TreePine, Building2, Wrench, ChefHat, Warehouse,
-  Globe, Calendar, FileText, ChevronDown, ChevronUp,
+  Globe, Calendar, FileText, ChevronDown, ChevronUp, Eye, RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractTextFromPDF } from "@/lib/pdf";
@@ -87,10 +87,10 @@ const PHYSICAL_SKILLS = [
   { id: "forklift", label: "Forklift / Pallet Jack Certified" },
 ];
 
-type Step = "form" | "uploading" | "generating" | "done" | "error";
+type Step = "loading" | "form" | "uploading" | "generating" | "done" | "error";
 
 export default function ResumeConverter() {
-  const [step, setStep] = useState<Step>("form");
+  const [step, setStep] = useState<Step>("loading");
 
   // Practical experience with duration
   const [selectedExperience, setSelectedExperience] = useState<Record<string, boolean>>({});
@@ -123,10 +123,127 @@ export default function ResumeConverter() {
   const [h2aResume, setH2aResume] = useState<any>(null);
   const [h2bResume, setH2bResume] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("h2a");
+  const [hasSavedResumes, setHasSavedResumes] = useState(false);
 
   // Collapsible sections
   const [showPhysical, setShowPhysical] = useState(true);
   const [showVisa, setShowVisa] = useState(true);
+
+  // Load saved data on mount
+  useEffect(() => {
+    const loadSavedData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setStep("form"); return; }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("resume_data_h2a, resume_data_h2b, resume_extra_context")
+          .eq("id", user.id)
+          .single();
+
+        if (!profile) { setStep("form"); return; }
+
+        // Load saved resumes
+        if (profile.resume_data_h2a && profile.resume_data_h2b) {
+          setH2aResume(profile.resume_data_h2a);
+          setH2bResume(profile.resume_data_h2b);
+          setHasSavedResumes(true);
+        }
+
+        // Load saved preferences
+        const ctx = profile.resume_extra_context as any;
+        if (ctx) {
+          // Restore experience selections & durations
+          if (ctx.practical_experience?.length) {
+            const expMap: Record<string, boolean> = {};
+            const durMap: Record<string, string> = {};
+            for (const item of ctx.practical_experience) {
+              // Find matching experience by label
+              const match = PRACTICAL_EXPERIENCE.find(e => e.label === item.area);
+              if (match) {
+                expMap[match.id] = true;
+                // Reverse lookup duration from label
+                const durEntry = Object.entries(DURATION_LABELS).find(([, v]) => v === item.duration);
+                if (durEntry) durMap[match.id] = durEntry[0];
+              }
+            }
+            setSelectedExperience(expMap);
+            setExperienceDuration(durMap);
+          }
+
+          // Restore physical skills
+          if (ctx.physical_skills?.length) {
+            const physMap: Record<string, boolean> = {};
+            const detailMap: Record<string, string> = {};
+            for (const item of ctx.physical_skills) {
+              const match = PHYSICAL_SKILLS.find(s => s.label === item.skill);
+              if (match) {
+                physMap[match.id] = true;
+                if (item.detail) detailMap[match.id] = item.detail;
+              }
+            }
+            setSelectedPhysical(physMap);
+            setPhysicalDetails(detailMap);
+          }
+
+          // Restore language levels
+          if (ctx.languages) {
+            if (ctx.languages.english) setEnglishLevel(ctx.languages.english);
+            if (ctx.languages.spanish) setSpanishLevel(ctx.languages.spanish);
+          }
+
+          // Restore migration status (reverse map from display values)
+          if (ctx.migration_status) {
+            const ms = ctx.migration_status;
+            if (ms.location?.includes("Outside")) setCurrentLocation("outside_us");
+            else if (ms.location?.includes("Currently")) setCurrentLocation("inside_us");
+
+            if (ms.work_auth?.includes("H-2")) setWorkAuth("needs_sponsorship");
+            else if (ms.work_auth?.includes("Citizen")) setWorkAuth("citizen_resident");
+            else if (ms.work_auth?.includes("Other")) setWorkAuth("other_status");
+
+            if (ms.h2_history && ms.h2_history !== "None - first time applicant") {
+              setHasH2History("yes");
+              setH2Details(ms.h2_history);
+            }
+
+            if (ms.visa_denials?.includes("Has had")) setVisaDenials("yes");
+            if (ms.passport?.includes("Expired")) setPassportStatus("expired");
+            else if (ms.passport?.includes("No passport")) setPassportStatus("none");
+          }
+
+          // Restore availability
+          if (ctx.availability) {
+            const av = ctx.availability;
+            if (av.when?.includes("Immediately")) setAvailableWhen("immediately");
+            else if (av.when?.includes("30")) setAvailableWhen("30_days");
+            else if (av.when?.includes("60")) setAvailableWhen("60_days");
+            else setAvailableWhen("flexible");
+
+            if (av.duration?.includes("Full")) setDurationPref("full_season");
+            else if (av.duration?.includes("6")) setDurationPref("6_months");
+            else if (av.duration?.includes("1 year")) setDurationPref("1_year");
+            else setDurationPref("flexible");
+          }
+
+          // Restore extra notes
+          if (ctx.extra_notes) setExtraNotes(ctx.extra_notes);
+        }
+
+        // Show saved resumes or form
+        if (profile.resume_data_h2a && profile.resume_data_h2b) {
+          setStep("done");
+        } else {
+          setStep("form");
+        }
+      } catch (err) {
+        console.error("Error loading saved data:", err);
+        setStep("form");
+      }
+    };
+    loadSavedData();
+  }, []);
 
   const toggleExperience = (id: string) => setSelectedExperience(p => ({ ...p, [id]: !p[id] }));
   const togglePhysical = (id: string) => setSelectedPhysical(p => ({ ...p, [id]: !p[id] }));
@@ -187,6 +304,7 @@ export default function ResumeConverter() {
 
       setH2aResume(data.h2a);
       setH2bResume(data.h2b);
+      setHasSavedResumes(true);
       setStep("done");
       toast.success("Both H-2A and H-2B resumes generated and saved!");
     } catch (err: any) {
@@ -211,9 +329,18 @@ export default function ResumeConverter() {
 
   const handleReset = () => {
     setStep("form");
-    setH2aResume(null);
-    setH2bResume(null);
+    // Keep preferences and saved resumes — user just wants to regenerate
   };
+
+  // LOADING STATE
+  if (step === "loading") {
+    return (
+      <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[40vh] text-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading your profile...</p>
+      </div>
+    );
+  }
 
   // RESULT VIEW
   if (step === "done" && h2aResume && h2bResume) {
@@ -225,11 +352,17 @@ export default function ResumeConverter() {
               <CheckCircle className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-foreground">Resumes Generated Successfully!</h2>
-              <p className="text-sm text-muted-foreground">Both H-2A and H-2B versions saved to your profile automatically.</p>
+              <h2 className="font-bold text-foreground">
+                {hasSavedResumes ? "Your Saved Resumes" : "Resumes Generated Successfully!"}
+              </h2>
+              <p className="text-sm text-muted-foreground">Both H-2A and H-2B versions are saved to your profile.</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleReset}>Generate New</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleReset}>
+              <RefreshCw className="h-3.5 w-3.5" /> Update & Regenerate
+            </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -366,6 +499,24 @@ export default function ResumeConverter() {
           Answer a few questions, upload your CV, and we'll generate <strong>two optimized resumes</strong> — one for H-2A and one for H-2B positions.
         </p>
       </div>
+
+      {/* Saved resumes banner */}
+      {hasSavedResumes && h2aResume && h2bResume && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Eye className="h-5 w-5 text-primary flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">You already have saved resumes</p>
+                <p className="text-xs text-muted-foreground">View or download your H-2A/H-2B resumes, or update your preferences and regenerate.</p>
+              </div>
+            </div>
+            <Button size="sm" variant="default" className="gap-1.5 whitespace-nowrap" onClick={() => setStep("done")}>
+              <Eye className="h-3.5 w-3.5" /> View Resumes
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN: Questions */}
@@ -716,7 +867,9 @@ export default function ResumeConverter() {
                   <Upload className="h-7 w-7 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-foreground">Upload Your CV</h3>
+                  <h3 className="font-bold text-sm text-foreground">
+                    {hasSavedResumes ? "Upload New CV to Regenerate" : "Upload Your CV"}
+                  </h3>
                   <p className="text-[10px] text-muted-foreground mt-1">PDF or DOCX — any language</p>
                 </div>
                 <div className="bg-primary/5 rounded-lg p-3 w-full">
