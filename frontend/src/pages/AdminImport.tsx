@@ -86,25 +86,71 @@ export default function AdminImport() {
     }, 2000);
   };
 
+  // Wait for a single job to complete by polling
+  const waitForJob = (jobId: string): Promise<ImportJobStatus> => {
+    return new Promise((resolve) => {
+      const interval = setInterval(async () => {
+        const { data } = await supabase
+          .from('import_jobs')
+          .select('id, source, status, processed_rows, total_rows, error_message')
+          .eq('id', jobId)
+          .single();
+
+        if (!data) return;
+
+        const job: ImportJobStatus = {
+          jobId: data.id,
+          source: data.source,
+          status: data.status as ImportJobStatus['status'],
+          processedRows: data.processed_rows ?? 0,
+          totalRows: data.total_rows ?? 0,
+          error: data.error_message ?? undefined,
+        };
+
+        // Update UI with latest progress
+        setActiveJobs(prev => prev.map(j => j.jobId === jobId ? job : j));
+
+        if (job.status === 'completed' || job.status === 'failed') {
+          clearInterval(interval);
+          resolve(job);
+        }
+      }, 2000);
+    });
+  };
+
   const runManualImport = async (source: string) => {
     setImportingSource(source);
+    setActiveJobs([]);
     try {
       if (source === 'all') {
-        // Call each source SEPARATELY to avoid CPU limit in a single worker
+        // Process each source ONE AT A TIME — wait for completion before next
         const sources = ['jo', 'h2a', 'h2b'];
-        const allJobs: ImportJobStatus[] = [];
 
-        for (const s of sources) {
+        for (let i = 0; i < sources.length; i++) {
+          const s = sources[i];
+          const skipRadar = i < sources.length - 1; // radar only on last
+
           const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
-            body: { source: s, skip_radar: s !== 'h2b' }, // radar only on last
+            body: { source: s, skip_radar: skipRadar },
           });
           if (error) throw error;
           const jobId = data?.job_id;
           if (!jobId) throw new Error(`No job_id for ${s}`);
-          allJobs.push({ jobId, source: s, status: 'processing', processedRows: 0, totalRows: 0 });
+
+          const newJob: ImportJobStatus = { jobId, source: s, status: 'processing', processedRows: 0, totalRows: 0 };
+          setActiveJobs(prev => [...prev, newJob]);
+
+          // WAIT for this job to finish before starting the next one
+          const result = await waitForJob(jobId);
+
+          if (result.status === 'completed') {
+            toast({ title: `${s.toUpperCase()} concluída`, description: `${result.processedRows} vagas processadas` });
+          } else {
+            toast({ title: `${s.toUpperCase()} falhou`, description: result.error || 'Erro', variant: 'destructive' });
+          }
         }
 
-        startPolling(allJobs);
+        setImportingSource(null);
       } else {
         const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
           body: { source, skip_radar: true },
@@ -112,7 +158,9 @@ export default function AdminImport() {
         if (error) throw error;
         const jobId = data?.job_id;
         if (!jobId) throw new Error('No job_id returned');
-        startPolling([{ jobId, source, status: 'processing', processedRows: 0, totalRows: 0 }]);
+        const newJob: ImportJobStatus = { jobId, source, status: 'processing', processedRows: 0, totalRows: 0 };
+        setActiveJobs([newJob]);
+        startPolling([newJob]);
       }
     } catch (err: any) {
       toast({ title: 'Erro na importação', description: err.message, variant: 'destructive' });
