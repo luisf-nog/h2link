@@ -22,6 +22,38 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+// --- Duration options ---
+const DURATION_OPTIONS = [
+  { value: "", label: "Select..." },
+  { value: "less_1m", label: "< 1 month" },
+  { value: "1_3m", label: "1–3 months" },
+  { value: "3_6m", label: "3–6 months" },
+  { value: "6_12m", label: "6–12 months" },
+  { value: "1_2y", label: "1–2 years" },
+  { value: "2_5y", label: "2–5 years" },
+  { value: "5_plus", label: "5+ years" },
+];
+
+const DURATION_LABELS: Record<string, string> = {
+  "less_1m": "< 1 mo",
+  "1_3m": "1–3 mo",
+  "3_6m": "3–6 mo",
+  "6_12m": "6–12 mo",
+  "1_2y": "1–2 yr",
+  "2_5y": "2–5 yr",
+  "5_plus": "5+ yr",
+};
+
+// --- Lifting weight options ---
+const LIFTING_OPTIONS = [
+  { value: "30lbs", label: "Up to 30 lbs (14 kg)" },
+  { value: "50lbs", label: "Up to 50 lbs (23 kg)" },
+  { value: "70lbs", label: "Up to 70 lbs (32 kg)" },
+  { value: "80lbs", label: "Up to 80 lbs (36 kg)" },
+  { value: "100lbs", label: "Up to 100 lbs (45 kg)" },
+  { value: "100plus", label: "100+ lbs (45+ kg)" },
+];
+
 // --- Practical experience options ---
 const PRACTICAL_EXPERIENCE = [
   { id: "farming_crops", label: "Crop Farming & Harvesting", icon: Tractor, tags: ["h2a"] },
@@ -41,17 +73,17 @@ const PRACTICAL_EXPERIENCE = [
   { id: "office_admin", label: "Office / Administrative (will be reframed)", icon: FileText, tags: [] },
 ];
 
-// --- Physical skills ---
+// --- Physical skills with optional sub-options ---
 const PHYSICAL_SKILLS = [
-  { id: "heavy_lifting", label: "Heavy Lifting (50+ lbs / 23+ kg)" },
+  { id: "heavy_lifting", label: "Heavy Lifting", hasDetail: "weight" as const },
   { id: "outdoor_heat", label: "Outdoor Work in Extreme Heat" },
   { id: "outdoor_cold", label: "Outdoor Work in Cold Weather" },
   { id: "standing_long", label: "Standing/Walking 8-12 hours" },
   { id: "repetitive_motion", label: "Repetitive Physical Tasks" },
   { id: "heights", label: "Comfortable Working at Heights" },
-  { id: "machinery", label: "Heavy Machinery / Equipment Operation" },
-  { id: "power_tools", label: "Power Tools (drills, saws, etc.)" },
-  { id: "drivers_license", label: "Valid Driver's License" },
+  { id: "machinery", label: "Heavy Machinery / Equipment Operation", hasDetail: "text" as const, placeholder: "E.g.: Tractor, excavator, combine harvester" },
+  { id: "power_tools", label: "Power Tools (drills, saws, etc.)", hasDetail: "text" as const, placeholder: "E.g.: Circular saw, nail gun, angle grinder" },
+  { id: "drivers_license", label: "Valid Driver's License", hasDetail: "text" as const, placeholder: "E.g.: Class B, CDL, motorcycle" },
   { id: "forklift", label: "Forklift / Pallet Jack Certified" },
 ];
 
@@ -60,10 +92,13 @@ type Step = "form" | "uploading" | "generating" | "done" | "error";
 export default function ResumeConverter() {
   const [step, setStep] = useState<Step>("form");
 
-  // Practical experience
+  // Practical experience with duration
   const [selectedExperience, setSelectedExperience] = useState<Record<string, boolean>>({});
-  // Physical skills
+  const [experienceDuration, setExperienceDuration] = useState<Record<string, string>>({});
+
+  // Physical skills with details
   const [selectedPhysical, setSelectedPhysical] = useState<Record<string, boolean>>({});
+  const [physicalDetails, setPhysicalDetails] = useState<Record<string, string>>({});
 
   // Migration/visa status
   const [currentLocation, setCurrentLocation] = useState("outside_us");
@@ -80,8 +115,9 @@ export default function ResumeConverter() {
   // Extra notes
   const [extraNotes, setExtraNotes] = useState("");
 
-  // English level
+  // Language levels
   const [englishLevel, setEnglishLevel] = useState("basic");
+  const [spanishLevel, setSpanishLevel] = useState("none");
 
   // Results
   const [h2aResume, setH2aResume] = useState<any>(null);
@@ -95,8 +131,14 @@ export default function ResumeConverter() {
   const toggleExperience = (id: string) => setSelectedExperience(p => ({ ...p, [id]: !p[id] }));
   const togglePhysical = (id: string) => setSelectedPhysical(p => ({ ...p, [id]: !p[id] }));
 
-  const selectedExpList = PRACTICAL_EXPERIENCE.filter(e => selectedExperience[e.id]).map(e => e.label);
-  const selectedPhysList = PHYSICAL_SKILLS.filter(s => selectedPhysical[s.id]).map(s => s.label);
+  const selectedExpList = PRACTICAL_EXPERIENCE.filter(e => selectedExperience[e.id]).map(e => ({
+    area: e.label,
+    duration: DURATION_LABELS[experienceDuration[e.id]] || "not specified",
+  }));
+  const selectedPhysList = PHYSICAL_SKILLS.filter(s => selectedPhysical[s.id]).map(s => ({
+    skill: s.label,
+    detail: physicalDetails[s.id] || undefined,
+  }));
 
   const processFile = useCallback(async (file: File) => {
     try {
@@ -110,7 +152,10 @@ export default function ResumeConverter() {
       const context = {
         practical_experience: selectedExpList,
         physical_skills: selectedPhysList,
-        english_level: englishLevel,
+        languages: {
+          english: englishLevel,
+          spanish: spanishLevel,
+        },
         migration_status: {
           location: currentLocation === "outside_us" ? "Outside the U.S." : "Currently in the U.S.",
           work_auth: workAuth === "needs_sponsorship" ? "Requires H-2 Visa Sponsorship"
@@ -149,7 +194,7 @@ export default function ResumeConverter() {
       setStep("error");
       toast.error(err.message || "Failed to generate resumes");
     }
-  }, [selectedExpList, selectedPhysList, englishLevel, currentLocation, workAuth, hasH2History, h2Details, visaDenials, passportStatus, availableWhen, durationPref, extraNotes]);
+  }, [selectedExpList, selectedPhysList, englishLevel, spanishLevel, currentLocation, workAuth, hasH2History, h2Details, visaDenials, passportStatus, availableWhen, durationPref, extraNotes]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: (files) => files.length > 0 && processFile(files[0]),
@@ -174,7 +219,6 @@ export default function ResumeConverter() {
   if (step === "done" && h2aResume && h2bResume) {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Success header */}
         <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
@@ -188,7 +232,6 @@ export default function ResumeConverter() {
           <Button variant="outline" size="sm" onClick={handleReset}>Generate New</Button>
         </div>
 
-        {/* Tabs for H-2A / H-2B */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 h-12">
             <TabsTrigger value="h2a" className="gap-2 text-sm font-bold">
@@ -212,15 +255,12 @@ export default function ResumeConverter() {
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Summary */}
                   {resume.summary && (
                     <div>
                       <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Professional Summary</p>
                       <p className="text-sm text-foreground leading-relaxed">{resume.summary}</p>
                     </div>
                   )}
-
-                  {/* Skills */}
                   {resume.skills?.length > 0 && (
                     <div>
                       <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Skills</p>
@@ -231,8 +271,6 @@ export default function ResumeConverter() {
                       </div>
                     </div>
                   )}
-
-                  {/* Experience */}
                   {resume.experience?.length > 0 && (
                     <div>
                       <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Experience</p>
@@ -258,8 +296,6 @@ export default function ResumeConverter() {
                       </div>
                     </div>
                   )}
-
-                  {/* Languages */}
                   {resume.languages?.length > 0 && (
                     <div>
                       <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Languages</p>
@@ -318,6 +354,8 @@ export default function ResumeConverter() {
     );
   }
 
+  const selectedExpCount = Object.values(selectedExperience).filter(Boolean).length;
+
   // FORM VIEW
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
@@ -340,50 +378,90 @@ export default function ResumeConverter() {
                 <Sparkles className="h-4 w-4 text-primary" />
                 1. Practical Experience
               </CardTitle>
-              <CardDescription>Select all work experience you have, even if not on your resume</CardDescription>
+              <CardDescription>Select all work experience you have and how long you worked in each area</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {PRACTICAL_EXPERIENCE.map((exp) => (
-                  <div
-                    key={exp.id}
-                    onClick={() => toggleExperience(exp.id)}
-                    className={cn(
-                      "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
-                      selectedExperience[exp.id]
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                        : "border-border hover:border-primary/30"
-                    )}
-                  >
-                    <Checkbox checked={!!selectedExperience[exp.id]} className="pointer-events-none" />
-                    <exp.icon className={cn("h-4 w-4 flex-shrink-0", selectedExperience[exp.id] ? "text-primary" : "text-muted-foreground")} />
-                    <span className="text-xs font-medium leading-tight">{exp.label}</span>
-                    {exp.tags.length > 0 && (
-                      <div className="ml-auto flex gap-1">
-                        {exp.tags.map(t => (
-                          <Badge key={t} variant="outline" className="text-[8px] px-1 py-0 h-4">{t.toUpperCase()}</Badge>
-                        ))}
+                {PRACTICAL_EXPERIENCE.map((exp) => {
+                  const isSelected = !!selectedExperience[exp.id];
+                  return (
+                    <div key={exp.id} className="space-y-1.5">
+                      <div
+                        onClick={() => toggleExperience(exp.id)}
+                        className={cn(
+                          "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                            : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        <Checkbox checked={isSelected} className="pointer-events-none" />
+                        <exp.icon className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
+                        <span className="text-xs font-medium leading-tight flex-1">{exp.label}</span>
+                        {exp.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {exp.tags.map(t => (
+                              <Badge key={t} variant="outline" className="text-[8px] px-1 py-0 h-4">{t.toUpperCase()}</Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {/* Duration selector - appears when checked */}
+                      {isSelected && (
+                        <div className="ml-8 flex items-center gap-2">
+                          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">How long:</Label>
+                          <Select
+                            value={experienceDuration[exp.id] || ""}
+                            onValueChange={(v) => setExperienceDuration(p => ({ ...p, [exp.id]: v }))}
+                          >
+                            <SelectTrigger className="h-7 text-[11px] w-32">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DURATION_OPTIONS.filter(d => d.value).map(d => (
+                                <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* English level */}
-              <div className="mt-4 flex items-center gap-3">
-                <Label className="text-xs font-bold whitespace-nowrap">English Level:</Label>
-                <Select value={englishLevel} onValueChange={setEnglishLevel}>
-                  <SelectTrigger className="h-8 text-xs w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                    <SelectItem value="fluent">Fluent</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Language levels */}
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-bold whitespace-nowrap">🇺🇸 English:</Label>
+                  <Select value={englishLevel} onValueChange={setEnglishLevel}>
+                    <SelectTrigger className="h-8 text-xs w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="basic">Basic</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                      <SelectItem value="fluent">Fluent / Native</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-bold whitespace-nowrap">🇪🇸 Spanish:</Label>
+                  <Select value={spanishLevel} onValueChange={setSpanishLevel}>
+                    <SelectTrigger className="h-8 text-xs w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="basic">Basic</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                      <SelectItem value="fluent">Fluent / Native</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -395,8 +473,8 @@ export default function ResumeConverter() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <HardHat className="h-4 w-4 text-primary" />
                   2. Physical Skills & Capabilities
-                  {selectedPhysList.length > 0 && (
-                    <Badge variant="secondary" className="text-[10px]">{selectedPhysList.length} selected</Badge>
+                  {Object.values(selectedPhysical).filter(Boolean).length > 0 && (
+                    <Badge variant="secondary" className="text-[10px]">{Object.values(selectedPhysical).filter(Boolean).length} selected</Badge>
                   )}
                 </CardTitle>
                 {showPhysical ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
@@ -405,21 +483,54 @@ export default function ResumeConverter() {
             {showPhysical && (
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {PHYSICAL_SKILLS.map((skill) => (
-                    <div
-                      key={skill.id}
-                      onClick={() => togglePhysical(skill.id)}
-                      className={cn(
-                        "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
-                        selectedPhysical[skill.id]
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border hover:border-primary/30"
-                      )}
-                    >
-                      <Checkbox checked={!!selectedPhysical[skill.id]} className="pointer-events-none" />
-                      <span className="text-xs font-medium">{skill.label}</span>
-                    </div>
-                  ))}
+                  {PHYSICAL_SKILLS.map((skill) => {
+                    const isSelected = !!selectedPhysical[skill.id];
+                    return (
+                      <div key={skill.id} className="space-y-1.5">
+                        <div
+                          onClick={() => togglePhysical(skill.id)}
+                          className={cn(
+                            "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border hover:border-primary/30"
+                          )}
+                        >
+                          <Checkbox checked={isSelected} className="pointer-events-none" />
+                          <span className="text-xs font-medium">{skill.label}</span>
+                        </div>
+                        {/* Sub-detail fields */}
+                        {isSelected && skill.hasDetail === "weight" && (
+                          <div className="ml-8 flex items-center gap-2">
+                            <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Max weight:</Label>
+                            <Select
+                              value={physicalDetails[skill.id] || ""}
+                              onValueChange={(v) => setPhysicalDetails(p => ({ ...p, [skill.id]: v }))}
+                            >
+                              <SelectTrigger className="h-7 text-[11px] w-44">
+                                <SelectValue placeholder="Select capacity..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LIFTING_OPTIONS.map(o => (
+                                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        {isSelected && skill.hasDetail === "text" && (
+                          <div className="ml-8">
+                            <Input
+                              className="h-7 text-[11px]"
+                              placeholder={skill.placeholder || "Specify details..."}
+                              value={physicalDetails[skill.id] || ""}
+                              onChange={(e) => setPhysicalDetails(p => ({ ...p, [skill.id]: e.target.value }))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             )}
@@ -569,15 +680,19 @@ export default function ResumeConverter() {
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Experience areas:</span>
-                    <Badge variant="secondary">{selectedExpList.length}</Badge>
+                    <Badge variant="secondary">{selectedExpCount}</Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Physical skills:</span>
-                    <Badge variant="secondary">{selectedPhysList.length}</Badge>
+                    <Badge variant="secondary">{Object.values(selectedPhysical).filter(Boolean).length}</Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">English:</span>
                     <span className="font-medium capitalize">{englishLevel}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Spanish:</span>
+                    <span className="font-medium capitalize">{spanishLevel}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">H-2 history:</span>
@@ -591,7 +706,7 @@ export default function ResumeConverter() {
             <Card
               className={cn(
                 "border-2 border-dashed transition-all cursor-pointer hover:border-primary/50",
-                selectedExpList.length === 0 ? "opacity-50 pointer-events-none" : ""
+                selectedExpCount === 0 ? "opacity-50 pointer-events-none" : ""
               )}
               {...getRootProps()}
             >
@@ -609,7 +724,7 @@ export default function ResumeConverter() {
                     AI will generate <strong>2 resumes</strong>: one optimized for H-2A and another for H-2B positions
                   </p>
                 </div>
-                {selectedExpList.length === 0 && (
+                {selectedExpCount === 0 && (
                   <p className="text-[10px] text-destructive font-medium">
                     ← Select at least one experience area first
                   </p>
