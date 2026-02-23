@@ -143,18 +143,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to avoid potential deadlocks
+        // Use setTimeout to avoid potential deadlocks
           setTimeout(async () => {
-            const [profileData, smtp] = await Promise.all([
-              fetchProfile(session.user.id),
-              fetchSmtpStatus(session.user.id),
-            ]);
-            setProfile(profileData);
-            setSmtpStatus(smtp);
-            if (session && profileData) {
-              tryApplyPendingReferral(session, profileData).catch(() => undefined);
+            try {
+              const [profileData, smtp] = await Promise.all([
+                fetchProfile(session.user.id),
+                fetchSmtpStatus(session.user.id),
+              ]);
+              setProfile(profileData);
+              setSmtpStatus(smtp);
+              if (session && profileData) {
+                tryApplyPendingReferral(session, profileData).catch(() => undefined);
+              }
+            } catch (err) {
+              console.error('Error loading user data:', err);
+              setSmtpStatus({ hasPassword: false, hasRiskProfile: false });
+            } finally {
+              setLoading(false);
             }
-            setLoading(false);
           }, 0);
         } else {
           setProfile(null);
@@ -179,6 +185,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (session && profileData) {
             tryApplyPendingReferral(session, profileData).catch(() => undefined);
           }
+          setLoading(false);
+        }).catch((err) => {
+          console.error('Error loading user data:', err);
+          setSmtpStatus({ hasPassword: false, hasRiskProfile: false });
           setLoading(false);
         });
       } else {
