@@ -148,7 +148,7 @@ async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supaba
     console.log(`[AUTO-IMPORT] ${source.visaType}: JSON string ${jsonStr.length} chars`);
 
     // Step 3: Split JSON string into chunks WITHOUT parsing (zero CPU for JSON.parse)
-    const CHUNK_SIZE = 200;
+    const CHUNK_SIZE = 50;
     const { chunks, totalItems } = splitJsonArrayString(jsonStr, CHUNK_SIZE);
     jsonStr = null; // FREE the full JSON string
 
