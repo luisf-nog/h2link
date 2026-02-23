@@ -1473,6 +1473,10 @@ export type Database = {
         Returns: number
       }
       process_jobs_bulk: { Args: { jobs_data: Json }; Returns: undefined }
+      resolve_profile_resume_url: {
+        Args: { p_queue_id?: string; p_token: string }
+        Returns: string
+      }
       track_profile_view: {
         Args: { p_queue_id?: string; p_token: string }
         Returns: {
