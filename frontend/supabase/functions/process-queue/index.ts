@@ -44,6 +44,8 @@ interface ProfileRow {
   phone_e164: string | null;
   contact_email: string | null;
   resume_data?: unknown | null;
+  resume_data_h2a?: unknown | null;
+  resume_data_h2b?: unknown | null;
   resume_url?: string | null;
   credits_used_today?: number | null;
   credits_reset_date?: string | null;
@@ -784,7 +786,7 @@ async function processOneUser(params: {
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
-    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors")
+    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_data_h2a,resume_data_h2b,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors")
     .eq("id", userId)
     .single();
 
@@ -1063,19 +1065,23 @@ async function processOneUser(params: {
       const sendingMethod = getSendingMethod(p.plan_tier);
       if (sendingMethod === "dynamic" && row.job_id) {
         try {
-          let resumeDataForEmail = p.resume_data;
+          // Step 1: Determine the correct fallback resume based on visa_type
+          const isH2A = visaType === "H-2A" || (("visa_type" in job) && String((job as any).visa_type).startsWith("H-2A"));
+          let resumeDataForEmail = isH2A
+            ? (p.resume_data_h2a || p.resume_data)
+            : (p.resume_data_h2b || p.resume_data);
+          
+          console.log(`[process-queue] Resume selection: visa=${visaType}, isH2A=${isH2A}, hasH2A=${!!p.resume_data_h2a}, hasH2B=${!!p.resume_data_h2b}`);
 
-          // Black tier: try to find a sector-specific resume matching the job's category
+          // Step 2: Black tier - try to find a sector-specific resume (overrides fallback)
           if (p.plan_tier === "black") {
             const pj = job as PublicJobRow;
             const jobCategory = (pj as any).category || "";
             
             if (jobCategory) {
-              // Get normalized category for this job
               const { data: normResult } = await serviceClient.rpc("get_normalized_category", { raw_cat: jobCategory });
               const normalizedCategory = normResult || "";
               
-              // Map normalized Portuguese category names to sector IDs
               const categoryToSectorMap: Record<string, string> = {
                 "Campo e Colheita": "campo_colheita",
                 "Construção e Manutenção": "construcao_manutencao",
@@ -1101,8 +1107,12 @@ async function processOneUser(params: {
                 
                 if (sectorResume?.resume_data) {
                   resumeDataForEmail = sectorResume.resume_data;
-                  console.log(`[process-queue] Black tier: using sector resume '${sectorId}' for job category '${jobCategory}'`);
+                  console.log(`[process-queue] Black tier: using SECTOR resume '${sectorId}' for job category '${jobCategory}'`);
+                } else {
+                  console.log(`[process-queue] Black tier: no sector resume for '${sectorId}', using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
                 }
+              } else {
+                console.log(`[process-queue] Black tier: category '${normalizedCategory}' not in sector map, using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
               }
             }
           }
