@@ -1417,6 +1417,10 @@ export type Database = {
         Returns: undefined
       }
       process_daily_smtp_warmup: { Args: never; Returns: undefined }
+      process_dol_raw_batch: {
+        Args: { p_raw_items: Json; p_visa_type: string }
+        Returns: number
+      }
       process_jobs_bulk: { Args: { jobs_data: Json }; Returns: undefined }
       track_profile_view: {
         Args: { p_queue_id?: string; p_token: string }

@@ -12,104 +12,11 @@ const DOL_SOURCES = [
   { key: "h2b", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2b", visaType: "H-2B" },
 ];
 
-// --- Helpers ---
-function calculateFinalWage(rawVal: any, hours: any): number | null {
-  if (!rawVal) return null;
-  let val = parseFloat(String(rawVal).replace(/[$,]/g, ""));
-  if (isNaN(val) || val <= 0) return null;
-  if (val > 100) {
-    const h = hours && hours > 0 ? hours : 40;
-    let calc = val / (h * 4.333);
-    return calc >= 7.25 && calc <= 95 ? parseFloat(calc.toFixed(2)) : null;
-  }
-  return val;
-}
-
-function formatToStaticDate(dateStr: any): string | null {
-  if (!dateStr || dateStr === "N/A") return null;
-  try {
-    if (typeof dateStr === "string" && dateStr.includes("T")) return dateStr.split("T")[0];
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString().split("T")[0];
-  } catch { return null; }
-}
-
-function getCaseBody(id: string): string {
-  if (!id) return id;
-  const cleanId = id.split("-GHOST")[0].trim();
-  const parts = cleanId.split("-");
-  if (parts[0] === "JO" && parts[1] === "A") return parts.slice(2).join("-");
-  if (parts[0] === "H") return parts.slice(1).join("-");
-  return cleanId;
-}
-
-function getVal(obj: any, keys: string[]): string | null {
-  if (!obj) return null;
-  for (const key of keys) {
-    const val = obj[key] ?? obj[key?.toLowerCase()];
-    if (val !== undefined && val !== null && String(val).trim() !== "") return String(val).trim();
-  }
-  return null;
-}
-
 function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-function processJobList(list: any[], visaType: string, jobsMap: Map<string, any>) {
-  const nyToday = getTodayNY();
-  const isEarly = visaType === "H-2A (Early Access)";
-
-  for (const item of list) {
-    const flat = {
-      ...item,
-      ...(item.clearanceOrder || {}),
-      ...(item.jobRequirements?.qualification || {}),
-      ...(item.employer || {}),
-    };
-
-    const rawId = getVal(flat, ["caseNumber", "jobOrderNumber", "CASE_NUMBER"]) || "";
-    if (!rawId) continue;
-    const email = getVal(flat, ["recApplyEmail", "email"]);
-    if (!email || email === "N/A") continue;
-
-    const fingerprint = getCaseBody(rawId);
-    const hours = parseFloat(getVal(flat, ["jobHoursTotal", "weekly_hours", "basicHours"]) || "0");
-    const postedDate = formatToStaticDate(getVal(flat, ["dateAcceptanceLtrIssued", "DECISION_DATE", "decisionDate"])) || nyToday;
-
-    jobsMap.set(fingerprint, {
-      job_id: rawId.split("-GHOST")[0].trim(),
-      visa_type: visaType, fingerprint, is_active: true,
-      job_title: getVal(flat, ["tempneedJobtitle", "jobTitle", "title"]),
-      company: getVal(flat, ["empBusinessName", "employerBusinessName", "empName"]),
-      email: email.toLowerCase(),
-      phone: getVal(flat, ["recApplyPhone", "empPhone"]),
-      city: getVal(flat, ["jobCity", "city"]),
-      state: getVal(flat, ["jobState", "state"]),
-      zip_code: getVal(flat, ["jobPostcode", "empPostalCode", "zip"]),
-      salary: calculateFinalWage(getVal(flat, ["wageFrom", "jobWageOffer", "wageOfferFrom"]), hours),
-      start_date: formatToStaticDate(getVal(flat, ["tempneedStart", "jobBeginDate"])),
-      posted_date: postedDate,
-      end_date: formatToStaticDate(getVal(flat, ["tempneedEnd", "jobEndDate"])),
-      job_duties: getVal(flat, ["tempneedDescription", "jobDuties"]),
-      job_min_special_req: getVal(flat, ["jobMinspecialreq", "jobAddReqinfo", "specialRequirements"]),
-      wage_additional: getVal(flat, ["wageAdditional", "jobSpecialPayInfo", "addSpecialPayInfo", "wageAddinfo"]),
-      rec_pay_deductions: getVal(flat, ["recPayDeductions", "jobPayDeduction", "deductionsInfo"]),
-      weekly_hours: hours,
-      category: getVal(flat, ["tempneedSocTitle", "jobSocTitle", "socTitle", "socCodeTitle", "SOC_TITLE"]) || "General Application",
-      openings: parseInt(getVal(flat, ["tempneedWkrPos", "jobWrksNeeded", "totalWorkersNeeded"]) || "0"),
-      experience_months: parseInt(getVal(flat, ["jobMinexpmonths", "experienceMonths"]) || "0"),
-      education_required: getVal(flat, ["jobMinedu", "educationLevel"]),
-      transport_provided: getVal(flat, ["transportation", "transportProvided", "recIsDailyTransport"])?.toLowerCase().includes("yes") || false,
-      source_url: getVal(flat, ["sourceUrl", "url", "recApplyUrl"]),
-      housing_info: getVal(flat, ["housingInfo", "housingDescription"]) || (visaType.includes("H-2A") ? "Housing Provided (H-2A Standard)" : null),
-      was_early_access: isEarly,
-    });
-  }
-}
-
-// Background processing - updates import_jobs table with progress
+// Background processing — now "lean": just downloads, unzips, and sends raw JSON to SQL
 async function processSourceWithTracking(
   source: typeof DOL_SOURCES[0],
   supabase: any,
@@ -133,41 +40,50 @@ async function processSourceWithTracking(
     await zip.loadAsync(zipBuffer);
 
     const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs`);
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs no ZIP`);
 
-    const jobsMap = new Map<string, any>();
+    // Collect all raw items from all JSON files
+    let allRawItems: any[] = [];
     for (const fileName of jsonFiles) {
       const content = await zip.files[fileName].async("string");
       const list = JSON.parse(content);
-      processJobList(list, source.visaType, jobsMap);
+      if (Array.isArray(list)) {
+        allRawItems = allRawItems.concat(list);
+      }
     }
 
-    const allJobs = Array.from(jobsMap.values());
-    const totalRows = allJobs.length;
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalRows} vagas para upsert`);
-
-    // Update total_rows
+    const totalRows = allRawItems.length;
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalRows} itens brutos para processar via SQL`);
     await supabase.from("import_jobs").update({ total_rows: totalRows }).eq("id", jobId);
 
-    const BATCH_SIZE = 50;
+    // Send raw JSON in batches of 500 to the SQL function
+    const BATCH_SIZE = 500;
     let totalProcessed = 0;
-    for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
-      const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
-      if (error) console.error(`[AUTO-IMPORT] Erro lote ${i}:`, error.message);
-      else totalProcessed += Math.min(BATCH_SIZE, allJobs.length - i);
 
-      // Update progress every 5 batches
-      if (i % (BATCH_SIZE * 5) === 0 || i + BATCH_SIZE >= allJobs.length) {
-        await supabase.from("import_jobs").update({ processed_rows: totalProcessed }).eq("id", jobId);
+    for (let i = 0; i < allRawItems.length; i += BATCH_SIZE) {
+      const batch = allRawItems.slice(i, i + BATCH_SIZE);
+      const { data, error } = await supabase.rpc("process_dol_raw_batch", {
+        p_raw_items: batch,
+        p_visa_type: source.visaType,
+      });
+
+      if (error) {
+        console.error(`[AUTO-IMPORT] Erro batch ${i}:`, error.message);
+      } else {
+        totalProcessed += (data ?? batch.length);
       }
-      await new Promise((r) => setTimeout(r, 10));
+
+      // Update progress every 5 batches or at the end
+      if (i % (BATCH_SIZE * 5) === 0 || i + BATCH_SIZE >= allRawItems.length) {
+        await supabase.from("import_jobs").update({ processed_rows: Math.min(i + BATCH_SIZE, totalRows) }).eq("id", jobId);
+      }
     }
 
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalProcessed} vagas processadas`);
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalProcessed} registros processados pelo SQL`);
     await supabase.rpc("deactivate_expired_jobs");
 
-    // Radar
-    if (!skipRadar && allJobs.length > 0) {
+    // Radar (unchanged logic)
+    if (!skipRadar && totalRows > 0) {
       console.log(`[AUTO-IMPORT] Disparando radar...`);
       const { data: activeRadars } = await supabase
         .from("radar_profiles")
@@ -203,7 +119,7 @@ async function processSourceWithTracking(
 
                 if (jobIds.length > 0) {
                   const { error: queueError } = await supabase.from("my_queue").insert(
-                    jobIds.map((jobId: string) => ({ user_id: radar.user_id, job_id: jobId, status: "pending" }))
+                    jobIds.map((jId: string) => ({ user_id: radar.user_id, job_id: jId, status: "pending" }))
                   );
                   if (!queueError) {
                     await supabase.from("radar_matched_jobs").update({ auto_queued: true }).eq("user_id", radar.user_id).in("job_id", jobIds);
@@ -225,7 +141,7 @@ async function processSourceWithTracking(
 
     // Mark completed
     await supabase.from("import_jobs").update({ status: "completed", processed_rows: totalProcessed }).eq("id", jobId);
-    console.log(`[AUTO-IMPORT] Concluído para ${source.visaType}: ${totalProcessed} processadas`);
+    console.log(`[AUTO-IMPORT] Concluído para ${source.visaType}: ${totalProcessed} processados`);
   } catch (err) {
     console.error(`[AUTO-IMPORT] Erro background ${source.visaType}:`, err.message);
     await supabase.from("import_jobs").update({ status: "failed", error_message: err.message }).eq("id", jobId);
@@ -255,7 +171,6 @@ Deno.serve(async (req) => {
     console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${today} skipRadar=${skipRadar}`);
 
     if (sourceKey === "all") {
-      // Cron: fire each source in background
       for (const source of DOL_SOURCES) {
         const { data: job } = await supabase.from("import_jobs").insert({ source: source.key, status: "processing" }).select("id").single();
         if (job) {
@@ -273,7 +188,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Create job record, process in background, return job_id for polling
       const { data: job, error: jobError } = await supabase
         .from("import_jobs")
         .insert({ source: sourceKey, status: "processing" })
