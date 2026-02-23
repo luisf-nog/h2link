@@ -89,31 +89,32 @@ export default function PublicProfile() {
     })();
   }, [queueId]);
 
-  // Resolve the best resume: first try URL, then fall back to generating PDF from resume data
+  // Resolve the best resume: prioritize DATA (always available for optimized versions), fall back to URL
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
-        // 1. Try to get a pre-built PDF URL
+        // 1. Try to resolve optimized resume DATA and generate PDF client-side
+        // This is preferred because resume_data_h2a/h2b are populated even when URLs are not
+        const { data: resumeData } = await supabase.rpc("resolve_profile_resume_data" as any, {
+          p_token: token,
+          p_queue_id: queueId || null,
+        });
+        if (resumeData && typeof resumeData === "object" && (resumeData as any).personal_info) {
+          const doc = generateResumePDF(resumeData as ResumeData);
+          const blob = doc.output("blob");
+          const blobUrl = URL.createObjectURL(blob);
+          setGeneratedBlobUrl(blobUrl);
+          return; // Generated PDF from optimized data — done
+        }
+
+        // 2. No resume data available — try pre-built PDF URL as fallback
         const { data: urlData } = await supabase.rpc("resolve_profile_resume_url" as any, {
           p_token: token,
           p_queue_id: queueId || null,
         });
         if (urlData) {
           setResolvedResumeUrl(urlData as string);
-          return;
-        }
-
-        // 2. No URL available — resolve resume DATA and generate PDF client-side
-        const { data: resumeData } = await supabase.rpc("resolve_profile_resume_data" as any, {
-          p_token: token,
-          p_queue_id: queueId || null,
-        });
-        if (resumeData && typeof resumeData === "object" && resumeData.personal_info) {
-          const doc = generateResumePDF(resumeData as ResumeData);
-          const blob = doc.output("blob");
-          const blobUrl = URL.createObjectURL(blob);
-          setGeneratedBlobUrl(blobUrl);
         }
       } catch (err) {
         console.error("Error resolving resume:", err);
