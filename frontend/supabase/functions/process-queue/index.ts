@@ -1063,7 +1063,51 @@ async function processOneUser(params: {
       const sendingMethod = getSendingMethod(p.plan_tier);
       if (sendingMethod === "dynamic" && row.job_id) {
         try {
-          if (!p.resume_data) throw new Error("resume_data_missing");
+          let resumeDataForEmail = p.resume_data;
+
+          // Black tier: try to find a sector-specific resume matching the job's category
+          if (p.plan_tier === "black") {
+            const pj = job as PublicJobRow;
+            const jobCategory = (pj as any).category || "";
+            
+            if (jobCategory) {
+              // Get normalized category for this job
+              const { data: normResult } = await serviceClient.rpc("get_normalized_category", { raw_cat: jobCategory });
+              const normalizedCategory = normResult || "";
+              
+              // Map normalized Portuguese category names to sector IDs
+              const categoryToSectorMap: Record<string, string> = {
+                "Campo e Colheita": "campo_colheita",
+                "Construção e Manutenção": "construcao_manutencao",
+                "Paisagismo e Jardinagem": "paisagismo_jardinagem",
+                "Hotelaria e Limpeza": "hotelaria_limpeza",
+                "Cozinha e Restaurante": "cozinha_restaurante",
+                "Logística e Transporte": "logistica_transporte",
+                "Indústria e Produção": "industria_producao",
+                "Mecânica e Reparo": "mecanica_reparo",
+                "Vendas e Escritório": "vendas_escritorio",
+                "Lazer e Serviços": "lazer_servicos",
+              };
+              
+              const sectorId = categoryToSectorMap[normalizedCategory];
+              
+              if (sectorId) {
+                const { data: sectorResume } = await serviceClient
+                  .from("sector_resumes")
+                  .select("resume_data")
+                  .eq("user_id", userId)
+                  .eq("category", sectorId)
+                  .maybeSingle();
+                
+                if (sectorResume?.resume_data) {
+                  resumeDataForEmail = sectorResume.resume_data;
+                  console.log(`[process-queue] Black tier: using sector resume '${sectorId}' for job category '${jobCategory}'`);
+                }
+              }
+            }
+          }
+
+          if (!resumeDataForEmail) throw new Error("resume_data_missing");
           
           // Fetch user's AI preferences
           const { data: prefsRow } = await serviceClient
@@ -1077,7 +1121,7 @@ async function processOneUser(params: {
             : defaultPreferences;
           
           const pj = job as PublicJobRow;
-          const ai = await generateDiamondEmail({ resumeData: p.resume_data, job: pj, visaType, prefs: userPrefs });
+          const ai = await generateDiamondEmail({ resumeData: resumeDataForEmail, job: pj, visaType, prefs: userPrefs });
           finalSubject = ai.subject;
           htmlBody = ai.body.replace(/\n/g, "<br>");
         } catch (e) {
