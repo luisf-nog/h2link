@@ -1,79 +1,81 @@
 
 
-# Fix: Memory-Safe Import + Robust Error Handling
+# Plano Definitivo: Resolver "supabaseUrl is required"
 
-## Problem Analysis
+## Diagnostico da Causa Raiz
 
-The Edge Function crashes on the JO source (2081 items) due to **memory limit exceeded** (150MB cap). The memory profile at peak:
-
-```text
-ZIP ArrayBuffer:     ~5 MB
-JSZip object:        ~10 MB
-JSON string:         ~25 MB
-Parsed JS array:     ~30 MB
-Supabase SDK:        ~10 MB
-Deno runtime:        ~30 MB
----------------------------------
-Total peak:          ~110-130 MB  (hits 150MB with GC pressure)
-```
-
-Additional issues: no timeout on frontend polling, no cleanup of stale jobs, and `processed_rows` stays at 0 because the crash happens before any RPC completes.
-
-## Solution: 5 Targeted Fixes
-
-### 1. Aggressive Memory Management in Edge Function
-
-Free each resource BEFORE allocating the next:
+O projeto tem **DUAS** estruturas Vite separadas:
 
 ```text
-Step 1: fetch ZIP -> arrayBuffer (5MB)
-Step 2: JSZip.loadAsync(buffer)
-Step 3: NULL the arrayBuffer
-Step 4: Extract JSON string from zip
-Step 5: NULL the zip object entirely  <-- KEY FIX
-Step 6: JSON.parse the string
-Step 7: NULL the string
-Step 8: Process array in batches using splice (mutates/frees)
+RAIZ (o que o Lovable USA de fato):
+  vite.config.ts        <-- SEM define block, SEM fallbacks
+  index.html            <-- <script src="/src/main.tsx">
+  src/                  <-- codigo fonte real
+  .env                  <-- auto-gerado pelo Lovable Cloud
+
+FRONTEND (onde TODAS as correções foram aplicadas):
+  frontend/vite.config.ts  <-- COM define block, COM fallbacks
+  frontend/index.html
+  frontend/src/
+  frontend/.env
 ```
 
-This reduces peak memory from ~130MB to ~65MB.
+**Todas as 6 tentativas anteriores modificaram `frontend/vite.config.ts`** -- um arquivo que o Lovable **nao usa**. O ambiente Lovable roda a partir da raiz, usando o `vite.config.ts` da raiz, que nao tem nenhum `define` block nem fallbacks para as credenciais do Supabase.
 
-### 2. Use Array Mutation (splice) Instead of Copying (slice)
+## Solucao
 
-Current code: `list.slice(i, i + BATCH_SIZE)` keeps the full array alive.
-Fix: `list.splice(0, BATCH_SIZE)` removes processed items from memory immediately.
+Adicionar o bloco `define` com as credenciais publicas (anon key) diretamente no **`vite.config.ts` da raiz** -- o unico que o Lovable efetivamente usa.
 
-### 3. Frontend Timeout on waitForJob
+## Mudancas Tecnicas
 
-Add a 5-minute max timeout to `waitForJob`. If the job hasn't reached `completed` or `failed` within 5 minutes, treat it as failed and move to the next source. This prevents the sequential chain from hanging forever.
+### Arquivo: `vite.config.ts` (RAIZ)
 
-### 4. Stale Job Cleanup on Page Load
+Adicionar `loadEnv` ao import e um bloco `define` com fallbacks hardcoded para as chaves publicas do Supabase:
 
-When AdminImport mounts, run a query to mark any job stuck in `processing` for over 5 minutes as `failed`. This clears the UI of ghost jobs from previous crashed runs.
+```typescript
+import { defineConfig, loadEnv, type ConfigEnv, type PluginOption } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+import { fileURLToPath } from "node:url";
+import { componentTagger } from "lovable-tagger";
 
-### 5. Set total_rows Before Processing and Write Status on Crash
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-- Write `total_rows` to the `import_jobs` row immediately after parsing the JSON array (before RPC batches start).
-- Wrap the entire processing in try/catch that guarantees a status update to `failed` even on unexpected crashes.
+export default defineConfig(({ mode }: ConfigEnv) => {
+  const env = loadEnv(mode, __dirname, "");
 
-## Files to Change
+  const SUPABASE_URL = env.VITE_SUPABASE_URL || "https://dalarhopratsgzmmzhxx.supabase.co";
+  const SUPABASE_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGFyaG9wcmF0c2d6bW16aHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM5NDksImV4cCI6MjA4NDY1OTk0OX0.CIV7u2pMSudse-Zpfqf8OHLkm_exZn0EaYXVEFwoXTQ";
+  const SUPABASE_PROJECT_ID = env.VITE_SUPABASE_PROJECT_ID || "dalarhopratsgzmmzhxx";
 
-### `supabase/functions/auto-import-jobs/index.ts`
-- Restructure `processSourceWithTracking` memory flow: null zip and buffer before JSON.parse, use splice instead of slice
-- Reduce BATCH_SIZE from 100 to 50 for additional safety margin
-- Set `total_rows` immediately after JSON.parse
-- Redeploy the function
+  return {
+    base: '/',
+    envDir: __dirname,
+    build: { outDir: "dist" },
+    server: { port: 8080, host: '0.0.0.0', allowedHosts: true as const },
+    define: {
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(SUPABASE_URL),
+      'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(SUPABASE_KEY),
+      'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(SUPABASE_PROJECT_ID),
+    },
+    plugins: [react(), mode === "development" ? componentTagger() : undefined].filter(Boolean) as unknown as PluginOption[],
+    resolve: {
+      alias: { "@": path.resolve(__dirname, "./src") },
+    },
+  };
+});
+```
 
-### `frontend/src/pages/AdminImport.tsx`
-- Add 5-minute timeout to `waitForJob`
-- Add `useEffect` on mount to clean up stale "processing" jobs older than 5 minutes
-- Show a more informative message when a job times out
+### Por que isso resolve
 
-## Expected Outcome
+- A anon key do Supabase e uma chave **publica** (nao e um segredo), entao pode ficar no codigo
+- O bloco `define` garante que `import.meta.env.VITE_SUPABASE_URL` sera substituido pelo valor correto durante o build/dev, independente de o `.env` ser encontrado ou nao
+- Desta vez estamos editando o arquivo **certo** -- o da raiz
 
-- JO (2081 items): peak ~65MB, completes in ~30-60s
-- H2A: similar or smaller, completes in ~20-40s  
-- H2B (1414 items): already works, ~20s
-- Total "Import All": ~2-3 minutes sequential
-- No more hung UI or ghost "processing" jobs
+### Nenhuma outra mudanca necessaria
+
+- `src/integrations/supabase/client.ts` -- NAO TOCAR (auto-gerado)
+- `frontend/vite.config.ts` -- irrelevante para o ambiente Lovable
+- `.env` -- auto-gerado pelo Lovable Cloud
 
