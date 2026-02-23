@@ -62,7 +62,9 @@ export default function PublicProfile() {
 
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch job info if queueId present
+  const [resolvedResumeUrl, setResolvedResumeUrl] = useState<string | null>(null);
+
+  // Fetch job info and resolve sector-specific resume URL if queueId present
   useEffect(() => {
     if (!queueId) return;
     (async () => {
@@ -84,6 +86,20 @@ export default function PublicProfile() {
       } catch {}
     })();
   }, [queueId]);
+
+  // Resolve the best resume URL (sector-specific > visa-specific > generic)
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc("resolve_profile_resume_url" as any, {
+          p_token: token,
+          p_queue_id: queueId || null,
+        });
+        if (data) setResolvedResumeUrl(data as string);
+      } catch {}
+    })();
+  }, [token, queueId]);
 
   useEffect(() => {
     if (!token) { setNotFound(true); setLoading(false); return; }
@@ -212,11 +228,13 @@ export default function PublicProfile() {
     }
   };
 
+  const effectiveResumeUrl = resolvedResumeUrl || profile?.resume_url;
+
   const handleDownload = async () => {
-    if (!profile?.resume_url) return;
+    if (!effectiveResumeUrl) return;
     setDownloading(true);
     try {
-      const res = await fetch(profile.resume_url);
+      const res = await fetch(effectiveResumeUrl);
       const blob = await res.blob();
       const cleanName = (profile.full_name || "resume").replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_");
       const url = URL.createObjectURL(blob);
@@ -278,7 +296,7 @@ export default function PublicProfile() {
             <Button
               variant="ghost" size="sm"
               onClick={handleDownload}
-              disabled={!profile.resume_url || downloading}
+              disabled={!effectiveResumeUrl || downloading}
               className="gap-1.5 text-xs h-8"
             >
               {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
@@ -417,15 +435,15 @@ export default function PublicProfile() {
           {/* RIGHT: Resume PDF */}
           <div className="flex-1 order-2 lg:order-2">
             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-              {profile.resume_url ? (
+              {effectiveResumeUrl ? (
                 <object
-                  data={`${profile.resume_url}#toolbar=1`}
+                  data={`${effectiveResumeUrl}#toolbar=1`}
                   type="application/pdf"
                   className="w-full"
                   style={{ minHeight: "calc(100vh - 160px)" }}
                 >
                   <iframe
-                    src={`${profile.resume_url}#toolbar=1`}
+                    src={`${effectiveResumeUrl}#toolbar=1`}
                     className="w-full"
                     style={{ minHeight: "calc(100vh - 160px)" }}
                     title="Resume"
