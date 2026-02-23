@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,16 +13,41 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const manualJobSchema = z.object({
   company: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(255),
   job_title: z.string().trim().min(1).max(120),
+  preferred_resume_category: z.string().trim().max(64).optional().or(z.literal("")),
   eta_number: z.string().trim().max(64).optional().or(z.literal("")),
   phone: z.string().trim().max(32).optional().or(z.literal("")),
 });
 
 type ManualJobForm = z.infer<typeof manualJobSchema>;
+
+const SECTOR_CATEGORY_LABELS: Record<string, string> = {
+  agricultura_colheita: "Agriculture & Harvesting",
+  equipamentos_agricolas: "Farm Equipment",
+  construcao_geral: "General Construction",
+  carpintaria_telhados: "Carpentry & Roofing",
+  instalacao_eletrica: "Installation & Electrical",
+  mecanica_reparo: "Mechanics & Repair",
+  limpeza_zeladoria: "Cleaning & Janitorial",
+  cozinha_preparacao: "Kitchen & Food Prep",
+  servico_mesa: "Dining & Table Service",
+  hotelaria_recepcao: "Hospitality & Front Desk",
+  bar_bebidas: "Bar & Beverages",
+  logistica_estoque: "Logistics & Warehousing",
+  transporte_motorista: "Transport & Driving",
+  manufatura_montagem: "Manufacturing & Assembly",
+  soldagem_corte: "Welding & Cutting",
+  marcenaria_madeira: "Woodworking",
+  carnes_frigorifico: "Meat Processing",
+  textil_lavanderia: "Textile & Laundry",
+  paisagismo_jardinagem: "Landscaping & Gardening",
+  vendas_atendimento: "Sales & Customer Service",
+};
 
 export function AddManualJobDialog({
   onAdded,
@@ -34,9 +59,17 @@ export function AddManualJobDialog({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sectorOptions, setSectorOptions] = useState<Array<{ value: string; label: string }>>([]);
 
   const defaults = useMemo<ManualJobForm>(
-    () => ({ company: "", email: "", job_title: "", eta_number: "", phone: "" }),
+    () => ({
+      company: "",
+      email: "",
+      job_title: "",
+      preferred_resume_category: "",
+      eta_number: "",
+      phone: "",
+    }),
     [],
   );
 
@@ -45,6 +78,35 @@ export function AddManualJobDialog({
     defaultValues: defaults,
     mode: "onSubmit",
   });
+
+  useEffect(() => {
+    const loadSectorOptions = async () => {
+      if (!open || !profile?.id || profile.plan_tier !== "black") {
+        setSectorOptions([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("sector_resumes")
+        .select("category")
+        .eq("user_id", profile.id);
+
+      if (error || !data) {
+        setSectorOptions([]);
+        return;
+      }
+
+      const unique = Array.from(new Set(data.map((item) => String(item.category || "").trim()).filter(Boolean)));
+      setSectorOptions(
+        unique.map((category) => ({
+          value: category,
+          label: SECTOR_CATEGORY_LABELS[category] || category,
+        })),
+      );
+    };
+
+    loadSectorOptions();
+  }, [open, profile?.id, profile?.plan_tier]);
 
   const submit = form.handleSubmit(async (values) => {
     if (!profile?.id) {
@@ -100,6 +162,7 @@ export function AddManualJobDialog({
           company: values.company,
           job_title: values.job_title,
           email: values.email,
+          preferred_resume_category: values.preferred_resume_category || null,
           eta_number: values.eta_number || null,
           phone: values.phone || null,
         } as any)
@@ -138,6 +201,8 @@ export function AddManualJobDialog({
       setSaving(false);
     }
   });
+
+  const selectedResumeCategory = form.watch("preferred_resume_category") || "";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -192,6 +257,30 @@ export function AddManualJobDialog({
               ) : null}
             </div>
 
+            {profile?.plan_tier === "black" && sectorOptions.length > 0 ? (
+              <div className="space-y-2">
+                <Label>{t("queue.manual_dialog.fields.resume_category")}</Label>
+                <Select
+                  value={selectedResumeCategory || "none"}
+                  onValueChange={(value) => form.setValue("preferred_resume_category", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("queue.manual_dialog.placeholders.resume_category")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("queue.manual_dialog.placeholders.resume_category_none")}</SelectItem>
+                    {sectorOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="manual_eta">{t("queue.manual_dialog.fields.eta_number")}</Label>
               <Input
@@ -203,20 +292,20 @@ export function AddManualJobDialog({
                 <p className="text-sm text-destructive">{form.formState.errors.eta_number.message}</p>
               ) : null}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="manual_phone">{t("queue.manual_dialog.fields.phone")}</Label>
-            <Input
-              id="manual_phone"
-              placeholder={t("queue.manual_dialog.placeholders.phone")}
-              inputMode="tel"
-              autoComplete="tel"
-              {...form.register("phone")}
-            />
-            {form.formState.errors.phone?.message ? (
-              <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
-            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="manual_phone">{t("queue.manual_dialog.fields.phone")}</Label>
+              <Input
+                id="manual_phone"
+                placeholder={t("queue.manual_dialog.placeholders.phone")}
+                inputMode="tel"
+                autoComplete="tel"
+                {...form.register("phone")}
+              />
+              {form.formState.errors.phone?.message ? (
+                <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
