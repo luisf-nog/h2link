@@ -16,333 +16,101 @@ const DOL_SOURCES = [
   { key: "h2b", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2b", visaType: "H-2B" },
 ];
 
+// ─── HELPER: Limpeza de memória ───
 function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-// ─── ZERO-PARSE JSON CHUNKING ──────────────────────────────────────────────
-// Splits a JSON array string into smaller JSON array strings WITHOUT calling JSON.parse
-// This avoids the ~2s CPU spike from parsing 25MB of JSON
-function splitJsonArrayString(jsonStr: string, chunkSize: number): { chunks: string[]; totalItems: number } {
-  const trimmed = jsonStr.trim();
-  // Remove outer [ and ]
-  const inner = trimmed.slice(1, trimmed.length - 1);
-
-  const chunks: string[] = [];
-  let depth = 0;
-  let itemCount = 0;
-  let chunkStartIdx = 0;
-  let lastItemEndIdx = 0;
-
-  for (let i = 0; i < inner.length; i++) {
-    const ch = inner[i];
-    if (ch === '"') {
-      // Skip strings (handle escaped quotes)
-      i++;
-      while (i < inner.length) {
-        if (inner[i] === '\\') { i++; } // skip escaped char
-        else if (inner[i] === '"') { break; }
-        i++;
-      }
-    } else if (ch === '{' || ch === '[') {
-      depth++;
-    } else if (ch === '}' || ch === ']') {
-      depth--;
-      if (depth === 0) {
-        itemCount++;
-        lastItemEndIdx = i + 1;
-        if (itemCount % chunkSize === 0) {
-          chunks.push('[' + inner.slice(chunkStartIdx, lastItemEndIdx) + ']');
-          // Find start of next item (skip comma and whitespace)
-          let nextStart = lastItemEndIdx;
-          while (nextStart < inner.length && (inner[nextStart] === ',' || inner[nextStart] === ' ' || inner[nextStart] === '\n' || inner[nextStart] === '\r')) {
-            nextStart++;
-          }
-          chunkStartIdx = nextStart;
-        }
-      }
-    }
-  }
-
-  // Remaining items
-  if (chunkStartIdx < inner.length) {
-    const remaining = inner.slice(chunkStartIdx, lastItemEndIdx).trim();
-    if (remaining) {
-      chunks.push('[' + remaining + ']');
-    }
-  }
-
-  return { chunks, totalItems: itemCount };
-}
-
-// ─── LIGHTWEIGHT ZIP EXTRACTION ────────────────────────────────────────────
-function extractJsonStringFromZip(zipBytes: Uint8Array): string | null {
-  const unzipped = unzipSync(zipBytes);
-  const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
-  if (!jsonFileName) return null;
-  return new TextDecoder().decode(unzipped[jsonFileName]);
-}
-
-// ─── SEND RAW JSON CHUNK TO POSTGRESQL (no JSON.parse/stringify overhead) ──
-async function sendRawChunkToPostgres(
-  chunkJsonStr: string,
-  visaType: string,
-  supabaseUrl: string,
-  serviceRoleKey: string
-): Promise<number> {
-  // Build the RPC body as a raw string to avoid JSON.parse + JSON.stringify
-  const body = `{"p_raw_items":${chunkJsonStr},"p_visa_type":"${visaType}"}`;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/rpc/process_dol_raw_batch`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      Prefer: "return=representation",
-    },
-    body,
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`RPC failed (${res.status}): ${errText.slice(0, 200)}`);
-  }
-
-  const result = await res.json();
-  return typeof result === "number" ? result : 0;
-}
-
-// ─── MEMORY + CPU SAFE PROCESSING ──────────────────────────────────────────
-async function processSourceWithTracking(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
+// ─── PROCESSO PRINCIPAL ───
+async function processSource(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
   try {
     const today = getTodayNY();
     const apiUrl = `${source.url}/${today}`;
 
-    console.log(`[AUTO-IMPORT] Baixando: ${apiUrl}`);
+    console.log(`[IMPORT] Iniciando ${source.key} em background...`);
+
     const response = await fetch(apiUrl);
-    if (!response.ok) {
-      await supabase
-        .from("import_jobs")
-        .update({ status: "failed", error_message: `HTTP ${response.status} em ${apiUrl}` })
-        .eq("id", jobId);
-      return 0;
-    }
+    if (!response.ok) throw new Error(`DOL Offline (${response.status})`);
 
-    // Step 1: Download ZIP into Uint8Array
-    let zipBytes: Uint8Array | null = new Uint8Array(await response.arrayBuffer());
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ZIP ${zipBytes.byteLength} bytes`);
+    // 1. Download e Unzip (Mínimo de RAM)
+    const zipBytes = new Uint8Array(await response.arrayBuffer());
+    const unzipped = unzipSync(zipBytes);
+    // @ts-ignore: Liberar referência
+    zipBytes = null;
 
-    // Step 2: Extract JSON string using fflate (lightweight)
-    let jsonStr: string | null = extractJsonStringFromZip(zipBytes);
-    zipBytes = null; // FREE ZIP
+    const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
+    if (!jsonFileName) throw new Error("ZIP sem JSON");
 
-    if (!jsonStr) {
-      await supabase.from("import_jobs").update({ status: "failed", error_message: "No JSON in ZIP" }).eq("id", jobId);
-      return 0;
-    }
+    // 2. Parse Direto (V8 é otimizado para isso)
+    const jsonStr = new TextDecoder().decode(unzipped[jsonFileName]);
+    // @ts-ignore: Liberar referência
+    unzipped = null;
 
-    console.log(`[AUTO-IMPORT] ${source.visaType}: JSON string ${jsonStr.length} chars`);
+    let allItems = JSON.parse(jsonStr);
+    // @ts-ignore: Liberar string gigante
+    jsonStr = null;
 
-    // Step 3: Split JSON string into chunks WITHOUT parsing (zero CPU for JSON.parse)
-    const CHUNK_SIZE = 25;
-    const { chunks, totalItems } = splitJsonArrayString(jsonStr, CHUNK_SIZE);
-    jsonStr = null; // FREE the full JSON string
+    const totalRows = allItems.length;
+    await supabase.from("import_jobs").update({ total_rows: totalRows }).eq("id", jobId);
+    console.log(`[IMPORT] ${source.key}: ${totalRows} itens carregados.`);
 
-    console.log(`[AUTO-IMPORT] ${source.visaType}: ${totalItems} itens em ${chunks.length} chunks`);
+    // 3. Batching com Splice (Tira da memória conforme envia)
+    const BATCH_SIZE = 100;
+    let processed = 0;
 
-    // Set total_rows immediately
-    await supabase.from("import_jobs").update({ total_rows: totalItems }).eq("id", jobId);
+    while (allItems.length > 0) {
+      const batch = allItems.splice(0, BATCH_SIZE);
+      const { error } = await supabase.rpc("process_dol_raw_batch", {
+        p_raw_items: batch,
+        p_visa_type: source.visaType,
+      });
 
-    // Step 4: Send each chunk sequentially with delay to avoid overloading the database
-    let totalProcessed = 0;
-    const DELAY_MS = 1500; // delay between batches to let DB breathe
-    for (let i = 0; i < chunks.length; i++) {
-      let retries = 2;
-      while (retries >= 0) {
-        try {
-          const processed = await sendRawChunkToPostgres(chunks[i], source.visaType, supabaseUrl, serviceRoleKey);
-          totalProcessed += processed;
-          chunks[i] = ""; // free memory
-          // Update progress every 5 chunks to reduce DB writes
-          if (i % 5 === 0 || i === chunks.length - 1) {
-            await supabase.from("import_jobs").update({ processed_rows: totalProcessed }).eq("id", jobId);
-          }
-          console.log(`[AUTO-IMPORT] ${source.visaType}: chunk ${i + 1}/${chunks.length} → ${totalProcessed}`);
-          break; // success, exit retry loop
-        } catch (err: any) {
-          retries--;
-          if (retries < 0) {
-            console.error(`[CHUNK FAIL] ${source.key} chunk ${i}: ${err.message}`);
-          } else {
-            console.warn(`[CHUNK RETRY] ${source.key} chunk ${i}, retries left: ${retries}`);
-            await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
-          }
+      if (!error) {
+        processed += batch.length;
+        if (processed % 500 === 0 || allItems.length === 0) {
+          await supabase.from("import_jobs").update({ processed_rows: processed }).eq("id", jobId);
         }
-      }
-      // Delay between batches
-      if (i < chunks.length - 1) {
-        await new Promise(r => setTimeout(r, DELAY_MS));
+      } else {
+        console.error(`[BATCH ERROR]`, error.message);
       }
     }
 
-    await supabase
-      .from("import_jobs")
-      .update({ status: "completed", processed_rows: totalProcessed })
-      .eq("id", jobId);
-    return totalProcessed;
-  } catch (err: any) {
+    // 4. Finalização
+    await supabase.from("import_jobs").update({ status: "completed", processed_rows: processed }).eq("id", jobId);
+    console.log(`[IMPORT] ${source.key} concluído com sucesso.`);
+  } catch (err) {
     console.error(`[FATAL ERROR] ${source.key}:`, err.message);
-    await supabase
-      .from("import_jobs")
-      .update({ status: "failed", error_message: err.message?.slice(0, 500) || "Unknown error" })
-      .eq("id", jobId);
-    return 0;
+    await supabase.from("import_jobs").update({ status: "failed", error_message: err.message }).eq("id", jobId);
   }
 }
 
-// ─── RADAR LOGIC ────────────────────────────────────────────────────────────
-async function runRadarMatching(supabase: any) {
-  console.log(`[RADAR] Iniciando cruzamento de perfis ativos...`);
-  const { data: activeRadars } = await supabase
-    .from("radar_profiles")
-    .select("user_id, auto_send")
-    .eq("is_active", true);
-
-  for (const radar of activeRadars || []) {
-    try {
-      const { data: matchCount } = await supabase.rpc("trigger_immediate_radar", { target_user_id: radar.user_id });
-      const matched = matchCount ?? 0;
-
-      if (radar.auto_send && matched > 0) {
-        const { data: dailyLimit } = await supabase.rpc("get_effective_daily_limit", { p_user_id: radar.user_id });
-        const limit = dailyLimit ?? 5;
-        const todayStart = new Date();
-        todayStart.setUTCHours(0, 0, 0, 0);
-        const { count: usedToday } = await supabase
-          .from("my_queue")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", radar.user_id)
-          .gte("created_at", todayStart.toISOString());
-        const remaining = Math.max(0, limit - (usedToday ?? 0));
-        if (remaining > 0) {
-          const { data: newMatches } = await supabase
-            .from("radar_matched_jobs")
-            .select("job_id")
-            .eq("user_id", radar.user_id)
-            .eq("auto_queued", false)
-            .limit(remaining);
-          const jobIds = (newMatches || []).map((m: any) => m.job_id);
-          if (jobIds.length > 0) {
-            const { error: qErr } = await supabase
-              .from("my_queue")
-              .insert(jobIds.map((id: string) => ({ user_id: radar.user_id, job_id: id, status: "pending" })));
-            if (!qErr) {
-              await supabase
-                .from("radar_matched_jobs")
-                .update({ auto_queued: true })
-                .eq("user_id", radar.user_id)
-                .in("job_id", jobIds);
-              fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-queue`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                },
-                body: JSON.stringify({ user_id: radar.user_id }),
-              }).catch(() => {});
-            }
-          }
-        }
-      }
-      await supabase
-        .from("radar_profiles")
-        .update({ last_scan_at: new Date().toISOString() })
-        .eq("user_id", radar.user_id);
-    } catch (e) {
-      console.error(`[RADAR ERROR] User ${radar.user_id}:`, e);
-    }
-  }
-}
-
-// ─── MAIN SERVE ─────────────────────────────────────────────────────────────
+// ─── SERVIDOR ───
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    let { source: sourceKey = "all", skip_radar = false } = await req.json().catch(() => ({}));
+    const { source: sourceKey } = await req.json().catch(() => ({}));
 
-    console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${getTodayNY()} skipRadar=${skip_radar}`);
+    // BLINDAGEM: Não permitimos mais o "all" via HTTP para não explodir a RAM.
+    // O Cron deve chamar uma por uma.
+    const source = DOL_SOURCES.find((s) => s.key === (sourceKey || "jo"));
 
-    if (sourceKey !== "all") {
-      const source = DOL_SOURCES.find((s) => s.key === sourceKey);
-      if (!source) {
-        return new Response(JSON.stringify({ error: `Source "${sourceKey}" not found` }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!source) return new Response("Source Inválida", { status: 400 });
 
-      const { data: job } = await supabase
-        .from("import_jobs")
-        .insert({ source: sourceKey, status: "processing" })
-        .select("id")
-        .single();
+    const { data: job } = await supabase
+      .from("import_jobs")
+      .insert({ source: source.key, status: "processing" })
+      .select("id")
+      .single();
 
-      if (!job) {
-        return new Response(JSON.stringify({ error: "Failed to create import_job" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    // Dispara e responde na hora (WaitUntil garante a execução no fundo)
+    EdgeRuntime.waitUntil(processSource(source, supabase, job.id));
 
-      EdgeRuntime.waitUntil(
-        (async () => {
-          const total = await processSourceWithTracking(source, supabase, job.id);
-          if (total > 0 && !skip_radar) {
-            await supabase.rpc("deactivate_expired_jobs");
-            await runRadarMatching(supabase);
-          }
-          console.log(`[AUTO-IMPORT] ${sourceKey} finished. Total: ${total} rows.`);
-        })(),
-      );
-
-      return new Response(JSON.stringify({ success: true, job_id: job.id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // "all" mode
-    EdgeRuntime.waitUntil(
-      (async () => {
-        let grandTotal = 0;
-        for (const source of DOL_SOURCES) {
-          const { data: job } = await supabase
-            .from("import_jobs")
-            .insert({ source: source.key, status: "processing" })
-            .select("id")
-            .single();
-          if (job) grandTotal += await processSourceWithTracking(source, supabase, job.id);
-        }
-        if (grandTotal > 0) {
-          await supabase.rpc("deactivate_expired_jobs");
-          if (!skip_radar) await runRadarMatching(supabase);
-        }
-        console.log(`[AUTO-IMPORT] Global Sync Finished. Total: ${grandTotal} rows.`);
-      })(),
-    );
-
-    return new Response(JSON.stringify({ success: true, message: "Importação processando em background." }), {
+    return new Response(JSON.stringify({ success: true, job_id: job.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (err) {
+    return new Response(err.message, { status: 500 });
   }
 });
