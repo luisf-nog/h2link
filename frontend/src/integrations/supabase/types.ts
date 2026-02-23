@@ -676,6 +676,7 @@ export type Database = {
         Row: {
           active_referrals_count: number
           age: number | null
+          ai_summary: Json | null
           consecutive_errors: number
           contact_email: string | null
           created_at: string
@@ -706,6 +707,7 @@ export type Database = {
         Insert: {
           active_referrals_count?: number
           age?: number | null
+          ai_summary?: Json | null
           consecutive_errors?: number
           contact_email?: string | null
           created_at?: string
@@ -736,6 +738,7 @@ export type Database = {
         Update: {
           active_referrals_count?: number
           age?: number | null
+          ai_summary?: Json | null
           consecutive_errors?: number
           contact_email?: string | null
           created_at?: string
