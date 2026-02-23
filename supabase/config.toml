@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.auto-import-jobs]
 verify_jwt = false
+
+[functions.summarize-resume]
+verify_jwt = false
