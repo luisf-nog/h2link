@@ -70,17 +70,44 @@ function buildPrompt(rawText: string, visaType: "H-2A" | "H-2B", context: any): 
 
   let industryFocus = "";
   if (visaType === "H-2A") {
-    industryFocus = `This resume is for H-2A (AGRICULTURAL) visa positions. Focus on:
-- Farm work, crop harvesting, livestock, nursery, greenhouse, forestry
-- Outdoor work endurance, physical stamina
-- Equipment operation (tractors, combines, irrigation systems)
-- Seasonal work experience and reliability`;
+    industryFocus = `This resume is for H-2A (AGRICULTURAL) visa positions.
+
+FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
+- Crop harvesting & planting
+- Livestock care & feeding
+- Greenhouse & nursery operations
+- Forestry & logging
+- Irrigation & soil management
+- Farm equipment operation
+
+CRITICAL TONE GUIDELINES:
+- Be SPECIFIC, not generic. Instead of "eager to contribute to farm work, crop harvesting, livestock, nursery, greenhouse, or forestry" → pick the 2-3 areas that best match the candidate's experience.
+- For equipment/machinery skills: if the candidate has NO direct experience, write "Familiar with [equipment] (training-based knowledge)" instead of implying hands-on operation.
+- MUST include a strong Availability Signal in the Summary:
+  ✔ "Fully available for the entire contract season"
+  ✔ "Open to relocation within the U.S."
+  ✔ "Willing to work overtime, weekends, and holidays"
+- Emphasize outdoor endurance, extreme weather tolerance, and physical stamina.`;
   } else {
-    industryFocus = `This resume is for H-2B (NON-AGRICULTURAL TEMPORARY) visa positions. Focus on:
-- Construction, landscaping, hospitality, food service, warehouse, manufacturing
-- Customer service, teamwork, reliability
-- Technical/trade skills relevant to the industry
-- Adaptability to temporary seasonal positions`;
+    industryFocus = `This resume is for H-2B (NON-AGRICULTURAL TEMPORARY) visa positions.
+
+FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
+- Construction & heavy labor
+- Landscaping & groundskeeping
+- Hospitality & housekeeping
+- Food service & kitchen operations
+- Warehouse & logistics
+- Manufacturing & production
+- Seafood processing
+
+CRITICAL TONE GUIDELINES:
+- The Professional Summary MUST be direct and assertive, American-style. 
+  BAD: "H-2B Visa Candidate with a strong background in various industries..."
+  GOOD: "Reliable H-2B visa candidate with hands-on experience in [specific areas]. Physically capable, safety-focused, and ready for immediate seasonal employment."
+- Be SPECIFIC about the candidate's strongest 2-3 sectors, don't list everything.
+- For equipment/machinery skills: if the candidate has NO direct experience, write "Familiar with [equipment] (training-based knowledge)" instead of implying hands-on operation.
+- MUST include availability signal: "Ready for immediate deployment" or "Available for full seasonal contract".
+- Emphasize safety compliance, teamwork, and reliability.`;
   }
 
   const practicalLines = practical_experience?.length
@@ -110,7 +137,7 @@ function buildPrompt(rawText: string, visaType: "H-2A" | "H-2B", context: any): 
 
   const extraLines = extra_notes ? `\nADDITIONAL NOTES FROM CANDIDATE: ${extra_notes}` : "";
 
-  return `You are an expert US Recruiter specializing in ${visaType} visa worker placement.
+  return `You are an expert US Recruiter specializing in ${visaType} visa worker placement. You write resumes that GET INTERVIEWS — direct, assertive, American-style.
 
 ${industryFocus}
 
@@ -118,11 +145,14 @@ RULES:
 1. Translate everything to English
 2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
-4. The Summary section MUST mention: visa type readiness, key relevant skills, and work authorization context
+4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
 5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
 6. If the candidate has office/desk experience but is applying for manual labor, REFRAME their skills (e.g., "project management" → "team coordination", "data entry" → "attention to detail and precision")
 7. Add relevant certifications section if applicable (safety training, equipment operation, food handling, etc.)
 8. Keep it professional, 1-2 pages maximum
+9. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
+10. For skills the candidate learned via training (not hands-on), use "Familiar with X (training-based)" wording
+11. Include an Availability section or integrate availability signals into the Summary
 ${practicalLines}
 ${physicalLines}
 ${langLines}
