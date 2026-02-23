@@ -1,89 +1,79 @@
 
-# Plano: Arquitetura "Lean Edge + Heavy SQL"
 
-## Problema
-A Edge Function `auto-import-jobs` continua estourando o limite de CPU (WORKER_LIMIT) porque faz processamento pesado de dados em TypeScript: flatten de objetos, mapeamento de aliases, calculo de salarios, formatacao de datas, deduplicacao por fingerprint. Tudo isso consome muita RAM e CPU do Deno.
+# Fix: Memory-Safe Import + Robust Error Handling
 
-## Solucao
-Mover toda a logica de transformacao para uma funcao PostgreSQL. A Edge Function vira um simples "motoboy" que:
-1. Baixa o ZIP
-2. Descompacta os JSONs
-3. Envia o JSON bruto para o banco via RPC em batches
+## Problem Analysis
 
-## Etapas
-
-### 1. Criar funcao SQL `process_dol_raw_batch`
-
-Uma funcao `plpgsql` que recebe:
-- `p_raw_items jsonb` - array de objetos JSON brutos do DOL  
-- `p_visa_type text` - tipo de visto (H-2A, H-2B, H-2A (Early Access))
-
-A funcao fara internamente:
-
-- **getVal** (fallback de campos): usando `COALESCE` com os mesmos aliases
-- **getCaseBody** (fingerprint): usando `SPLIT_PART`, `TRIM`, `REPLACE`
-- **calculateFinalWage**: usando `CASE WHEN` com logica numerica
-- **formatToStaticDate**: usando cast `::date` nativo do Postgres
-- **Flatten**: usando `||` para merge de objetos JSONB (`item || item->'clearanceOrder' || ...`)
-- **Filtro de email valido**: `WHERE email IS NOT NULL AND email != 'N/A'`
-- **INSERT ... ON CONFLICT (fingerprint) DO UPDATE**: upsert direto
-
-Campos mapeados (todos os 20+ campos que o TypeScript faz hoje):
+The Edge Function crashes on the JO source (2081 items) due to **memory limit exceeded** (150MB cap). The memory profile at peak:
 
 ```text
-job_id, fingerprint, visa_type, job_title, company, email, phone,
-city, state, zip_code, salary, start_date, posted_date, end_date,
-job_duties, job_min_special_req, wage_additional, rec_pay_deductions,
-weekly_hours, category, openings, experience_months, education_required,
-transport_provided, source_url, housing_info, was_early_access, is_active
+ZIP ArrayBuffer:     ~5 MB
+JSZip object:        ~10 MB
+JSON string:         ~25 MB
+Parsed JS array:     ~30 MB
+Supabase SDK:        ~10 MB
+Deno runtime:        ~30 MB
+---------------------------------
+Total peak:          ~110-130 MB  (hits 150MB with GC pressure)
 ```
 
-### 2. Simplificar a Edge Function
+Additional issues: no timeout on frontend polling, no cleanup of stale jobs, and `processed_rows` stays at 0 because the crash happens before any RPC completes.
 
-O novo `auto-import-jobs/index.ts` fica drasticamente menor:
+## Solution: 5 Targeted Fixes
+
+### 1. Aggressive Memory Management in Edge Function
+
+Free each resource BEFORE allocating the next:
 
 ```text
-1. Baixa o ZIP via fetch
-2. Descompacta com JSZip
-3. Para cada JSON no ZIP:
-   - Parse do JSON
-   - Envia em batches de 500 itens via supabase.rpc('process_dol_raw_batch', { p_raw_items, p_visa_type })
-4. Atualiza import_jobs com progresso
-5. Chama deactivate_expired_jobs
-6. Se nao for skip_radar, dispara radar (mesma logica atual)
+Step 1: fetch ZIP -> arrayBuffer (5MB)
+Step 2: JSZip.loadAsync(buffer)
+Step 3: NULL the arrayBuffer
+Step 4: Extract JSON string from zip
+Step 5: NULL the zip object entirely  <-- KEY FIX
+Step 6: JSON.parse the string
+Step 7: NULL the string
+Step 8: Process array in batches using splice (mutates/frees)
 ```
 
-Beneficios chave:
-- O Edge nao cria Map, nao faz loop de transformacao, nao calcula salarios
-- Batch de 500 (em vez de 50) porque o SQL processa em massa
-- Menos chamadas RPC = menos I/O overhead
+This reduces peak memory from ~130MB to ~65MB.
 
-### 3. Manter a UI de polling inalterada
+### 2. Use Array Mutation (splice) Instead of Copying (slice)
 
-A pagina AdminImport.tsx continua igual, fazendo polling na tabela `import_jobs`.
+Current code: `list.slice(i, i + BATCH_SIZE)` keeps the full array alive.
+Fix: `list.splice(0, BATCH_SIZE)` removes processed items from memory immediately.
 
----
+### 3. Frontend Timeout on waitForJob
 
-## Detalhes Tecnicos
+Add a 5-minute max timeout to `waitForJob`. If the job hasn't reached `completed` or `failed` within 5 minutes, treat it as failed and move to the next source. This prevents the sequential chain from hanging forever.
 
-### Funcao SQL completa (campos e aliases)
+### 4. Stale Job Cleanup on Page Load
 
-A funcao ira usar CTEs para:
-1. Flatten dos objetos (merge de sub-objetos como `clearanceOrder`, `employer`, `jobRequirements.qualification`)
-2. Extrair valores com COALESCE nos mesmos aliases usados hoje
-3. Calcular fingerprint com a mesma logica de `getCaseBody`
-4. Calcular salario com a mesma logica de `calculateFinalWage`
-5. Filtrar registros sem email
-6. Upsert com ON CONFLICT (fingerprint)
+When AdminImport mounts, run a query to mark any job stuck in `processing` for over 5 minutes as `failed`. This clears the UI of ghost jobs from previous crashed runs.
 
-### Edge Function simplificada
+### 5. Set total_rows Before Processing and Write Status on Crash
 
-- Remove: `processJobList`, `calculateFinalWage`, `formatToStaticDate`, `getCaseBody`, `getVal`
-- Mantem: download ZIP, JSZip, `EdgeRuntime.waitUntil`, tracking via `import_jobs`, logica de radar
-- Batch size sobe de 50 para 500 (o SQL faz o trabalho pesado)
+- Write `total_rows` to the `import_jobs` row immediately after parsing the JSON array (before RPC batches start).
+- Wrap the entire processing in try/catch that guarantees a status update to `failed` even on unexpected crashes.
 
-### Migracao SQL
+## Files to Change
 
-Uma unica migracao que:
-1. Cria a funcao `process_dol_raw_batch(p_raw_items jsonb, p_visa_type text)`
-2. Retorna `integer` (numero de registros processados)
+### `supabase/functions/auto-import-jobs/index.ts`
+- Restructure `processSourceWithTracking` memory flow: null zip and buffer before JSON.parse, use splice instead of slice
+- Reduce BATCH_SIZE from 100 to 50 for additional safety margin
+- Set `total_rows` immediately after JSON.parse
+- Redeploy the function
+
+### `frontend/src/pages/AdminImport.tsx`
+- Add 5-minute timeout to `waitForJob`
+- Add `useEffect` on mount to clean up stale "processing" jobs older than 5 minutes
+- Show a more informative message when a job times out
+
+## Expected Outcome
+
+- JO (2081 items): peak ~65MB, completes in ~30-60s
+- H2A: similar or smaller, completes in ~20-40s  
+- H2B (1414 items): already works, ~20s
+- Total "Import All": ~2-3 minutes sequential
+- No more hung UI or ghost "processing" jobs
+
