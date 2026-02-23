@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import JSZip from "https://esm.sh/jszip@3.10.1";
 
@@ -110,117 +109,69 @@ function processJobList(list: any[], visaType: string, jobsMap: Map<string, any>
   }
 }
 
-// Process a single source independently
-async function processSource(source: typeof DOL_SOURCES[0], supabase: any): Promise<number> {
-  const today = getTodayNY();
-  const apiUrl = `${source.url}/${today}`;
-  console.log(`[AUTO-IMPORT] Baixando: ${apiUrl}`);
-
-  const response = await fetch(apiUrl);
-  if (!response.ok) {
-    console.error(`[AUTO-IMPORT] HTTP ${response.status} para ${source.visaType}`);
-    return 0;
-  }
-
-  const zipBuffer = await response.arrayBuffer();
-  const zip = new JSZip();
-  await zip.loadAsync(zipBuffer);
-
-  const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
-  console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs`);
-
-  const jobsMap = new Map<string, any>();
-  for (const fileName of jsonFiles) {
-    const content = await zip.files[fileName].async("string");
-    const list = JSON.parse(content);
-    processJobList(list, source.visaType, jobsMap);
-  }
-
-  const allJobs = Array.from(jobsMap.values());
-  const BATCH_SIZE = 100;
-  for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
-    const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
-    if (error) console.error(`[AUTO-IMPORT] Erro lote:`, error.message);
-  }
-
-  console.log(`[AUTO-IMPORT] ${source.visaType}: ${allJobs.length} vagas processadas`);
-  return allJobs.length;
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+// Background processing function
+async function processSourceBackground(source: typeof DOL_SOURCES[0], supabase: any, skipRadar: boolean) {
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Check which source to process (or "all" for sequential calls)
-    let sourceKey = "all";
-    let skipRadar = false;
-    try {
-      const body = await req.json();
-      if (body?.source) sourceKey = body.source;
-      if (body?.skip_radar) skipRadar = true;
-    } catch { /* no body */ }
-
     const today = getTodayNY();
-    console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${today}`);
+    const apiUrl = `${source.url}/${today}`;
+    console.log(`[AUTO-IMPORT] Baixando: ${apiUrl}`);
 
-    let totalProcessed = 0;
-
-    if (sourceKey === "all") {
-      // Process each source one by one to stay within limits
-      for (const source of DOL_SOURCES) {
-        try {
-          totalProcessed += await processSource(source, supabase);
-        } catch (err) {
-          console.error(`[AUTO-IMPORT] Erro ${source.visaType}:`, err.message);
-        }
-      }
-    } else {
-      const source = DOL_SOURCES.find((s) => s.key === sourceKey);
-      if (!source) {
-        return new Response(JSON.stringify({ error: `Source inválida: ${sourceKey}` }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      totalProcessed = await processSource(source, supabase);
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      console.error(`[AUTO-IMPORT] HTTP ${response.status} para ${source.visaType}`);
+      return;
     }
 
-    // Deactivate expired jobs
-    const { data: deactivated } = await supabase.rpc("deactivate_expired_jobs");
+    const zipBuffer = await response.arrayBuffer();
+    const zip = new JSZip();
+    await zip.loadAsync(zipBuffer);
 
-    // Trigger radar matching for all active profiles after import
-    if (totalProcessed > 0 && !skipRadar) {
-      console.log(`[AUTO-IMPORT] Disparando radar para perfis ativos...`);
+    const jsonFiles = Object.keys(zip.files).filter((f) => f.endsWith(".json"));
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${jsonFiles.length} JSONs`);
+
+    const jobsMap = new Map<string, any>();
+    for (const fileName of jsonFiles) {
+      const content = await zip.files[fileName].async("string");
+      const list = JSON.parse(content);
+      processJobList(list, source.visaType, jobsMap);
+    }
+
+    const allJobs = Array.from(jobsMap.values());
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${allJobs.length} vagas para upsert`);
+
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
+      const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
+      if (error) console.error(`[AUTO-IMPORT] Erro lote ${i}:`, error.message);
+      // Yield to event loop
+      await new Promise((r) => setTimeout(r, 10));
+    }
+
+    console.log(`[AUTO-IMPORT] ${source.visaType}: ${allJobs.length} vagas processadas`);
+
+    // Deactivate expired jobs
+    await supabase.rpc("deactivate_expired_jobs");
+
+    // Radar only if not skipped and jobs were imported
+    if (!skipRadar && allJobs.length > 0) {
+      console.log(`[AUTO-IMPORT] Disparando radar...`);
       const { data: activeRadars } = await supabase
         .from("radar_profiles")
         .select("user_id, auto_send")
         .eq("is_active", true);
 
-      let radarMatches = 0;
       for (const radar of (activeRadars || [])) {
         try {
           const { data: matchCount } = await supabase.rpc("trigger_immediate_radar", {
             target_user_id: radar.user_id,
           });
           const matched = matchCount ?? 0;
-          radarMatches += matched;
 
-          // NEW: Move matches from radar_matched_jobs → my_queue
           if (radar.auto_send && matched > 0) {
             try {
-              // 1. Get daily limit
-              const { data: dailyLimit } = await supabase.rpc("get_effective_daily_limit", {
-                p_user_id: radar.user_id,
-              });
+              const { data: dailyLimit } = await supabase.rpc("get_effective_daily_limit", { p_user_id: radar.user_id });
               const limit = dailyLimit ?? 5;
 
-              // 2. Check how many already used today
               const todayStart = new Date();
               todayStart.setUTCHours(0, 0, 0, 0);
               const { count: usedToday } = await supabase
@@ -232,7 +183,6 @@ serve(async (req) => {
               const remaining = Math.max(0, limit - (usedToday ?? 0));
 
               if (remaining > 0) {
-                // 3. Fetch new matches NOT yet in my_queue
                 const { data: newMatches } = await supabase
                   .from("radar_matched_jobs")
                   .select("job_id")
@@ -243,7 +193,6 @@ serve(async (req) => {
                 const jobIds = (newMatches || []).map((m: any) => m.job_id);
 
                 if (jobIds.length > 0) {
-                  // 4. Insert into my_queue
                   const { error: queueError } = await supabase.from("my_queue").insert(
                     jobIds.map((jobId: string) => ({
                       user_id: radar.user_id,
@@ -253,7 +202,6 @@ serve(async (req) => {
                   );
 
                   if (!queueError) {
-                    // 5. Mark as auto_queued
                     await supabase
                       .from("radar_matched_jobs")
                       .update({ auto_queued: true })
@@ -262,7 +210,6 @@ serve(async (req) => {
 
                     console.log(`[AUTO-IMPORT] Enfileirou ${jobIds.length} vagas para ${radar.user_id}`);
 
-                    // 6. Trigger process-queue
                     await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/process-queue`, {
                       method: "POST",
                       headers: {
@@ -271,19 +218,14 @@ serve(async (req) => {
                       },
                       body: JSON.stringify({ user_id: radar.user_id }),
                     });
-                  } else {
-                    console.error(`[AUTO-IMPORT] Erro ao enfileirar para ${radar.user_id}:`, queueError.message);
                   }
                 }
-              } else {
-                console.log(`[AUTO-IMPORT] Limite diário atingido para ${radar.user_id}`);
               }
             } catch (e) {
               console.error(`[AUTO-IMPORT] Erro auto-send para ${radar.user_id}:`, e);
             }
           }
 
-          // Update last_scan_at
           await supabase
             .from("radar_profiles")
             .update({ last_scan_at: new Date().toISOString() })
@@ -292,13 +234,54 @@ serve(async (req) => {
           console.error(`[AUTO-IMPORT] Erro radar para ${radar.user_id}:`, e);
         }
       }
-      console.log(`[AUTO-IMPORT] Radar: ${radarMatches} matches em ${(activeRadars || []).length} perfis`);
     }
 
-    const summary = { success: true, date: today, total_processed: totalProcessed, expired_deactivated: deactivated ?? 0 };
-    console.log(`[AUTO-IMPORT] Concluído:`, JSON.stringify(summary));
+    console.log(`[AUTO-IMPORT] Background concluído para ${source.visaType}`);
+  } catch (err) {
+    console.error(`[AUTO-IMPORT] Erro background ${source.visaType}:`, err.message);
+  }
+}
 
-    return new Response(JSON.stringify(summary), {
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    let sourceKey = "all";
+    let skipRadar = false;
+    try {
+      const body = await req.json();
+      if (body?.source) sourceKey = body.source;
+      if (body?.skip_radar) skipRadar = true;
+    } catch { /* no body */ }
+
+    const today = getTodayNY();
+    console.log(`[AUTO-IMPORT] Início - source=${sourceKey} date=${today} skipRadar=${skipRadar}`);
+
+    if (sourceKey === "all") {
+      // Cron: process each source sequentially in background
+      for (const source of DOL_SOURCES) {
+        EdgeRuntime.waitUntil(processSourceBackground(source, supabase, skipRadar));
+      }
+    } else {
+      const source = DOL_SOURCES.find((s) => s.key === sourceKey);
+      if (!source) {
+        return new Response(JSON.stringify({ error: `Source inválida: ${sourceKey}` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Fire and forget - process in background
+      EdgeRuntime.waitUntil(processSourceBackground(source, supabase, skipRadar));
+    }
+
+    // Return immediately
+    return new Response(JSON.stringify({ success: true, date: today, source: sourceKey, message: "Importação iniciada em background" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
