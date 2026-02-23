@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MultiJsonImporter } from '@/components/admin/MultiJsonImporter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,30 +6,98 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
+
+interface ImportStatus {
+  jobId: string;
+  source: string;
+  status: 'processing' | 'completed' | 'failed';
+  processedRows: number;
+  totalRows: number;
+  error?: string;
+}
 
 export default function AdminImport() {
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ updated: number; notFound: number } | null>(null);
   const [importingSource, setImportingSource] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  const pollJobStatus = async (jobId: string, source: string) => {
+    const { data, error } = await supabase
+      .from('import_jobs')
+      .select('status, processed_rows, total_rows, error_message')
+      .eq('id', jobId)
+      .maybeSingle();
+
+    if (error || !data) return;
+
+    setImportStatus({
+      jobId,
+      source,
+      status: data.status as ImportStatus['status'],
+      processedRows: data.processed_rows ?? 0,
+      totalRows: data.total_rows ?? 0,
+      error: data.error_message ?? undefined,
+    });
+
+    if (data.status === 'completed' || data.status === 'failed') {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      setImportingSource(null);
+
+      if (data.status === 'completed') {
+        toast({
+          title: `Importação ${source.toUpperCase()} concluída`,
+          description: `${data.processed_rows} vagas processadas`,
+        });
+      } else {
+        toast({
+          title: `Importação ${source.toUpperCase()} falhou`,
+          description: data.error_message || 'Erro desconhecido',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
   const runManualImport = async (source: string) => {
     setImportingSource(source);
+    setImportStatus({ jobId: '', source, status: 'processing', processedRows: 0, totalRows: 0 });
+
     try {
       const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
         body: { source, skip_radar: true },
       });
       if (error) throw error;
-      toast({
-        title: `Importação ${source.toUpperCase()} concluída`,
-        description: `Inseridos: ${data?.inserted ?? 0} | Atualizados: ${data?.updated ?? 0}`,
-      });
+
+      const jobId = data?.job_id;
+      if (!jobId) throw new Error('No job_id returned');
+
+      setImportStatus(prev => prev ? { ...prev, jobId } : null);
+
+      // Start polling every 3 seconds
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = setInterval(() => pollJobStatus(jobId, source), 3000);
+      // Also poll immediately
+      pollJobStatus(jobId, source);
     } catch (err: any) {
       toast({ title: 'Erro na importação', description: err.message, variant: 'destructive' });
-    } finally {
       setImportingSource(null);
+      setImportStatus(null);
     }
   };
 
@@ -44,7 +112,6 @@ export default function AdminImport() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(sheet);
 
-      // Build map: case_number -> group
       const groupMap = new Map<string, string>();
       for (const row of rows) {
         const caseNumber = row['Case Number'] || row['case_number'] || row['CASE_NUMBER'];
@@ -56,8 +123,6 @@ export default function AdminImport() {
 
       let updated = 0;
       let notFound = 0;
-
-      // Process in batches of 50 case numbers
       const entries = Array.from(groupMap.entries());
       const BATCH = 50;
 
@@ -65,7 +130,6 @@ export default function AdminImport() {
         const batch = entries.slice(i, i + BATCH);
         const caseNumbers = batch.map(([cn]) => cn);
 
-        // Find matching jobs
         const { data: jobs } = await supabase
           .from('public_jobs')
           .select('id, job_id')
@@ -97,6 +161,10 @@ export default function AdminImport() {
       setProcessing(false);
     }
   };
+
+  const progressPercent = importStatus?.totalRows
+    ? Math.round((importStatus.processedRows / importStatus.totalRows) * 100)
+    : 0;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -208,6 +276,39 @@ export default function AdminImport() {
                   {importingSource === source ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
                 </Button>
               ))}
+
+              {/* Import progress */}
+              {importStatus && importStatus.status === 'processing' && (
+                <div className="mt-4 space-y-2 p-4 rounded-lg border bg-muted/50">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Importando {importStatus.source.toUpperCase()}...</span>
+                    <span className="text-muted-foreground">
+                      {importStatus.processedRows} / {importStatus.totalRows || '?'}
+                    </span>
+                  </div>
+                  <Progress value={importStatus.totalRows ? progressPercent : undefined} className="h-2" />
+                  <p className="text-xs text-muted-foreground">Processando em background. Esta página atualiza automaticamente.</p>
+                </div>
+              )}
+
+              {importStatus && importStatus.status === 'completed' && (
+                <div className="mt-4 flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-800">
+                      Importação {importStatus.source.toUpperCase()} concluída
+                    </p>
+                    <p className="text-sm text-green-600">{importStatus.processedRows} vagas processadas</p>
+                  </div>
+                </div>
+              )}
+
+              {importStatus && importStatus.status === 'failed' && (
+                <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="font-medium text-destructive">Importação falhou</p>
+                  <p className="text-sm text-destructive/80">{importStatus.error}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
