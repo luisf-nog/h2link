@@ -75,7 +75,8 @@ Output a JSON object with these fields:
 - "headline": One-liner about the candidate (max 15 words)
 - "strengths": Array of 3-5 key strengths (each max 8 words)  
 - "experience_years": Estimated total years of experience (number)
-- "summary": 3-4 sentence executive summary for a hiring manager
+- "experience_domain": Primary field of experience (e.g. "agriculture", "construction", "landscaping", "hospitality", "logistics", "food processing", "manufacturing"). Be specific based on the resume.
+- "summary": 3-4 sentence executive summary for a hiring manager. Always mention the specific industry/field of experience, not just years.
 - "languages": Array of languages spoken
 - "availability": Any availability info found, or "Immediately available"
 
@@ -95,11 +96,12 @@ Write in English. Be professional and direct. Focus on what matters to a US empl
                   headline: { type: "string" },
                   strengths: { type: "array", items: { type: "string" } },
                   experience_years: { type: "number" },
+                  experience_domain: { type: "string", description: "Primary field/industry of experience" },
                   summary: { type: "string" },
                   languages: { type: "array", items: { type: "string" } },
                   availability: { type: "string" },
                 },
-                required: ["headline", "strengths", "experience_years", "summary", "languages", "availability"],
+                required: ["headline", "strengths", "experience_years", "experience_domain", "summary", "languages", "availability"],
                 additionalProperties: false,
               },
             },
