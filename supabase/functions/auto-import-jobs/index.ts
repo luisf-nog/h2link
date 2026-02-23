@@ -137,7 +137,7 @@ async function processSource(source: typeof DOL_SOURCES[0], supabase: any): Prom
   }
 
   const allJobs = Array.from(jobsMap.values());
-  const BATCH_SIZE = 200;
+  const BATCH_SIZE = 100;
   for (let i = 0; i < allJobs.length; i += BATCH_SIZE) {
     const { error } = await supabase.rpc("process_jobs_bulk", { jobs_data: allJobs.slice(i, i + BATCH_SIZE) });
     if (error) console.error(`[AUTO-IMPORT] Erro lote:`, error.message);
@@ -160,9 +160,11 @@ serve(async (req) => {
 
     // Check which source to process (or "all" for sequential calls)
     let sourceKey = "all";
+    let skipRadar = false;
     try {
       const body = await req.json();
       if (body?.source) sourceKey = body.source;
+      if (body?.skip_radar) skipRadar = true;
     } catch { /* no body */ }
 
     const today = getTodayNY();
@@ -193,7 +195,7 @@ serve(async (req) => {
     const { data: deactivated } = await supabase.rpc("deactivate_expired_jobs");
 
     // Trigger radar matching for all active profiles after import
-    if (totalProcessed > 0) {
+    if (totalProcessed > 0 && !skipRadar) {
       console.log(`[AUTO-IMPORT] Disparando radar para perfis ativos...`);
       const { data: activeRadars } = await supabase
         .from("radar_profiles")
