@@ -23,8 +23,8 @@ export default function AdminImport() {
       });
       if (error) throw error;
       toast({
-        title: `Importação ${source.toUpperCase()} iniciada`,
-        description: `Processando em background. Verifique os logs para acompanhar.`,
+        title: `Importação ${source.toUpperCase()} concluída`,
+        description: `Inseridos: ${data?.inserted ?? 0} | Atualizados: ${data?.updated ?? 0}`,
       });
     } catch (err: any) {
       toast({ title: 'Erro na importação', description: err.message, variant: 'destructive' });
