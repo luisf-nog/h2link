@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import NotFound from "./NotFound";
 import { toast } from "sonner";
+import { generateResumePDF, type ResumeData } from "@/lib/resumePdf";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -63,8 +64,9 @@ export default function PublicProfile() {
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
 
   const [resolvedResumeUrl, setResolvedResumeUrl] = useState<string | null>(null);
+  const [generatedBlobUrl, setGeneratedBlobUrl] = useState<string | null>(null);
 
-  // Fetch job info and resolve sector-specific resume URL if queueId present
+  // Fetch job info if queueId present
   useEffect(() => {
     if (!queueId) return;
     (async () => {
@@ -87,18 +89,41 @@ export default function PublicProfile() {
     })();
   }, [queueId]);
 
-  // Resolve the best resume URL (sector-specific > visa-specific > generic)
+  // Resolve the best resume: first try URL, then fall back to generating PDF from resume data
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
-        const { data } = await supabase.rpc("resolve_profile_resume_url" as any, {
+        // 1. Try to get a pre-built PDF URL
+        const { data: urlData } = await supabase.rpc("resolve_profile_resume_url" as any, {
           p_token: token,
           p_queue_id: queueId || null,
         });
-        if (data) setResolvedResumeUrl(data as string);
-      } catch {}
+        if (urlData) {
+          setResolvedResumeUrl(urlData as string);
+          return;
+        }
+
+        // 2. No URL available — resolve resume DATA and generate PDF client-side
+        const { data: resumeData } = await supabase.rpc("resolve_profile_resume_data" as any, {
+          p_token: token,
+          p_queue_id: queueId || null,
+        });
+        if (resumeData && typeof resumeData === "object" && resumeData.personal_info) {
+          const doc = generateResumePDF(resumeData as ResumeData);
+          const blob = doc.output("blob");
+          const blobUrl = URL.createObjectURL(blob);
+          setGeneratedBlobUrl(blobUrl);
+        }
+      } catch (err) {
+        console.error("Error resolving resume:", err);
+      }
     })();
+
+    return () => {
+      // Cleanup blob URL on unmount
+      if (generatedBlobUrl) URL.revokeObjectURL(generatedBlobUrl);
+    };
   }, [token, queueId]);
 
   useEffect(() => {
@@ -228,7 +253,7 @@ export default function PublicProfile() {
     }
   };
 
-  const effectiveResumeUrl = resolvedResumeUrl || profile?.resume_url;
+  const effectiveResumeUrl = resolvedResumeUrl || generatedBlobUrl || profile?.resume_url;
 
   const handleDownload = async () => {
     if (!effectiveResumeUrl) return;
@@ -489,7 +514,7 @@ export default function PublicProfile() {
           </button>
           <button
             onClick={handleDownload}
-            disabled={!profile.resume_url || downloading}
+            disabled={!effectiveResumeUrl || downloading}
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground disabled:opacity-30"
           >
             {downloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
