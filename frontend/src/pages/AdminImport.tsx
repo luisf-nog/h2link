@@ -19,7 +19,7 @@ export default function AdminImport() {
     setImportingSource(source);
     try {
       const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
-        body: { source },
+        body: { source, skip_radar: true },
       });
       if (error) throw error;
       toast({
