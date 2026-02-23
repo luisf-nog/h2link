@@ -31,6 +31,19 @@ serve(async (req) => {
       });
     }
 
+    // Check if we already have a cached summary
+    const { data: profileWithSummary } = await supabase
+      .from("profiles")
+      .select("ai_summary")
+      .eq("public_token", token)
+      .single();
+
+    if (profileWithSummary?.ai_summary) {
+      return new Response(JSON.stringify(profileWithSummary.ai_summary), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const resumeData = profile.resume_data as any;
     if (!resumeData) {
       return new Response(JSON.stringify({ error: "No resume data available" }), {
@@ -68,10 +81,7 @@ Output a JSON object with these fields:
 
 Write in English. Be professional and direct. Focus on what matters to a US employer.`,
           },
-          {
-            role: "user",
-            content: resumeText,
-          },
+          { role: "user", content: resumeText },
         ],
         tools: [
           {
@@ -102,17 +112,14 @@ Write in English. Be professional and direct. Focus on what matters to a US empl
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
-      
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResponse.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error("AI gateway error");
@@ -120,12 +127,15 @@ Write in English. Be professional and direct. Focus on what matters to a US empl
 
     const aiData = await aiResponse.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    
-    if (!toolCall) {
-      throw new Error("No tool call in AI response");
-    }
+    if (!toolCall) throw new Error("No tool call in AI response");
 
     const candidateSummary = JSON.parse(toolCall.function.arguments);
+
+    // Cache the summary in profiles table
+    await supabase
+      .from("profiles")
+      .update({ ai_summary: candidateSummary })
+      .eq("public_token", token);
 
     return new Response(JSON.stringify(candidateSummary), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
