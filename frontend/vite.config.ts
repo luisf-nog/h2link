@@ -9,7 +9,6 @@ const __dirname = path.dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  envDir: path.resolve(__dirname, ".."), // Load .env from project root
   build: {
     outDir: 'build'
   },
