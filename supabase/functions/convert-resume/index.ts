@@ -13,7 +13,7 @@ function json(status: number, payload: unknown) {
   });
 }
 
-const RESUME_TOOL = {
+const TOOL_SCHEMA = {
   type: "function" as const,
   function: {
     name: "format_resume",
@@ -31,7 +31,7 @@ const RESUME_TOOL = {
           },
           required: ["full_name"],
         },
-        summary: { type: "string" },
+        summary: { type: "string", description: "Professional summary tailored to the visa type and industry" },
         skills: { type: "array", items: { type: "string" } },
         experience: {
           type: "array",
@@ -58,79 +58,92 @@ const RESUME_TOOL = {
           },
         },
         languages: { type: "array", items: { type: "string" } },
+        certifications: { type: "array", items: { type: "string" } },
       },
-      required: ["personal_info", "experience"],
+      required: ["personal_info", "summary", "skills", "experience"],
     },
   },
 };
 
-function parseAiResponse(aiData: any) {
+function buildPrompt(rawText: string, visaType: "H-2A" | "H-2B", context: any): string {
+  const { practical_experience, physical_skills, migration_status, availability, extra_notes, languages } = context || {};
+
+  let industryFocus = "";
+  if (visaType === "H-2A") {
+    industryFocus = `This resume is for H-2A (AGRICULTURAL) visa positions. Focus on:
+- Farm work, crop harvesting, livestock, nursery, greenhouse, forestry
+- Outdoor work endurance, physical stamina
+- Equipment operation (tractors, combines, irrigation systems)
+- Seasonal work experience and reliability`;
+  } else {
+    industryFocus = `This resume is for H-2B (NON-AGRICULTURAL TEMPORARY) visa positions. Focus on:
+- Construction, landscaping, hospitality, food service, warehouse, manufacturing
+- Customer service, teamwork, reliability
+- Technical/trade skills relevant to the industry
+- Adaptability to temporary seasonal positions`;
+  }
+
+  const practicalLines = practical_experience?.length
+    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE (from questionnaire):\n${practical_experience.map((e: any) => typeof e === 'string' ? `- ${e}` : `- ${e.area} (${e.duration})`).join("\n")}`
+    : "";
+
+  const physicalLines = physical_skills?.length
+    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: any) => typeof s === 'string' ? `- ${s}` : `- ${s.skill}${s.detail ? ` (${s.detail})` : ''}`).join("\n")}`
+    : "";
+
+  const langLines = languages
+    ? `\nLANGUAGE PROFICIENCY:\n- English: ${languages.english || 'not specified'}\n- Spanish: ${languages.spanish || 'not specified'}`
+    : "";
+
+  const migrationLines = migration_status
+    ? `\nMIGRATION/VISA CONTEXT:
+- Current location: ${migration_status.location || "Not specified"}
+- Work authorization: ${migration_status.work_auth || "Needs H-2 sponsorship"}
+- Previous H-2 experience: ${migration_status.h2_history || "None"}
+- Visa denials: ${migration_status.visa_denials || "None"}
+- Passport status: ${migration_status.passport || "Valid"}`
+    : "";
+
+  const availLines = availability
+    ? `\nAVAILABILITY: ${availability.when || "Immediately"}, Duration preference: ${availability.duration || "Full season"}`
+    : "";
+
+  const extraLines = extra_notes ? `\nADDITIONAL NOTES FROM CANDIDATE: ${extra_notes}` : "";
+
+  return `You are an expert US Recruiter specializing in ${visaType} visa worker placement.
+
+${industryFocus}
+
+RULES:
+1. Translate everything to English
+2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth
+3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
+4. The Summary section MUST mention: visa type readiness, key relevant skills, and work authorization context
+5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
+6. If the candidate has office/desk experience but is applying for manual labor, REFRAME their skills (e.g., "project management" → "team coordination", "data entry" → "attention to detail and precision")
+7. Add relevant certifications section if applicable (safety training, equipment operation, food handling, etc.)
+8. Keep it professional, 1-2 pages maximum
+${practicalLines}
+${physicalLines}
+${langLines}
+${migrationLines}
+${availLines}
+${extraLines}
+
+ORIGINAL RESUME TEXT:
+"${rawText.substring(0, 20000)}"
+
+Generate a complete, enhanced US-style resume JSON optimized for ${visaType} positions.`;
+}
+
+function parseToolResponse(aiData: any): any {
   const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
-  if (toolCall && toolCall.function.name === "format_resume") {
+  if (toolCall?.function?.name === "format_resume") {
     return JSON.parse(toolCall.function.arguments);
   }
   const content = aiData?.choices?.[0]?.message?.content || "";
   const clean = content.replace(/```json/g, "").replace(/```/g, "").trim();
   return JSON.parse(clean);
-}
-
-async function generateResume(
-  apiKey: string,
-  rawText: string,
-  visaType: "H-2A" | "H-2B",
-  context: any
-) {
-  const industryFocus =
-    visaType === "H-2A"
-      ? "Agriculture, livestock, crop harvesting, greenhouse, nursery, outdoor farm work, equipment operation, physical endurance in heat/cold."
-      : "Construction, hospitality, hotels, restaurants, landscaping, warehouse, manufacturing, cleaning, painting, plumbing, trades.";
-
-  const contextBlock = context
-    ? `\n\nCANDIDATE PROFILE:\n${JSON.stringify(context, null, 2)}`
-    : "";
-
-  const systemPrompt = `You are an expert US Recruiter specializing in ${visaType} visa positions.
-Analyze the resume and candidate profile, then generate a US-style resume JSON optimized for ${visaType} positions.
-
-INDUSTRY FOCUS: ${industryFocus}
-
-RULES:
-- Translate everything to English.
-- Remove: Age, Photo, Marital Status, IDs (CPF/RG).
-- Use Action Verbs relevant to ${visaType} work.
-- Reframe non-vocational experience (e.g. "Project Management" → "Team Coordination", "IT Support" → "Equipment Troubleshooting").
-- Emphasize physical capabilities, outdoor endurance, and hands-on skills.
-- Include language proficiency levels in the languages array.
-- The summary should highlight fitness for ${visaType} positions specifically.
-- Return strictly the JSON structure via the tool.`;
-
-  const userPrompt = `Resume Content:\n"${rawText.substring(0, 20000)}"${contextBlock}\n\nGenerate an optimized ${visaType} resume JSON.`;
-
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      temperature: 0.15,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      tools: [RESUME_TOOL],
-    }),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text();
-    console.error(`AI Gateway Error (${visaType}):`, resp.status, errText);
-    throw new Error(`AI Gateway failed for ${visaType}: ${resp.status}`);
-  }
-
-  const aiData = await resp.json();
-  return parseAiResponse(aiData);
 }
 
 serve(async (req) => {
@@ -139,59 +152,100 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
-      return json(401, { success: false, error: "Missing Authorization Header" });
+      return json(401, { error: "Missing Authorization Header" });
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (authError || !user) {
-      console.error("Auth Error:", authError);
-      return json(401, { success: false, error: "Unauthorized User" });
-    }
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
+    if (authError || !user) return json(401, { error: "Unauthorized" });
 
-    const { raw_text, context } = await req.json().catch(() => ({}));
+    const body = await req.json();
+    const { raw_text, context } = body;
+
     if (!raw_text || raw_text.length < 10) {
-      return json(400, { success: false, error: "Resume text is empty or too short." });
+      return json(400, { error: "Resume text is empty or too short." });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("CRITICAL: LOVABLE_API_KEY missing.");
-      return json(500, { success: false, error: "Server AI Key not configured." });
+    if (!LOVABLE_API_KEY) return json(500, { error: "AI Key not configured." });
+
+    console.log("Starting dual resume generation for user:", user.id);
+
+    // Generate H-2A resume
+    console.log("Generating H-2A resume...");
+    const h2aPrompt = buildPrompt(raw_text, "H-2A", context);
+    const h2aResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        temperature: 0.15,
+        messages: [{ role: "user", content: h2aPrompt }],
+        tools: [TOOL_SCHEMA],
+        tool_choice: { type: "function", function: { name: "format_resume" } },
+      }),
+    });
+
+    if (!h2aResp.ok) {
+      const errText = await h2aResp.text();
+      console.error("H-2A AI error:", h2aResp.status, errText);
+      return json(500, { error: `AI failed for H-2A resume: ${h2aResp.status}` });
     }
 
-    // Generate both resumes in parallel
-    const [h2aResume, h2bResume] = await Promise.all([
-      generateResume(LOVABLE_API_KEY, raw_text, "H-2A", context),
-      generateResume(LOVABLE_API_KEY, raw_text, "H-2B", context),
-    ]);
+    const h2aData = await h2aResp.json();
+    const h2aResume = parseToolResponse(h2aData);
+    console.log("H-2A resume generated successfully");
 
-    // Save to profile using service role for reliability
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Generate H-2B resume
+    console.log("Generating H-2B resume...");
+    const h2bPrompt = buildPrompt(raw_text, "H-2B", context);
+    const h2bResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        temperature: 0.15,
+        messages: [{ role: "user", content: h2bPrompt }],
+        tools: [TOOL_SCHEMA],
+        tool_choice: { type: "function", function: { name: "format_resume" } },
+      }),
+    });
 
-    await serviceClient
-      .from("profiles")
-      .update({
-        resume_data_h2a: h2aResume,
-        resume_data_h2b: h2bResume,
-        resume_extra_context: context || null,
-      })
-      .eq("id", user.id);
+    if (!h2bResp.ok) {
+      const errText = await h2bResp.text();
+      console.error("H-2B AI error:", h2bResp.status, errText);
+      return json(500, { error: `AI failed for H-2B resume: ${h2bResp.status}` });
+    }
+
+    const h2bData = await h2bResp.json();
+    const h2bResume = parseToolResponse(h2bData);
+    console.log("H-2B resume generated successfully");
+
+    // Save both resumes + context to profile
+    console.log("Saving to profile...");
+    const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    
+    const { error: updateError } = await serviceClient.from("profiles").update({
+      resume_data_h2a: h2aResume,
+      resume_data_h2b: h2bResume,
+      resume_extra_context: context || null,
+    }).eq("id", user.id);
+
+    if (updateError) {
+      console.error("Profile update error:", updateError);
+    } else {
+      console.log("Profile updated successfully");
+    }
+
+    // Track AI usage
+    await serviceClient.rpc("increment_ai_usage", { p_user_id: user.id, p_function_type: "resume" });
 
     return json(200, { h2a: h2aResume, h2b: h2bResume });
   } catch (error: any) {
-    console.error("Unhandled Error:", error);
-    return json(500, { success: false, error: error.message || "Unknown Server Error" });
+    console.error("convert-resume error:", error);
+    return json(500, { error: error.message || "Unknown error" });
   }
 });
