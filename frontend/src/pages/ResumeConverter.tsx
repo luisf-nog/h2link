@@ -33,6 +33,20 @@ const TIER_RESUME_LIMITS: Record<PlanTier, { max: number; label: string }> = {
   black: { max: 5, label: "Multi-Sector Resume Engine (up to 5)" },
 };
 
+// Normalized sector categories that map to public_jobs categories via get_normalized_category
+const SECTOR_CATEGORIES = [
+  { id: "campo_colheita", label: "Campo e Colheita", labelEn: "Agriculture & Harvesting", icon: Tractor },
+  { id: "construcao_manutencao", label: "Construção e Manutenção", labelEn: "Construction & Maintenance", icon: Hammer },
+  { id: "paisagismo_jardinagem", label: "Paisagismo e Jardinagem", labelEn: "Landscaping & Gardening", icon: TreePine },
+  { id: "hotelaria_limpeza", label: "Hotelaria e Limpeza", labelEn: "Hospitality & Cleaning", icon: Building2 },
+  { id: "cozinha_restaurante", label: "Cozinha e Restaurante", labelEn: "Kitchen & Restaurant", icon: ChefHat },
+  { id: "logistica_transporte", label: "Logística e Transporte", labelEn: "Logistics & Transport", icon: Truck },
+  { id: "industria_producao", label: "Indústria e Produção", labelEn: "Manufacturing & Production", icon: Warehouse },
+  { id: "mecanica_reparo", label: "Mecânica e Reparo", labelEn: "Mechanics & Repair", icon: Wrench },
+  { id: "vendas_escritorio", label: "Vendas e Escritório", labelEn: "Sales & Office", icon: FileText },
+  { id: "lazer_servicos", label: "Lazer e Serviços", labelEn: "Leisure & Services", icon: Globe },
+];
+
 // --- Duration options ---
 const DURATION_OPTIONS = [
   { value: "", label: "Select..." },
@@ -98,7 +112,7 @@ const PHYSICAL_SKILLS = [
   { id: "forklift", label: "Forklift / Pallet Jack Certified" },
 ];
 
-type Step = "loading" | "form" | "uploading" | "generating" | "done" | "error";
+type Step = "loading" | "form" | "uploading" | "generating" | "generating_sectors" | "done" | "error";
 
 export default function ResumeConverter() {
   const { profile, loading: authLoading } = useAuth();
@@ -132,15 +146,25 @@ export default function ResumeConverter() {
   const [englishLevel, setEnglishLevel] = useState("basic");
   const [spanishLevel, setSpanishLevel] = useState("none");
 
+  // Gold tier: visa choice (h2a or h2b)
+  const [goldVisaChoice, setGoldVisaChoice] = useState<"h2a" | "h2b">("h2b");
+
+  // Black tier: sector categories (up to 5)
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+
   // Results
   const [h2aResume, setH2aResume] = useState<any>(null);
   const [h2bResume, setH2bResume] = useState<any>(null);
+  const [sectorResumes, setSectorResumes] = useState<Array<{ category: string; resume_data: any }>>([]);
   const [activeTab, setActiveTab] = useState("h2a");
   const [hasSavedResumes, setHasSavedResumes] = useState(false);
 
   // Collapsible sections
   const [showPhysical, setShowPhysical] = useState(true);
   const [showVisa, setShowVisa] = useState(true);
+
+  const planTier = (profile?.plan_tier || "free") as PlanTier;
+  const tierConfig = TIER_RESUME_LIMITS[planTier];
 
   // Load saved data on mount
   useEffect(() => {
@@ -149,34 +173,43 @@ export default function ResumeConverter() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { setStep("form"); return; }
 
-        const { data: profile } = await supabase
+        const { data: profileData } = await supabase
           .from("profiles")
           .select("resume_data_h2a, resume_data_h2b, resume_extra_context")
           .eq("id", user.id)
           .single();
 
-        if (!profile) { setStep("form"); return; }
+        if (!profileData) { setStep("form"); return; }
 
         // Load saved resumes
-        if (profile.resume_data_h2a && profile.resume_data_h2b) {
-          setH2aResume(profile.resume_data_h2a);
-          setH2bResume(profile.resume_data_h2b);
+        if (profileData.resume_data_h2a || profileData.resume_data_h2b) {
+          if (profileData.resume_data_h2a) setH2aResume(profileData.resume_data_h2a);
+          if (profileData.resume_data_h2b) setH2bResume(profileData.resume_data_h2b);
           setHasSavedResumes(true);
         }
 
+        // Load sector resumes for Black tier
+        if (planTier === "black") {
+          const { data: sectors } = await supabase
+            .from("sector_resumes")
+            .select("category, resume_data")
+            .eq("user_id", user.id);
+          if (sectors && sectors.length > 0) {
+            setSectorResumes(sectors as any);
+          }
+        }
+
         // Load saved preferences
-        const ctx = profile.resume_extra_context as any;
+        const ctx = profileData.resume_extra_context as any;
         if (ctx) {
           // Restore experience selections & durations
           if (ctx.practical_experience?.length) {
             const expMap: Record<string, boolean> = {};
             const durMap: Record<string, string> = {};
             for (const item of ctx.practical_experience) {
-              // Find matching experience by label
               const match = PRACTICAL_EXPERIENCE.find(e => e.label === item.area);
               if (match) {
                 expMap[match.id] = true;
-                // Reverse lookup duration from label
                 const durEntry = Object.entries(DURATION_LABELS).find(([, v]) => v === item.duration);
                 if (durEntry) durMap[match.id] = durEntry[0];
               }
@@ -206,7 +239,7 @@ export default function ResumeConverter() {
             if (ctx.languages.spanish) setSpanishLevel(ctx.languages.spanish);
           }
 
-          // Restore migration status (reverse map from display values)
+          // Restore migration status
           if (ctx.migration_status) {
             const ms = ctx.migration_status;
             if (ms.location?.includes("Outside")) setCurrentLocation("outside_us");
@@ -242,10 +275,20 @@ export default function ResumeConverter() {
 
           // Restore extra notes
           if (ctx.extra_notes) setExtraNotes(ctx.extra_notes);
+
+          // Restore sector selections
+          if (ctx.selected_sectors?.length) {
+            setSelectedSectors(ctx.selected_sectors);
+          }
+
+          // Restore gold visa choice
+          if (ctx.gold_visa_choice) {
+            setGoldVisaChoice(ctx.gold_visa_choice);
+          }
         }
 
         // Show saved resumes or form
-        if (profile.resume_data_h2a && profile.resume_data_h2b) {
+        if (profileData.resume_data_h2a || profileData.resume_data_h2b) {
           setStep("done");
         } else {
           setStep("form");
@@ -256,10 +299,21 @@ export default function ResumeConverter() {
       }
     };
     loadSavedData();
-  }, []);
+  }, [planTier]);
 
   const toggleExperience = (id: string) => setSelectedExperience(p => ({ ...p, [id]: !p[id] }));
   const togglePhysical = (id: string) => setSelectedPhysical(p => ({ ...p, [id]: !p[id] }));
+
+  const toggleSector = (id: string) => {
+    setSelectedSectors(prev => {
+      if (prev.includes(id)) return prev.filter(s => s !== id);
+      if (prev.length >= 5) {
+        toast.error("Maximum 5 sectors allowed");
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
 
   const selectedExpList = PRACTICAL_EXPERIENCE.filter(e => selectedExperience[e.id]).map(e => ({
     area: e.label,
@@ -306,6 +360,10 @@ export default function ResumeConverter() {
             : "Flexible",
         },
         extra_notes: extraNotes || undefined,
+        // Tier-specific context
+        gold_visa_choice: planTier === "gold" ? goldVisaChoice : undefined,
+        selected_sectors: planTier === "black" ? selectedSectors : undefined,
+        plan_tier: planTier,
       };
 
       const { data, error } = await supabase.functions.invoke("convert-resume", {
@@ -315,17 +373,43 @@ export default function ResumeConverter() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setH2aResume(data.h2a);
-      setH2bResume(data.h2b);
+      // Set results based on tier
+      if (planTier === "gold") {
+        if (goldVisaChoice === "h2a") {
+          setH2aResume(data.h2a);
+          setH2bResume(null);
+          setActiveTab("h2a");
+        } else {
+          setH2bResume(data.h2b);
+          setH2aResume(null);
+          setActiveTab("h2b");
+        }
+      } else if (planTier === "diamond") {
+        setH2aResume(data.h2a);
+        setH2bResume(data.h2b);
+      } else if (planTier === "black") {
+        // Black: sector resumes
+        if (data.sector_resumes?.length) {
+          setSectorResumes(data.sector_resumes);
+        }
+        // Black doesn't generate generic H-2A/H-2B
+        setH2aResume(null);
+        setH2bResume(null);
+      }
+
       setHasSavedResumes(true);
       setStep("done");
-      toast.success("Both H-2A and H-2B resumes generated and saved!");
+
+      const resumeCount = planTier === "black" 
+        ? (data.sector_resumes?.length || 0)
+        : planTier === "gold" ? 1 : 2;
+      toast.success(`${resumeCount} optimized resume(s) generated and saved!`);
     } catch (err: any) {
       console.error("Resume conversion error:", err);
       setStep("error");
       toast.error(err.message || "Failed to generate resumes");
     }
-  }, [selectedExpList, selectedPhysList, englishLevel, spanishLevel, currentLocation, workAuth, hasH2History, h2Details, visaDenials, passportStatus, availableWhen, durationPref, extraNotes]);
+  }, [selectedExpList, selectedPhysList, englishLevel, spanishLevel, currentLocation, workAuth, hasH2History, h2Details, visaDenials, passportStatus, availableWhen, durationPref, extraNotes, planTier, goldVisaChoice, selectedSectors]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: (files) => files.length > 0 && processFile(files[0]),
@@ -342,7 +426,6 @@ export default function ResumeConverter() {
 
   const handleReset = () => {
     setStep("form");
-    // Keep preferences and saved resumes — user just wants to regenerate
   };
 
   // LOADING STATE
@@ -356,9 +439,6 @@ export default function ResumeConverter() {
   }
 
   // FREE TIER GATE
-  const planTier = profile?.plan_tier || "free";
-  const tierConfig = TIER_RESUME_LIMITS[planTier];
-
   if (!authLoading && planTier === "free") {
     return (
       <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[50vh] text-center gap-6">
@@ -387,8 +467,24 @@ export default function ResumeConverter() {
     );
   }
 
+  // DONE STATE
+  if (step === "done" && (h2aResume || h2bResume || sectorResumes.length > 0)) {
+    const availableResumes = [
+      ...(h2aResume ? [{ key: "h2a", resume: h2aResume, label: "H-2A" }] : []),
+      ...(h2bResume ? [{ key: "h2b", resume: h2bResume, label: "H-2B" }] : []),
+      ...sectorResumes.map((sr) => {
+        const sectorDef = SECTOR_CATEGORIES.find(s => s.id === sr.category);
+        return {
+          key: `sector_${sr.category}`,
+          resume: sr.resume_data,
+          label: sectorDef?.labelEn || sr.category,
+        };
+      }),
+    ];
 
-  if (step === "done" && h2aResume && h2bResume) {
+    // Auto-select first available tab
+    const firstTab = availableResumes[0]?.key || "h2a";
+
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
         <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -400,7 +496,14 @@ export default function ResumeConverter() {
               <h2 className="font-bold text-foreground">
                 {hasSavedResumes ? "Your Saved Resumes" : "Resumes Generated Successfully!"}
               </h2>
-              <p className="text-sm text-muted-foreground">Both H-2A and H-2B versions are saved to your profile.</p>
+              <p className="text-sm text-muted-foreground">
+                {planTier === "black" 
+                  ? `${availableResumes.length} sector-optimized resume(s) saved.`
+                  : planTier === "gold"
+                    ? `Your ${goldVisaChoice.toUpperCase()} resume is saved.`
+                    : "Both H-2A and H-2B versions are saved to your profile."
+                }
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -410,25 +513,25 @@ export default function ResumeConverter() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 h-12">
-            <TabsTrigger value="h2a" className="gap-2 text-sm font-bold">
-              <Tractor className="h-4 w-4" /> H-2A Agricultural
-            </TabsTrigger>
-            <TabsTrigger value="h2b" className="gap-2 text-sm font-bold">
-              <HardHat className="h-4 w-4" /> H-2B Non-Agricultural
-            </TabsTrigger>
+        <Tabs defaultValue={firstTab} value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className={cn("grid w-full", 
+            availableResumes.length <= 2 ? "grid-cols-2" :
+            availableResumes.length <= 3 ? "grid-cols-3" :
+            availableResumes.length <= 4 ? "grid-cols-4" : "grid-cols-5"
+          )} style={{ height: "auto" }}>
+            {availableResumes.map(({ key, label }) => (
+              <TabsTrigger key={key} value={key} className="gap-1 text-xs font-bold py-2 px-1">
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          {[
-            { key: "h2a", resume: h2aResume, label: "H-2A" },
-            { key: "h2b", resume: h2bResume, label: "H-2B" },
-          ].map(({ key, resume, label }) => (
+          {availableResumes.map(({ key, resume, label }) => (
             <TabsContent key={key} value={key}>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-base">{resume.personal_info?.full_name} — {label} Resume</CardTitle>
-                  <Button size="sm" className="gap-2" onClick={() => handleDownload(resume, label)}>
+                  <Button size="sm" className="gap-2" onClick={() => handleDownload(resume, label.replace(/\s+/g, "_"))}>
                     <Download className="h-4 w-4" /> Download PDF
                   </Button>
                 </CardHeader>
@@ -490,7 +593,7 @@ export default function ResumeConverter() {
   }
 
   // GENERATING STATE
-  if (step === "uploading" || step === "generating") {
+  if (step === "uploading" || step === "generating" || step === "generating_sectors") {
     return (
       <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[60vh] text-center gap-6">
         <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -498,23 +601,15 @@ export default function ResumeConverter() {
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">
-            {step === "uploading" ? "Reading your resume..." : "AI is generating both H-2A & H-2B resumes..."}
+            {step === "uploading" ? "Reading your resume..." 
+              : step === "generating_sectors" ? "Generating sector-specific resumes..."
+              : "AI is generating your optimized resume(s)..."}
           </h2>
           <p className="text-sm text-muted-foreground mt-2">
-            {step === "generating" && "This may take 30-60 seconds. We're creating two optimized versions."}
+            {step === "generating" && planTier === "black" 
+              ? `Generating ${selectedSectors.length} sector-optimized resumes. This may take 1-2 minutes.`
+              : step === "generating" && "This may take 30-60 seconds."}
           </p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-          <div className={cn("p-3 rounded-lg border text-center", step === "generating" ? "border-primary/30 bg-primary/5" : "border-muted")}>
-            <Tractor className="h-5 w-5 mx-auto mb-1 text-primary" />
-            <span className="text-[10px] font-bold uppercase">H-2A</span>
-            {step === "generating" && <Loader2 className="h-3 w-3 animate-spin mx-auto mt-1 text-primary" />}
-          </div>
-          <div className={cn("p-3 rounded-lg border text-center", step === "generating" ? "border-primary/30 bg-primary/5" : "border-muted")}>
-            <HardHat className="h-5 w-5 mx-auto mb-1 text-primary" />
-            <span className="text-[10px] font-bold uppercase">H-2B</span>
-            {step === "generating" && <Loader2 className="h-3 w-3 animate-spin mx-auto mt-1 text-primary" />}
-          </div>
         </div>
       </div>
     );
@@ -534,6 +629,11 @@ export default function ResumeConverter() {
 
   const selectedExpCount = Object.values(selectedExperience).filter(Boolean).length;
 
+  // Check if upload should be enabled
+  const canUpload = selectedExpCount > 0 && (
+    planTier !== "black" || selectedSectors.length > 0
+  );
+
   // FORM VIEW
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
@@ -541,19 +641,27 @@ export default function ResumeConverter() {
       <div className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">H-2 Smart Resume Builder</h1>
         <p className="text-sm text-muted-foreground">
-          Answer a few questions, upload your CV, and we'll generate <strong>two optimized resumes</strong> — one for H-2A and one for H-2B positions.
+          {planTier === "black" 
+            ? "Answer the questions, select up to 5 target sectors, upload your CV, and we'll generate sector-optimized resumes."
+            : planTier === "gold"
+              ? "Answer a few questions, upload your CV, and we'll generate one optimized resume for the visa type you choose."
+              : "Answer a few questions, upload your CV, and we'll generate two optimized resumes — one for H-2A and one for H-2B positions."
+          }
         </p>
+        <Badge variant="secondary" className="text-xs">
+          <Crown className="h-3 w-3 mr-1" /> {tierConfig.label}
+        </Badge>
       </div>
 
       {/* Saved resumes banner */}
-      {hasSavedResumes && h2aResume && h2bResume && (
+      {hasSavedResumes && (h2aResume || h2bResume || sectorResumes.length > 0) && (
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Eye className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-foreground">You already have saved resumes</p>
-                <p className="text-xs text-muted-foreground">View or download your H-2A/H-2B resumes, or update your preferences and regenerate.</p>
+                <p className="text-xs text-muted-foreground">View or download your resumes, or update your preferences and regenerate.</p>
               </div>
             </div>
             <Button size="sm" variant="default" className="gap-1.5 whitespace-nowrap" onClick={() => setStep("done")}>
@@ -567,12 +675,98 @@ export default function ResumeConverter() {
         {/* LEFT COLUMN: Questions */}
         <div className="lg:col-span-2 space-y-5">
 
+          {/* Gold: Visa type choice */}
+          {planTier === "gold" && (
+            <Card className="border-primary/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2 text-primary">
+                  <Crown className="h-4 w-4" />
+                  Choose Your Visa Type
+                </CardTitle>
+                <CardDescription>Gold plan generates 1 optimized resume. Choose H-2A or H-2B.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "h2a" as const, label: "H-2A (Agricultural)", icon: Tractor },
+                    { value: "h2b" as const, label: "H-2B (Non-Agricultural)", icon: HardHat },
+                  ].map(({ value, label, icon: Icon }) => (
+                    <div
+                      key={value}
+                      onClick={() => setGoldVisaChoice(value)}
+                      className={cn(
+                        "p-4 rounded-lg border-2 cursor-pointer transition-all flex flex-col items-center gap-2 text-center",
+                        goldVisaChoice === value
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <Icon className={cn("h-6 w-6", goldVisaChoice === value ? "text-primary" : "text-muted-foreground")} />
+                      <span className="text-xs font-bold">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Black: Sector selection */}
+          {planTier === "black" && (
+            <Card className="border-primary/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2 text-primary">
+                  <Crown className="h-4 w-4" />
+                  Select Target Sectors (up to 5)
+                </CardTitle>
+                <CardDescription>
+                  Each sector generates a unique, optimized resume. Your resume will be matched to jobs in these sectors automatically.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {SECTOR_CATEGORIES.map((sector) => {
+                    const isSelected = selectedSectors.includes(sector.id);
+                    const Icon = sector.icon;
+                    return (
+                      <div
+                        key={sector.id}
+                        onClick={() => toggleSector(sector.id)}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                            : "border-border hover:border-primary/30",
+                          !isSelected && selectedSectors.length >= 5 && "opacity-40 cursor-not-allowed"
+                        )}
+                      >
+                        <Checkbox checked={isSelected} className="pointer-events-none" />
+                        <Icon className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-medium block">{sector.labelEn}</span>
+                          <span className="text-[10px] text-muted-foreground">{sector.label}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Badge variant={selectedSectors.length > 0 ? "default" : "secondary"} className="text-xs">
+                    {selectedSectors.length}/5 selected
+                  </Badge>
+                  {selectedSectors.length === 0 && (
+                    <span className="text-[10px] text-destructive">Select at least 1 sector</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* 1. Practical Experience */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                1. Practical Experience
+                {planTier === "black" ? "2" : planTier === "gold" ? "2" : "1"}. Practical Experience
               </CardTitle>
               <CardDescription>Select all work experience you have and how long you worked in each area</CardDescription>
             </CardHeader>
@@ -602,7 +796,6 @@ export default function ResumeConverter() {
                           </div>
                         )}
                       </div>
-                      {/* Duration selector - appears when checked */}
                       {isSelected && (
                         <div className="ml-8 flex items-center gap-2">
                           <Label className="text-[10px] text-muted-foreground whitespace-nowrap">How long:</Label>
@@ -668,7 +861,7 @@ export default function ResumeConverter() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <HardHat className="h-4 w-4 text-primary" />
-                  2. Physical Skills & Capabilities
+                  {planTier === "black" || planTier === "gold" ? "3" : "2"}. Physical Skills & Capabilities
                   {Object.values(selectedPhysical).filter(Boolean).length > 0 && (
                     <Badge variant="secondary" className="text-[10px]">{Object.values(selectedPhysical).filter(Boolean).length} selected</Badge>
                   )}
@@ -695,7 +888,6 @@ export default function ResumeConverter() {
                           <Checkbox checked={isSelected} className="pointer-events-none" />
                           <span className="text-xs font-medium">{skill.label}</span>
                         </div>
-                        {/* Sub-detail fields */}
                         {isSelected && skill.hasDetail === "weight" && (
                           <div className="ml-8 flex items-center gap-2">
                             <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Max weight:</Label>
@@ -738,7 +930,7 @@ export default function ResumeConverter() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2 text-primary">
                   <ShieldCheck className="h-4 w-4" />
-                  3. Visa & Work Authorization
+                  {planTier === "black" || planTier === "gold" ? "4" : "3"}. Visa & Work Authorization
                 </CardTitle>
                 {showVisa ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </div>
@@ -874,6 +1066,18 @@ export default function ResumeConverter() {
               <CardContent className="p-4 space-y-3">
                 <p className="text-xs font-bold uppercase text-muted-foreground">Your Profile</p>
                 <div className="space-y-2 text-xs">
+                  {planTier === "gold" && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Visa type:</span>
+                      <Badge variant="default" className="text-[10px]">{goldVisaChoice.toUpperCase()}</Badge>
+                    </div>
+                  )}
+                  {planTier === "black" && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Sectors:</span>
+                      <Badge variant={selectedSectors.length > 0 ? "default" : "secondary"} className="text-[10px]">{selectedSectors.length}/5</Badge>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Experience areas:</span>
                     <Badge variant="secondary">{selectedExpCount}</Badge>
@@ -902,7 +1106,7 @@ export default function ResumeConverter() {
             <Card
               className={cn(
                 "border-2 border-dashed transition-all cursor-pointer hover:border-primary/50",
-                selectedExpCount === 0 ? "opacity-50 pointer-events-none" : ""
+                !canUpload ? "opacity-50 pointer-events-none" : ""
               )}
               {...getRootProps()}
             >
@@ -919,12 +1123,20 @@ export default function ResumeConverter() {
                 </div>
                 <div className="bg-primary/5 rounded-lg p-3 w-full">
                   <p className="text-[10px] font-medium text-primary">
-                    AI will generate <strong>2 resumes</strong>: one optimized for H-2A and another for H-2B positions
+                    {planTier === "black" 
+                      ? `AI will generate ${selectedSectors.length} sector-optimized resume(s)`
+                      : planTier === "gold"
+                        ? `AI will generate 1 optimized ${goldVisaChoice.toUpperCase()} resume`
+                        : "AI will generate 2 resumes: one for H-2A and another for H-2B"
+                    }
                   </p>
                 </div>
-                {selectedExpCount === 0 && (
+                {!canUpload && (
                   <p className="text-[10px] text-destructive font-medium">
-                    ← Select at least one experience area first
+                    {planTier === "black" && selectedSectors.length === 0
+                      ? "← Select at least one target sector first"
+                      : "← Select at least one experience area first"
+                    }
                   </p>
                 )}
               </CardContent>
