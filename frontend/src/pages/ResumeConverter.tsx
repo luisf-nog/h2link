@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Upload, Loader2, Download, CheckCircle, Sparkles, AlertCircle,
-  HardHat, Tractor, Utensils, Hammer, Package, ShieldCheck, Info,
+  HardHat, Tractor, Utensils, Hammer, ShieldCheck, Info,
   Truck, TreePine, Building2, Wrench, ChefHat, Warehouse,
   Globe, Calendar, FileText, ChevronDown, ChevronUp, Eye, RefreshCw,
+  Beef, Shirt, Axe, Zap, Paintbrush, UtensilsCrossed, Wine, DoorOpen, Package, Car,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractTextFromPDF } from "@/lib/pdf";
@@ -33,18 +34,28 @@ const TIER_RESUME_LIMITS: Record<PlanTier, { max: number; label: string }> = {
   black: { max: 5, label: "5 Sector Resumes + H-2A/H-2B Fallbacks" },
 };
 
-// Normalized sector categories that map to public_jobs categories via get_normalized_category
+// Normalized sector categories that map to public_jobs categories via get_normalized_category (20 sub-sectors)
 const SECTOR_CATEGORIES = [
-  { id: "campo_colheita", label: "Campo e Colheita", labelEn: "Agriculture & Harvesting", icon: Tractor },
-  { id: "construcao_manutencao", label: "Construção e Manutenção", labelEn: "Construction & Maintenance", icon: Hammer },
-  { id: "paisagismo_jardinagem", label: "Paisagismo e Jardinagem", labelEn: "Landscaping & Gardening", icon: TreePine },
-  { id: "hotelaria_limpeza", label: "Hotelaria e Limpeza", labelEn: "Hospitality & Cleaning", icon: Building2 },
-  { id: "cozinha_restaurante", label: "Cozinha e Restaurante", labelEn: "Kitchen & Restaurant", icon: ChefHat },
-  { id: "logistica_transporte", label: "Logística e Transporte", labelEn: "Logistics & Transport", icon: Truck },
-  { id: "industria_producao", label: "Indústria e Produção", labelEn: "Manufacturing & Production", icon: Warehouse },
+  { id: "agricultura_colheita", label: "Agricultura e Colheita", labelEn: "Agriculture & Harvesting", icon: Tractor },
+  { id: "equipamentos_agricolas", label: "Equipamentos Agrícolas", labelEn: "Farm Equipment", icon: Wrench },
+  { id: "construcao_geral", label: "Construção Geral", labelEn: "General Construction", icon: Hammer },
+  { id: "carpintaria_telhados", label: "Carpintaria e Telhados", labelEn: "Carpentry & Roofing", icon: Axe },
+  { id: "instalacao_eletrica", label: "Instalação e Elétrica", labelEn: "Installation & Electrical", icon: Zap },
   { id: "mecanica_reparo", label: "Mecânica e Reparo", labelEn: "Mechanics & Repair", icon: Wrench },
-  { id: "vendas_escritorio", label: "Vendas e Escritório", labelEn: "Sales & Office", icon: FileText },
-  { id: "lazer_servicos", label: "Lazer e Serviços", labelEn: "Leisure & Services", icon: Globe },
+  { id: "limpeza_zeladoria", label: "Limpeza e Zeladoria", labelEn: "Cleaning & Janitorial", icon: Paintbrush },
+  { id: "cozinha_preparacao", label: "Cozinha e Preparação", labelEn: "Kitchen & Food Prep", icon: ChefHat },
+  { id: "servico_mesa", label: "Serviço de Mesa", labelEn: "Dining & Table Service", icon: UtensilsCrossed },
+  { id: "hotelaria_recepcao", label: "Hotelaria e Recepção", labelEn: "Hospitality & Front Desk", icon: DoorOpen },
+  { id: "bar_bebidas", label: "Bar e Bebidas", labelEn: "Bar & Beverages", icon: Wine },
+  { id: "logistica_estoque", label: "Logística e Estoque", labelEn: "Logistics & Warehousing", icon: Package },
+  { id: "transporte_motorista", label: "Transporte e Motorista", labelEn: "Transport & Driving", icon: Car },
+  { id: "manufatura_montagem", label: "Manufatura e Montagem", labelEn: "Manufacturing & Assembly", icon: Warehouse },
+  { id: "soldagem_corte", label: "Soldagem e Corte", labelEn: "Welding & Cutting", icon: HardHat },
+  { id: "marcenaria_madeira", label: "Marcenaria e Madeira", labelEn: "Woodworking", icon: Axe },
+  { id: "carnes_frigorifico", label: "Carnes e Frigorífico", labelEn: "Meat Processing", icon: Beef },
+  { id: "textil_lavanderia", label: "Têxtil e Lavanderia", labelEn: "Textile & Laundry", icon: Shirt },
+  { id: "paisagismo_jardinagem", label: "Paisagismo e Jardinagem", labelEn: "Landscaping & Gardening", icon: TreePine },
+  { id: "vendas_atendimento", label: "Vendas e Atendimento", labelEn: "Sales & Customer Service", icon: FileText },
 ];
 
 // --- Duration options ---
