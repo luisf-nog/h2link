@@ -410,7 +410,7 @@ serve(async (req) => {
       }).eq("id", user.id);
 
     } else if (planTier === "black") {
-      // Black: generate up to 5 sector-specific resumes
+      // Black: generate up to 5 sector-specific resumes + 1 H-2A + 1 H-2B fallback
       const selectedSectors: string[] = context?.selected_sectors || [];
       if (selectedSectors.length === 0) {
         return json(400, { error: "Black plan requires at least 1 sector selection." });
@@ -419,21 +419,31 @@ serve(async (req) => {
         return json(400, { error: "Maximum 5 sectors allowed." });
       }
 
-      console.log(`Black tier: generating ${selectedSectors.length} sector resumes: ${selectedSectors.join(", ")}`);
+      console.log(`Black tier: generating ${selectedSectors.length} sector resumes + H-2A/H-2B fallbacks`);
 
-      // Generate sector resumes in parallel (max 5)
-      const sectorResults = await Promise.all(
-        selectedSectors.map(async (sectorId) => {
-          try {
-            const prompt = buildSectorPrompt(raw_text, sectorId, context);
-            const resume = await generateResume(LOVABLE_API_KEY, prompt);
-            return { category: sectorId, resume_data: resume, success: true };
-          } catch (err) {
-            console.error(`Failed to generate sector resume for ${sectorId}:`, err);
-            return { category: sectorId, resume_data: null, success: false };
-          }
-        })
-      );
+      // Generate sector resumes + H-2A + H-2B fallbacks in parallel
+      const [sectorResults, h2aFallback, h2bFallback] = await Promise.all([
+        Promise.all(
+          selectedSectors.map(async (sectorId) => {
+            try {
+              const prompt = buildSectorPrompt(raw_text, sectorId, context);
+              const resume = await generateResume(LOVABLE_API_KEY, prompt);
+              return { category: sectorId, resume_data: resume, success: true };
+            } catch (err) {
+              console.error(`Failed to generate sector resume for ${sectorId}:`, err);
+              return { category: sectorId, resume_data: null, success: false };
+            }
+          })
+        ),
+        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2A", context)).catch((err) => {
+          console.error("Failed to generate H-2A fallback:", err);
+          return null;
+        }),
+        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2B", context)).catch((err) => {
+          console.error("Failed to generate H-2B fallback:", err);
+          return null;
+        }),
+      ]);
 
       const successfulResumes = sectorResults.filter(r => r.success && r.resume_data);
 
@@ -447,14 +457,16 @@ serve(async (req) => {
         }, { onConflict: "user_id,category" });
       }
 
-      // Also set the first sector resume as default resume_data for fallback
-      if (successfulResumes.length > 0) {
-        await serviceClient.from("profiles").update({
-          resume_data: successfulResumes[0].resume_data,
-          resume_extra_context: context || null,
-        }).eq("id", user.id);
-      }
+      // Save H-2A/H-2B fallbacks to profiles
+      await serviceClient.from("profiles").update({
+        resume_data_h2a: h2aFallback || null,
+        resume_data_h2b: h2bFallback || null,
+        resume_data: h2bFallback || h2aFallback || (successfulResumes[0]?.resume_data ?? null),
+        resume_extra_context: context || null,
+      }).eq("id", user.id);
 
+      result.h2a = h2aFallback;
+      result.h2b = h2bFallback;
       result.sector_resumes = successfulResumes.map(r => ({
         category: r.category,
         resume_data: r.resume_data,
