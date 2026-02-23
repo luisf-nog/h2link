@@ -357,11 +357,11 @@ export default function Auth() {
               <span className="auth-accent-text">H2</span> Linker
             </h1>
             <p className="mt-5 text-white/30 text-base max-w-sm leading-relaxed">
-              Vagas H-2A e H-2B direto do Department of Labor — encontre, candidate-se e acompanhe tudo automaticamente.
+              {t("auth.hero_description")}
             </p>
             <div className="mt-6 flex items-center gap-3">
               <div className="h-px flex-1 max-w-[60px] bg-gradient-to-r from-sky-500/40 to-transparent" />
-              <span className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-semibold">U.S. Visa Programs</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-semibold">{t("auth.visa_programs_label")}</span>
             </div>
           </div>
 
@@ -370,25 +370,25 @@ export default function Auth() {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <div className="text-3xl font-bold text-white font-brand">10,000<span className="auth-accent-text">+</span></div>
-                <div className="text-xs text-white/30 mt-1">Vagas no banco de dados</div>
+                <div className="text-xs text-white/30 mt-1">{t("auth.stats.jobs_in_database")}</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-white font-brand">100<span className="auth-accent-text">%</span></div>
-                <div className="text-xs text-white/30 mt-1">Grátis para começar</div>
+                <div className="text-xs text-white/30 mt-1">{t("auth.stats.free_to_start")}</div>
               </div>
             </div>
 
             <div className="flex gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sky-500/20 bg-sky-500/5 text-[10px] font-bold text-sky-400/70 tracking-wider uppercase">
-                H-2A Agricultural
+                {t("auth.badges.h2a")}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sky-500/20 bg-sky-500/5 text-[10px] font-bold text-sky-400/70 tracking-wider uppercase">
-                H-2B Non-Agricultural
+                {t("auth.badges.h2b")}
               </span>
             </div>
 
             <p className="text-[10px] text-white/15 tracking-wide">
-              U.S. Department of Labor · Temporary Employment Certification Program
+              {t("auth.dol_notice")}
             </p>
           </div>
         </div>
@@ -582,7 +582,7 @@ export default function Auth() {
 
           {/* Footer */}
           <button onClick={() => navigate("/jobs")} className="mt-8 text-[11px] text-white/15 hover:text-white/35 transition-colors bg-transparent border-none cursor-pointer font-brand tracking-wide">
-            Ver vagas sem criar conta →
+            {t("auth.browse_jobs_link")}
           </button>
         </div>
       </div>

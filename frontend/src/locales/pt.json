@@ -13,7 +13,19 @@
   "auth": {
     "browse_jobs": "Explorar Vagas Disponíveis",
     "browse_jobs_hint": "Navegue sem criar conta • Acesso gratuito",
+    "browse_jobs_link": "Ver vagas sem criar conta →",
     "hero_tagline": "Economize tempo e encontre oportunidades H-2A e H-2B reais",
+    "hero_description": "Vagas H-2A e H-2B direto do Department of Labor — encontre, candidate-se e acompanhe tudo automaticamente.",
+    "visa_programs_label": "U.S. Visa Programs",
+    "stats": {
+      "jobs_in_database": "Vagas no banco de dados",
+      "free_to_start": "Grátis para começar"
+    },
+    "badges": {
+      "h2a": "H-2A Agrícola",
+      "h2b": "H-2B Não-Agrícola"
+    },
+    "dol_notice": "U.S. Department of Labor · Programa de Certificação de Emprego Temporário",
     "tabs": {
       "signin": "Entrar",
       "signup": "Criar Conta"
