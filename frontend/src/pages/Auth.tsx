@@ -387,9 +387,6 @@ export default function Auth() {
               </span>
             </div>
 
-            <p className="text-[10px] text-white/15 tracking-wide">
-              {t("auth.dol_notice")}
-            </p>
           </div>
         </div>
 
