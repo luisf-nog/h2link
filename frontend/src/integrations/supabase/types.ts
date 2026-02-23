@@ -1442,7 +1442,19 @@ export type Database = {
           view_id: string
         }[]
       }
-      track_whatsapp_click: { Args: { p_token: string }; Returns: undefined }
+      track_whatsapp_click:
+        | {
+            Args: { p_token: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.track_whatsapp_click(p_token => text), public.track_whatsapp_click(p_token => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { p_token: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.track_whatsapp_click(p_token => text), public.track_whatsapp_click(p_token => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
       trigger_immediate_radar: {
         Args: { target_user_id: string }
         Returns: number
