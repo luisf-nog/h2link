@@ -33,6 +33,7 @@ interface AISummary {
   headline: string;
   strengths: string[];
   experience_years: number;
+  experience_domain?: string;
   summary: string;
   languages: string[];
   availability: string;
@@ -182,12 +183,12 @@ export default function PublicProfile() {
     if (!token || !profile?.phone_e164) return;
     try { await supabase.rpc("track_whatsapp_click", { p_token: token }); } catch {}
     const phone = profile.phone_e164.replace(/\D/g, "");
-    window.open(`https://wa.me/${phone}`, "_blank");
+    window.location.href = `https://wa.me/${phone}`;
   };
 
   const handleSmsClick = () => {
     if (!profile?.phone_e164) return;
-    window.open(`sms:${profile.phone_e164}`, "_blank");
+    window.location.href = `sms:${profile.phone_e164}`;
   };
 
   const handleCallClick = () => {
@@ -197,7 +198,7 @@ export default function PublicProfile() {
 
   const handleEmailClick = () => {
     const email = profile?.contact_email || "";
-    if (email) window.open(`mailto:${email}`, "_blank");
+    if (email) window.location.href = `mailto:${email}`;
   };
 
   const handleShare = async () => {
@@ -331,7 +332,8 @@ export default function PublicProfile() {
                     {/* Quick stats row */}
                     <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1 bg-muted/60 rounded-full px-2.5 py-1">
-                        <Clock className="h-3 w-3" /> {aiSummary.experience_years}+ yrs
+                        <Briefcase className="h-3 w-3" />
+                        {aiSummary.experience_years}+ yrs {aiSummary.experience_domain ? `in ${aiSummary.experience_domain}` : ""}
                       </span>
                       <span className="inline-flex items-center gap-1 bg-muted/60 rounded-full px-2.5 py-1">
                         <Globe className="h-3 w-3" /> {aiSummary.languages.join(", ")}
