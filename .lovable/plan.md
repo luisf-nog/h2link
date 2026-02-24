@@ -1,81 +1,119 @@
 
 
-# Plano Definitivo: Resolver "supabaseUrl is required"
+# Travas de Seguranca Anti-Desperdicio de IA
 
-## Diagnostico da Causa Raiz
+## Visao Geral
 
-O projeto tem **DUAS** estruturas Vite separadas:
+Implementar duas travas de seguranca que impedem chamadas de IA quando o SMTP nao esta funcional, eliminando custos desnecessarios. O usuario sera informado de forma clara sobre o motivo do bloqueio e como resolver.
+
+## Trava 1: Verificacao Obrigatoria de SMTP (Pre-Flight Check)
+
+### Como funciona
+
+O usuario so consegue enviar emails ou acionar a IA apos validar seu SMTP com sucesso (enviando um email de teste real). Enquanto nao validar, os botoes de envio ficam desabilitados com mensagem explicativa.
+
+### Fluxo do usuario
 
 ```text
-RAIZ (o que o Lovable USA de fato):
-  vite.config.ts        <-- SEM define block, SEM fallbacks
-  index.html            <-- <script src="/src/main.tsx">
-  src/                  <-- codigo fonte real
-  .env                  <-- auto-gerado pelo Lovable Cloud
-
-FRONTEND (onde TODAS as correções foram aplicadas):
-  frontend/vite.config.ts  <-- COM define block, COM fallbacks
-  frontend/index.html
-  frontend/src/
-  frontend/.env
+1. Usuario configura SMTP (email + senha de app)
+2. Clica em "Testar e Ativar" (substitui o botao "Salvar" atual)
+3. Sistema envia email de teste real para o proprio usuario
+4. Se sucesso: smtp_verified = true, botoes de envio liberados
+5. Se falha: mensagem de erro explicativa, botoes permanecem bloqueados
 ```
 
-**Todas as 6 tentativas anteriores modificaram `frontend/vite.config.ts`** -- um arquivo que o Lovable **nao usa**. O ambiente Lovable roda a partir da raiz, usando o `vite.config.ts` da raiz, que nao tem nenhum `define` block nem fallbacks para as credenciais do Supabase.
+### Alteracoes
 
-## Solucao
+**Banco de dados (migracao SQL):**
+- Adicionar `smtp_verified boolean DEFAULT false` na tabela `profiles`
+- Adicionar `last_smtp_check timestamptz` na tabela `profiles`
 
-Adicionar o bloco `define` com as credenciais publicas (anon key) diretamente no **`vite.config.ts` da raiz** -- o unico que o Lovable efetivamente usa.
+**Frontend - EmailSettingsPanel.tsx:**
+- Substituir botao "Salvar" + "Testar Conexao" por um unico botao "Testar e Ativar"
+- Ao clicar: salvar credenciais, enviar email de teste, e se sucesso, setar `smtp_verified = true` no perfil
+- Mostrar badge verde "SMTP Verificado" quando ativo
 
-## Mudancas Tecnicas
+**Frontend - Queue.tsx:**
+- No `ensureCanSend()`, verificar `profile.smtp_verified === true`
+- Se falso, exibir alerta explicativo com botao que leva para `/settings/email`:
+  - Titulo: "SMTP nao verificado"
+  - Mensagem: "Voce precisa testar e ativar sua conexao de email antes de enviar. Va em Configuracoes > Email e clique em 'Testar e Ativar'."
 
-### Arquivo: `vite.config.ts` (RAIZ)
+**Backend - generate-job-email/index.ts:**
+- Adicionar verificacao: se `smtp_verified !== true`, retornar erro 403 com mensagem `smtp_not_verified`
+- Isso impede que a IA seja chamada mesmo via manipulacao direta
 
-Adicionar `loadEnv` ao import e um bloco `define` com fallbacks hardcoded para as chaves publicas do Supabase:
+**Frontend - AuthContext.tsx:**
+- Adicionar `smtp_verified` na interface `Profile`
+- Incluir campo na query de `fetchProfile`
 
-```typescript
-import { defineConfig, loadEnv, type ConfigEnv, type PluginOption } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { fileURLToPath } from "node:url";
-import { componentTagger } from "lovable-tagger";
+**Frontend - SetupChecklist (useSetupChecklist.ts):**
+- Adicionar step "smtp_verified" que verifica `profile.smtp_verified`
+- Diferente do step "smtp" existente (que so verifica se tem senha salva)
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+## Trava 2: Disjuntor Automatico (Circuit Breaker)
 
-export default defineConfig(({ mode }: ConfigEnv) => {
-  const env = loadEnv(mode, __dirname, "");
+### Como funciona
 
-  const SUPABASE_URL = env.VITE_SUPABASE_URL || "https://dalarhopratsgzmmzhxx.supabase.co";
-  const SUPABASE_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGFyaG9wcmF0c2d6bW16aHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM5NDksImV4cCI6MjA4NDY1OTk0OX0.CIV7u2pMSudse-Zpfqf8OHLkm_exZn0EaYXVEFwoXTQ";
-  const SUPABASE_PROJECT_ID = env.VITE_SUPABASE_PROJECT_ID || "dalarhopratsgzmmzhxx";
+Durante o envio em massa, se 5 falhas SMTP consecutivas ocorrerem, o sistema para imediatamente, reseta `smtp_verified = false`, e exibe alerta critico.
 
-  return {
-    base: '/',
-    envDir: __dirname,
-    build: { outDir: "dist" },
-    server: { port: 8080, host: '0.0.0.0', allowedHosts: true as const },
-    define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(SUPABASE_URL),
-      'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(SUPABASE_KEY),
-      'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(SUPABASE_PROJECT_ID),
-    },
-    plugins: [react(), mode === "development" ? componentTagger() : undefined].filter(Boolean) as unknown as PluginOption[],
-    resolve: {
-      alias: { "@": path.resolve(__dirname, "./src") },
-    },
-  };
-});
+### Fluxo
+
+```text
+1. Usuario inicia envio em massa
+2. Contador de falhas consecutivas: 0
+3. Email enviado com sucesso -> contador reseta para 0
+4. Email falha -> contador += 1
+5. Se contador >= 5:
+   a. Para o loop imediatamente
+   b. Atualiza profiles.smtp_verified = false
+   c. Exibe alerta: "Envio pausado: detectamos 5 falhas consecutivas.
+      Seu SMTP pode estar bloqueado ou suas credenciais expiraram.
+      Va em Configuracoes > Email e revalide sua conexao."
+   d. Usuario precisa re-testar SMTP para desbloquear
 ```
 
-### Por que isso resolve
+### Alteracoes
 
-- A anon key do Supabase e uma chave **publica** (nao e um segredo), entao pode ficar no codigo
-- O bloco `define` garante que `import.meta.env.VITE_SUPABASE_URL` sera substituido pelo valor correto durante o build/dev, independente de o `.env` ser encontrado ou nao
-- Desta vez estamos editando o arquivo **certo** -- o da raiz
+**Frontend - Queue.tsx (funcao sendQueueItems):**
+- Adicionar variavel `consecutiveSmtpFailures = 0`
+- No bloco catch: incrementar contador. No bloco de sucesso: resetar para 0
+- Se `consecutiveSmtpFailures >= 5`:
+  - Chamar `supabase.from("profiles").update({ smtp_verified: false }).eq("id", profile.id)`
+  - Exibir toast destrutivo com mensagem explicativa e botao para configuracoes
+  - Fazer `break` no loop
 
-### Nenhuma outra mudanca necessaria
+## Mensagens ao Usuario (i18n)
 
-- `src/integrations/supabase/client.ts` -- NAO TOCAR (auto-gerado)
-- `frontend/vite.config.ts` -- irrelevante para o ambiente Lovable
-- `.env` -- auto-gerado pelo Lovable Cloud
+Novas chaves de traducao nos 3 idiomas (en, pt, es):
+
+| Chave | PT | EN | ES |
+|-------|----|----|-----|
+| `smtp.not_verified_title` | SMTP nao verificado | SMTP not verified | SMTP no verificado |
+| `smtp.not_verified_desc` | Teste e ative sua conexao de email em Configuracoes antes de enviar. | Test and activate your email connection in Settings before sending. | Pruebe y active su conexion de email en Configuracion antes de enviar. |
+| `smtp.circuit_breaker_title` | Envio pausado automaticamente | Sending paused automatically | Envio pausado automaticamente |
+| `smtp.circuit_breaker_desc` | Detectamos 5 falhas consecutivas. Revalide seu SMTP em Configuracoes > Email. | We detected 5 consecutive failures. Re-validate your SMTP in Settings > Email. | Detectamos 5 fallos consecutivos. Revalide su SMTP en Configuracion > Email. |
+| `smtp.verify_and_activate` | Testar e Ativar | Test and Activate | Probar y Activar |
+| `smtp.verified_badge` | SMTP Verificado | SMTP Verified | SMTP Verificado |
+
+## Arquivos a Modificar
+
+| Arquivo | Mudanca |
+|---------|---------|
+| Nova migracao SQL | `smtp_verified` e `last_smtp_check` em `profiles` |
+| `frontend/src/contexts/AuthContext.tsx` | Adicionar `smtp_verified` na interface Profile |
+| `frontend/src/components/settings/EmailSettingsPanel.tsx` | Botao "Testar e Ativar", badge de verificado |
+| `frontend/src/pages/Queue.tsx` | Verificacao em `ensureCanSend()` + circuit breaker no loop |
+| `frontend/supabase/functions/generate-job-email/index.ts` | Bloquear chamadas se `smtp_verified = false` |
+| `frontend/src/hooks/useSetupChecklist.ts` | Novo step de verificacao SMTP |
+| `frontend/src/locales/en.json` | Novas chaves i18n |
+| `frontend/src/locales/pt.json` | Novas chaves i18n |
+| `frontend/src/locales/es.json` | Novas chaves i18n |
+
+## Impacto Esperado
+
+- **Custo zero em erros**: IA nunca sera chamada se SMTP estiver offline
+- **Protecao em tempo real**: circuit breaker para o envio antes de acumular centenas de falhas
+- **Clareza para o usuario**: mensagens explicitas sobre o que fazer para resolver
+- **Seguranca no backend**: edge function rejeita chamadas mesmo se o frontend for burlado
 
