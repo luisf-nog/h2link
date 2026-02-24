@@ -210,12 +210,12 @@ export function EmailSettingsPanel() {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 max-w-[450px]">
               <div className="rounded-lg overflow-hidden border shadow-sm aspect-video bg-black">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
-                  title="Tutorial Senha de App Google"
-                  frameBorder="0"
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={t("smtp.tutorial.video_url")}
+                    title={t("smtp.tutorial.warning_title")}
+                    frameBorder="0"
                   allowFullScreen
                 ></iframe>
               </div>

@@ -483,7 +483,8 @@
       "step2": "Busca <strong>\"Contraseñas de aplicaciones\"</strong> en tu cuenta.",
       "step3": "Crea una contraseña con el nombre <strong>\"H2 Linker\"</strong>.",
       "step4": "Copia el código de 16 letras y pégalo abajo.",
-      "generate_now": "Generar Contraseña Ahora"
+      "generate_now": "Generar Contraseña Ahora",
+      "video_url": "https://www.youtube.com/embed/jjDNndrl7_U?si=iMLKezNo2HjxuKMT"
     },
     "password_label": "Contraseña de App (16 letras)",
     "normal_password_warning": "Contraseña normal no funciona",
