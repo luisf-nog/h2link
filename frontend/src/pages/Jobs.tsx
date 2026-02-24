@@ -342,14 +342,14 @@ export default function Jobs() {
               </Select>
               <Input
                 type="number"
-                placeholder={t("common.loading")} // Reutilizando key de carregamento ou use uma vazia
+                placeholder={t("jobs.filters.min_salary")}
                 value={minSalary}
                 onChange={(e) => setMinSalary(e.target.value)}
                 className="h-10"
               />
               <Input
                 type="number"
-                placeholder={t("common.loading")}
+                placeholder={t("jobs.filters.max_salary")}
                 value={maxSalary}
                 onChange={(e) => setMaxSalary(e.target.value)}
                 className="h-10"
