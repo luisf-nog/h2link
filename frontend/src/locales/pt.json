@@ -1050,7 +1050,9 @@
       "state": "Estado (ex: FL)",
       "city": "Cidade",
       "category": "Categoria",
-      "category_all": "Todas as categorias"
+      "category_all": "Todas as categorias",
+      "min_salary": "Salário mínimo ($)",
+      "max_salary": "Salário máximo ($)"
     },
     "search": {
       "placeholder": "Buscar por cargo, empresa, cidade..."
