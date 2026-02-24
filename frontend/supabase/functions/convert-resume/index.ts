@@ -566,7 +566,7 @@ serve(async (req) => {
     }
 
     // Track AI usage
-    await serviceClient.rpc("increment_ai_usage", { p_user_id: user.id, p_function_type: "resume" });
+    await serviceClient.rpc("increment_ai_usage", { p_user_id: user.id, p_function_type: "resume_conversion" });
 
     return json(200, result);
   } catch (error: any) {
