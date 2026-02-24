@@ -17,6 +17,7 @@ export type Database = {
       ai_daily_usage: {
         Row: {
           job_email_generations: number
+          resume_conversions: number
           resume_parses: number
           template_generations: number
           updated_at: string
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           job_email_generations?: number
+          resume_conversions?: number
           resume_parses?: number
           template_generations?: number
           updated_at?: string
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           job_email_generations?: number
+          resume_conversions?: number
           resume_parses?: number
           template_generations?: number
           updated_at?: string
@@ -1321,6 +1324,7 @@ export type Database = {
       ai_usage_summary: {
         Row: {
           total_job_email_generations: number | null
+          total_resume_conversions: number | null
           total_resume_parses: number | null
           total_template_generations: number | null
           unique_users: number | null
