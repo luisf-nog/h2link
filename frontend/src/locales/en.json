@@ -1051,8 +1051,8 @@
       "city": "City",
       "category": "Category",
       "category_all": "All categories",
-      "min_salary": "Min salary ($)",
-      "max_salary": "Max salary ($)"
+      "min_salary": "Min hourly rate ($)",
+      "max_salary": "Max hourly rate ($)"
     },
     "search": {
       "placeholder": "Search by role, company, city..."

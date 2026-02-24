@@ -1051,8 +1051,8 @@
       "city": "Cidade",
       "category": "Categoria",
       "category_all": "Todas as categorias",
-      "min_salary": "Salário mínimo ($)",
-      "max_salary": "Salário máximo ($)"
+      "min_salary": "Valor/hora mín ($)",
+      "max_salary": "Valor/hora máx ($)"
     },
     "search": {
       "placeholder": "Buscar por cargo, empresa, cidade..."
