@@ -504,7 +504,9 @@
     "email_first": "Enter email first",
     "gmail_recommended": "Gmail (Recommended)",
     "save_first_title": "Save your credentials first",
-    "save_first_desc": "Click Save before continuing."
+    "save_first_desc": "Click Save before continuing.",
+    "test_email_subject": "✅ SMTP Connection Test - H2 Linker",
+    "test_email_body": "Congratulations! Your SMTP connection is working perfectly on H2 Linker."
   },
   "templates": {
     "title": "Email templates",
