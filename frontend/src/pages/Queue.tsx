@@ -288,6 +288,21 @@ export default function Queue() {
   const allPendingSelected = pendingItems.length > 0 && selectedPendingIds.length === pendingItems.length;
 
   const ensureCanSend = async () => {
+    // --- TRAVA 1: Verificação obrigatória de SMTP ---
+    if (!(profile as any)?.smtp_verified) {
+      toast({
+        title: t("smtp.not_verified_title"),
+        description: t("smtp.not_verified_desc"),
+        variant: "destructive",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => navigate("/settings/email")} className="shrink-0">
+            {t("smtp.verify_and_activate")}
+          </Button>
+        ),
+      });
+      return { ok: false as const };
+    }
+
     if (smtpReady !== true) {
       if (profile?.id) {
         const { data, error } = await supabase
@@ -372,6 +387,7 @@ export default function Queue() {
     const failedIds: string[] = [];
     const failedErrors: string[] = [];
     let creditsRemaining = remainingToday;
+    let consecutiveSmtpFailures = 0;
 
     setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
 
@@ -497,9 +513,12 @@ export default function Queue() {
         console.log(`[Queue] Email enviado com sucesso para ${to}`);
         sentIds.push(item.id);
         creditsRemaining -= 1;
+        consecutiveSmtpFailures = 0; // Reset on success
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : t("common.errors.send_failed");
         console.error(`[Queue] Erro ao processar item ${item.id}:`, e);
+
+        consecutiveSmtpFailures += 1;
 
         const now = new Date().toISOString();
         await supabase
@@ -521,6 +540,28 @@ export default function Queue() {
 
         failedIds.push(item.id);
         failedErrors.push(message);
+
+        // --- TRAVA 2: Disjuntor automático (Circuit Breaker) ---
+        if (consecutiveSmtpFailures >= 5 && profile?.id) {
+          // Reset smtp_verified to force re-validation
+          await supabase
+            .from("profiles")
+            .update({ smtp_verified: false })
+            .eq("id", profile.id);
+          await refreshProfile();
+
+          toast({
+            title: t("smtp.circuit_breaker_title"),
+            description: t("smtp.circuit_breaker_desc"),
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => navigate("/settings/email")} className="shrink-0">
+                {t("smtp.verify_and_activate")}
+              </Button>
+            ),
+          });
+          break;
+        }
       }
 
       if (idx < items.length - 1 && sentIds.length > 0) {

@@ -407,12 +407,17 @@ serve(async (req) => {
 
     const { data: profile, error: profileErr } = await serviceClient
       .from("profiles")
-      .select("plan_tier,resume_data,resume_data_h2a,resume_data_h2b,full_name,phone_e164,contact_email,email")
+      .select("plan_tier,resume_data,resume_data_h2a,resume_data_h2b,full_name,phone_e164,contact_email,email,smtp_verified")
       .eq("id", userId)
       .maybeSingle();
     if (profileErr) throw profileErr;
     if ((profile as any)?.plan_tier !== "black") {
       return json(403, { success: false, error: "Black plan only" });
+    }
+
+    // --- TRAVA DE SEGURANÇA: Bloquear IA se SMTP não verificado ---
+    if (!(profile as any)?.smtp_verified) {
+      return json(403, { success: false, error: "smtp_not_verified" });
     }
 
     // Fetch user's AI preferences
