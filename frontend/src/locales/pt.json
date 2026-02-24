@@ -483,7 +483,8 @@
       "step2": "Pesquise por <strong>\"Senhas de App\"</strong> na sua conta.",
       "step3": "Crie uma senha com o nome <strong>\"H2 Linker\"</strong>.",
       "step4": "Copie o código de 16 letras e cole abaixo.",
-      "generate_now": "Gerar Senha Agora"
+      "generate_now": "Gerar Senha Agora",
+      "video_url": "https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
     },
     "password_label": "Senha de App (16 letras)",
     "normal_password_warning": "Senha normal não funciona",

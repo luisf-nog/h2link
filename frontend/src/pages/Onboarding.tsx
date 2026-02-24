@@ -285,7 +285,7 @@ export default function Onboarding() {
                         <iframe
                           width="100%"
                           height="100%"
-                          src="https://www.youtube.com/embed/Lz6fJChKRtA?si=4Mt-69l3C8NaS8yN"
+                          src={t("smtp.tutorial.video_url")}
                           frameBorder="0"
                           allowFullScreen
                         />

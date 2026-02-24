@@ -483,7 +483,8 @@
       "step2": "Search for <strong>\"App Passwords\"</strong> in your account.",
       "step3": "Create a password named <strong>\"H2 Linker\"</strong>.",
       "step4": "Copy the 16-letter code and paste it below.",
-      "generate_now": "Generate Password Now"
+      "generate_now": "Generate Password Now",
+      "video_url": "https://www.youtube.com/embed/jjDNndrl7_U?si=iMLKezNo2HjxuKMT"
     },
     "password_label": "App Password (16 letters)",
     "normal_password_warning": "Regular password won't work",
