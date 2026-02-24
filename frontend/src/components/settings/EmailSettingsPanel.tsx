@@ -137,8 +137,8 @@ export function EmailSettingsPanel() {
       const { data: payload, error: funcError } = await supabase.functions.invoke("send-email-custom", {
         body: {
           to: email,
-          subject: "✅ Teste de Conexão SMTP - H2 Linker",
-          body: "Parabéns! Sua conexão SMTP está funcionando perfeitamente no H2 Linker.",
+          subject: t("smtp.test_email_subject"),
+          body: t("smtp.test_email_body"),
           provider,
         },
       });

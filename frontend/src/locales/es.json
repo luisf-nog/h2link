@@ -504,7 +504,9 @@
     "email_first": "Ingresa el email primero",
     "gmail_recommended": "Gmail (Recomendado)",
     "save_first_title": "Guarda tus credenciales primero",
-    "save_first_desc": "Haz clic en Guardar antes de continuar."
+    "save_first_desc": "Haz clic en Guardar antes de continuar.",
+    "test_email_subject": "✅ Prueba de Conexión SMTP - H2 Linker",
+    "test_email_body": "¡Felicidades! Tu conexión SMTP está funcionando perfectamente en H2 Linker."
   },
   "templates": {
     "title": "Plantillas de email",
