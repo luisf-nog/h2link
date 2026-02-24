@@ -7,15 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Save, AlertTriangle, ExternalLink, Wifi, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, Save, AlertTriangle, ExternalLink, Wifi, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
+import { Badge } from "@/components/ui/badge";
 
 type Provider = "gmail" | "outlook";
 
 export function EmailSettingsPanel() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -114,8 +115,8 @@ export function EmailSettingsPanel() {
     }
   };
 
-  // --- BOTÃO DE TESTE RÁPIDO (auto-save before testing) ---
-  const handleTestConnection = async () => {
+  // --- BOTÃO "TESTAR E ATIVAR" (auto-save, test, then verify) ---
+  const handleTestAndActivate = async () => {
     if (!email) {
       toast({ title: t("smtp.email_first"), variant: "destructive" });
       return;
@@ -145,9 +146,18 @@ export function EmailSettingsPanel() {
       if (funcError) throw funcError;
       if (payload?.success === false) throw new Error(payload?.error);
 
+      // SMTP verified! Update profile
+      if (user?.id) {
+        await supabase
+          .from("profiles")
+          .update({ smtp_verified: true, last_smtp_check: new Date().toISOString() })
+          .eq("id", user.id);
+        await refreshProfile();
+      }
+
       toast({
         title: t("smtp.connection_ok_title"),
-        description: t("smtp.connection_ok_desc"),
+        description: t("smtp.verified_activated_desc"),
         className: "bg-green-600 text-white border-none",
       });
     } catch (e: any) {
@@ -286,18 +296,28 @@ export function EmailSettingsPanel() {
             </p>
           </div>
 
+          {/* SMTP Verified Badge */}
+          {(profile as any)?.smtp_verified && (
+            <div className="flex items-center gap-2 pt-1">
+              <Badge variant="outline" className="border-emerald-400 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 gap-1.5 px-3 py-1">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {t("smtp.verified_badge")}
+              </Badge>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 pt-2">
             <Button onClick={handleSave} disabled={saving} className="flex-1">
               {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}{" "}
               {t("common.save")}
             </Button>
             <Button
-              onClick={handleTestConnection}
+              onClick={handleTestAndActivate}
               disabled={testing || (!hasPassword && !password)}
               variant="outline"
-              className="flex-1 border-blue-200 text-blue-700"
+              className="flex-1 border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400"
             >
-              {testing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Wifi className="mr-2 h-4 w-4" />} {t("smtp.test_connection")}
+              {testing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />} {t("smtp.verify_and_activate")}
             </Button>
           </div>
         </CardContent>

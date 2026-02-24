@@ -693,6 +693,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_referral_activated: boolean
+          last_smtp_check: string | null
           last_viewed_at: string | null
           phone_e164: string | null
           plan_tier: Database["public"]["Enums"]["plan_tier"]
@@ -708,6 +709,7 @@ export type Database = {
           resume_url: string | null
           resume_url_h2a: string | null
           resume_url_h2b: string | null
+          smtp_verified: boolean | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           timezone: string
@@ -729,6 +731,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_referral_activated?: boolean
+          last_smtp_check?: string | null
           last_viewed_at?: string | null
           phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
@@ -744,6 +747,7 @@ export type Database = {
           resume_url?: string | null
           resume_url_h2a?: string | null
           resume_url_h2b?: string | null
+          smtp_verified?: boolean | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           timezone?: string
@@ -765,6 +769,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_referral_activated?: boolean
+          last_smtp_check?: string | null
           last_viewed_at?: string | null
           phone_e164?: string | null
           plan_tier?: Database["public"]["Enums"]["plan_tier"]
@@ -780,6 +785,7 @@ export type Database = {
           resume_url?: string | null
           resume_url_h2a?: string | null
           resume_url_h2b?: string | null
+          smtp_verified?: boolean | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           timezone?: string

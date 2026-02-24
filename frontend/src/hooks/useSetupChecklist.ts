@@ -48,6 +48,11 @@ export function useSetupChecklist() {
       route: "/settings/email",
     },
     {
+      key: "smtp_verified",
+      done: Boolean((profile as any)?.smtp_verified),
+      route: "/settings/email",
+    },
+    {
       key: "resume",
       done: Boolean((profile as any)?.resume_url),
       route: "/settings",

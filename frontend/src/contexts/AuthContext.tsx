@@ -17,6 +17,8 @@ interface Profile {
   timezone?: string;
   consecutive_errors?: number;
   preferred_language?: string;
+  smtp_verified?: boolean;
+  last_smtp_check?: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   referral_code?: string | null;
