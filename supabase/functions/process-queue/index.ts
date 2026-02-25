@@ -77,6 +77,9 @@ function isCircuitBreakerError(message: string): boolean {
   // Typical bounces / hard fails
   if (m.includes("550") || m.includes("551") || m.includes("552") || m.includes("553") || m.includes("554")) return true;
   if (m.includes("mailbox") || m.includes("recipient") || m.includes("unknown user") || m.includes("user unknown")) return true;
+  // AI gateway errors — pause queue when AI API is down
+  if (m.includes("non-2xx") || m.includes("ai error") || m.includes("ai gateway") || m.includes("generate-job-email") || m.includes("generation failed")) return true;
+  if (m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) return true;
   return false;
 }
 
