@@ -13,40 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Loader2,
-  Save,
-  Target,
-  Trash2,
-  Send,
-  MapPin,
-  CircleDollarSign,
-  Briefcase,
-  Building2,
-  RefreshCcw,
-  Eye,
-  Radio,
-  CheckCircle2,
-  Zap,
-  Layers,
-  HelpCircle,
-  ArrowRight,
-  Bot,
-  Rocket,
-  Satellite,
-  Settings2,
-  Pause,
-  Play,
-  ChevronDown,
-  ChevronRight,
-  Info,
-  Shield,
-  Clock,
-  Sparkles,
+  Loader2, Save, Target, Trash2, Send, MapPin, CircleDollarSign, Briefcase,
+  Building2, RefreshCcw, Eye, Radio, CheckCircle2, Zap, Layers, ArrowRight,
+  Satellite, Settings2, Pause, Play, ChevronDown, ChevronRight, Info, Sparkles,
+  Rocket, Mail, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +76,7 @@ export default function Radar() {
   const [radarProfile, setRadarProfile] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
+  const [showAutopilotConfirm, setShowAutopilotConfirm] = useState(false);
 
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
@@ -140,6 +115,11 @@ export default function Radar() {
   }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, groupFilter, radarProfile]);
 
   const getSectorName = (key: string) => t(`radar.sectors.${key}`, key);
+
+  const wageDisplay = minWage ? `$${minWage}/hr` : t("radar.criteria_any");
+  const expDisplay = maxExperience ? `${maxExperience}+ ${t("radar.criteria_years")}` : t("radar.criteria_any");
+  const stateDisplay = stateFilter === "all" ? t("radar.state_all") : stateFilter;
+  const visaDisplay = visaType === "all" ? t("radar.criteria_all_visas") : visaType.toUpperCase();
 
   const updateStats = async () => {
     if (!profile?.id) return;
@@ -278,9 +258,7 @@ export default function Radar() {
 
   const toggleSubCategory = (rawCategory: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(rawCategory)
-        ? prev.filter((c) => c !== rawCategory)
-        : [...prev, rawCategory],
+      prev.includes(rawCategory) ? prev.filter((c) => c !== rawCategory) : [...prev, rawCategory],
     );
   };
 
@@ -293,19 +271,27 @@ export default function Radar() {
     });
   };
 
-  useEffect(() => {
-    updateStats();
-  }, [visaType, stateFilter, minWage, maxExperience, groupFilter, profile?.id]);
+  const handleAutopilotToggle = (newValue: boolean) => {
+    if (newValue && !autoSend) {
+      setShowAutopilotConfirm(true);
+    } else {
+      setAutoSend(newValue);
+    }
+  };
+
+  const confirmAutopilot = () => {
+    setAutoSend(true);
+    setShowAutopilotConfirm(false);
+  };
+
+  useEffect(() => { updateStats(); }, [visaType, stateFilter, minWage, maxExperience, groupFilter, profile?.id]);
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!profile?.id) return;
       setLoading(true);
       const { data: prof }: any = await supabase
-        .from("radar_profiles" as any)
-        .select("*")
-        .eq("user_id", profile.id)
-        .maybeSingle();
+        .from("radar_profiles" as any).select("*").eq("user_id", profile.id).maybeSingle();
       if (prof) {
         setRadarProfile(prof);
         setIsActive(prof.is_active);
@@ -323,7 +309,6 @@ export default function Radar() {
     loadProfile();
   }, [profile?.id]);
 
-  // ─── UPGRADE WALL ──────────────────────────────────────────────────
   if (!isPremium)
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-fade-in">
@@ -347,15 +332,42 @@ export default function Radar() {
       </div>
     );
 
-  const wageDisplay = minWage ? `$${minWage}/hr` : t("radar.criteria_any");
-  const expDisplay = maxExperience ? `${maxExperience}+ ${t("radar.criteria_years")}` : t("radar.criteria_any");
-  const stateDisplay = stateFilter === "all" ? t("radar.state_all") : stateFilter;
-
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* ═══════════════════════════════════════════════════════════════
-          FILTERS DIALOG
-      ═══════════════════════════════════════════════════════════════ */}
+    <div className="animate-fade-in space-y-5">
+      {/* ═══ AUTOPILOT CONFIRMATION DIALOG ═══ */}
+      <Dialog open={showAutopilotConfirm} onOpenChange={setShowAutopilotConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              {t("radar.autopilot_confirm_title")}
+            </DialogTitle>
+            <DialogDescription>{t("radar.autopilot_confirm_desc")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <span>{t("radar.autopilot_confirm_point1")}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <span>{t("radar.autopilot_confirm_point2")}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <span>{t("radar.autopilot_confirm_point3")}</span>
+              </div>
+            </div>
+            <Button onClick={confirmAutopilot} className="w-full font-bold gap-2">
+              <Zap className="h-4 w-4" />
+              {t("radar.autopilot_confirm_cta")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ FILTERS DIALOG ═══ */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -393,9 +405,7 @@ export default function Radar() {
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("radar.state_all")}</SelectItem>
-                  {US_STATES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
+                  {US_STATES.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -419,199 +429,202 @@ export default function Radar() {
       </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════
-          1️⃣  WELCOME / EXPLAINER (shown inline for first-time or always visible as header)
+          SECTION 1 — STATUS HEADER + FILTER CHIPS
       ═══════════════════════════════════════════════════════════════ */}
-      {isFirstTime ? (
-        /* ── First-time: full explainer ─────────────────────────── */
-        <Card className="border-primary/20 bg-primary/[0.02]">
-          <CardContent className="p-6 space-y-5">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-xl bg-primary/10 shrink-0">
-                <Satellite className="h-8 w-8 text-primary" />
+      <div className="space-y-4">
+        {/* Status bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "relative p-2.5 rounded-xl shrink-0 transition-colors",
+              isActive ? "bg-primary/10" : "bg-muted",
+            )}>
+              <Satellite className={cn("h-6 w-6 transition-colors", isActive ? "text-primary" : "text-muted-foreground")} />
+              {isActive && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+                </span>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-foreground">{t("radar.title")}</h1>
+                <Badge
+                  variant={isActive ? "default" : "secondary"}
+                  className={cn("text-[10px] font-bold uppercase tracking-wider", isActive && "bg-primary text-primary-foreground")}
+                >
+                  {isActive ? t("radar.status_active") : t("radar.status_paused")}
+                </Badge>
               </div>
-              <div className="space-y-1">
-                <h1 className="text-xl font-bold text-foreground">{t("radar.welcome_title")}</h1>
-                <p className="text-sm text-muted-foreground">{t("radar.welcome_subtitle")}</p>
-              </div>
+              <p className="text-xs text-muted-foreground">{t("radar.smart_desc")}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant={isActive ? "outline" : "default"}
+              size="sm"
+              onClick={() => {
+                const newVal = !isActive;
+                setIsActive(newVal);
+                performSave({ is_active: newVal });
+              }}
+              className="gap-1.5"
+            >
+              {isActive ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              {isActive ? t("radar.pause_radar") : t("radar.activate_radar")}
+            </Button>
+            {hasChangesComputed && (
+              <Button onClick={() => performSave()} disabled={saving} size="sm" className="gap-1.5">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {t("radar.save_changes")}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter chips — always visible, clickable */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-sm text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+          >
+            <Radio className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium">{monitoredCount}</span>
+            <span className="text-muted-foreground">{t("radar.categories_label")}</span>
+          </button>
+          <button
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-sm text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+          >
+            <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
+            {wageDisplay}
+          </button>
+          <button
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-sm text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+          >
+            <MapPin className="h-3.5 w-3.5 text-primary" />
+            {stateDisplay}
+          </button>
+          <button
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-sm text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+          >
+            <Briefcase className="h-3.5 w-3.5 text-primary" />
+            {expDisplay}
+          </button>
+          <button
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-sm text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
+          >
+            <Target className="h-3.5 w-3.5 text-primary" />
+            {visaDisplay}
+          </button>
+          <button
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-full text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            {t("radar.edit_criteria")}
+          </button>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECTION 2 — FIRST-TIME ONBOARDING
+      ═══════════════════════════════════════════════════════════════ */}
+      {isFirstTime && (
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.03] to-accent/[0.06]">
+          <CardContent className="p-5 space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-base font-bold text-foreground">{t("radar.welcome_title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("radar.welcome_subtitle")}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
-                <Target className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{t("radar.welcome_step1_title")}</p>
-                  <p className="text-xs text-muted-foreground">{t("radar.welcome_step1_desc")}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
-                <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{t("radar.welcome_step2_title")}</p>
-                  <p className="text-xs text-muted-foreground">{t("radar.welcome_step2_desc")}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
-                <Zap className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{t("radar.welcome_step3_title")}</p>
-                  <p className="text-xs text-muted-foreground">{t("radar.welcome_step3_desc")}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/50 border border-accent">
-              <Info className="h-4 w-4 text-primary shrink-0" />
-              <p className="text-xs text-muted-foreground">{t("radar.welcome_tip")}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        /* ── Returning user: compact status header ──────────────── */
-        <Card className={cn(
-          "overflow-hidden border-border transition-colors",
-          isActive ? "bg-primary/[0.03]" : "bg-muted/50",
-        )}>
-          <CardContent className="p-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className={cn("p-3 rounded-xl shrink-0 transition-colors", isActive ? "bg-primary/10" : "bg-muted")}>
-                  <Satellite className={cn("h-7 w-7 transition-colors", isActive ? "text-primary animate-pulse" : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <h1 className="text-xl font-bold text-foreground">{t("radar.title")}</h1>
-                    <Badge
-                      variant={isActive ? "default" : "secondary"}
-                      className={cn("text-[10px] font-bold uppercase tracking-wider", isActive && "bg-success text-success-foreground")}
-                    >
-                      {isActive ? (
-                        <span className="flex items-center gap-1.5">
-                          <span className="flex h-1.5 w-1.5 rounded-full bg-success-foreground animate-ping" />
-                          {t("radar.status_active")}
-                        </span>
-                      ) : t("radar.status_paused")}
-                    </Badge>
+              {[
+                { icon: Target, step: "1", titleKey: "radar.welcome_step1_title", descKey: "radar.welcome_step1_desc", color: "text-primary" },
+                { icon: Settings2, step: "2", titleKey: "radar.welcome_step2_title", descKey: "radar.welcome_step2_desc", color: "text-primary" },
+                { icon: Zap, step: "3", titleKey: "radar.welcome_step3_title", descKey: "radar.welcome_step3_desc", color: "text-primary" },
+              ].map(({ icon: Icon, step, titleKey, descKey, color }) => (
+                <div key={step} className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
+                  <div className="flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 shrink-0">
+                    <span className="text-xs font-bold text-primary">{step}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{t("radar.smart_desc")}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{t(titleKey)}</p>
+                    <p className="text-xs text-muted-foreground">{t(descKey)}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <Button
-                  variant={isActive ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => {
-                    const newVal = !isActive;
-                    setIsActive(newVal);
-                    performSave({ is_active: newVal });
-                  }}
-                  className="gap-2"
-                >
-                  {isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  {isActive ? t("radar.pause_radar") : t("radar.activate_radar")}
-                </Button>
-              </div>
-            </div>
-
-            {/* Quick stats strip */}
-            <Separator className="my-4" />
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Radio className="h-3.5 w-3.5 text-primary" />
-                {monitoredCount} {t("radar.categories_label")}
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
-                {wageDisplay}
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5 text-primary" />
-                {stateDisplay}
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Briefcase className="h-3.5 w-3.5 text-primary" />
-                {expDisplay}
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Target className="h-3.5 w-3.5 text-primary" />
-                <span className="font-bold text-foreground">{matchCount}</span> {t("radar.matches_ready")}
-              </span>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)} className="gap-1.5 text-xs">
-                <Settings2 className="h-3.5 w-3.5" />
-                {t("radar.edit_criteria")}
-              </Button>
-              {hasChangesComputed && (
-                <Button onClick={() => performSave()} disabled={saving} size="sm" className="gap-1.5 text-xs">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  {t("radar.save_changes")}
-                </Button>
-              )}
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
-          2️⃣  AUTO-SEND EXPLAINER CARD
+          SECTION 3 — AUTOPILOT CARD (highlighted)
       ═══════════════════════════════════════════════════════════════ */}
       <Card className={cn(
-        "border-border transition-colors",
-        autoSend ? "bg-success/[0.04] border-success/30" : "",
+        "overflow-hidden border transition-all",
+        autoSend
+          ? "border-primary/40 bg-gradient-to-r from-primary/[0.06] to-accent/[0.04]"
+          : "border-border bg-card",
       )}>
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className={cn("p-2 rounded-lg shrink-0", autoSend ? "bg-success/10" : "bg-muted")}>
-                <Zap className={cn("h-5 w-5", autoSend ? "text-success" : "text-muted-foreground")} />
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className={cn(
+                "p-2.5 rounded-xl shrink-0 transition-colors",
+                autoSend ? "bg-primary/15" : "bg-muted",
+              )}>
+                <Zap className={cn("h-5 w-5", autoSend ? "text-primary" : "text-muted-foreground")} />
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-sm font-bold text-foreground">{t("radar.autosend_title")}</h3>
-                  <Badge variant={autoSend ? "default" : "secondary"} className={cn("text-[10px]", autoSend && "bg-success text-success-foreground")}>
-                    {autoSend ? "ON" : "OFF"}
-                  </Badge>
+                  {autoSend && (
+                    <Badge className="bg-primary/15 text-primary border-0 text-[10px] font-bold uppercase">
+                      {t("radar.status_active")}
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground max-w-lg">{t("radar.autosend_explanation")}</p>
+                <p className={cn(
+                  "text-xs leading-relaxed",
+                  autoSend ? "text-foreground/80" : "text-muted-foreground",
+                )}>
+                  {autoSend ? t("radar.autosend_active_desc") : t("radar.autosend_explanation")}
+                </p>
               </div>
             </div>
             <Switch
               checked={autoSend}
-              onCheckedChange={setAutoSend}
-              className="data-[state=checked]:bg-success shrink-0"
+              onCheckedChange={handleAutopilotToggle}
+              className="data-[state=checked]:bg-primary shrink-0"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* ═══════════════════════════════════════════════════════════════
-          3️⃣  MAIN LAYOUT: Categories (left) + Matches (right)
+          SECTION 4 — MAIN LAYOUT: Categories → Matches
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6" style={{ minHeight: "calc(100vh - 480px)" }}>
-        {/* LEFT — Job Categories with hierarchy (3/5) */}
-        <div className="lg:col-span-3">
-          <div className="flex items-center justify-between mb-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5" style={{ minHeight: "calc(100vh - 440px)" }}>
+        {/* LEFT — Categories (3/5) */}
+        <div className="lg:col-span-3 space-y-3">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Radio className="h-4 w-4 text-primary" />
-                {t("radar.categories_title")}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("radar.categories_subtitle")}</p>
+              <h2 className="text-sm font-bold text-foreground">{t("radar.categories_title")}</h2>
+              <p className="text-xs text-muted-foreground">{t("radar.categories_subtitle")}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                {totalSinaisGeral} {t("radar.active_jobs")}
-              </Badge>
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)} className="gap-1.5 text-xs h-7">
-                <Settings2 className="h-3 w-3" />
-                {t("radar.filters_btn")}
-              </Button>
-            </div>
+            <Badge variant="secondary" className="text-xs shrink-0">
+              {totalSinaisGeral} {t("radar.active_jobs")}
+            </Badge>
           </div>
 
-          <ScrollArea className="h-[calc(100vh-520px)]">
+          <ScrollArea className="h-[calc(100vh-540px)]">
             <div className="space-y-1.5 pr-3">
               {sectorEntries.map(([segment, data]) => {
                 const selectedInSector = data.items.filter((i) => selectedCategories.includes(i.raw_category)).length;
@@ -623,11 +636,8 @@ export default function Radar() {
                 return (
                   <div key={segment} className={cn(
                     "rounded-lg border transition-all",
-                    isTracked
-                      ? "border-primary/30 bg-primary/[0.02]"
-                      : "border-border bg-card",
+                    isTracked ? "border-primary/30 bg-primary/[0.02]" : "border-border bg-card",
                   )}>
-                    {/* Macro category row */}
                     <div className="flex items-center gap-3 px-3 py-2.5">
                       <Checkbox
                         checked={allSelected}
@@ -665,7 +675,6 @@ export default function Radar() {
                       )}
                     </div>
 
-                    {/* Sub-categories (expanded) */}
                     {hasSubcategories && isExpanded && (
                       <div className="border-t border-border/50 px-3 py-2 space-y-1 bg-muted/30">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 px-6">
@@ -694,46 +703,55 @@ export default function Radar() {
           </ScrollArea>
 
           {hasChangesComputed && (
-            <div className="mt-3">
-              <Button onClick={() => { setIsActive(true); performSave({ is_active: true }); }} disabled={saving} className="w-full font-bold gap-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {radarProfile ? t("radar.save_changes") : t("radar.activate_and_save")}
-              </Button>
-            </div>
+            <Button onClick={() => { setIsActive(true); performSave({ is_active: true }); }} disabled={saving} className="w-full font-bold gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {radarProfile ? t("radar.save_changes") : t("radar.activate_and_save")}
+            </Button>
           )}
         </div>
 
         {/* RIGHT — Matches (2/5) */}
-        <div className="lg:col-span-2 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                {t("radar.matches_title")}
-                <Badge variant="secondary" className="text-xs font-bold">{matchCount}</Badge>
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("radar.matches_explanation")}</p>
+        <div className="lg:col-span-2 flex flex-col space-y-3">
+          {/* Match count hero */}
+          <div className={cn(
+            "rounded-xl border p-4 text-center transition-all",
+            matchCount > 0
+              ? "border-primary/30 bg-gradient-to-br from-primary/[0.06] to-accent/[0.04]"
+              : "border-border bg-card",
+          )}>
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Target className={cn("h-5 w-5", matchCount > 0 ? "text-primary" : "text-muted-foreground")} />
+              <h2 className="text-sm font-bold text-foreground">{t("radar.matches_title")}</h2>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={fetchMatches}>
+                <RefreshCcw className="h-3.5 w-3.5" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchMatches}>
-              <RefreshCcw className="h-4 w-4" />
-            </Button>
+            <div className={cn(
+              "text-4xl font-black tracking-tight my-2 transition-colors",
+              matchCount > 0 ? "text-primary" : "text-muted-foreground/50",
+            )}>
+              {matchCount}
+            </div>
+            <p className="text-xs text-muted-foreground">{t("radar.matches_hero_subtitle")}</p>
           </div>
 
+          {/* Send all CTA */}
           {matchedJobs.length > 0 && (
-            <Button onClick={handleSendAll} disabled={batchSending} size="sm" className="w-full mb-3 font-bold bg-success hover:bg-success/90 text-success-foreground">
-              {batchSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+            <Button onClick={handleSendAll} disabled={batchSending} className="w-full font-bold gap-2">
+              {batchSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {t("radar.send_all", { count: matchCount })}
             </Button>
           )}
 
-          <ScrollArea className="flex-1 h-[calc(100vh-520px)]">
+          {/* Matches list */}
+          <ScrollArea className="flex-1 h-[calc(100vh-600px)]">
             <div className="space-y-2 pr-3">
               {matchedJobs.length > 0 ? (
                 matchedJobs.map((match) => {
                   const job = match.public_jobs;
                   if (!job) return null;
                   return (
-                    <Card key={match.id} className="hover:shadow-md transition-shadow">
+                    <Card key={match.id} className="hover:shadow-md transition-shadow border-border">
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="secondary" className="text-[10px]">{job.visa_type}</Badge>
@@ -758,13 +776,15 @@ export default function Radar() {
                             <Briefcase className="h-3 w-3 text-primary" /> {job.experience_months || 0}m
                           </span>
                         </div>
+
+                        {/* Action buttons with explanation */}
                         <div className="flex items-center gap-1.5 pt-1 border-t border-border">
                           <Button
                             onClick={() => handleSendApplication(match.id, job.id)}
                             size="sm"
-                            className="bg-success hover:bg-success/90 text-success-foreground font-bold text-xs flex-1 h-7"
+                            className="font-bold text-xs flex-1 h-7 gap-1"
                           >
-                            <Send className="h-3 w-3 mr-1" /> {t("radar.send_to_queue")}
+                            <Mail className="h-3 w-3" /> {t("radar.send_to_queue")}
                           </Button>
                           <Button
                             size="sm"
@@ -783,12 +803,15 @@ export default function Radar() {
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
+                        <p className="text-[10px] text-muted-foreground leading-snug">
+                          {t("radar.queue_explanation")}
+                        </p>
                       </CardContent>
                     </Card>
                   );
                 })
               ) : (
-                <div className="py-16 flex flex-col items-center gap-3 text-center">
+                <div className="py-12 flex flex-col items-center gap-3 text-center">
                   <div className={cn("p-4 rounded-full", isActive ? "bg-primary/10" : "bg-muted")}>
                     <Satellite className={cn("h-8 w-8", isActive ? "text-primary animate-pulse" : "text-muted-foreground")} />
                   </div>
@@ -804,6 +827,14 @@ export default function Radar() {
               )}
             </div>
           </ScrollArea>
+
+          {/* Relationship explainer */}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+            <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              {t("radar.causality_hint")}
+            </p>
+          </div>
         </div>
       </div>
     </div>
