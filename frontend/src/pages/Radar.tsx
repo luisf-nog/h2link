@@ -40,6 +40,7 @@ import {
   ArrowRight,
   ShieldAlert,
   Bot,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -129,16 +130,6 @@ export default function Radar() {
     );
   }, [isActive, autoSend, selectedCategories, minWage, maxExperience, visaType, stateFilter, groupFilter, radarProfile]);
 
-  const getGroupStyles = (group: string) => {
-    switch (group?.toUpperCase()) {
-      case "A": return "bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-100";
-      case "B": return "bg-indigo-100 text-indigo-700 border-indigo-200";
-      case "C": return "bg-slate-100 text-slate-600 border-slate-200";
-      default: return "bg-slate-50 text-slate-400 border-slate-100";
-    }
-  };
-
-  // Map sector key to translated name
   const getSectorName = (key: string) => t(`radar.sectors.${key}`, key);
 
   const updateStats = async () => {
@@ -217,7 +208,7 @@ export default function Radar() {
         await fetchMatches();
         await updateStats();
       }
-      toast({ title: t("radar.toast_recalibrated"), className: "bg-indigo-600 text-white shadow-xl" });
+      toast({ title: t("radar.toast_recalibrated") });
     }
     setSaving(false);
   };
@@ -226,18 +217,16 @@ export default function Radar() {
     if (matchedJobs.length === 0 || !profile?.id) return;
     if (!confirm(t("radar.confirm_send_all", { count: matchCount }))) return;
     setBatchSending(true);
-
     const currentJobs = [...matchedJobs];
     setMatchedJobs([]);
     setMatchCount(0);
-
     try {
       const apps = currentJobs.map((m) => ({ user_id: profile.id, job_id: m.job_id, status: "pending" }));
       await supabase.from("my_queue" as any).insert(apps);
       await supabase.from("radar_matched_jobs" as any).delete().eq("user_id", profile.id);
       await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
       await updateStats();
-      toast({ title: t("radar.toast_captured_all"), className: "bg-emerald-600 text-white shadow-xl" });
+      toast({ title: t("radar.toast_captured_all") });
     } catch (err) {
       setMatchedJobs(currentJobs);
       setMatchCount(currentJobs.length);
@@ -255,7 +244,7 @@ export default function Radar() {
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
       await updateStats();
-      toast({ title: t("radar.toast_captured"), className: "bg-emerald-600 text-white shadow-sm" });
+      toast({ title: t("radar.toast_captured") });
     } catch (err) {
       toast({ title: t("radar.toast_error"), variant: "destructive" });
     }
@@ -316,415 +305,404 @@ export default function Radar() {
     loadProfile();
   }, [profile?.id]);
 
+  // ─── UPGRADE WALL ──────────────────────────────────────────────────────
   if (!isPremium)
     return (
-      <div className="p-20 text-center">
-        <Radio className="h-20 w-20 mx-auto text-slate-200 animate-pulse" />
-        <Button onClick={() => navigate("/plans")} className="mt-6 bg-indigo-600 font-black shadow-lg">
-          {t("radar.upgrade_cta")}
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in fade-in duration-700">
+        <div className="p-6 bg-muted rounded-full">
+          <Radio className="h-16 w-16 text-muted-foreground animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">{t("radar.title")}</h2>
+          <p className="text-muted-foreground max-w-md">{t("radar.upgrade_cta")}</p>
+        </div>
+        <Button onClick={() => navigate("/plans")} size="lg" className="font-bold">
+          <Rocket className="h-4 w-4 mr-2" /> Upgrade
         </Button>
       </div>
     );
+
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-24 px-4 sm:px-6 text-left">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-700">
+      {/* ─── ONBOARDING DIALOG ────────────────────────────────────── */}
       <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
-        <DialogContent className="max-w-4xl bg-white border-none shadow-2xl rounded-[2.5rem] overflow-hidden p-0 text-left">
-          <div className="grid grid-cols-1 md:grid-cols-5 h-full">
-            <div className="md:col-span-2 bg-indigo-600 p-10 text-white flex flex-col justify-between relative overflow-hidden text-left">
-              <div className="z-10 text-left">
-                <Badge className="bg-white/20 text-white border-none px-3 py-1 text-[10px] font-black uppercase mb-4 tracking-widest text-left">
-                  {t("radar.onboarding.badge")}
-                </Badge>
-                <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none mb-4 text-left">
-                  {t("radar.onboarding.title")}
-                </h2>
-                <p className="text-indigo-100 text-sm font-medium opacity-90 leading-relaxed text-left">
-                  {t("radar.onboarding.description")}
-                </p>
-              </div>
-              <Bot className="absolute -bottom-10 -left-10 h-64 w-64 text-white/10" />
-            </div>
-            <div className="md:col-span-3 p-10 space-y-8 bg-white overflow-y-auto max-h-[85vh] custom-scrollbar text-left">
-              <section className="text-left">
-                <h3 className="text-lg font-black uppercase italic tracking-tight text-slate-900 mb-2">
-                  {t("radar.onboarding.what_is_title")}
-                </h3>
-                <p className="text-sm text-slate-500 text-left">
-                  {t("radar.onboarding.what_is_desc")}
-                </p>
-              </section>
-              <section className="bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100 text-left">
-                <div className="flex items-center gap-3 mb-3 text-left">
-                  <Zap className="h-6 w-6 text-indigo-600 fill-indigo-600" />
-                  <h3 className="text-lg font-black uppercase italic tracking-tight text-indigo-900">
-                    {t("radar.onboarding.autopilot_title")}
-                  </h3>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <Bot className="h-6 w-6 text-primary" />
+              {t("radar.onboarding.title")}
+            </DialogTitle>
+            <DialogDescription>{t("radar.onboarding.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">{t("radar.onboarding.what_is_desc")}</p>
+            <Card className="bg-accent/50 border-accent">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-foreground">{t("radar.onboarding.autopilot_title")}</span>
                 </div>
-                <p className="text-sm text-indigo-700 leading-relaxed mb-4">
-                  {t("radar.onboarding.autopilot_desc")}
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase">
-                    <CheckCircle2 className="h-4 w-4" /> {t("radar.onboarding.feature_search")}
-                  </li>
-                  <li className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase">
-                    <CheckCircle2 className="h-4 w-4" /> {t("radar.onboarding.feature_instant")}
-                  </li>
+                <p className="text-sm text-muted-foreground">{t("radar.onboarding.autopilot_desc")}</p>
+                <ul className="space-y-1.5 text-sm text-foreground">
+                  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> {t("radar.onboarding.feature_search")}</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> {t("radar.onboarding.feature_instant")}</li>
                 </ul>
-              </section>
-              <Button
-                onClick={() => setShowInstructions(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-7 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition-all uppercase tracking-widest text-xs"
-              >
-                {t("radar.onboarding.start_button")} <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
+              </CardContent>
+            </Card>
+            <Button onClick={() => setShowInstructions(false)} className="w-full font-bold">
+              {t("radar.onboarding.start_button")} <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-6 space-y-6">
-          <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden text-left">
-            <button
-              onClick={() => setShowInstructions(true)}
-              className="absolute right-4 top-4 h-8 w-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all flex items-center justify-center group shadow-sm z-10"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </button>
-            <div className="flex items-center justify-between pr-8">
-              <div className="flex items-center gap-4 text-left">
-                <div
-                  className={cn(
-                    "p-4 rounded-xl border transition-all shadow-inner",
-                    isActive ? "bg-indigo-50 border-indigo-200 text-indigo-600" : "bg-slate-50 border-slate-200 text-slate-400",
-                  )}
-                >
-                  <Radio className={cn("h-7 w-7", isActive && "animate-pulse")} />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">
-                    {t("radar.title")}
-                  </h1>
-                  <div className="flex items-center gap-2 mt-2">
-                    {isActive ? (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
-                        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{t("radar.live")}</span>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 leading-none">
-                        {t("radar.offline")}
-                      </span>
-                    )}
-                  </div>
-                </div>
+      {/* ─── HERO SECTION ─────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="relative z-10 p-8 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="space-y-4">
+            <Badge variant="outline" className="border-white/20 text-white/80 bg-white/5 backdrop-blur-md uppercase tracking-wide">
+              {t("radar.onboarding.badge")}
+            </Badge>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+              {t("radar.title")}
+            </h1>
+            <p className="text-slate-400 text-base max-w-md">{t("radar.onboarding.description")}</p>
+            <div className="flex items-center gap-4 pt-2">
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={(val) => {
+                    setIsActive(val);
+                    performSave({ is_active: val });
+                  }}
+                  className="data-[state=checked]:bg-emerald-500"
+                />
+                <span className="text-sm font-medium">
+                  {isActive ? (
+                    <span className="flex items-center gap-2">
+                      <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                      {t("radar.live")}
+                    </span>
+                  ) : t("radar.offline")}
+                </span>
               </div>
-              <Switch
-                checked={isActive}
-                onCheckedChange={(val) => {
-                  setIsActive(val);
-                  performSave({ is_active: val });
-                }}
-                className="data-[state=checked]:bg-indigo-600"
-              />
+              <button onClick={() => setShowInstructions(true)} className="text-white/40 hover:text-white/80 transition-colors">
+                <HelpCircle className="h-5 w-5" />
+              </button>
             </div>
-            {hasChangesComputed && (
-              <Button
-                onClick={() => performSave()}
-                disabled={saving}
-                className="w-full bg-indigo-600 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-indigo-800 transition-all uppercase tracking-widest text-[10px]"
-              >
-                {t("radar.save_protocols")}
-              </Button>
-            )}
           </div>
 
-          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
-            <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-row text-left">
-              <CardTitle className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2 tracking-[0.1em] text-left">
-                <ShieldCheck className="h-4 w-4 text-indigo-600" /> {t("radar.filters_title")}
-              </CardTitle>
-              <div className="flex items-center gap-3 bg-indigo-600 px-3 py-1.5 rounded-full border border-indigo-700 shadow-sm">
-                <Label className="text-[9px] font-black text-white cursor-pointer uppercase leading-none">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-6 lg:max-w-md ml-auto w-full">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-sm font-medium text-slate-300 uppercase tracking-wider">{t("radar.matches_title")}</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-5xl font-black text-white">{matchCount}</span>
+                  <span className="text-sm text-slate-400 font-medium">matches</span>
+                </div>
+              </div>
+              <div className="p-3 bg-primary/20 rounded-full">
+                <Target className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <div>
+                <p className="text-xs text-slate-400">{t("radar.sectors_title")}</p>
+                <p className="text-xl font-bold text-white">{selectedCategories.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">{t("radar.active_signals", { count: totalSinaisGeral })}</p>
+                <p className="text-xl font-bold text-white">{totalSinaisGeral}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 text-sm">
+                <Zap className={cn("h-4 w-4", autoSend ? "text-emerald-400" : "text-slate-500")} />
+                <span className={autoSend ? "text-emerald-300 font-medium" : "text-slate-400"}>
                   {t("radar.auto_send")}
-                </Label>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} className="scale-75 data-[state=checked]:bg-white" />
+                </span>
               </div>
-            </CardHeader>
-            <CardContent className="p-5 text-left">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("radar.filter_visa")}</Label>
-                  <Select value={visaType} onValueChange={setVisaType}>
-                    <SelectTrigger className="h-9 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {VISA_TYPE_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("radar.filter_group")}</Label>
-                  <Select value={groupFilter} onValueChange={setGroupFilter}>
-                    <SelectTrigger className="h-9 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("radar.group_all")}</SelectItem>
-                      <SelectItem value="A">{t("radar.group_label", { group: "A" })}</SelectItem>
-                      <SelectItem value="B">{t("radar.group_label", { group: "B" })}</SelectItem>
-                      <SelectItem value="C">{t("radar.group_label", { group: "C" })}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("radar.filter_state")}</Label>
-                  <Select value={stateFilter} onValueChange={setStateFilter}>
-                    <SelectTrigger className="h-9 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t("radar.state_all")}</SelectItem>
-                      {US_STATES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("radar.filter_wage")}</Label>
-                  <Input type="number" value={minWage} onChange={(e) => setMinWage(e.target.value)} className="h-9 font-black text-xs" />
-                </div>
-                <div className="space-y-1.5 text-left">
-                  <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("radar.filter_exp")}</Label>
-                  <Input type="number" value={maxExperience} onChange={(e) => setMaxExperience(e.target.value)} className="h-9 font-black text-xs" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden text-left">
-            <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center text-left">
-              <div className="flex items-center gap-3 text-left">
-                <CardTitle className="text-[11px] font-black uppercase text-slate-500 tracking-[0.1em] flex items-center gap-2 text-left">
-                  <LayoutGrid className="h-4 w-4 text-indigo-600" /> {t("radar.sectors_title")}
-                </CardTitle>
-                <Badge className="bg-indigo-600 text-white font-black text-[9px] px-2 py-0.5 shadow-sm">
-                  {t("radar.active_signals", { count: totalSinaisGeral })}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 bg-slate-50/20 text-left">
-              <div className="grid grid-cols-2 gap-4">
-                {[leftSectorsMemo, rightSectorsMemo].map((column, colIdx) => (
-                  <div key={colIdx} className="space-y-2 text-left">
-                    {column.map(([segment, data]) => {
-                      const selectedInSector = data.items.filter((i) => selectedCategories.includes(i.raw_category)).length;
-                      const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
-                      return (
-                        <div
-                          key={segment}
-                          className={cn(
-                            "border bg-white rounded-xl overflow-hidden shadow-sm transition-all text-left",
-                            selectedInSector > 0 ? "border-indigo-400 ring-1 ring-indigo-100" : "border-slate-200",
-                          )}
-                        >
-                          <div
-                            className="p-2.5 cursor-pointer flex items-center justify-between group"
-                            onClick={() =>
-                              setExpandedSegments((p) =>
-                                p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
-                              )
-                            }
-                          >
-                            <div className="flex flex-col text-left">
-                              <div className="flex items-center gap-2 text-left">
-                                <span className="text-[10px] font-black text-slate-700 uppercase leading-none text-left">
-                                  {segment}
-                                </span>
-                                {allSelected ? (
-                                  <CheckCircle2 className="h-3 w-3 text-indigo-600 shrink-0" />
-                                ) : (
-                                  selectedInSector > 0 && (
-                                    <span className="text-[8px] font-bold text-indigo-600 shrink-0">• {selectedInSector}</span>
-                                  )
-                                )}
-                              </div>
-                              <span className="text-[8px] font-bold text-slate-400 uppercase mt-1 text-left">
-                                {t("radar.posts_count", { count: data.totalJobs })}
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSector(segment);
-                              }}
-                              className={cn(
-                                "h-6 text-[7px] font-black px-1.5 border",
-                                allSelected ? "bg-indigo-600 text-white" : "text-indigo-600 border-indigo-100",
-                              )}
-                            >
-                              {allSelected ? t("radar.remove") : t("radar.add")}
-                            </Button>
-                          </div>
-                          {expandedSegments.includes(segment) && (
-                            <div className="p-2 bg-slate-50 border-t border-slate-100 flex flex-col gap-1 text-left">
-                              {data.items.map((cat) => (
-                                <button
-                                  key={cat.raw_category}
-                                  onClick={() =>
-                                    setSelectedCategories((p) =>
-                                      p.includes(cat.raw_category)
-                                        ? p.filter((c) => c !== cat.raw_category)
-                                        : [...p, cat.raw_category],
-                                    )
-                                  }
-                                  className={cn(
-                                    "p-1.5 rounded-lg border text-left text-[9px] font-bold transition-all flex justify-between items-center",
-                                    selectedCategories.includes(cat.raw_category)
-                                      ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                                      : "bg-white text-slate-500 hover:border-indigo-200",
-                                  )}
-                                >
-                                  {cat.raw_category} <span className="text-[8px] opacity-60">({cat.count})</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-6 space-y-4 text-left">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-4 text-left">
-            <div className="text-left">
-              <h2 className="text-xl font-black uppercase italic text-slate-900 flex items-center gap-3 text-left">
-                <Target className="h-6 w-6 text-indigo-600" /> {t("radar.matches_title")}
-              </h2>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 text-left">
-                {t("radar.matches_subtitle")}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={fetchMatches} className="text-slate-400 hover:text-indigo-600">
-                <RefreshCcw className="h-4 w-4" />
-              </Button>
-              <Badge className="bg-indigo-600 text-white font-black px-4 py-1.5 shadow-lg">
-                {t("radar.matches_count", { count: matchCount })}
-              </Badge>
+              <Switch checked={autoSend} onCheckedChange={setAutoSend} className="scale-90 data-[state=checked]:bg-emerald-500" />
             </div>
           </div>
-          {matchedJobs.length > 0 && (
-            <Button
-              onClick={handleSendAll}
-              disabled={batchSending}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 rounded-xl shadow-lg border-b-4 border-emerald-800 flex items-center justify-center gap-3 transition-all uppercase text-[10px]"
-            >
-              <Zap className="h-5 w-5 fill-white" /> {t("radar.send_all", { count: matchCount })}
+        </div>
+      </div>
+
+      {/* ─── FILTERS ──────────────────────────────────────────────── */}
+      <Card className="border-border shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            {t("radar.filters_title")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">{t("radar.filter_visa")}</Label>
+              <Select value={visaType} onValueChange={setVisaType}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {VISA_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">{t("radar.filter_group")}</Label>
+              <Select value={groupFilter} onValueChange={setGroupFilter}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("radar.group_all")}</SelectItem>
+                  <SelectItem value="A">{t("radar.group_label", { group: "A" })}</SelectItem>
+                  <SelectItem value="B">{t("radar.group_label", { group: "B" })}</SelectItem>
+                  <SelectItem value="C">{t("radar.group_label", { group: "C" })}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">{t("radar.filter_state")}</Label>
+              <Select value={stateFilter} onValueChange={setStateFilter}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("radar.state_all")}</SelectItem>
+                  {US_STATES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">{t("radar.filter_wage")}</Label>
+              <Input type="number" value={minWage} onChange={(e) => setMinWage(e.target.value)} className="h-9" placeholder="$/h" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">{t("radar.filter_exp")}</Label>
+              <Input type="number" value={maxExperience} onChange={(e) => setMaxExperience(e.target.value)} className="h-9" placeholder={t("common.months")} />
+            </div>
+          </div>
+          {hasChangesComputed && (
+            <Button onClick={() => performSave()} disabled={saving} className="w-full mt-4 font-bold">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {t("radar.save_protocols")}
             </Button>
           )}
-          <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[75vh] pr-2 custom-scrollbar text-left">
-            {matchedJobs.length > 0 ? (
-              matchedJobs.map((match) => {
-                const job = match.public_jobs;
-                if (!job) return null;
+        </CardContent>
+      </Card>
+
+      {/* ─── SECTORS ──────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-accent rounded-lg text-primary">
+            <LayoutGrid className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{t("radar.sectors_title")}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t("radar.active_signals", { count: totalSinaisGeral })}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[leftSectorsMemo, rightSectorsMemo].map((column, colIdx) => (
+            <div key={colIdx} className="space-y-2">
+              {column.map(([segment, data]) => {
+                const selectedInSector = data.items.filter((i) => selectedCategories.includes(i.raw_category)).length;
+                const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
                 return (
                   <Card
-                    key={match.id}
-                    className="group border-slate-200 bg-white hover:border-indigo-400 transition-all shadow-sm overflow-hidden text-left"
+                    key={segment}
+                    className={cn(
+                      "transition-all",
+                      selectedInSector > 0 ? "border-primary/40 shadow-sm" : "border-border",
+                    )}
                   >
-                    <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch text-left">
-                      <div className="p-4 flex-1 space-y-2.5 text-left">
-                        <div className="flex items-center gap-2 text-left">
-                          <Badge className="bg-indigo-50 text-indigo-600 text-[9px] border-indigo-100 font-black px-2">
-                            {job.visa_type}
-                          </Badge>
-                          {job.randomization_group && (
-                            <Badge
-                              className={cn(
-                                "text-[9px] font-black uppercase px-2 py-0.5 border flex items-center gap-1.5 transition-all shadow-sm",
-                                getGroupStyles(job.randomization_group),
-                              )}
-                            >
-                              <Layers className="h-2.5 w-2.5" /> {t("radar.group_label", { group: job.randomization_group })}
-                            </Badge>
-                          )}
-                          <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 border-l border-slate-100 pl-2 font-mono text-left">
-                            <MapPin className="h-3 w-3" /> {job.state}
-                          </span>
-                        </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight text-left">
-                          {job.category}
-                        </h3>
-                        <div className="flex items-center gap-2 border-l-2 border-indigo-600 pl-3 py-1 bg-slate-50/50 text-left">
-                          <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                          <p className="text-[11px] font-black text-indigo-900 uppercase italic leading-none text-left">
-                            {job.company || t("radar.company_fallback")}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4 pt-2 text-left">
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            <CircleDollarSign className="h-3.5 w-3.5 text-indigo-600" /> ${job.salary || "N/A"}/h
-                          </span>
-                          <span className="text-[11px] font-black text-slate-900 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            <Briefcase className="h-3.5 w-3.5 text-indigo-600" /> {job.experience_months || 0}m exp
+                    <div
+                      className="p-3 cursor-pointer flex items-center justify-between"
+                      onClick={() =>
+                        setExpandedSegments((p) =>
+                          p.includes(segment) ? p.filter((s) => s !== segment) : [...p, segment],
+                        )
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">{segment}</span>
+                            {allSelected ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                            ) : selectedInSector > 0 && (
+                              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{selectedInSector}</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {t("radar.posts_count", { count: data.totalJobs })}
                           </span>
                         </div>
                       </div>
-                      <div className="bg-slate-50/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-slate-200 min-w-[160px] text-center">
+                      <div className="flex items-center gap-2">
                         <Button
-                          onClick={() => handleSendApplication(match.id, job.id)}
+                          variant={allSelected ? "default" : "outline"}
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] h-9 px-6 rounded-xl shadow-md w-full transition-all active:translate-y-0.5 border-b-2 border-emerald-900 uppercase tracking-widest text-center"
+                          onClick={(e) => { e.stopPropagation(); toggleSector(segment); }}
+                          className="h-7 text-xs px-3"
                         >
-                          {t("radar.send")}
+                          {allSelected ? t("radar.remove") : t("radar.add")}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
-                          className="text-[9px] font-black h-8 w-full border-slate-300 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2 uppercase tracking-widest text-center"
-                        >
-                          {t("radar.hub")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => removeMatch(match.id)}
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 transition-colors text-center"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {expandedSegments.includes(segment) ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
-                    </CardContent>
+                    </div>
+                    {expandedSegments.includes(segment) && (
+                      <div className="px-3 pb-3 flex flex-col gap-1.5 border-t border-border pt-2">
+                        {data.items.map((cat) => (
+                          <button
+                            key={cat.raw_category}
+                            onClick={() =>
+                              setSelectedCategories((p) =>
+                                p.includes(cat.raw_category)
+                                  ? p.filter((c) => c !== cat.raw_category)
+                                  : [...p, cat.raw_category],
+                              )
+                            }
+                            className={cn(
+                              "px-3 py-1.5 rounded-lg border text-left text-xs font-medium transition-all flex justify-between items-center",
+                              selectedCategories.includes(cat.raw_category)
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "bg-card text-foreground border-border hover:border-primary/40",
+                            )}
+                          >
+                            <span className="truncate">{cat.raw_category}</span>
+                            <span className="text-[10px] opacity-70 ml-2 shrink-0">({cat.count})</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 );
-              })
-            ) : (
-              <div className="py-32 bg-slate-50/30 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center gap-5 text-center">
-                <Radio className="h-14 w-14 text-slate-200 animate-pulse" />
-                <div className="space-y-1 text-center">
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">{t("radar.waiting_signals")}</p>
-                  <p className="text-[10px] text-slate-400 text-center">
-                    {t("radar.waiting_signals_desc")}
-                  </p>
-                </div>
-              </div>
-            )}
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── MATCHES ──────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-accent rounded-lg text-primary">
+              <Target className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">{t("radar.matches_title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("radar.matches_subtitle")}</p>
+            </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={fetchMatches}>
+              <RefreshCcw className="h-4 w-4" />
+            </Button>
+            <Badge variant="secondary" className="font-bold">
+              {t("radar.matches_count", { count: matchCount })}
+            </Badge>
+          </div>
+        </div>
+
+        {matchedJobs.length > 0 && (
+          <Button onClick={handleSendAll} disabled={batchSending} className="w-full font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+            {batchSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+            {t("radar.send_all", { count: matchCount })}
+          </Button>
+        )}
+
+        <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+          {matchedJobs.length > 0 ? (
+            matchedJobs.map((match) => {
+              const job = match.public_jobs;
+              if (!job) return null;
+              return (
+                <Card key={match.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-0 flex flex-col md:flex-row md:items-stretch">
+                    <div className="p-4 flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="secondary" className="text-xs">{job.visa_type}</Badge>
+                        {job.randomization_group && (
+                          <Badge variant="outline" className="text-xs">
+                            <Layers className="h-3 w-3 mr-1" /> {t("radar.group_label", { group: job.randomization_group })}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {job.state}
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-bold text-foreground leading-tight">{job.category}</h3>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5" /> {job.company || t("radar.company_fallback")}
+                      </p>
+                      <div className="flex items-center gap-3 pt-1">
+                        <span className="text-xs font-medium text-foreground flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                          <CircleDollarSign className="h-3.5 w-3.5 text-primary" /> ${job.salary || "N/A"}/h
+                        </span>
+                        <span className="text-xs font-medium text-foreground flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                          <Briefcase className="h-3.5 w-3.5 text-primary" /> {job.experience_months || 0}m
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 p-4 flex md:flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-border min-w-[140px]">
+                      <Button
+                        onClick={() => handleSendApplication(match.id, job.id)}
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs w-full"
+                      >
+                        <Send className="h-3.5 w-3.5 mr-1.5" /> {t("radar.send")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
+                        className="text-xs w-full"
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-1.5" /> {t("radar.hub")}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeMatch(match.id)}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="py-20 flex flex-col items-center gap-4 text-center">
+              <div className="p-4 bg-muted rounded-full">
+                <Radio className="h-10 w-10 text-muted-foreground animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-muted-foreground">{t("radar.waiting_signals")}</p>
+                <p className="text-xs text-muted-foreground max-w-sm">{t("radar.waiting_signals_desc")}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
