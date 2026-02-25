@@ -445,12 +445,37 @@ export default function Radar() {
     if (!profile?.id) return;
     const { data } = await supabase
       .from("radar_matched_jobs" as any)
-      .select(`id, job_id, public_jobs!fk_radar_job (*)`)
+      .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
       .eq("user_id", profile.id);
 
     if (data) {
-      setMatchedJobs(data);
-      setMatchCount(data.length);
+      // Filter to only valid matches: active, not banned, not already in queue
+      const validMatches = (data as any[]).filter((m: any) => {
+        const job = m.public_jobs;
+        if (!job) return false;
+        if (job.is_active === false) return false;
+        if (job.is_banned === true) return false;
+        return true;
+      });
+
+      // Now filter out jobs already in my_queue
+      const jobIds = validMatches.map((m: any) => m.job_id);
+      if (jobIds.length > 0) {
+        const { data: queuedJobs } = await supabase
+          .from("my_queue")
+          .select("job_id")
+          .eq("user_id", profile.id)
+          .in("job_id", jobIds);
+
+        const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
+        const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
+
+        setMatchedJobs(finalMatches);
+        setMatchCount(finalMatches.length);
+      } else {
+        setMatchedJobs(validMatches);
+        setMatchCount(validMatches.length);
+      }
     }
   };
 
