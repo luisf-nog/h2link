@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,13 +12,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2,
-  Save,
   Target,
   Trash2,
   Send,
@@ -28,20 +26,13 @@ import {
   Building2,
   RefreshCcw,
   Eye,
-  Radio,
   CheckCircle2,
   Zap,
   Layers,
-  ArrowRight,
-  Satellite,
   Settings2,
-  Pause,
-  Play,
-  ChevronDown,
-  ChevronRight,
+  Satellite,
   Info,
   Sparkles,
-  Rocket,
   Mail,
   Clock,
   Crown,
@@ -50,70 +41,174 @@ import {
   Shield,
   Search,
   Filter,
-  ArrowUpRight,
-  BarChart3,
   Globe,
-  ZapOff,
-  MousePointer2,
+  BarChart3,
+  ChevronRight,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- Custom Components for High-End Feel ---
+// --- Minimalist Premium Components ---
 
-const GlassCard = ({
-  children,
-  className,
-  active = false,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  active?: boolean;
-}) => (
+const HeroPanel = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div
     className={cn(
-      "relative overflow-hidden rounded-2xl border transition-all duration-500",
-      active
-        ? "border-primary/40 bg-primary/[0.03] shadow-[0_0_40px_-15px_rgba(var(--primary),0.2)]"
-        : "border-border/50 bg-card/50 backdrop-blur-md hover:border-primary/20",
+      "relative rounded-3xl border border-border/30 bg-gradient-to-br from-primary/[0.02] via-card to-card/50",
+      "backdrop-blur-sm shadow-[0_0_60px_-20px_rgba(var(--primary),0.08)]",
+      "overflow-hidden",
       className,
     )}
   >
-    {active && (
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
-    )}
-    {children}
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.01] to-transparent pointer-events-none" />
+    <div className="relative z-10">{children}</div>
   </div>
 );
 
-const AnimatedPulse = () => (
-  <div className="relative flex h-3 w-3">
-    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-  </div>
-);
-
-const StatBadge = ({
-  label,
-  value,
-  icon: Icon,
-  trend,
-}: {
-  label: string;
-  value: string | number;
-  icon: any;
-  trend?: string;
-}) => (
-  <div className="flex flex-col gap-1 p-3 rounded-xl bg-muted/30 border border-border/50">
+const MetricCard = ({ label, value, icon: Icon, subtitle }: any) => (
+  <div className="flex flex-col gap-3 p-6">
     <div className="flex items-center justify-between">
-      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-      {trend && (
-        <span className="text-[10px] font-bold text-success flex items-center">
-          {trend} <ArrowUpRight className="h-2 w-2" />
-        </span>
+      <Icon className="h-4 w-4 text-muted-foreground/50" />
+      <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">{label}</span>
+    </div>
+    <div className="space-y-1">
+      <div className="text-3xl font-bold tracking-tighter text-foreground">{value}</div>
+      {subtitle && <p className="text-[11px] text-muted-foreground/60">{subtitle}</p>}
+    </div>
+  </div>
+);
+
+const SectorCard = ({ segment, data, isTracked, isExpanded, onToggle, onExpand }: any) => {
+  const selectedInSector = data.items.filter((i: any) => isTracked.includes(i.raw_category)).length;
+  const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
+
+  return (
+    <div
+      className={cn(
+        "group relative rounded-2xl border transition-all duration-300 overflow-hidden",
+        "p-5 cursor-pointer",
+        allSelected
+          ? "border-primary/30 bg-primary/[0.04] shadow-[0_0_30px_-15px_rgba(var(--primary),0.1)]"
+          : "border-border/40 bg-card/40 hover:border-primary/20 hover:bg-card/60",
+      )}
+      onClick={onExpand}
+    >
+      {/* Left indicator bar */}
+      <div
+        className={cn(
+          "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
+          allSelected ? "bg-primary" : "bg-transparent group-hover:bg-primary/20",
+        )}
+      />
+
+      <div className="flex items-start justify-between gap-4 pl-2">
+        <div className="flex-1 space-y-3">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <h3 className="font-semibold text-sm text-foreground/90 group-hover:text-primary transition-colors">
+              {segment}
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="text-muted-foreground/60">{data.totalJobs} opportunities</span>
+            {allSelected && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold">
+                Active
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {data.items.length > 1 && (
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 text-muted-foreground/40 transition-transform duration-300",
+              isExpanded && "rotate-90",
+            )}
+          />
+        )}
+      </div>
+
+      {/* Expanded subcategories */}
+      {isExpanded && data.items.length > 1 && (
+        <div className="mt-5 pt-5 border-t border-border/20 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          {data.items.map((item: any) => (
+            <div key={item.raw_category} className="flex items-center justify-between pl-9">
+              <span className="text-[12px] text-muted-foreground/70">{item.raw_category}</span>
+              <span className="text-[10px] font-bold text-muted-foreground/40">{item.count}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
-    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
-    <span className="text-lg font-bold text-foreground tracking-tight">{value}</span>
+  );
+};
+
+const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
+  <div className="group relative rounded-2xl border border-border/40 bg-card/40 hover:border-primary/30 hover:bg-card/70 transition-all duration-300 p-5 space-y-4">
+    {/* Top metadata */}
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-[9px] font-bold border-border/50 bg-muted/30">
+          {job.visa_type}
+        </Badge>
+        <span className="text-[10px] font-bold text-muted-foreground/50 flex items-center gap-1">
+          <MapPin className="h-3 w-3" /> {job.state}
+        </span>
+      </div>
+      <span className="text-[9px] text-muted-foreground/40">Detected 2m ago</span>
+    </div>
+
+    {/* Job title */}
+    <h3 className="text-base font-bold text-foreground leading-tight group-hover:text-primary transition-colors">
+      {job.category}
+    </h3>
+
+    {/* Key metrics */}
+    <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/20 border border-border/20">
+        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Salary</span>
+        <span className="text-sm font-bold text-foreground">${job.salary || "N/A"}/hr</span>
+      </div>
+      <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/20 border border-border/20">
+        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Exp</span>
+        <span className="text-sm font-bold text-foreground">{job.experience_months || 0}m</span>
+      </div>
+    </div>
+
+    {/* Action buttons */}
+    <div className="flex items-center gap-2 pt-2">
+      <Button
+        onClick={() => onApply(match.id, job.id)}
+        className="flex-1 h-10 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 font-bold text-sm transition-all"
+      >
+        <Send className="h-4 w-4 mr-2" /> Apply
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onView(job.id)}
+        className="h-10 w-10 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-primary/5"
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onDismiss(match.id)}
+        className="h-10 w-10 rounded-lg border border-border/40 hover:border-destructive/30 hover:bg-destructive/5 text-muted-foreground hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
   </div>
 );
 
@@ -203,7 +298,6 @@ export default function Radar() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [batchSending, setBatchSending] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
   const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
@@ -212,7 +306,7 @@ export default function Radar() {
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
 
   const [isActive, setIsActive] = useState(false);
-  const [autoSend, setAutoSend] = useState(false);
+  const [radarMode, setRadarMode] = useState<"manual" | "autopilot">("manual");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [minWage, setMinWage] = useState("");
   const [maxExperience, setMaxExperience] = useState("");
@@ -233,7 +327,7 @@ export default function Radar() {
     if (!radarProfile) return selectedCategories.length > 0;
     return (
       isActive !== (radarProfile.is_active ?? false) ||
-      autoSend !== (radarProfile.auto_send ?? false) ||
+      radarMode !== (radarProfile.auto_send ? "autopilot" : "manual") ||
       JSON.stringify([...selectedCategories].sort()) !== JSON.stringify([...(radarProfile.categories || [])].sort()) ||
       minWage !== (radarProfile.min_wage?.toString() || "") ||
       maxExperience !== (radarProfile.max_experience?.toString() || "") ||
@@ -243,7 +337,7 @@ export default function Radar() {
     );
   }, [
     isActive,
-    autoSend,
+    radarMode,
     selectedCategories,
     minWage,
     maxExperience,
@@ -305,7 +399,7 @@ export default function Radar() {
     const payload = {
       user_id: profile.id,
       is_active: isActive,
-      auto_send: autoSend,
+      auto_send: radarMode === "autopilot",
       categories: selectedCategories,
       min_wage: minWage !== "" ? Number(minWage) : null,
       max_experience: maxExperience !== "" ? Number(maxExperience) : null,
@@ -342,9 +436,22 @@ export default function Radar() {
         .eq("id", matchId);
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-      toast({ title: t("radar.toast_sent") });
+      toast({ title: "Application queued" });
     } catch (err) {
-      toast({ title: t("radar.toast_send_error"), variant: "destructive" });
+      toast({ title: "Error sending application", variant: "destructive" });
+    }
+  };
+
+  const removeMatch = async (matchId: string) => {
+    try {
+      await supabase
+        .from("radar_matched_jobs" as any)
+        .delete()
+        .eq("id", matchId);
+      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
+      setMatchCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      toast({ title: "Error", variant: "destructive" });
     }
   };
 
@@ -363,7 +470,7 @@ export default function Radar() {
         if (data) {
           setRadarProfile(data);
           setIsActive(data.is_active ?? false);
-          setAutoSend(data.auto_send ?? false);
+          setRadarMode(data.auto_send ? "autopilot" : "manual");
           setSelectedCategories(data.categories || []);
           setMinWage(data.min_wage?.toString() || "");
           setMaxExperience(data.max_experience?.toString() || "");
@@ -390,373 +497,293 @@ export default function Radar() {
   if (loading)
     return (
       <div className="flex items-center justify-center h-[80vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
       </div>
     );
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 p-4 md:p-8 animate-in fade-in duration-700">
-      {/* --- HEADER SECTION: Immersive Glass Design --- */}
-      <header className="relative flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pb-2">
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 shadow-inner">
-              <Satellite className="h-6 w-6 text-primary" />
+    <div className="max-w-[1600px] mx-auto space-y-12 p-6 md:p-12 animate-in fade-in duration-700">
+      {/* ═══════════════════════════════════════════════════════════════
+          LEVEL 1: HERO CONTROL PANEL
+      ═══════════════════════════════════════════════════════════════ */}
+      <HeroPanel className="p-8">
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                  <Satellite className="h-5 w-5 text-primary/70" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground">Radar</h1>
+                  <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
+                    Premium Edition
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-black tracking-tight text-foreground uppercase italic">Radar</h1>
-                <Badge className="bg-plan-diamond text-white border-0 text-[10px] font-black px-2 py-0.5 rounded-sm tracking-tighter">
-                  PREMIUM
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <AnimatedPulse />
-                <span className="text-xs font-bold uppercase tracking-widest opacity-70">
-                  {isActive ? "System Online" : "System Standby"}
-                </span>
-              </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-success/5 border border-success/20">
+              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs font-bold text-success/70 uppercase tracking-widest">System Online</span>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground max-w-md font-medium leading-relaxed">
-            Algoritmo de varredura em tempo real para detecção de oportunidades H2B.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <GlassCard
-            className="flex items-center gap-4 px-6 py-3 border-primary/20 bg-primary/[0.02]"
-            active={isActive}
-          >
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Autopilot</span>
-              <span className="text-sm font-bold">{autoSend ? "ENABLED" : "DISABLED"}</span>
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-border/0 via-border/30 to-border/0" />
+
+          {/* Control Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left: Radar Mode */}
+            <div className="space-y-4">
+              <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+                Radar Mode
+              </label>
+              <div className="flex gap-3">
+                {["manual", "autopilot"].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setRadarMode(mode as "manual" | "autopilot")}
+                    className={cn(
+                      "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
+                      radarMode === mode
+                        ? "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-muted/20 border-border/40 text-muted-foreground/60 hover:border-primary/20",
+                    )}
+                  >
+                    {mode === "manual" ? "Manual" : "Autopilot"}
+                  </button>
+                ))}
+              </div>
             </div>
-            <Switch
-              checked={autoSend}
-              onCheckedChange={(v) => {
-                setAutoSend(v);
-                if (v) performSave({ auto_send: true });
-              }}
-              className="data-[state=checked]:bg-primary"
-            />
-          </GlassCard>
 
-          <Button
-            onClick={() => {
-              setIsActive(!isActive);
-              performSave({ is_active: !isActive });
-            }}
-            className={cn(
-              "h-14 px-8 rounded-2xl font-black uppercase tracking-widest transition-all duration-500 shadow-xl",
-              isActive
-                ? "bg-destructive hover:bg-destructive/90 shadow-destructive/20"
-                : "bg-primary hover:bg-primary/90 shadow-primary/20",
-            )}
-          >
-            {isActive ? (
-              <Pause className="mr-2 h-5 w-5 fill-current" />
-            ) : (
-              <Play className="mr-2 h-5 w-5 fill-current" />
-            )}
-            {isActive ? "Stop Scan" : "Start Scan"}
-          </Button>
+            {/* Right: Radar Control */}
+            <div className="space-y-4">
+              <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+                Scan Control
+              </label>
+              <Button
+                onClick={() => {
+                  setIsActive(!isActive);
+                  performSave({ is_active: !isActive });
+                }}
+                className={cn(
+                  "w-full h-12 rounded-lg font-bold uppercase tracking-wider transition-all duration-300",
+                  isActive
+                    ? "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15"
+                    : "bg-primary text-primary-foreground border border-primary hover:bg-primary/90",
+                )}
+              >
+                {isActive ? "Pause Radar" : "Start Radar"}
+              </Button>
+            </div>
+          </div>
         </div>
-      </header>
+      </HeroPanel>
 
-      {/* --- ANALYTICS BAR --- */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatBadge label="Live Signals" value={totalSinaisGeral} icon={Activity} trend="+12%" />
-        <StatBadge label="Active Matches" value={matchCount} icon={Target} />
-        <StatBadge label="Monitored Sectors" value={selectedCategories.length} icon={Globe} />
-        <StatBadge label="Scan Frequency" value="24/7" icon={Clock} />
+      {/* ═══════════════════════════════════════════════════════════════
+          LEVEL 2: METRICS & INTELLIGENCE
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <HeroPanel className="p-0 overflow-hidden">
+          <MetricCard label="Live Signals" value={totalSinaisGeral} icon={Activity} subtitle="Opportunities detected" />
+        </HeroPanel>
+        <HeroPanel className="p-0 overflow-hidden">
+          <MetricCard label="Active Matches" value={matchCount} icon={Target} subtitle="Ready to apply" />
+        </HeroPanel>
+        <HeroPanel className="p-0 overflow-hidden">
+          <MetricCard
+            label="Sectors Monitored"
+            value={selectedCategories.length}
+            icon={Globe}
+            subtitle="Active tracking"
+          />
+        </HeroPanel>
+        <HeroPanel className="p-0 overflow-hidden">
+          <MetricCard label="Scan Frequency" value="24/7" icon={Clock} subtitle="Continuous monitoring" />
+        </HeroPanel>
       </div>
 
-      {/* --- MAIN INTERFACE --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* LEFT: Configuration & Targeting (7/12) */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-              <Filter className="h-5 w-5 text-primary" /> Targeting Configuration
+      {/* Intelligence Indicator */}
+      <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-muted/20 border border-border/40">
+        <Sparkles className="h-4 w-4 text-primary/50" />
+        <p className="text-sm text-muted-foreground/70">
+          Matching opportunities based on <span className="font-semibold text-foreground">salary requirements</span>,{" "}
+          <span className="font-semibold text-foreground">sector preferences</span>, and{" "}
+          <span className="font-semibold text-foreground">location criteria</span>.
+        </p>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          LEVEL 3: CONFIGURATION & LIVE FEED
+      ═══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
+        {/* Left: Targeting Configuration (7/12) */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Filter className="h-5 w-5 text-primary/50" /> Sector Targeting
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowFilters(true)}
-              className="text-xs font-bold uppercase tracking-widest hover:bg-primary/5"
+              className="text-xs font-bold uppercase tracking-widest hover:bg-primary/5 h-8"
             >
-              <Settings2 className="h-4 w-4 mr-2" /> Advanced Filters
+              <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Filters
             </Button>
           </div>
 
-          <GlassCard className="p-1">
-            <ScrollArea className="h-[600px] px-4 py-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-4">
+          <HeroPanel className="p-0 overflow-hidden">
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-3 p-6">
                 {sectorEntries.map(([segment, data]) => {
-                  const selectedInSector = data.items.filter((i) => selectedCategories.includes(i.raw_category)).length;
-                  const isTracked = selectedInSector > 0;
+                  const selectedInSector = data.items.filter((i: any) =>
+                    selectedCategories.includes(i.raw_category),
+                  ).length;
+                  const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
                   const isExpanded = expandedSectors.has(segment);
 
                   return (
-                    <div
+                    <SectorCard
                       key={segment}
-                      className={cn(
-                        "group relative rounded-xl border p-4 transition-all duration-300 cursor-pointer overflow-hidden",
-                        isTracked
-                          ? "border-primary/40 bg-primary/[0.04]"
-                          : "border-border/40 bg-muted/10 hover:border-primary/20",
-                      )}
-                      onClick={() =>
-                        setExpandedSectors((prev) => {
-                          const next = new Set(prev);
-                          isExpanded ? next.delete(segment) : next.add(segment);
-                          return next;
-                        })
-                      }
-                    >
-                      {/* Background Decoration */}
-                      <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                        <BarChart3 className="h-24 w-24" />
-                      </div>
-
-                      <div className="relative z-10 flex items-start justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-black text-sm uppercase tracking-tight group-hover:text-primary transition-colors">
-                            {segment}
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] font-bold border-primary/20 bg-primary/5 text-primary"
-                            >
-                              {data.totalJobs} SIGNALS
-                            </Badge>
-                            {isTracked && (
-                              <Badge className="text-[9px] font-bold bg-success/20 text-success border-0">
-                                MONITORING
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <Checkbox
-                          checked={isTracked}
-                          onCheckedChange={() => {
-                            const sectorCats = data.items.map((i) => i.raw_category);
-                            setSelectedCategories((prev) =>
-                              isTracked
-                                ? prev.filter((c) => !sectorCats.includes(c))
-                                : [...new Set([...prev, ...sectorCats])],
-                            );
-                          }}
-                          className="mt-1 border-primary/30 data-[state=checked]:bg-primary"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-
-                      {isExpanded && (
-                        <div className="mt-4 pt-4 border-t border-primary/10 space-y-2 animate-in slide-in-from-top-2 duration-300">
-                          {data.items.map((item) => (
-                            <div key={item.raw_category} className="flex items-center justify-between group/item">
-                              <span className="text-[11px] font-medium text-muted-foreground group-hover/item:text-foreground transition-colors">
-                                {item.raw_category}
-                              </span>
-                              <span className="text-[10px] font-black text-primary/40">{item.count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      segment={segment}
+                      data={data}
+                      isTracked={selectedCategories}
+                      isExpanded={isExpanded}
+                      onToggle={() => {
+                        const sectorCats = data.items.map((i: any) => i.raw_category);
+                        setSelectedCategories((prev) =>
+                          allSelected
+                            ? prev.filter((c) => !sectorCats.includes(c))
+                            : [...new Set([...prev, ...sectorCats])],
+                        );
+                      }}
+                      onExpand={() => {
+                        const next = new Set(expandedSectors);
+                        isExpanded ? next.delete(segment) : next.add(segment);
+                        setExpandedSectors(next);
+                      }}
+                    />
                   );
                 })}
               </div>
             </ScrollArea>
-          </GlassCard>
+          </HeroPanel>
 
           {hasChangesComputed && (
             <Button
               onClick={() => performSave()}
               disabled={saving}
-              className="w-full h-14 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-black uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-[0.98]"
+              className="w-full h-12 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-wider"
             >
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5 mr-2" />}
-              Commit Configuration
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              Save Configuration
             </Button>
           )}
         </div>
 
-        {/* RIGHT: Live Feed (5/12) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" /> Live Detection Feed
+        {/* Right: Live Detection Feed (5/12) */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary/50" /> Live Feed
             </h2>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Real-time</span>
+              <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
+                Real-time
+              </span>
               <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             </div>
           </div>
 
-          <GlassCard className="flex-1 flex flex-col min-h-[600px]">
-            <ScrollArea className="flex-1 h-[600px]">
-              <div className="p-4 space-y-4">
+          <HeroPanel className="p-0 overflow-hidden flex flex-col min-h-[500px]">
+            <ScrollArea className="flex-1 h-[500px]">
+              <div className="p-6 space-y-4">
                 {matchedJobs.length > 0 ? (
                   matchedJobs.map((match, idx) => {
                     const job = match.public_jobs;
                     if (!job) return null;
                     return (
-                      <div
+                      <JobCard
                         key={match.id}
-                        className="group relative p-5 rounded-2xl border border-border/50 bg-card/30 hover:border-primary/40 hover:bg-primary/[0.02] transition-all duration-300 animate-in fade-in slide-in-from-right-4"
-                        style={{ animationDelay: `${idx * 100}ms` }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-3 flex-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-[9px] font-black tracking-tighter bg-muted/50">
-                                {job.visa_type}
-                              </Badge>
-                              <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" /> {job.state}
-                              </span>
-                            </div>
-                            <h3 className="text-base font-black leading-tight tracking-tight group-hover:text-primary transition-colors">
-                              {job.category}
-                            </h3>
-                            <div className="flex items-center gap-4">
-                              <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                                  Salary
-                                </span>
-                                <span className="text-sm font-bold text-foreground">${job.salary || "N/A"}/hr</span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                                  Experience
-                                </span>
-                                <span className="text-sm font-bold text-foreground">{job.experience_months || 0}m</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              size="icon"
-                              onClick={() => handleSendApplication(match.id, job.id)}
-                              className="h-12 w-12 rounded-xl bg-primary shadow-lg shadow-primary/20 hover:scale-110 transition-transform"
-                            >
-                              <Send className="h-5 w-5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
-                              className="h-10 w-10 rounded-xl border-border/50 hover:bg-primary/5"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Action Bar */}
-                        <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-muted-foreground italic">
-                            Detected {idx + 1}m ago
-                          </span>
-                          <button
-                            onClick={() => removeMatch(match.id)}
-                            className="text-[10px] font-black text-muted-foreground hover:text-destructive uppercase tracking-widest transition-colors"
-                          >
-                            Dismiss
-                          </button>
-                        </div>
-                      </div>
+                        job={job}
+                        match={match}
+                        onApply={handleSendApplication}
+                        onView={(jobId) => window.open(`/jobs/${jobId}`, "_blank")}
+                        onDismiss={removeMatch}
+                      />
                     );
                   })
                 ) : (
-                  <div className="h-[500px] flex flex-col items-center justify-center text-center space-y-6 opacity-40">
+                  <div className="h-[450px] flex flex-col items-center justify-center text-center space-y-6">
                     <div className="relative">
-                      <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-                      <div className="relative p-8 rounded-full bg-primary/5 border border-primary/10">
-                        <Search className="h-12 w-12 text-primary" />
+                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/10 blur-xl" />
+                      <div className="relative p-6 rounded-full bg-primary/5 border border-primary/10">
+                        <Search className="h-8 w-8 text-primary/40" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-lg font-black uppercase tracking-tighter">Scanning Frequencies...</p>
-                      <p className="text-xs font-medium max-w-[200px] mx-auto">
-                        No signals detected in the current targeting parameters.
+                      <p className="text-sm font-semibold text-foreground">Scanning frequencies...</p>
+                      <p className="text-xs text-muted-foreground/60 max-w-[220px]">
+                        No signals detected. Configure your targeting parameters to begin.
                       </p>
                     </div>
                   </div>
                 )}
               </div>
             </ScrollArea>
-
-            {matchedJobs.length > 0 && (
-              <div className="p-4 border-t border-border/50 bg-muted/10">
-                <Button className="w-full h-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 font-black uppercase tracking-widest">
-                  Batch Process Signals ({matchCount})
-                </Button>
-              </div>
-            )}
-          </GlassCard>
+          </HeroPanel>
         </div>
       </div>
 
-      {/* --- FILTERS DIALOG: Custom High-End Styling --- */}
+      {/* ═══════════════════════════════════════════════════════════════
+          FILTERS DIALOG
+      ═══════════════════════════════════════════════════════════════ */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
-        <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-xl border-primary/20 rounded-[2rem] p-8">
-          <DialogHeader className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-primary/10">
-                <Settings2 className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
-                  Targeting Parameters
-                </DialogTitle>
-                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
-                  Refine your detection algorithm
-                </DialogDescription>
-              </div>
-            </div>
+        <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-xl border-border/50 rounded-3xl p-8">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-bold">Advanced Filters</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+              Refine your targeting parameters
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                  Minimum Compensation
+                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+                  Minimum Salary
                 </Label>
                 <div className="relative">
-                  <CircleDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                  <CircleDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
                   <Input
                     type="number"
                     value={minWage}
                     onChange={(e) => setMinWage(e.target.value)}
-                    className="h-14 pl-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary/50 font-bold text-lg"
+                    className="h-11 pl-11 rounded-lg bg-muted/20 border-border/40 focus:border-primary/50 font-semibold"
                     placeholder="0.00"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground/40">
                     USD/HR
                   </span>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                  Max Experience Required
+                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+                  Max Experience
                 </Label>
                 <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
                   <Input
                     type="number"
                     value={maxExperience}
                     onChange={(e) => setMaxExperience(e.target.value)}
-                    className="h-14 pl-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary/50 font-bold text-lg"
+                    className="h-11 pl-11 rounded-lg bg-muted/20 border-border/40 focus:border-primary/50 font-semibold"
                     placeholder="0"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground/40">
                     YEARS
                   </span>
                 </div>
@@ -765,19 +792,17 @@ export default function Radar() {
 
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                  Geographic Focus
-                </Label>
+                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">State</Label>
                 <Select value={stateFilter} onValueChange={setStateFilter}>
-                  <SelectTrigger className="h-14 rounded-xl bg-muted/30 border-border/50 font-bold">
-                    <SelectValue placeholder="All States" />
+                  <SelectTrigger className="h-11 rounded-lg bg-muted/20 border-border/40 font-semibold">
+                    <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-primary/20">
-                    <SelectItem value="all" className="font-bold">
-                      GLOBAL (ALL STATES)
+                  <SelectContent className="rounded-lg border-border/50">
+                    <SelectItem value="all" className="font-semibold">
+                      All States
                     </SelectItem>
                     {US_STATES.map((s) => (
-                      <SelectItem key={s} value={s} className="font-bold">
+                      <SelectItem key={s} value={s} className="font-semibold">
                         {s}
                       </SelectItem>
                     ))}
@@ -786,19 +811,19 @@ export default function Radar() {
               </div>
 
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                  Visa Classification
+                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+                  Visa Type
                 </Label>
                 <Select value={visaType} onValueChange={setVisaType}>
-                  <SelectTrigger className="h-14 rounded-xl bg-muted/30 border-border/50 font-bold">
-                    <SelectValue placeholder="All Visas" />
+                  <SelectTrigger className="h-11 rounded-lg bg-muted/20 border-border/40 font-semibold">
+                    <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-primary/20">
-                    <SelectItem value="all" className="font-bold">
-                      ALL CLASSIFICATIONS
+                  <SelectContent className="rounded-lg border-border/50">
+                    <SelectItem value="all" className="font-semibold">
+                      All Types
                     </SelectItem>
                     {VISA_TYPE_OPTIONS.map((v) => (
-                      <SelectItem key={v} value={v} className="font-bold">
+                      <SelectItem key={v} value={v} className="font-semibold">
                         {v}
                       </SelectItem>
                     ))}
@@ -813,27 +838,18 @@ export default function Radar() {
               setShowFilters(false);
               performSave();
             }}
-            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+            className="w-full h-11 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-wider"
           >
-            Apply Parameters
+            Apply Filters
           </Button>
         </DialogContent>
       </Dialog>
 
-      {/* --- FOOTER: System Status --- */}
-      <footer className="pt-8 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4 opacity-50">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Secure Scan Protocol</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Multi-Region Detection</span>
-          </div>
-        </div>
-        <span className="text-[10px] font-black uppercase tracking-widest">H2 Link Radar v4.0.2 — Premium Edition</span>
-      </footer>
+      {/* Footer */}
+      <div className="pt-8 border-t border-border/20 flex items-center justify-between text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">
+        <span>H2 Link Radar • Premium Edition</span>
+        <span>v4.1.0</span>
+      </div>
     </div>
   );
 }
