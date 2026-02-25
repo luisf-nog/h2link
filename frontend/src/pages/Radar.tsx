@@ -4,10 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -23,28 +21,16 @@ import {
   MapPin,
   CircleDollarSign,
   Briefcase,
-  Building2,
-  RefreshCcw,
-  Eye,
-  CheckCircle2,
-  Zap,
-  Layers,
-  Settings2,
+  ChevronRight,
   Satellite,
-  Info,
   Sparkles,
-  Mail,
   Clock,
-  Crown,
-  Gauge,
   Activity,
-  Shield,
   Search,
   Filter,
   Globe,
-  BarChart3,
-  ChevronRight,
-  Radio,
+  Settings2,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,33 +39,60 @@ import { cn } from "@/lib/utils";
 const HeroPanel = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div
     className={cn(
-      "relative rounded-3xl border border-border/30 bg-gradient-to-br from-primary/[0.02] via-card to-card/50",
-      "backdrop-blur-sm shadow-[0_0_60px_-20px_rgba(var(--primary),0.08)]",
-      "overflow-hidden",
+      "relative rounded-3xl border border-border/35 bg-gradient-to-br from-primary/[0.03] via-card to-card/60",
+      "backdrop-blur-sm shadow-[0_0_70px_-24px_rgba(var(--primary),0.10)]",
+      "ring-1 ring-inset ring-border/15 overflow-hidden",
       className,
     )}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.01] to-transparent pointer-events-none" />
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-transparent pointer-events-none" />
     <div className="relative z-10">{children}</div>
   </div>
 );
 
-const MetricCard = ({ label, value, icon: Icon, subtitle }: any) => (
+const MetricCard = ({
+  label,
+  value,
+  icon: Icon,
+  subtitle,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: any;
+  subtitle?: string;
+}) => (
   <div className="flex flex-col gap-3 p-6">
     <div className="flex items-center justify-between">
-      <Icon className="h-4 w-4 text-muted-foreground/50" />
-      <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">{label}</span>
+      <Icon className="h-4 w-4 text-muted-foreground/45" />
+      <span className="text-[9px] font-bold text-muted-foreground/35 uppercase tracking-[0.18em]">{label}</span>
     </div>
     <div className="space-y-1">
-      <div className="text-3xl font-bold tracking-tighter text-foreground">{value}</div>
-      {subtitle && <p className="text-[11px] text-muted-foreground/60">{subtitle}</p>}
+      <div className="text-[34px] leading-none font-bold tracking-tight text-foreground">{value}</div>
+      {subtitle && <p className="text-[11px] text-muted-foreground/55">{subtitle}</p>}
     </div>
   </div>
 );
 
-const SectorCard = ({ segment, data, isTracked, isExpanded, onToggle, onExpand }: any) => {
+const SectorCard = ({
+  segment,
+  data,
+  isTracked,
+  isExpanded,
+  onToggleAllInSector,
+  onExpand,
+}: {
+  segment: string;
+  data: { items: any[]; totalJobs: number };
+  isTracked: string[];
+  isExpanded: boolean;
+  onToggleAllInSector: () => void;
+  onExpand: () => void;
+}) => {
+  const totalInSector = data.items.length;
   const selectedInSector = data.items.filter((i: any) => isTracked.includes(i.raw_category)).length;
-  const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
+
+  const allSelected = totalInSector > 0 && selectedInSector === totalInSector;
+  const partialSelected = selectedInSector > 0 && !allSelected;
 
   return (
     <div
@@ -87,50 +100,81 @@ const SectorCard = ({ segment, data, isTracked, isExpanded, onToggle, onExpand }
         "group relative rounded-2xl border transition-all duration-300 overflow-hidden",
         "p-5 cursor-pointer",
         allSelected
-          ? "border-primary/30 bg-primary/[0.04] shadow-[0_0_30px_-15px_rgba(var(--primary),0.1)]"
-          : "border-border/40 bg-card/40 hover:border-primary/20 hover:bg-card/60",
+          ? "border-primary/30 bg-primary/[0.05] shadow-[0_0_34px_-18px_rgba(var(--primary),0.14)]"
+          : partialSelected
+            ? "border-primary/20 bg-primary/[0.025] hover:border-primary/25 hover:bg-primary/[0.035]"
+            : "border-border/40 bg-card/40 hover:border-primary/20 hover:bg-card/60",
       )}
       onClick={onExpand}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onExpand();
+      }}
     >
       {/* Left indicator bar */}
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
-          allSelected ? "bg-primary" : "bg-transparent group-hover:bg-primary/20",
+          allSelected ? "bg-primary" : partialSelected ? "bg-primary/45" : "bg-transparent group-hover:bg-primary/20",
         )}
       />
 
       <div className="flex items-start justify-between gap-4 pl-2">
         <div className="flex-1 space-y-3">
           <div className="flex items-center gap-3">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={(e) => {
-                e.stopPropagation();
-                onToggle();
-              }}
-              className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+            <div
+              className="shrink-0"
               onClick={(e) => e.stopPropagation()}
-            />
-            <h3 className="font-semibold text-sm text-foreground/90 group-hover:text-primary transition-colors">
-              {segment}
-            </h3>
-          </div>
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={() => onToggleAllInSector()}
+                className="border-border/55 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+            </div>
 
-          <div className="flex items-center gap-3 text-[11px]">
-            <span className="text-muted-foreground/60">{data.totalJobs} opportunities</span>
-            {allSelected && (
-              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold">
-                Active
-              </Badge>
-            )}
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm text-foreground/90 group-hover:text-primary transition-colors truncate">
+                {segment}
+              </h3>
+              <div className="flex items-center gap-2 text-[11px] mt-1">
+                <span className="text-muted-foreground/60">{data.totalJobs} opportunities</span>
+
+                {allSelected && (
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold"
+                  >
+                    Monitoring
+                  </Badge>
+                )}
+
+                {partialSelected && (
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/5 text-primary/70 border-primary/15 text-[9px] font-bold"
+                  >
+                    Partial
+                  </Badge>
+                )}
+
+                {totalInSector > 0 && (
+                  <span className="text-[10px] font-bold text-muted-foreground/35">
+                    {selectedInSector}/{totalInSector}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {data.items.length > 1 && (
           <ChevronRight
             className={cn(
-              "h-4 w-4 text-muted-foreground/40 transition-transform duration-300",
+              "h-4 w-4 text-muted-foreground/35 transition-transform duration-300 mt-1",
               isExpanded && "rotate-90",
             )}
           />
@@ -140,12 +184,23 @@ const SectorCard = ({ segment, data, isTracked, isExpanded, onToggle, onExpand }
       {/* Expanded subcategories */}
       {isExpanded && data.items.length > 1 && (
         <div className="mt-5 pt-5 border-t border-border/20 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-          {data.items.map((item: any) => (
-            <div key={item.raw_category} className="flex items-center justify-between pl-9">
-              <span className="text-[12px] text-muted-foreground/70">{item.raw_category}</span>
-              <span className="text-[10px] font-bold text-muted-foreground/40">{item.count}</span>
-            </div>
-          ))}
+          {data.items.map((item: any) => {
+            const checked = isTracked.includes(item.raw_category);
+            return (
+              <div key={item.raw_category} className="flex items-center justify-between pl-9">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={cn(
+                      "inline-block h-1.5 w-1.5 rounded-full",
+                      checked ? "bg-primary" : "bg-muted-foreground/25",
+                    )}
+                  />
+                  <span className="text-[12px] text-muted-foreground/70 truncate">{item.raw_category}</span>
+                </div>
+                <span className="text-[10px] font-bold text-muted-foreground/35">{item.count}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -160,11 +215,11 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
         <Badge variant="outline" className="text-[9px] font-bold border-border/50 bg-muted/30">
           {job.visa_type}
         </Badge>
-        <span className="text-[10px] font-bold text-muted-foreground/50 flex items-center gap-1">
+        <span className="text-[10px] font-bold text-muted-foreground/45 flex items-center gap-1">
           <MapPin className="h-3 w-3" /> {job.state}
         </span>
       </div>
-      <span className="text-[9px] text-muted-foreground/40">Detected 2m ago</span>
+      <span className="text-[9px] text-muted-foreground/35">Detected 2m ago</span>
     </div>
 
     {/* Job title */}
@@ -175,11 +230,11 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
     {/* Key metrics */}
     <div className="grid grid-cols-2 gap-3">
       <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/20 border border-border/20">
-        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Salary</span>
+        <span className="text-[9px] font-bold text-muted-foreground/45 uppercase tracking-wider">Salary</span>
         <span className="text-sm font-bold text-foreground">${job.salary || "N/A"}/hr</span>
       </div>
       <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/20 border border-border/20">
-        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Exp</span>
+        <span className="text-[9px] font-bold text-muted-foreground/45 uppercase tracking-wider">Exp</span>
         <span className="text-sm font-bold text-foreground">{job.experience_months || 0}m</span>
       </div>
     </div>
@@ -315,11 +370,11 @@ export default function Radar() {
   const [groupFilter, setGroupFilter] = useState("all");
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
-  const isFirstTime = !radarProfile && !loading;
 
   const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
+
   const totalSinaisGeral = useMemo(
-    () => Object.values(groupedCategories).reduce((acc, curr) => acc + curr.totalJobs, 0),
+    () => Object.values(groupedCategories).reduce((acc, curr) => acc + (curr.totalJobs || 0), 0),
     [groupedCategories],
   );
 
@@ -358,22 +413,26 @@ export default function Radar() {
         p_max_exp: maxExperience !== "" ? Number(maxExperience) : 999,
         p_group: groupFilter,
       });
+
       if (data) {
         const grouped = (data as any[]).reduce((acc: any, curr: any) => {
           const raw = curr.raw_category || "";
           let segment = "other";
+
           for (const [sectorKey, keywords] of Object.entries(SECTOR_KEYWORDS)) {
             if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
               segment = sectorKey;
               break;
             }
           }
+
           const sectorName = t(`radar.sectors.${segment}`, segment);
           if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
           acc[sectorName].items.push(curr);
           acc[sectorName].totalJobs += curr.count || 0;
           return acc;
         }, {});
+
         setGroupedCategories(grouped);
       }
     } catch (e) {
@@ -387,15 +446,17 @@ export default function Radar() {
       .from("radar_matched_jobs" as any)
       .select(`id, job_id, public_jobs!fk_radar_job (*)`)
       .eq("user_id", profile.id);
+
     if (data) {
       setMatchedJobs(data);
       setMatchCount(data.length);
     }
   };
 
-  const performSave = async (overrides = {}) => {
+  const performSave = async (overrides: Record<string, any> = {}) => {
     if (!profile?.id) return;
     setSaving(true);
+
     const payload = {
       user_id: profile.id,
       is_active: isActive,
@@ -408,21 +469,28 @@ export default function Radar() {
       randomization_group: groupFilter,
       ...overrides,
     };
+
     const { error } = radarProfile
       ? await supabase
           .from("radar_profiles" as any)
           .update(payload)
           .eq("user_id", profile.id)
       : await supabase.from("radar_profiles" as any).insert(payload);
+
     if (!error) {
       setRadarProfile({ ...radarProfile, ...payload });
+
       if (payload.is_active) {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
         await fetchMatches();
         await updateStats();
       }
+
       toast({ title: t("radar.toast_recalibrated") });
+    } else {
+      toast({ title: "Error saving configuration", variant: "destructive" });
     }
+
     setSaving(false);
   };
 
@@ -434,8 +502,10 @@ export default function Radar() {
         .from("radar_matched_jobs" as any)
         .delete()
         .eq("id", matchId);
+
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
+
       toast({ title: "Application queued" });
     } catch (err) {
       toast({ title: "Error sending application", variant: "destructive" });
@@ -461,12 +531,14 @@ export default function Radar() {
         setLoading(false);
         return;
       }
+
       try {
         const { data } = await supabase
           .from("radar_profiles" as any)
           .select("*")
           .eq("user_id", profile.id)
           .single();
+
         if (data) {
           setRadarProfile(data);
           setIsActive(data.is_active ?? false);
@@ -484,6 +556,7 @@ export default function Radar() {
         setLoading(false);
       }
     };
+
     init();
   }, [profile?.id]);
 
@@ -492,7 +565,14 @@ export default function Radar() {
       updateStats();
       if (isActive) fetchMatches();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, isActive]);
+
+  // Keep stats visually responsive to filter adjustments (even before saving)
+  useEffect(() => {
+    if (!loading) updateStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaType, stateFilter, minWage, maxExperience, groupFilter, loading]);
 
   if (loading)
     return (
@@ -512,7 +592,7 @@ export default function Radar() {
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                <div className="p-3 rounded-xl bg-primary/6 border border-primary/12">
                   <Satellite className="h-5 w-5 text-primary/70" />
                 </div>
                 <div>
@@ -523,14 +603,15 @@ export default function Radar() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-success/5 border border-success/20">
+
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/6 border border-success/20 shadow-sm">
               <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
               <span className="text-xs font-bold text-success/70 uppercase tracking-widest">System Online</span>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-border/0 via-border/30 to-border/0" />
+          <div className="h-px bg-gradient-to-r from-border/0 via-border/35 to-border/0" />
 
           {/* Control Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -540,15 +621,15 @@ export default function Radar() {
                 Radar Mode
               </label>
               <div className="flex gap-3">
-                {["manual", "autopilot"].map((mode) => (
+                {(["manual", "autopilot"] as const).map((mode) => (
                   <button
                     key={mode}
-                    onClick={() => setRadarMode(mode as "manual" | "autopilot")}
+                    onClick={() => setRadarMode(mode)}
                     className={cn(
                       "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
                       radarMode === mode
-                        ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-muted/20 border-border/40 text-muted-foreground/60 hover:border-primary/20",
+                        ? "bg-primary/10 border-primary/30 text-primary shadow-[0_0_18px_-10px_rgba(var(--primary),0.18)]"
+                        : "bg-muted/25 border-border/45 text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
                     )}
                   >
                     {mode === "manual" ? "Manual" : "Autopilot"}
@@ -564,8 +645,9 @@ export default function Radar() {
               </label>
               <Button
                 onClick={() => {
-                  setIsActive(!isActive);
-                  performSave({ is_active: !isActive });
+                  const next = !isActive;
+                  setIsActive(next);
+                  performSave({ is_active: next });
                 }}
                 className={cn(
                   "w-full h-12 rounded-lg font-bold uppercase tracking-wider transition-all duration-300",
@@ -618,7 +700,7 @@ export default function Radar() {
           LEVEL 3: CONFIGURATION & LIVE FEED
       ═══════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
-        {/* Left: Targeting Configuration (7/12) */}
+        {/* Left: Targeting Configuration */}
         <div className="lg:col-span-4 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -651,7 +733,7 @@ export default function Radar() {
                       data={data}
                       isTracked={selectedCategories}
                       isExpanded={isExpanded}
-                      onToggle={() => {
+                      onToggleAllInSector={() => {
                         const sectorCats = data.items.map((i: any) => i.raw_category);
                         setSelectedCategories((prev) =>
                           allSelected
@@ -683,14 +765,14 @@ export default function Radar() {
           )}
         </div>
 
-        {/* Right: Live Detection Feed (5/12) */}
+        {/* Right: Live Detection Feed */}
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary/50" /> Live Feed
             </h2>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
+              <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
                 Real-time
               </span>
               <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
@@ -701,16 +783,17 @@ export default function Radar() {
             <ScrollArea className="flex-1 h-[500px]">
               <div className="p-6 space-y-4">
                 {matchedJobs.length > 0 ? (
-                  matchedJobs.map((match, idx) => {
+                  matchedJobs.map((match) => {
                     const job = match.public_jobs;
                     if (!job) return null;
+
                     return (
                       <JobCard
                         key={match.id}
                         job={job}
                         match={match}
                         onApply={handleSendApplication}
-                        onView={(jobId) => window.open(`/jobs/${jobId}`, "_blank")}
+                        onView={(jobId: string) => window.open(`/jobs/${jobId}`, "_blank")}
                         onDismiss={removeMatch}
                       />
                     );
@@ -725,7 +808,7 @@ export default function Radar() {
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-foreground">Scanning frequencies...</p>
-                      <p className="text-xs text-muted-foreground/60 max-w-[220px]">
+                      <p className="text-xs text-muted-foreground/60 max-w-[240px]">
                         No signals detected. Configure your targeting parameters to begin.
                       </p>
                     </div>
