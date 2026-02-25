@@ -996,11 +996,13 @@ async function processOneUser(params: {
 
     console.log(`[process-queue] Processando item ${row.id} para usuário ${userId}`);
 
+    // Declare job OUTSIDE try so it's accessible in catch for error logging
+    let job:
+      | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
+      | (ManualJobRow & { visa_type?: string | null })
+      | null = null;
+
     try {
-      let job:
-        | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
-        | (ManualJobRow & { visa_type?: string | null })
-        | null = null;
 
       if (row.job_id) {
         const { data: pj, error: pjErr } = await serviceClient
