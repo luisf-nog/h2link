@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,31 +46,78 @@ import {
   Clock,
   Crown,
   Gauge,
+  Activity,
+  Shield,
+  Search,
+  Filter,
+  ArrowUpRight,
+  BarChart3,
+  Globe,
+  ZapOff,
+  MousePointer2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SECTOR_KEYS = [
-  "agriculture",
-  "farm_equipment",
-  "construction",
-  "carpentry",
-  "installation",
-  "mechanics",
-  "cleaning",
-  "kitchen",
-  "dining",
-  "hospitality",
-  "bar",
-  "logistics",
-  "transport",
-  "manufacturing",
-  "welding",
-  "wood",
-  "textile",
-  "meat",
-  "landscaping",
-  "sales",
-] as const;
+// --- Custom Components for High-End Feel ---
+
+const GlassCard = ({
+  children,
+  className,
+  active = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  active?: boolean;
+}) => (
+  <div
+    className={cn(
+      "relative overflow-hidden rounded-2xl border transition-all duration-500",
+      active
+        ? "border-primary/40 bg-primary/[0.03] shadow-[0_0_40px_-15px_rgba(var(--primary),0.2)]"
+        : "border-border/50 bg-card/50 backdrop-blur-md hover:border-primary/20",
+      className,
+    )}
+  >
+    {active && (
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+    )}
+    {children}
+  </div>
+);
+
+const AnimatedPulse = () => (
+  <div className="relative flex h-3 w-3">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+  </div>
+);
+
+const StatBadge = ({
+  label,
+  value,
+  icon: Icon,
+  trend,
+}: {
+  label: string;
+  value: string | number;
+  icon: any;
+  trend?: string;
+}) => (
+  <div className="flex flex-col gap-1 p-3 rounded-xl bg-muted/30 border border-border/50">
+    <div className="flex items-center justify-between">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+      {trend && (
+        <span className="text-[10px] font-bold text-success flex items-center">
+          {trend} <ArrowUpRight className="h-2 w-2" />
+        </span>
+      )}
+    </div>
+    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
+    <span className="text-lg font-bold text-foreground tracking-tight">{value}</span>
+  </div>
+);
+
+// --- Main Component ---
 
 const SECTOR_KEYWORDS: Record<string, string[]> = {
   agriculture: ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
@@ -163,7 +210,6 @@ export default function Radar() {
   const [radarProfile, setRadarProfile] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
-  const [showAutopilotConfirm, setShowAutopilotConfirm] = useState(false);
 
   const [isActive, setIsActive] = useState(false);
   const [autoSend, setAutoSend] = useState(false);
@@ -181,11 +227,6 @@ export default function Radar() {
   const totalSinaisGeral = useMemo(
     () => Object.values(groupedCategories).reduce((acc, curr) => acc + curr.totalJobs, 0),
     [groupedCategories],
-  );
-  const monitoredCount = useMemo(
-    () =>
-      sectorEntries.filter(([, data]) => data.items.some((i) => selectedCategories.includes(i.raw_category))).length,
-    [sectorEntries, selectedCategories],
   );
 
   const hasChangesComputed = useMemo(() => {
@@ -212,13 +253,6 @@ export default function Radar() {
     radarProfile,
   ]);
 
-  const getSectorName = (key: string) => t(`radar.sectors.${key}`, key);
-
-  const wageDisplay = minWage ? `$${minWage}/hr` : t("radar.criteria_any");
-  const expDisplay = maxExperience ? `${maxExperience}+ ${t("radar.criteria_years")}` : t("radar.criteria_any");
-  const stateDisplay = stateFilter === "all" ? t("radar.state_all") : stateFilter;
-  const visaDisplay = visaType === "all" ? t("radar.criteria_all_visas") : visaType.toUpperCase();
-
   const updateStats = async () => {
     if (!profile?.id) return;
     try {
@@ -240,16 +274,12 @@ export default function Radar() {
               break;
             }
           }
-          const sectorName = getSectorName(segment);
+          const sectorName = t(`radar.sectors.${segment}`, segment);
           if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
           acc[sectorName].items.push(curr);
           acc[sectorName].totalJobs += curr.count || 0;
           return acc;
         }, {});
-        SECTOR_KEYS.forEach((s) => {
-          const name = getSectorName(s);
-          if (!grouped[name]) grouped[name] = { items: [], totalJobs: 0 };
-        });
         setGroupedCategories(grouped);
       }
     } catch (e) {
@@ -272,7 +302,6 @@ export default function Radar() {
   const performSave = async (overrides = {}) => {
     if (!profile?.id) return;
     setSaving(true);
-    setMatchedJobs([]);
     const payload = {
       user_id: profile.id,
       is_active: isActive,
@@ -303,32 +332,6 @@ export default function Radar() {
     setSaving(false);
   };
 
-  const handleSendAll = async () => {
-    if (matchedJobs.length === 0 || !profile?.id) return;
-    if (!confirm(t("radar.confirm_send_all", { count: matchCount }))) return;
-    setBatchSending(true);
-    const currentJobs = [...matchedJobs];
-    setMatchedJobs([]);
-    setMatchCount(0);
-    try {
-      const apps = currentJobs.map((m) => ({ user_id: profile.id, job_id: m.job_id, status: "pending" }));
-      await supabase.from("my_queue" as any).insert(apps);
-      await supabase
-        .from("radar_matched_jobs" as any)
-        .delete()
-        .eq("user_id", profile.id);
-      await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
-      await updateStats();
-      toast({ title: t("radar.toast_captured_all") });
-    } catch (err) {
-      setMatchedJobs(currentJobs);
-      setMatchCount(currentJobs.length);
-      toast({ title: t("radar.toast_send_error"), variant: "destructive" });
-    } finally {
-      setBatchSending(false);
-    }
-  };
-
   const handleSendApplication = async (matchId: string, jobId: string) => {
     if (!profile?.id) return;
     try {
@@ -342,54 +345,6 @@ export default function Radar() {
       toast({ title: t("radar.toast_sent") });
     } catch (err) {
       toast({ title: t("radar.toast_send_error"), variant: "destructive" });
-    }
-  };
-
-  const removeMatch = async (matchId: string) => {
-    try {
-      await supabase
-        .from("radar_matched_jobs" as any)
-        .delete()
-        .eq("id", matchId);
-      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
-      setMatchCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      toast({ title: t("radar.toast_error"), variant: "destructive" });
-    }
-  };
-
-  const toggleSector = (segment: string) => {
-    const sectorData = groupedCategories[segment];
-    if (!sectorData) return;
-    const sectorCategories = sectorData.items.map((i) => i.raw_category);
-    const allSelected = sectorCategories.every((c) => selectedCategories.includes(c));
-    if (allSelected) {
-      setSelectedCategories((prev) => prev.filter((c) => !sectorCategories.includes(c)));
-    } else {
-      setSelectedCategories((prev) => [...new Set([...prev, ...sectorCategories])]);
-    }
-  };
-
-  const toggleSubCategory = (raw: string) => {
-    setSelectedCategories((prev) => (prev.includes(raw) ? prev.filter((c) => c !== raw) : [...prev, raw]));
-  };
-
-  const toggleExpanded = (segment: string) => {
-    setExpandedSectors((prev) => {
-      const next = new Set(prev);
-      next.has(segment) ? next.delete(segment) : next.add(segment);
-      return next;
-    });
-  };
-
-  const handleAutopilotToggle = async () => {
-    if (!autoSend && selectedCategories.length === 0) {
-      toast({ title: t("radar.select_categories_first"), variant: "destructive" });
-      return;
-    }
-    setAutoSend(!autoSend);
-    if (!autoSend) {
-      setShowAutopilotConfirm(true);
     }
   };
 
@@ -428,568 +383,457 @@ export default function Radar() {
   useEffect(() => {
     if (!loading) {
       updateStats();
-      if (isActive) {
-        fetchMatches();
-      }
+      if (isActive) fetchMatches();
     }
   }, [loading, isActive]);
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-[80vh]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
       </div>
     );
-  }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* ═══════════════════════════════════════════════════════════════
-          PREMIUM BANNER — Feature Launch Announcement
-      ═══════════════════════════════════════════════════════════════ */}
-      <div className="relative overflow-hidden rounded-2xl border border-plan-diamond/30 bg-gradient-to-r from-plan-diamond/[0.08] via-plan-diamond/[0.04] to-accent/[0.06] p-6 sm:p-8">
-        {/* Decorative gradient orbs */}
-        <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-plan-diamond/10 blur-3xl" />
-        <div className="absolute -left-20 bottom-0 h-32 w-32 rounded-full bg-accent/10 blur-3xl" />
-
-        <div className="relative z-10">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-plan-diamond to-plan-diamond/70 shadow-lg">
-                <Gauge className="h-7 w-7 text-white" />
+    <div className="max-w-[1600px] mx-auto space-y-8 p-4 md:p-8 animate-in fade-in duration-700">
+      {/* --- HEADER SECTION: Immersive Glass Design --- */}
+      <header className="relative flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pb-2">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 shadow-inner">
+              <Satellite className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-black tracking-tight text-foreground uppercase italic">Radar</h1>
+                <Badge className="bg-plan-diamond text-white border-0 text-[10px] font-black px-2 py-0.5 rounded-sm tracking-tighter">
+                  PREMIUM
+                </Badge>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-foreground">{t("radar.title", "Radar")}</h1>
-                  <Badge className="bg-plan-diamond/20 text-plan-diamond border-plan-diamond/30 font-semibold gap-1">
-                    <Crown className="h-3.5 w-3.5" />
-                    {t("radar.premium_feature", "Premium")}
-                  </Badge>
-                </div>
-                <p className="text-sm text-foreground/80 max-w-2xl leading-relaxed">
-                  {t(
-                    "radar.subtitle",
-                    "Automatically discover and apply to jobs that match your profile. Let Radar work for you 24/7.",
-                  )}
-                </p>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <AnimatedPulse />
+                <span className="text-xs font-bold uppercase tracking-widest opacity-70">
+                  {isActive ? "System Online" : "System Standby"}
+                </span>
               </div>
             </div>
-            {isPremium && (
-              <div className="hidden sm:flex flex-col items-end gap-2">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-success/10 border border-success/20">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="text-xs font-semibold text-success">{t("radar.premium_active", "Active")}</span>
-                </div>
-              </div>
-            )}
           </div>
+          <p className="text-sm text-muted-foreground max-w-md font-medium leading-relaxed">
+            Algoritmo de varredura em tempo real para detecção de oportunidades H2B.
+          </p>
         </div>
-      </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          QUICK FILTERS — Refined Pill Design
-      ═══════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          {t("radar.filters_label", "Filters")}
-        </span>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowFilters(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/20 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 hover:border-primary/40 transition-all cursor-pointer"
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <GlassCard
+            className="flex items-center gap-4 px-6 py-3 border-primary/20 bg-primary/[0.02]"
+            active={isActive}
           >
-            <CircleDollarSign className="h-4 w-4" />
-            {wageDisplay}
-          </button>
-          <button
-            onClick={() => setShowFilters(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/20 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 hover:border-primary/40 transition-all cursor-pointer"
-          >
-            <MapPin className="h-4 w-4" />
-            {stateDisplay}
-          </button>
-          <button
-            onClick={() => setShowFilters(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/20 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 hover:border-primary/40 transition-all cursor-pointer"
-          >
-            <Briefcase className="h-4 w-4" />
-            {expDisplay}
-          </button>
-          <button
-            onClick={() => setShowFilters(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary/20 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 hover:border-primary/40 transition-all cursor-pointer"
-          >
-            <Target className="h-4 w-4" />
-            {visaDisplay}
-          </button>
-          <button
-            onClick={() => setShowFilters(true)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer border border-border hover:border-primary/20"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            {t("radar.edit_criteria", "Edit")}
-          </button>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          SECTION 1 — FIRST-TIME ONBOARDING (Enhanced)
-      ═══════════════════════════════════════════════════════════════ */}
-      {isFirstTime && (
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.04] via-card to-accent/[0.03] overflow-hidden">
-          <CardContent className="p-6 space-y-5">
-            <div className="space-y-2">
-              <h2 className="text-lg font-bold text-foreground">
-                {t("radar.welcome_title", "Get Started with Radar")}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {t(
-                  "radar.welcome_subtitle",
-                  "Set up your preferences and let Radar find the best opportunities for you",
-                )}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { icon: Target, step: "1", titleKey: "radar.welcome_step1_title", descKey: "radar.welcome_step1_desc" },
-                {
-                  icon: Settings2,
-                  step: "2",
-                  titleKey: "radar.welcome_step2_title",
-                  descKey: "radar.welcome_step2_desc",
-                },
-                { icon: Zap, step: "3", titleKey: "radar.welcome_step3_title", descKey: "radar.welcome_step3_desc" },
-              ].map(({ icon: Icon, step, titleKey, descKey }) => (
-                <div
-                  key={step}
-                  className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-colors"
-                >
-                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 shrink-0">
-                    <span className="text-xs font-bold text-primary">{step}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{t(titleKey)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t(descKey)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          SECTION 2 — AUTOPILOT CARD (Enhanced Premium Feel)
-      ═══════════════════════════════════════════════════════════════ */}
-      <Card
-        className={cn(
-          "overflow-hidden border transition-all duration-300",
-          autoSend
-            ? "border-primary/40 bg-gradient-to-r from-primary/[0.08] to-accent/[0.04] shadow-lg shadow-primary/10"
-            : "border-border bg-card hover:border-primary/20",
-        )}
-      >
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5 flex-1 min-w-0">
-              <div
-                className={cn(
-                  "p-3 rounded-xl shrink-0 transition-all duration-300",
-                  autoSend ? "bg-primary/15 shadow-lg shadow-primary/20" : "bg-muted",
-                )}
-              >
-                <Zap className={cn("h-5 w-5", autoSend ? "text-primary" : "text-muted-foreground")} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <h3 className="text-sm font-bold text-foreground">{t("radar.autosend_title", "Autopilot Mode")}</h3>
-                  {autoSend && (
-                    <Badge className="bg-primary/15 text-primary border-0 text-[10px] font-bold uppercase tracking-wider">
-                      {t("radar.status_active", "Active")}
-                    </Badge>
-                  )}
-                </div>
-                <p className={cn("text-xs leading-relaxed", autoSend ? "text-foreground/75" : "text-muted-foreground")}>
-                  {autoSend
-                    ? t("radar.autosend_active_desc", "Automatically sending applications to matching jobs")
-                    : t("radar.autosend_explanation", "Automatically apply to jobs matching your criteria")}
-                </p>
-              </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Autopilot</span>
+              <span className="text-sm font-bold">{autoSend ? "ENABLED" : "DISABLED"}</span>
             </div>
             <Switch
               checked={autoSend}
-              onCheckedChange={handleAutopilotToggle}
-              className="data-[state=checked]:bg-primary shrink-0"
+              onCheckedChange={(v) => {
+                setAutoSend(v);
+                if (v) performSave({ auto_send: true });
+              }}
+              className="data-[state=checked]:bg-primary"
             />
+          </GlassCard>
+
+          <Button
+            onClick={() => {
+              setIsActive(!isActive);
+              performSave({ is_active: !isActive });
+            }}
+            className={cn(
+              "h-14 px-8 rounded-2xl font-black uppercase tracking-widest transition-all duration-500 shadow-xl",
+              isActive
+                ? "bg-destructive hover:bg-destructive/90 shadow-destructive/20"
+                : "bg-primary hover:bg-primary/90 shadow-primary/20",
+            )}
+          >
+            {isActive ? (
+              <Pause className="mr-2 h-5 w-5 fill-current" />
+            ) : (
+              <Play className="mr-2 h-5 w-5 fill-current" />
+            )}
+            {isActive ? "Stop Scan" : "Start Scan"}
+          </Button>
+        </div>
+      </header>
+
+      {/* --- ANALYTICS BAR --- */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatBadge label="Live Signals" value={totalSinaisGeral} icon={Activity} trend="+12%" />
+        <StatBadge label="Active Matches" value={matchCount} icon={Target} />
+        <StatBadge label="Monitored Sectors" value={selectedCategories.length} icon={Globe} />
+        <StatBadge label="Scan Frequency" value="24/7" icon={Clock} />
+      </div>
+
+      {/* --- MAIN INTERFACE --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* LEFT: Configuration & Targeting (7/12) */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+              <Filter className="h-5 w-5 text-primary" /> Targeting Configuration
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(true)}
+              className="text-xs font-bold uppercase tracking-widest hover:bg-primary/5"
+            >
+              <Settings2 className="h-4 w-4 mr-2" /> Advanced Filters
+            </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          SECTION 3 — MAIN LAYOUT: Categories → Matches
-      ═══════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6" style={{ minHeight: "calc(100vh - 500px)" }}>
-        {/* LEFT — Categories (3/5) */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-foreground">{t("radar.categories_title", "Job Categories")}</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("radar.categories_subtitle", "Select sectors to monitor")}
-              </p>
-            </div>
-            <Badge variant="secondary" className="text-xs font-semibold shrink-0 px-3 py-1.5">
-              {totalSinaisGeral} {t("radar.active_jobs", "jobs")}
-            </Badge>
-          </div>
+          <GlassCard className="p-1">
+            <ScrollArea className="h-[600px] px-4 py-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-4">
+                {sectorEntries.map(([segment, data]) => {
+                  const selectedInSector = data.items.filter((i) => selectedCategories.includes(i.raw_category)).length;
+                  const isTracked = selectedInSector > 0;
+                  const isExpanded = expandedSectors.has(segment);
 
-          <ScrollArea className="h-[calc(100vh-600px)] rounded-lg border border-border">
-            <div className="space-y-2 p-4">
-              {sectorEntries.map(([segment, data]) => {
-                const selectedInSector = data.items.filter((i) => selectedCategories.includes(i.raw_category)).length;
-                const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
-                const isTracked = selectedInSector > 0;
-                const isExpanded = expandedSectors.has(segment);
-                const hasSubcategories = data.items.length > 1;
-
-                return (
-                  <div
-                    key={segment}
-                    className={cn(
-                      "rounded-lg border transition-all duration-200",
-                      isTracked
-                        ? "border-primary/30 bg-primary/[0.03] shadow-sm shadow-primary/5"
-                        : "border-border bg-card hover:border-primary/10",
-                    )}
-                  >
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={() => toggleSector(segment)}
-                        className={cn(
-                          "shrink-0",
-                          isTracked &&
-                            !allSelected &&
-                            "data-[state=unchecked]:bg-primary/20 data-[state=unchecked]:border-primary",
-                        )}
-                      />
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer select-none"
-                        onClick={() => (hasSubcategories ? toggleExpanded(segment) : toggleSector(segment))}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-sm font-semibold text-foreground truncate">{segment}</span>
-                          {isTracked && !allSelected && (
-                            <Badge variant="secondary" className="text-[10px] h-5 px-2 shrink-0 font-medium">
-                              {selectedInSector}/{data.items.length}
-                            </Badge>
-                          )}
-                          {allSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
-                        </div>
-                        <span className="text-[11px] text-muted-foreground mt-0.5">
-                          {data.totalJobs} {t("radar.active_jobs", "jobs")}
-                          {hasSubcategories &&
-                            ` · ${data.items.length} ${t("radar.subcategories_label", "subcategories")}`}
-                        </span>
+                  return (
+                    <div
+                      key={segment}
+                      className={cn(
+                        "group relative rounded-xl border p-4 transition-all duration-300 cursor-pointer overflow-hidden",
+                        isTracked
+                          ? "border-primary/40 bg-primary/[0.04]"
+                          : "border-border/40 bg-muted/10 hover:border-primary/20",
+                      )}
+                      onClick={() =>
+                        setExpandedSectors((prev) => {
+                          const next = new Set(prev);
+                          isExpanded ? next.delete(segment) : next.add(segment);
+                          return next;
+                        })
+                      }
+                    >
+                      {/* Background Decoration */}
+                      <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+                        <BarChart3 className="h-24 w-24" />
                       </div>
-                      {hasSubcategories && (
-                        <button
-                          onClick={() => toggleExpanded(segment)}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
-                        >
-                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </button>
+
+                      <div className="relative z-10 flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h3 className="font-black text-sm uppercase tracking-tight group-hover:text-primary transition-colors">
+                            {segment}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] font-bold border-primary/20 bg-primary/5 text-primary"
+                            >
+                              {data.totalJobs} SIGNALS
+                            </Badge>
+                            {isTracked && (
+                              <Badge className="text-[9px] font-bold bg-success/20 text-success border-0">
+                                MONITORING
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Checkbox
+                          checked={isTracked}
+                          onCheckedChange={() => {
+                            const sectorCats = data.items.map((i) => i.raw_category);
+                            setSelectedCategories((prev) =>
+                              isTracked
+                                ? prev.filter((c) => !sectorCats.includes(c))
+                                : [...new Set([...prev, ...sectorCats])],
+                            );
+                          }}
+                          className="mt-1 border-primary/30 data-[state=checked]:bg-primary"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-primary/10 space-y-2 animate-in slide-in-from-top-2 duration-300">
+                          {data.items.map((item) => (
+                            <div key={item.raw_category} className="flex items-center justify-between group/item">
+                              <span className="text-[11px] font-medium text-muted-foreground group-hover/item:text-foreground transition-colors">
+                                {item.raw_category}
+                              </span>
+                              <span className="text-[10px] font-black text-primary/40">{item.count}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-
-                    {hasSubcategories && isExpanded && (
-                      <div className="border-t border-border/50 px-4 py-3 space-y-1.5 bg-muted/20">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 px-2">
-                          {t("radar.subcategories_hint", "Subcategories")}
-                        </p>
-                        {data.items.map((item) => (
-                          <label
-                            key={item.raw_category}
-                            className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent/50 cursor-pointer transition-colors group"
-                          >
-                            <Checkbox
-                              checked={selectedCategories.includes(item.raw_category)}
-                              onCheckedChange={() => toggleSubCategory(item.raw_category)}
-                              className="shrink-0"
-                            />
-                            <span className="text-xs text-foreground flex-1 truncate group-hover:text-primary transition-colors">
-                              {item.raw_category}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground shrink-0">
-                              {item.count} {t("radar.jobs_label", "jobs")}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </GlassCard>
 
           {hasChangesComputed && (
             <Button
-              onClick={() => {
-                setIsActive(true);
-                performSave({ is_active: true });
-              }}
+              onClick={() => performSave()}
               disabled={saving}
-              className="w-full font-bold gap-2 h-11 text-base shadow-lg hover:shadow-xl transition-shadow"
+              className="w-full h-14 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-black uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-[0.98]"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {radarProfile ? t("radar.save_changes", "Save Changes") : t("radar.activate_and_save", "Activate Radar")}
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5 mr-2" />}
+              Commit Configuration
             </Button>
           )}
         </div>
 
-        {/* RIGHT — Matches (2/5) */}
-        <div className="lg:col-span-2 flex flex-col space-y-4">
-          {/* Match count hero */}
-          <div
-            className={cn(
-              "rounded-xl border p-5 text-center transition-all duration-300",
-              matchCount > 0
-                ? "border-primary/30 bg-gradient-to-br from-primary/[0.08] to-accent/[0.04] shadow-lg shadow-primary/10"
-                : "border-border bg-card",
-            )}
-          >
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Target
-                className={cn("h-5 w-5 transition-colors", matchCount > 0 ? "text-primary" : "text-muted-foreground")}
-              />
-              <h2 className="text-sm font-bold text-foreground">{t("radar.matches_title", "Matches")}</h2>
-              <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={fetchMatches}>
-                <RefreshCcw className="h-3.5 w-3.5" />
-              </Button>
+        {/* RIGHT: Live Feed (5/12) */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" /> Live Detection Feed
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Real-time</span>
+              <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             </div>
-            <div
-              className={cn(
-                "text-4xl font-bold transition-colors",
-                matchCount > 0 ? "text-primary" : "text-muted-foreground/50",
-              )}
-            >
-              {matchCount}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{t("radar.matches_hero_subtitle", "Ready to apply")}</p>
           </div>
 
-          {/* Send all CTA */}
-          {matchedJobs.length > 0 && (
-            <Button
-              onClick={handleSendAll}
-              disabled={batchSending}
-              className="w-full font-bold gap-2 h-10 shadow-lg hover:shadow-xl transition-shadow"
-            >
-              {batchSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {t("radar.send_all", "Send All")} ({matchCount})
-            </Button>
-          )}
+          <GlassCard className="flex-1 flex flex-col min-h-[600px]">
+            <ScrollArea className="flex-1 h-[600px]">
+              <div className="p-4 space-y-4">
+                {matchedJobs.length > 0 ? (
+                  matchedJobs.map((match, idx) => {
+                    const job = match.public_jobs;
+                    if (!job) return null;
+                    return (
+                      <div
+                        key={match.id}
+                        className="group relative p-5 rounded-2xl border border-border/50 bg-card/30 hover:border-primary/40 hover:bg-primary/[0.02] transition-all duration-300 animate-in fade-in slide-in-from-right-4"
+                        style={{ animationDelay: `${idx * 100}ms` }}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-3 flex-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-[9px] font-black tracking-tighter bg-muted/50">
+                                {job.visa_type}
+                              </Badge>
+                              <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" /> {job.state}
+                              </span>
+                            </div>
+                            <h3 className="text-base font-black leading-tight tracking-tight group-hover:text-primary transition-colors">
+                              {job.category}
+                            </h3>
+                            <div className="flex items-center gap-4">
+                              <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                                  Salary
+                                </span>
+                                <span className="text-sm font-bold text-foreground">${job.salary || "N/A"}/hr</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                                  Experience
+                                </span>
+                                <span className="text-sm font-bold text-foreground">{job.experience_months || 0}m</span>
+                              </div>
+                            </div>
+                          </div>
 
-          {/* Matches list */}
-          <ScrollArea className="flex-1 h-[calc(100vh-700px)] rounded-lg border border-border">
-            <div className="space-y-3 p-4">
-              {matchedJobs.length > 0 ? (
-                matchedJobs.map((match) => {
-                  const job = match.public_jobs;
-                  if (!job) return null;
-                  return (
-                    <Card
-                      key={match.id}
-                      className="hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden border-border"
-                    >
-                      <CardContent className="p-3.5 space-y-3">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge variant="secondary" className="text-[10px] font-semibold">
-                            {job.visa_type}
-                          </Badge>
-                          {job.randomization_group && (
-                            <Badge variant="outline" className="text-[10px] gap-1">
-                              <Layers className="h-3 w-3" /> {job.randomization_group}
-                            </Badge>
-                          )}
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 ml-auto">
-                            <MapPin className="h-3 w-3" /> {job.state}
-                          </span>
-                        </div>
-                        <h3 className="text-sm font-bold text-foreground leading-tight">{job.category}</h3>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Building2 className="h-3.5 w-3.5" /> {job.company || t("radar.company_fallback", "Company")}
-                        </p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold text-primary flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md">
-                            <CircleDollarSign className="h-3.5 w-3.5" /> ${job.salary || "N/A"}/hr
-                          </span>
-                          <span className="text-xs font-semibold text-primary flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md">
-                            <Briefcase className="h-3.5 w-3.5" /> {job.experience_months || 0}m
-                          </span>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="icon"
+                              onClick={() => handleSendApplication(match.id, job.id)}
+                              className="h-12 w-12 rounded-xl bg-primary shadow-lg shadow-primary/20 hover:scale-110 transition-transform"
+                            >
+                              <Send className="h-5 w-5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
+                              className="h-10 w-10 rounded-xl border-border/50 hover:bg-primary/5"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1.5 pt-2.5 border-t border-border">
-                          <Button
-                            onClick={() => handleSendApplication(match.id, job.id)}
-                            size="sm"
-                            className="font-bold text-xs flex-1 h-8 gap-1"
-                          >
-                            <Mail className="h-3.5 w-3.5" /> {t("radar.send_to_queue", "Apply")}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(`/jobs/${job.id}`, "_blank")}
-                            className="text-xs h-8 px-2"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
+                        {/* Action Bar */}
+                        <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-muted-foreground italic">
+                            Detected {idx + 1}m ago
+                          </span>
+                          <button
                             onClick={() => removeMatch(match.id)}
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                            className="text-[10px] font-black text-muted-foreground hover:text-destructive uppercase tracking-widest transition-colors"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                            Dismiss
+                          </button>
                         </div>
-                        <p className="text-[10px] text-muted-foreground leading-snug">
-                          {t("radar.queue_explanation", "Applications are queued and sent automatically")}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              ) : (
-                <div className="py-16 flex flex-col items-center gap-4 text-center">
-                  <div
-                    className={cn(
-                      "p-5 rounded-full transition-all",
-                      isActive ? "bg-primary/10 animate-pulse" : "bg-muted",
-                    )}
-                  >
-                    <Satellite className={cn("h-8 w-8", isActive ? "text-primary" : "text-muted-foreground")} />
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="h-[500px] flex flex-col items-center justify-center text-center space-y-6 opacity-40">
+                    <div className="relative">
+                      <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                      <div className="relative p-8 rounded-full bg-primary/5 border border-primary/10">
+                        <Search className="h-12 w-12 text-primary" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-lg font-black uppercase tracking-tighter">Scanning Frequencies...</p>
+                      <p className="text-xs font-medium max-w-[200px] mx-auto">
+                        No signals detected in the current targeting parameters.
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <p className="text-sm font-semibold text-foreground">
-                      {isActive
-                        ? t("radar.scanning", "Scanning for matches...")
-                        : t("radar.empty_title", "No matches yet")}
-                    </p>
-                    <p className="text-xs text-muted-foreground max-w-[220px]">
-                      {isActive
-                        ? t("radar.scanning_desc", "Radar is actively searching for opportunities")
-                        : t("radar.empty_desc", "Activate Radar to start finding jobs")}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+                )}
+              </div>
+            </ScrollArea>
 
-          {/* Relationship explainer */}
-          <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-muted/40 border border-border">
-            <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              {t("radar.causality_hint", "Matches are based on your selected categories and filters")}
-            </p>
-          </div>
+            {matchedJobs.length > 0 && (
+              <div className="p-4 border-t border-border/50 bg-muted/10">
+                <Button className="w-full h-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 font-black uppercase tracking-widest">
+                  Batch Process Signals ({matchCount})
+                </Button>
+              </div>
+            )}
+          </GlassCard>
         </div>
       </div>
 
-      {/* Filters Dialog */}
+      {/* --- FILTERS DIALOG: Custom High-End Styling --- */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("radar.edit_criteria", "Edit Criteria")}</DialogTitle>
-            <DialogDescription>
-              {t("radar.filters_description", "Customize your job search preferences")}
-            </DialogDescription>
+        <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-xl border-primary/20 rounded-[2rem] p-8">
+          <DialogHeader className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-primary/10">
+                <Settings2 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
+                  Targeting Parameters
+                </DialogTitle>
+                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                  Refine your detection algorithm
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="min-wage" className="text-sm font-semibold">
-                {t("radar.min_wage_label", "Minimum Hourly Wage")}
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">$</span>
-                <Input
-                  id="min-wage"
-                  type="number"
-                  value={minWage}
-                  onChange={(e) => setMinWage(e.target.value)}
-                  placeholder="0"
-                  className="flex-1"
-                />
-                <span className="text-sm text-muted-foreground">/hr</span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  Minimum Compensation
+                </Label>
+                <div className="relative">
+                  <CircleDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                  <Input
+                    type="number"
+                    value={minWage}
+                    onChange={(e) => setMinWage(e.target.value)}
+                    className="h-14 pl-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary/50 font-bold text-lg"
+                    placeholder="0.00"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
+                    USD/HR
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  Max Experience Required
+                </Label>
+                <div className="relative">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                  <Input
+                    type="number"
+                    value={maxExperience}
+                    onChange={(e) => setMaxExperience(e.target.value)}
+                    className="h-14 pl-12 rounded-xl bg-muted/30 border-border/50 focus:border-primary/50 font-bold text-lg"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
+                    YEARS
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="max-exp" className="text-sm font-semibold">
-                {t("radar.max_experience_label", "Maximum Experience Required")}
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="max-exp"
-                  type="number"
-                  value={maxExperience}
-                  onChange={(e) => setMaxExperience(e.target.value)}
-                  placeholder="0"
-                  className="flex-1"
-                />
-                <span className="text-sm text-muted-foreground">{t("radar.criteria_years", "years")}</span>
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  Geographic Focus
+                </Label>
+                <Select value={stateFilter} onValueChange={setStateFilter}>
+                  <SelectTrigger className="h-14 rounded-xl bg-muted/30 border-border/50 font-bold">
+                    <SelectValue placeholder="All States" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-primary/20">
+                    <SelectItem value="all" className="font-bold">
+                      GLOBAL (ALL STATES)
+                    </SelectItem>
+                    {US_STATES.map((s) => (
+                      <SelectItem key={s} value={s} className="font-bold">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  Visa Classification
+                </Label>
+                <Select value={visaType} onValueChange={setVisaType}>
+                  <SelectTrigger className="h-14 rounded-xl bg-muted/30 border-border/50 font-bold">
+                    <SelectValue placeholder="All Visas" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-primary/20">
+                    <SelectItem value="all" className="font-bold">
+                      ALL CLASSIFICATIONS
+                    </SelectItem>
+                    {VISA_TYPE_OPTIONS.map((v) => (
+                      <SelectItem key={v} value={v} className="font-bold">
+                        {v}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state" className="text-sm font-semibold">
-                {t("radar.state_label", "State")}
-              </Label>
-              <Select value={stateFilter} onValueChange={setStateFilter}>
-                <SelectTrigger id="state">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("radar.state_all", "All States")}</SelectItem>
-                  {US_STATES.map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {state}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="visa" className="text-sm font-semibold">
-                {t("radar.visa_label", "Visa Type")}
-              </Label>
-              <Select value={visaType} onValueChange={setVisaType}>
-                <SelectTrigger id="visa">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("radar.criteria_all_visas", "All Visa Types")}</SelectItem>
-                  {VISA_TYPE_OPTIONS.map((visa) => (
-                    <SelectItem key={visa} value={visa}>
-                      {visa}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button onClick={() => setShowFilters(false)} className="w-full font-bold">
-              {t("radar.apply_filters", "Apply Filters")}
-            </Button>
           </div>
+
+          <Button
+            onClick={() => {
+              setShowFilters(false);
+              performSave();
+            }}
+            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+          >
+            Apply Parameters
+          </Button>
         </DialogContent>
       </Dialog>
+
+      {/* --- FOOTER: System Status --- */}
+      <footer className="pt-8 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4 opacity-50">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Secure Scan Protocol</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Multi-Region Detection</span>
+          </div>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest">H2 Link Radar v4.0.2 — Premium Edition</span>
+      </footer>
     </div>
   );
 }
