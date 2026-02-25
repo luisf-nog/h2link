@@ -32,6 +32,10 @@ import {
   Globe,
   Settings2,
   Eye,
+  HelpCircle,
+  Zap,
+  CheckCircle2,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -371,6 +375,7 @@ export default function Radar() {
   const [visaType, setVisaType] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
@@ -592,6 +597,13 @@ export default function Radar() {
         console.error(e);
       } finally {
         setLoading(false);
+
+        // Auto-open "How it works" on first visit
+        const seenKey = "radar_how_it_works_seen";
+        if (!localStorage.getItem(seenKey)) {
+          localStorage.setItem(seenKey, "1");
+          setTimeout(() => setShowHowItWorks(true), 600);
+        }
       }
     };
 
@@ -642,9 +654,20 @@ export default function Radar() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/6 border border-success/20 shadow-sm">
-              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-bold text-success/80 uppercase tracking-widest">System Online</span>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHowItWorks(true)}
+                className="text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/5 gap-1.5 h-8 rounded-lg"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                Como funciona?
+              </Button>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/6 border border-success/20 shadow-sm">
+                <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                <span className="text-xs font-bold text-success/80 uppercase tracking-widest">System Online</span>
+              </div>
             </div>
           </div>
 
@@ -991,6 +1014,109 @@ export default function Radar() {
           >
             Apply Filters
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          HOW IT WORKS DIALOG
+      ═══════════════════════════════════════════════════════════════ */}
+      <Dialog open={showHowItWorks} onOpenChange={setShowHowItWorks}>
+        <DialogContent className="max-w-xl bg-card/95 backdrop-blur-xl border-border rounded-3xl p-0 overflow-hidden">
+          {/* Hero header */}
+          <div className="relative px-8 pt-8 pb-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                <Rocket className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-foreground">Como funciona o Radar?</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
+                  Seu assistente automático de candidaturas
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-8 py-6 space-y-6">
+            {/* Main pitch */}
+            <div className="space-y-3">
+              <p className="text-sm text-foreground leading-relaxed">
+                O Radar monitora <span className="font-bold text-primary">24 horas por dia, 7 dias por semana</span> todas as novas vagas publicadas no sistema DOL. 
+                Quando uma vaga compatível com seus filtros é detectada, ele age automaticamente por você.
+              </p>
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/5 border border-primary/15">
+                <Zap className="h-5 w-5 text-primary shrink-0" />
+                <p className="text-sm font-semibold text-primary">
+                  Ative e deixe. O Radar trabalha por você enquanto você descansa.
+                </p>
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
+                Passo a passo
+              </p>
+              
+              {[
+                {
+                  step: "1",
+                  title: "Configure seus filtros",
+                  desc: "Escolha os setores, salário mínimo, estado e tipo de visto que te interessam. Quanto mais específico, melhores os resultados.",
+                },
+                {
+                  step: "2", 
+                  title: "Escolha o modo de operação",
+                  desc: "No modo Manual, você revisa cada vaga antes de enviar. No Autopilot, o sistema envia automaticamente — zero esforço.",
+                },
+                {
+                  step: "3",
+                  title: "Ative o Radar e pronto!",
+                  desc: "O sistema escaneia continuamente por novas vagas. Quando encontra um match, gera um e-mail personalizado com IA e envia para o empregador.",
+                },
+              ].map((item) => (
+                <div key={item.step} className="flex items-start gap-4">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm shrink-0">
+                    {item.step}
+                  </div>
+                  <div className="space-y-1 pt-0.5">
+                    <p className="text-sm font-bold text-foreground">{item.title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Benefits */}
+            <div className="space-y-3 pt-2">
+              <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
+                Benefícios
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  "Candidaturas enviadas 24/7",
+                  "E-mails personalizados com IA",
+                  "Sem perder vagas novas",
+                  "Zero trabalho manual",
+                ].map((benefit) => (
+                  <div key={benefit} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-foreground/80">{benefit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="px-8 pb-8">
+            <Button
+              onClick={() => setShowHowItWorks(false)}
+              className="w-full h-12 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-sm uppercase tracking-wider"
+            >
+              Entendi, vamos começar!
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
