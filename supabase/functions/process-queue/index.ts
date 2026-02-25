@@ -779,9 +779,10 @@ async function processOneUser(params: {
   userId: string;
   maxItems: number;
   queueIds?: string[];
+  supabaseUrl: string;
 }): Promise<{ processed: number; sent: number; failed: number }>
 {
-  const { serviceClient, userId, maxItems, queueIds } = params;
+  const { serviceClient, userId, maxItems, queueIds, supabaseUrl } = params;
   console.log(`[processOneUser] Iniciando processamento para usuário ${userId}, maxItems: ${maxItems}, queueIds: ${queueIds?.length || 0}`);
 
   const { data: profile, error: profileErr } = await serviceClient
@@ -1354,7 +1355,7 @@ const handler = async (req: Request): Promise<Response> => {
       let failed = 0;
 
       for (const u of (users ?? []) as Array<{ id: string }>) {
-        const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2 });
+        const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2, supabaseUrl });
         if (r.processed > 0) usersTouched += 1;
         processed += r.processed;
         sent += r.sent;
@@ -1425,7 +1426,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Fire-and-forget: start processing in the background and return immediately.
     // This prevents the browser from timing out (which shows up as "Failed to fetch").
     console.log(`[process-queue] Iniciando processamento em background...`);
-    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
+    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds, supabaseUrl });
     const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
     if (typeof waitUntil === "function") {
       waitUntil(
