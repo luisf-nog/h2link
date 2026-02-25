@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { VISA_TYPE_OPTIONS } from "@/lib/visaTypes";
+import { formatNumber } from "@/lib/number";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2,
@@ -34,18 +35,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- Minimalist Premium Components ---
+// --- Visual Components with improved contrast & hierarchy ---
 
 const HeroPanel = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div
     className={cn(
-      "relative rounded-3xl border border-border/35 bg-gradient-to-br from-primary/[0.03] via-card to-card/60",
-      "backdrop-blur-sm shadow-[0_0_70px_-24px_rgba(var(--primary),0.10)]",
-      "ring-1 ring-inset ring-border/15 overflow-hidden",
+      "relative rounded-2xl border bg-card",
+      "shadow-[0_4px_24px_-4px_hsl(var(--foreground)/0.08)]",
+      "border-border",
       className,
     )}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.015] via-transparent to-transparent pointer-events-none" />
     <div className="relative z-10">{children}</div>
   </div>
 );
@@ -61,14 +61,14 @@ const MetricCard = ({
   icon: any;
   subtitle?: string;
 }) => (
-  <div className="flex flex-col gap-3 p-6">
+  <div className="flex flex-col gap-3 p-5">
     <div className="flex items-center justify-between">
-      <Icon className="h-4 w-4 text-muted-foreground/45" />
-      <span className="text-[9px] font-bold text-muted-foreground/35 uppercase tracking-[0.18em]">{label}</span>
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
     </div>
     <div className="space-y-1">
-      <div className="text-[34px] leading-none font-bold tracking-tight text-foreground">{value}</div>
-      {subtitle && <p className="text-[11px] text-muted-foreground/55">{subtitle}</p>}
+      <div className="text-3xl leading-none font-bold tracking-tight text-foreground">{value}</div>
+      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
     </div>
   </div>
 );
@@ -97,13 +97,13 @@ const SectorCard = ({
   return (
     <div
       className={cn(
-        "group relative rounded-2xl border transition-all duration-300 overflow-hidden",
-        "p-5 cursor-pointer",
+        "group relative rounded-xl border transition-all duration-200 overflow-hidden",
+        "p-4 cursor-pointer",
         allSelected
-          ? "border-primary/30 bg-primary/[0.05] shadow-[0_0_34px_-18px_rgba(var(--primary),0.14)]"
+          ? "border-primary/40 bg-primary/[0.06] shadow-sm"
           : partialSelected
-            ? "border-primary/20 bg-primary/[0.025] hover:border-primary/25 hover:bg-primary/[0.035]"
-            : "border-border/40 bg-card/40 hover:border-primary/20 hover:bg-card/60",
+            ? "border-primary/25 bg-primary/[0.03] hover:border-primary/35"
+            : "border-border bg-card hover:border-primary/25 hover:shadow-sm",
       )}
       onClick={onExpand}
       role="button"
@@ -115,13 +115,13 @@ const SectorCard = ({
       {/* Left indicator bar */}
       <div
         className={cn(
-          "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
-          allSelected ? "bg-primary" : partialSelected ? "bg-primary/45" : "bg-transparent group-hover:bg-primary/20",
+          "absolute left-0 top-0 bottom-0 w-1 transition-all duration-200",
+          allSelected ? "bg-primary" : partialSelected ? "bg-primary/50" : "bg-transparent group-hover:bg-primary/20",
         )}
       />
 
-      <div className="flex items-start justify-between gap-4 pl-2">
-        <div className="flex-1 space-y-3">
+      <div className="flex items-start justify-between gap-3 pl-2">
+        <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
             <div
               className="shrink-0"
@@ -132,37 +132,37 @@ const SectorCard = ({
               <Checkbox
                 checked={allSelected}
                 onCheckedChange={() => onToggleAllInSector()}
-                className="border-border/55 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
               />
             </div>
 
             <div className="min-w-0">
-              <h3 className="font-semibold text-sm text-foreground/90 group-hover:text-primary transition-colors truncate">
+              <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
                 {segment}
               </h3>
-              <div className="flex items-center gap-2 text-[11px] mt-1">
-                <span className="text-muted-foreground/60">{data.totalJobs} opportunities</span>
+              <div className="flex items-center gap-2 text-xs mt-0.5">
+                <span className="text-muted-foreground">{formatNumber(data.totalJobs)} vagas</span>
 
                 {allSelected && (
                   <Badge
                     variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold"
+                    className="bg-primary/10 text-primary border-primary/25 text-[10px] font-semibold"
                   >
-                    Monitoring
+                    Monitorando
                   </Badge>
                 )}
 
                 {partialSelected && (
                   <Badge
                     variant="outline"
-                    className="bg-primary/5 text-primary/70 border-primary/15 text-[9px] font-bold"
+                    className="bg-primary/5 text-primary/70 border-primary/20 text-[10px] font-semibold"
                   >
-                    Partial
+                    Parcial
                   </Badge>
                 )}
 
                 {totalInSector > 0 && (
-                  <span className="text-[10px] font-bold text-muted-foreground/35">
+                  <span className="text-[10px] font-medium text-muted-foreground">
                     {selectedInSector}/{totalInSector}
                   </span>
                 )}
@@ -174,7 +174,7 @@ const SectorCard = ({
         {data.items.length > 1 && (
           <ChevronRight
             className={cn(
-              "h-4 w-4 text-muted-foreground/35 transition-transform duration-300 mt-1",
+              "h-4 w-4 text-muted-foreground transition-transform duration-200 mt-1",
               isExpanded && "rotate-90",
             )}
           />
@@ -183,7 +183,7 @@ const SectorCard = ({
 
       {/* Expanded subcategories */}
       {isExpanded && data.items.length > 1 && (
-        <div className="mt-5 pt-5 border-t border-border/20 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="mt-4 pt-4 border-t border-border/60 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
           {data.items.map((item: any) => {
             const checked = isTracked.includes(item.raw_category);
             return (
@@ -192,12 +192,12 @@ const SectorCard = ({
                   <span
                     className={cn(
                       "inline-block h-1.5 w-1.5 rounded-full",
-                      checked ? "bg-primary" : "bg-muted-foreground/25",
+                      checked ? "bg-primary" : "bg-muted-foreground/40",
                     )}
                   />
-                  <span className="text-[12px] text-muted-foreground/70 truncate">{item.raw_category}</span>
+                  <span className="text-xs text-muted-foreground truncate">{item.raw_category}</span>
                 </div>
-                <span className="text-[10px] font-bold text-muted-foreground/35">{item.count}</span>
+                <span className="text-[10px] font-medium text-muted-foreground">{formatNumber(item.count)}</span>
               </div>
             );
           })}
@@ -208,18 +208,17 @@ const SectorCard = ({
 };
 
 const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
-  <div className="group relative rounded-2xl border border-border/40 bg-card/40 hover:border-primary/30 hover:bg-card/70 transition-all duration-300 p-5 space-y-4">
+  <div className="group relative rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all duration-200 p-5 space-y-4">
     {/* Top metadata */}
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-[9px] font-bold border-border/50 bg-muted/30">
+        <Badge variant="outline" className="text-[10px] font-semibold border-border bg-muted/50">
           {job.visa_type}
         </Badge>
-        <span className="text-[10px] font-bold text-muted-foreground/45 flex items-center gap-1">
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
           <MapPin className="h-3 w-3" /> {job.state}
         </span>
       </div>
-      <span className="text-[9px] text-muted-foreground/35">Detected 2m ago</span>
     </div>
 
     {/* Job title */}
@@ -229,13 +228,13 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
 
     {/* Key metrics */}
     <div className="grid grid-cols-2 gap-3">
-      <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/20 border border-border/20">
-        <span className="text-[9px] font-bold text-muted-foreground/45 uppercase tracking-wider">Salary</span>
-        <span className="text-sm font-bold text-foreground">${job.salary || "N/A"}/hr</span>
+      <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/40 border border-border">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Salário</span>
+        <span className="text-sm font-bold text-foreground">${job.salary ? formatNumber(job.salary) : "N/A"}/hr</span>
       </div>
-      <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/20 border border-border/20">
-        <span className="text-[9px] font-bold text-muted-foreground/45 uppercase tracking-wider">Exp</span>
-        <span className="text-sm font-bold text-foreground">{job.experience_months || 0}m</span>
+      <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/40 border border-border">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Exp.</span>
+        <span className="text-sm font-bold text-foreground">{job.experience_months || 0} meses</span>
       </div>
     </div>
 
@@ -243,15 +242,15 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
     <div className="flex items-center gap-2 pt-2">
       <Button
         onClick={() => onApply(match.id, job.id)}
-        className="flex-1 h-10 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 font-bold text-sm transition-all"
+        className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-sm transition-all"
       >
-        <Send className="h-4 w-4 mr-2" /> Apply
+        <Send className="h-4 w-4 mr-2" /> Candidatar
       </Button>
       <Button
         variant="ghost"
         size="icon"
         onClick={() => onView(job.id)}
-        className="h-10 w-10 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-primary/5"
+        className="h-10 w-10 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5"
       >
         <Eye className="h-4 w-4" />
       </Button>
@@ -259,7 +258,7 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
         variant="ghost"
         size="icon"
         onClick={() => onDismiss(match.id)}
-        className="h-10 w-10 rounded-lg border border-border/40 hover:border-destructive/30 hover:bg-destructive/5 text-muted-foreground hover:text-destructive"
+        className="h-10 w-10 rounded-lg border border-border hover:border-destructive/30 hover:bg-destructive/5 text-muted-foreground hover:text-destructive"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -293,56 +292,11 @@ const SECTOR_KEYWORDS: Record<string, string[]> = {
 };
 
 const US_STATES = [
-  "AL",
-  "AK",
-  "AZ",
-  "AR",
-  "CA",
-  "CO",
-  "CT",
-  "DE",
-  "FL",
-  "GA",
-  "HI",
-  "ID",
-  "IL",
-  "IN",
-  "IA",
-  "KS",
-  "KY",
-  "LA",
-  "ME",
-  "MD",
-  "MA",
-  "MI",
-  "MN",
-  "MS",
-  "MO",
-  "MT",
-  "NE",
-  "NV",
-  "NH",
-  "NJ",
-  "NM",
-  "NY",
-  "NC",
-  "ND",
-  "OH",
-  "OK",
-  "OR",
-  "PA",
-  "RI",
-  "SC",
-  "SD",
-  "TN",
-  "TX",
-  "UT",
-  "VT",
-  "VA",
-  "WA",
-  "WV",
-  "WI",
-  "WY",
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
+  "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+  "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+  "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
 export default function Radar() {
@@ -401,6 +355,12 @@ export default function Radar() {
     groupFilter,
     radarProfile,
   ]);
+
+  // --- Filter display helpers ---
+  const wageDisplay = minWage ? `$${formatNumber(Number(minWage))}+/hr` : "Qualquer salário";
+  const stateDisplay = stateFilter !== "all" ? stateFilter : "Todos os estados";
+  const expDisplay = maxExperience ? `Até ${maxExperience} meses exp.` : "Qualquer experiência";
+  const visaDisplay = visaType !== "all" ? visaType : "Todos os vistos";
 
   const updateStats = async () => {
     if (!profile?.id) return;
@@ -488,7 +448,7 @@ export default function Radar() {
 
       toast({ title: t("radar.toast_recalibrated") });
     } else {
-      toast({ title: "Error saving configuration", variant: "destructive" });
+      toast({ title: "Erro ao salvar configuração", variant: "destructive" });
     }
 
     setSaving(false);
@@ -506,9 +466,9 @@ export default function Radar() {
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
 
-      toast({ title: "Application queued" });
+      toast({ title: "Candidatura adicionada à fila de envio!" });
     } catch (err) {
-      toast({ title: "Error sending application", variant: "destructive" });
+      toast({ title: "Erro ao enviar candidatura", variant: "destructive" });
     }
   };
 
@@ -521,7 +481,7 @@ export default function Radar() {
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      toast({ title: "Error", variant: "destructive" });
+      toast({ title: "Erro", variant: "destructive" });
     }
   };
 
@@ -540,15 +500,16 @@ export default function Radar() {
           .single();
 
         if (data) {
-          setRadarProfile(data);
-          setIsActive(data.is_active ?? false);
-          setRadarMode(data.auto_send ? "autopilot" : "manual");
-          setSelectedCategories(data.categories || []);
-          setMinWage(data.min_wage?.toString() || "");
-          setMaxExperience(data.max_experience?.toString() || "");
-          setVisaType(data.visa_type || "all");
-          setStateFilter(data.state || "all");
-          setGroupFilter(data.randomization_group || "all");
+          const d = data as any;
+          setRadarProfile(d);
+          setIsActive(d.is_active ?? false);
+          setRadarMode(d.auto_send ? "autopilot" : "manual");
+          setSelectedCategories(d.categories || []);
+          setMinWage(d.min_wage?.toString() || "");
+          setMaxExperience(d.max_experience?.toString() || "");
+          setVisaType(d.visa_type || "all");
+          setStateFilter(d.state || "all");
+          setGroupFilter(d.randomization_group || "all");
         }
       } catch (e) {
         console.error(e);
@@ -568,7 +529,6 @@ export default function Radar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, isActive]);
 
-  // Keep stats visually responsive to filter adjustments (even before saving)
   useEffect(() => {
     if (!loading) updateStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -577,48 +537,80 @@ export default function Radar() {
   if (loading)
     return (
       <div className="flex items-center justify-center h-[80vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12 p-6 md:p-12 animate-in fade-in duration-700">
+    <div className="max-w-[1600px] mx-auto space-y-8 p-4 md:p-8 animate-in fade-in duration-500">
+
       {/* ═══════════════════════════════════════════════════════════════
-          LEVEL 1: HERO CONTROL PANEL
+          LEVEL 1: RADAR STATUS + ACTIVE CRITERIA
       ═══════════════════════════════════════════════════════════════ */}
-      <HeroPanel className="p-8">
-        <div className="space-y-8">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-primary/6 border border-primary/12">
-                  <Satellite className="h-5 w-5 text-primary/70" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground">Radar</h1>
-                  <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
-                    Premium Edition
-                  </p>
-                </div>
+      <HeroPanel className="p-6 md:p-8">
+        <div className="space-y-6">
+          {/* Header row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                <Satellite className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-foreground">Job Radar</h1>
+                <p className="text-xs text-muted-foreground">
+                  Busca automática 24/7 por vagas que combinam com você
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/6 border border-success/20 shadow-sm">
-              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-bold text-success/70 uppercase tracking-widest">System Online</span>
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold",
+              isActive
+                ? "bg-success/10 border-success/30 text-success"
+                : "bg-muted border-border text-muted-foreground"
+            )}>
+              <div className={cn("h-2 w-2 rounded-full", isActive ? "bg-success animate-pulse" : "bg-muted-foreground/40")} />
+              {isActive ? "Radar Ativo" : "Radar Pausado"}
             </div>
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-border/0 via-border/35 to-border/0" />
+          <div className="h-px bg-border" />
+
+          {/* Active Criteria Chips — always visible */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-3">
+              Critérios de busca — o radar só mostra vagas que atendem a TODOS estes filtros:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setShowFilters(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
+                {wageDisplay}
+              </button>
+              <button onClick={() => setShowFilters(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                {stateDisplay}
+              </button>
+              <button onClick={() => setShowFilters(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                <Briefcase className="h-3.5 w-3.5 text-primary" />
+                {expDisplay}
+              </button>
+              <button onClick={() => setShowFilters(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                <Globe className="h-3.5 w-3.5 text-primary" />
+                {visaDisplay}
+              </button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-border" />
 
           {/* Control Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left: Radar Mode */}
-            <div className="space-y-4">
-              <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-                Radar Mode
+            <div className="space-y-3">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Modo do Radar
               </label>
               <div className="flex gap-3">
                 {(["manual", "autopilot"] as const).map((mode) => (
@@ -626,22 +618,29 @@ export default function Radar() {
                     key={mode}
                     onClick={() => setRadarMode(mode)}
                     className={cn(
-                      "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
+                      "flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 border",
                       radarMode === mode
-                        ? "bg-primary/10 border-primary/30 text-primary shadow-[0_0_18px_-10px_rgba(var(--primary),0.18)]"
-                        : "bg-muted/25 border-border/45 text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
+                        ? mode === "autopilot"
+                          ? "bg-success/10 border-success/30 text-success"
+                          : "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-muted/40 border-border text-muted-foreground hover:border-primary/25 hover:bg-muted/60",
                     )}
                   >
-                    {mode === "manual" ? "Manual" : "Autopilot"}
+                    {mode === "manual" ? "Manual" : "🤖 Autopilot"}
                   </button>
                 ))}
               </div>
+              {radarMode === "autopilot" && (
+                <p className="text-xs text-success/80 bg-success/5 border border-success/20 rounded-lg px-3 py-2">
+                  O sistema envia candidaturas automaticamente para vagas compatíveis. Você não precisa fazer nada!
+                </p>
+              )}
             </div>
 
             {/* Right: Radar Control */}
-            <div className="space-y-4">
-              <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-                Scan Control
+            <div className="space-y-3">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Controle
               </label>
               <Button
                 onClick={() => {
@@ -650,13 +649,13 @@ export default function Radar() {
                   performSave({ is_active: next });
                 }}
                 className={cn(
-                  "w-full h-12 rounded-lg font-bold uppercase tracking-wider transition-all duration-300",
+                  "w-full h-12 rounded-lg font-semibold transition-all duration-200",
                   isActive
-                    ? "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15"
-                    : "bg-primary text-primary-foreground border border-primary hover:bg-primary/90",
+                    ? "bg-muted text-foreground border border-border hover:bg-muted/80"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90",
                 )}
               >
-                {isActive ? "Pause Radar" : "Start Radar"}
+                {isActive ? "⏸ Pausar Radar" : "▶ Ativar Radar"}
               </Button>
             </div>
           </div>
@@ -664,124 +663,104 @@ export default function Radar() {
       </HeroPanel>
 
       {/* ═══════════════════════════════════════════════════════════════
-          LEVEL 2: METRICS & INTELLIGENCE
+          LEVEL 2: METRICS
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <HeroPanel className="p-0 overflow-hidden">
-          <MetricCard label="Live Signals" value={totalSinaisGeral} icon={Activity} subtitle="Opportunities detected" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <HeroPanel>
+          <MetricCard label="Vagas Encontradas" value={formatNumber(totalSinaisGeral)} icon={Activity} subtitle="No total" />
         </HeroPanel>
-        <HeroPanel className="p-0 overflow-hidden">
-          <MetricCard label="Active Matches" value={matchCount} icon={Target} subtitle="Ready to apply" />
+        <HeroPanel>
+          <MetricCard label="Matches" value={formatNumber(matchCount)} icon={Target} subtitle="Prontos para envio" />
         </HeroPanel>
-        <HeroPanel className="p-0 overflow-hidden">
-          <MetricCard
-            label="Sectors Monitored"
-            value={selectedCategories.length}
-            icon={Globe}
-            subtitle="Active tracking"
-          />
+        <HeroPanel>
+          <MetricCard label="Setores" value={formatNumber(selectedCategories.length)} icon={Globe} subtitle="Monitorados" />
         </HeroPanel>
-        <HeroPanel className="p-0 overflow-hidden">
-          <MetricCard label="Scan Frequency" value="24/7" icon={Clock} subtitle="Continuous monitoring" />
+        <HeroPanel>
+          <MetricCard label="Frequência" value="24/7" icon={Clock} subtitle="Contínuo" />
         </HeroPanel>
-      </div>
-
-      {/* Intelligence Indicator */}
-      <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-muted/20 border border-border/40">
-        <Sparkles className="h-4 w-4 text-primary/50" />
-        <p className="text-sm text-muted-foreground/70">
-          Matching opportunities based on <span className="font-semibold text-foreground">salary requirements</span>,{" "}
-          <span className="font-semibold text-foreground">sector preferences</span>, and{" "}
-          <span className="font-semibold text-foreground">location criteria</span>.
-        </p>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          LEVEL 3: CONFIGURATION & LIVE FEED
+          LEVEL 3: SECTOR TARGETING + LIVE FEED
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
-        {/* Left: Targeting Configuration */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Filter className="h-5 w-5 text-primary/50" /> Sector Targeting
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        {/* Left: Targeting Configuration — subtle background difference */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Filter className="h-4 w-4 text-primary" /> Setores Monitorados
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFilters(true)}
-              className="text-xs font-bold uppercase tracking-widest hover:bg-primary/5 h-8"
-            >
-              <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Filters
-            </Button>
+            <span className="text-xs text-muted-foreground">
+              Selecione os setores → vagas aparecem ao lado
+            </span>
           </div>
 
-          <HeroPanel className="p-0 overflow-hidden">
-            <ScrollArea className="h-[500px]">
-              <div className="space-y-3 p-6">
-                {sectorEntries.map(([segment, data]) => {
-                  const selectedInSector = data.items.filter((i: any) =>
-                    selectedCategories.includes(i.raw_category),
-                  ).length;
-                  const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
-                  const isExpanded = expandedSectors.has(segment);
+          <div className="rounded-2xl border border-border bg-muted/20 p-1">
+            <HeroPanel className="border-0 shadow-none bg-card">
+              <ScrollArea className="h-[500px]">
+                <div className="space-y-2 p-4">
+                  {sectorEntries.map(([segment, data]) => {
+                    const selectedInSector = data.items.filter((i: any) =>
+                      selectedCategories.includes(i.raw_category),
+                    ).length;
+                    const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
+                    const isExpanded = expandedSectors.has(segment);
 
-                  return (
-                    <SectorCard
-                      key={segment}
-                      segment={segment}
-                      data={data}
-                      isTracked={selectedCategories}
-                      isExpanded={isExpanded}
-                      onToggleAllInSector={() => {
-                        const sectorCats = data.items.map((i: any) => i.raw_category);
-                        setSelectedCategories((prev) =>
-                          allSelected
-                            ? prev.filter((c) => !sectorCats.includes(c))
-                            : [...new Set([...prev, ...sectorCats])],
-                        );
-                      }}
-                      onExpand={() => {
-                        const next = new Set(expandedSectors);
-                        isExpanded ? next.delete(segment) : next.add(segment);
-                        setExpandedSectors(next);
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </HeroPanel>
+                    return (
+                      <SectorCard
+                        key={segment}
+                        segment={segment}
+                        data={data}
+                        isTracked={selectedCategories}
+                        isExpanded={isExpanded}
+                        onToggleAllInSector={() => {
+                          const sectorCats = data.items.map((i: any) => i.raw_category);
+                          setSelectedCategories((prev) =>
+                            allSelected
+                              ? prev.filter((c) => !sectorCats.includes(c))
+                              : [...new Set([...prev, ...sectorCats])],
+                          );
+                        }}
+                        onExpand={() => {
+                          const next = new Set(expandedSectors);
+                          isExpanded ? next.delete(segment) : next.add(segment);
+                          setExpandedSectors(next);
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </HeroPanel>
+          </div>
 
           {hasChangesComputed && (
             <Button
               onClick={() => performSave()}
               disabled={saving}
-              className="w-full h-12 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-wider"
+              className="w-full h-11 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              Save Configuration
+              Salvar Configuração
             </Button>
           )}
         </div>
 
         {/* Right: Live Detection Feed */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary/50" /> Live Feed
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" /> Vagas Encontradas
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
-                Real-time
-              </span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Em tempo real</span>
               <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             </div>
           </div>
 
-          <HeroPanel className="p-0 overflow-hidden flex flex-col min-h-[500px]">
+          <HeroPanel className="flex flex-col min-h-[500px]">
             <ScrollArea className="flex-1 h-[500px]">
-              <div className="p-6 space-y-4">
+              <div className="p-4 space-y-3">
                 {matchedJobs.length > 0 ? (
                   matchedJobs.map((match) => {
                     const job = match.public_jobs;
@@ -799,17 +778,14 @@ export default function Radar() {
                     );
                   })
                 ) : (
-                  <div className="h-[450px] flex flex-col items-center justify-center text-center space-y-6">
-                    <div className="relative">
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/10 blur-xl" />
-                      <div className="relative p-6 rounded-full bg-primary/5 border border-primary/10">
-                        <Search className="h-8 w-8 text-primary/40" />
-                      </div>
+                  <div className="h-[450px] flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="p-5 rounded-full bg-muted/50 border border-border">
+                      <Search className="h-7 w-7 text-muted-foreground" />
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-foreground">Scanning frequencies...</p>
-                      <p className="text-xs text-muted-foreground/60 max-w-[240px]">
-                        No signals detected. Configure your targeting parameters to begin.
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">Buscando vagas...</p>
+                      <p className="text-xs text-muted-foreground max-w-[260px]">
+                        Selecione setores à esquerda e ative o radar para encontrar vagas compatíveis.
                       </p>
                     </div>
                   </div>
@@ -824,68 +800,68 @@ export default function Radar() {
           FILTERS DIALOG
       ═══════════════════════════════════════════════════════════════ */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
-        <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-xl border-border/50 rounded-3xl p-8">
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="text-xl font-bold">Advanced Filters</DialogTitle>
-            <DialogDescription className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-              Refine your targeting parameters
+        <DialogContent className="max-w-2xl bg-card border-border rounded-2xl p-6 md:p-8">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg font-bold">Critérios de Busca</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Defina os parâmetros mínimos. O radar só mostra vagas que atendem a <strong>todos</strong> os critérios abaixo.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-                  Minimum Salary
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-foreground">
+                  Salário mínimo por hora
                 </Label>
                 <div className="relative">
-                  <CircleDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                  <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
                   <Input
                     type="number"
                     value={minWage}
                     onChange={(e) => setMinWage(e.target.value)}
-                    className="h-11 pl-11 rounded-lg bg-muted/20 border-border/40 focus:border-primary/50 font-semibold"
-                    placeholder="0.00"
+                    className="h-10 pl-10 rounded-lg border-border font-medium"
+                    placeholder="Ex: 16"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground/40">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                     USD/HR
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-                  Max Experience
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-foreground">
+                  Experiência máxima exigida (meses)
                 </Label>
                 <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+                  <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
                   <Input
                     type="number"
                     value={maxExperience}
                     onChange={(e) => setMaxExperience(e.target.value)}
-                    className="h-11 pl-11 rounded-lg bg-muted/20 border-border/40 focus:border-primary/50 font-semibold"
-                    placeholder="0"
+                    className="h-10 pl-10 rounded-lg border-border font-medium"
+                    placeholder="Ex: 12"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground/40">
-                    YEARS
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    meses
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">State</Label>
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-foreground">Estado (EUA)</Label>
                 <Select value={stateFilter} onValueChange={setStateFilter}>
-                  <SelectTrigger className="h-11 rounded-lg bg-muted/20 border-border/40 font-semibold">
+                  <SelectTrigger className="h-10 rounded-lg border-border font-medium">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-lg border-border/50">
-                    <SelectItem value="all" className="font-semibold">
-                      All States
+                  <SelectContent className="rounded-lg border-border">
+                    <SelectItem value="all" className="font-medium">
+                      Todos os estados
                     </SelectItem>
                     {US_STATES.map((s) => (
-                      <SelectItem key={s} value={s} className="font-semibold">
+                      <SelectItem key={s} value={s} className="font-medium">
                         {s}
                       </SelectItem>
                     ))}
@@ -893,21 +869,18 @@ export default function Radar() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-                  Visa Type
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-foreground">
+                  Tipo de Visto
                 </Label>
                 <Select value={visaType} onValueChange={setVisaType}>
-                  <SelectTrigger className="h-11 rounded-lg bg-muted/20 border-border/40 font-semibold">
+                  <SelectTrigger className="h-10 rounded-lg border-border font-medium">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-lg border-border/50">
-                    <SelectItem value="all" className="font-semibold">
-                      All Types
-                    </SelectItem>
+                  <SelectContent className="rounded-lg border-border">
                     {VISA_TYPE_OPTIONS.map((v) => (
-                      <SelectItem key={v} value={v} className="font-semibold">
-                        {v}
+                      <SelectItem key={v.value} value={v.value} className="font-medium">
+                        {v.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -921,18 +894,12 @@ export default function Radar() {
               setShowFilters(false);
               performSave();
             }}
-            className="w-full h-11 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-wider"
+            className="w-full h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
           >
-            Apply Filters
+            Aplicar Filtros
           </Button>
         </DialogContent>
       </Dialog>
-
-      {/* Footer */}
-      <div className="pt-8 border-t border-border/20 flex items-center justify-between text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">
-        <span>H2 Link Radar • Premium Edition</span>
-        <span>v4.1.0</span>
-      </div>
     </div>
   );
 }
