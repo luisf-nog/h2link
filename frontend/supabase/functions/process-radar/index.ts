@@ -155,7 +155,10 @@ serve(async (req) => {
 
             const { error: queueError } = await supabase
               .from("my_queue")
-              .insert(queueRecords);
+              .upsert(queueRecords, {
+                onConflict: "user_id,job_id",
+                ignoreDuplicates: true,
+              });
 
             if (!queueError) {
               totalQueued += queueRecords.length;
