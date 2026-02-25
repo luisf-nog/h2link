@@ -182,7 +182,7 @@ async function computeSuspicion(
   const secondsSinceSend = sentAt ? (Date.now() - sentAt.getTime()) / 1000 : ANTIVIRUS_DELAY_SECONDS + 1;
 
   if (secondsSinceSend < ANTIVIRUS_DELAY_SECONDS) {
-    score += 50;
+    score += 70;
     reasons.push(`too_fast:${Math.round(secondsSinceSend)}s`);
   }
 

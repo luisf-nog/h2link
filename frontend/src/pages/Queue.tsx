@@ -20,6 +20,7 @@ import { SendingStatusCard } from "@/components/queue/SendingStatusCard";
 import { useNavigate } from "react-router-dom";
 import { format, type Locale } from "date-fns";
 import { ptBR, enUS, es } from "date-fns/locale";
+import { formatDateTz } from "@/lib/formatDate";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -675,12 +676,10 @@ export default function Queue() {
     return t("queue.status.pending");
   };
 
+  const userTz = profile?.timezone;
+
   const formatOpenedAt = (openedAt: string) => {
-    try {
-      return format(new Date(openedAt), "dd/MM/yyyy HH:mm");
-    } catch {
-      return openedAt;
-    }
+    return formatDateTz(openedAt, i18n.language, userTz);
   };
 
   return (
@@ -1009,11 +1008,7 @@ export default function Queue() {
                               {item.status === "sent" && item.sent_at ? (
                                 <span className="flex items-center gap-1">
                                   {Math.max(item.send_count, 1)}x{" "}
-                                  {format(
-                                    new Date(item.sent_at),
-                                    i18n.language === "en" ? "MM/dd hh:mm a" : "dd/MM HH:mm",
-                                    { locale: dateLocaleMap[i18n.language] ?? enUS },
-                                  )}
+                                  {formatDateTz(item.sent_at, i18n.language, userTz, { short: true })}
                                 </span>
                               ) : (
                                 statusLabel(item.status)

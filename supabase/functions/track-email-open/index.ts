@@ -77,7 +77,7 @@ async function computeSuspicion(
 
   const sentAt = historyRow.sent_at ? new Date(historyRow.sent_at as string) : null;
   const secSinceSend = sentAt ? (Date.now() - sentAt.getTime()) / 1000 : ANTIVIRUS_DELAY_SECONDS + 1;
-  if (secSinceSend < ANTIVIRUS_DELAY_SECONDS) { score += 50; reasons.push(`fast:${Math.round(secSinceSend)}s`); }
+  if (secSinceSend < ANTIVIRUS_DELAY_SECONDS) { score += 70; reasons.push(`fast:${Math.round(secSinceSend)}s`); }
 
   const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
   const { count: recentCount } = await db

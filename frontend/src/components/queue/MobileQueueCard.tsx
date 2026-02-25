@@ -8,10 +8,8 @@ import { Trash2, Send, Loader2, RefreshCw, History, Mail, Building2, FileText, F
 import { useTranslation } from "react-i18next";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
-import { format, type Locale } from "date-fns";
-import { ptBR, enUS, es } from "date-fns/locale";
-
-const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
+import { formatDateTz } from "@/lib/formatDate";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface QueueItem {
   id: string;
@@ -69,6 +67,8 @@ export function MobileQueueCard({
   globalSending,
 }: MobileQueueCardProps) {
   const { t, i18n } = useTranslation();
+  const { profile } = useAuth();
+  const userTz = profile?.timezone;
   const job = item.public_jobs ?? item.manual_jobs;
 
   const statusLabel = (status: string) => {
@@ -81,11 +81,7 @@ export function MobileQueueCard({
   };
 
   const formatOpenedAt = (openedAt: string) => {
-    try {
-      return format(new Date(openedAt), "dd/MM/yyyy HH:mm");
-    } catch {
-      return openedAt;
-    }
+    return formatDateTz(openedAt, i18n.language, userTz);
   };
 
   const getStatusBadgeClasses = (status: string) => {
@@ -164,11 +160,7 @@ export function MobileQueueCard({
           >
             {item.status === "sent" && item.sent_at ? (
               <span className="flex items-center gap-1">
-                {Math.max(item.send_count, 1)}x {format(
-                  new Date(item.sent_at),
-                  i18n.language === "en" ? "MM/dd hh:mm a" : "dd/MM HH:mm",
-                  { locale: dateLocaleMap[i18n.language] ?? enUS }
-                )}
+                {Math.max(item.send_count, 1)}x {formatDateTz(item.sent_at, i18n.language, userTz, { short: true })}
               </span>
             ) : (
               statusLabel(item.status)
