@@ -537,6 +537,8 @@ export type Database = {
       }
       my_queue: {
         Row: {
+          cached_body: string | null
+          cached_subject: string | null
           created_at: string
           email_open_count: number
           id: string
@@ -555,6 +557,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cached_body?: string | null
+          cached_subject?: string | null
           created_at?: string
           email_open_count?: number
           id?: string
@@ -573,6 +577,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cached_body?: string | null
+          cached_subject?: string | null
           created_at?: string
           email_open_count?: number
           id?: string
