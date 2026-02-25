@@ -1,119 +1,88 @@
 
+Resumo do diagnóstico (com evidência real do projeto):
 
-# Travas de Seguranca Anti-Desperdicio de IA
+1) O número “37” no Radar não é o total bruto de matches
+- Hoje o frontend filtra e esconde tudo que já está na fila:
+  - Em `frontend/src/pages/Radar.tsx`, `fetchMatches()` busca `radar_matched_jobs` e depois remove jobs que existem em `my_queue` (bloco com `queuedSet`).
+- Situação atual do seu usuário:
+  - `radar_matched_jobs` total: 79
+  - Desses, já na fila: 42
+  - Restantes visíveis no Radar: 37
+- Isso explica exatamente o “79 no backend vs 37 no front”.
 
-## Visao Geral
+2) Os 37 e os 42 vieram de momentos diferentes
+- Consulta no banco mostrou:
+  - 37 com `auto_queued=false` em ~13:00
+  - 42 com `auto_queued=true` em ~17:03
+- Ou seja: não foi “o mesmo lote”. Foram ciclos diferentes de matching/autoqueue.
 
-Implementar duas travas de seguranca que impedem chamadas de IA quando o SMTP nao esta funcional, eliminando custos desnecessarios. O usuario sera informado de forma clara sobre o motivo do bloqueio e como resolver.
+3) O autopilot de envio está quebrando no processamento
+- Logs do `process-queue` estão falhando repetidamente com:
+  - `ReferenceError: job is not defined`
+- Esse erro acontece dentro do bloco de erro, interrompe o loop e deixa itens em `processing`/`pending`.
+- Resultado: vagas entram na fila, mas não seguem para envio como esperado.
 
-## Trava 1: Verificacao Obrigatoria de SMTP (Pre-Flight Check)
+4) Há inconsistência de regras entre Radar e Autopilot
+- `process-radar` não aplica todos os critérios que o sistema usa em outros pontos:
+  - faltam filtros como `max_experience` e `randomization_group`
+  - limite fixo de 50 (`.limit(50)`) distorce leitura e consistência de contagem
+- Isso abre margem para “o que aparece/conta no Radar” ≠ “o que o autopilot considera”.
 
-### Como funciona
+Plano de correção (implementação):
 
-O usuario so consegue enviar emails ou acionar a IA apos validar seu SMTP com sucesso (enviando um email de teste real). Enquanto nao validar, os botoes de envio ficam desabilitados com mensagem explicativa.
+Fase 1 — Consertar o gargalo crítico de envio automático
+1. Corrigir `process-queue` para não quebrar no catch:
+- Declarar variável do job fora do `try` (escopo seguro para `catch`).
+- Garantir que logging de erro nunca lance exceção.
+- Garantir que cada falha de item atualize status corretamente sem derrubar o processamento inteiro.
 
-### Fluxo do usuario
+2. Tornar o loop resiliente por usuário:
+- No modo cron, isolar erro por usuário (try/catch por usuário) para um usuário com erro não parar todos.
+- Manter retorno consolidado de `processed/sent/failed`.
 
-```text
-1. Usuario configura SMTP (email + senha de app)
-2. Clica em "Testar e Ativar" (substitui o botao "Salvar" atual)
-3. Sistema envia email de teste real para o proprio usuario
-4. Se sucesso: smtp_verified = true, botoes de envio liberados
-5. Se falha: mensagem de erro explicativa, botoes permanecem bloqueados
-```
+3. Recuperar itens presos:
+- Adicionar rotina de “requeue” de itens `processing` estagnados (ex.: `processing_started_at` antigo) para `pending`, com `last_error` explicativo.
+- Aplicar isso no início da execução do `process-queue` (ou em migration única + proteção contínua).
 
-### Alteracoes
+Fase 2 — Unificar critérios para “as informações se conversarem 100%”
+4. Alinhar `process-radar` com a mesma regra de matching do Radar:
+- Aplicar `max_experience`.
+- Aplicar `randomization_group`.
+- Manter exclusões (`job_reports`, banidas/inativas, já em fila).
+- Remover ou revisar `limit(50)` (ou usar limite técnico maior com paginação/chunk), para não truncar universo de vagas.
 
-**Banco de dados (migracao SQL):**
-- Adicionar `smtp_verified boolean DEFAULT false` na tabela `profiles`
-- Adicionar `last_smtp_check timestamptz` na tabela `profiles`
+5. Garantir comportamento esperado do autopilot:
+- Se `auto_send=true`, todo match válido deve:
+  - ir para `my_queue`
+  - entrar no pipeline de envio automático sem ação manual na tela Queue
+- O delay por plano continua no `process-queue` (já existe regra por tier).
 
-**Frontend - EmailSettingsPanel.tsx:**
-- Substituir botao "Salvar" + "Testar Conexao" por um unico botao "Testar e Ativar"
-- Ao clicar: salvar credenciais, enviar email de teste, e se sucesso, setar `smtp_verified = true` no perfil
-- Mostrar badge verde "SMTP Verificado" quando ativo
+Fase 3 — Transparência no front para não gerar confusão de números
+6. Ajustar métricas do Radar para exibir 3 números explícitos:
+- “Total matches detectados” (bruto)
+- “Enviados para fila / em processamento”
+- “Disponíveis no Live Feed” (não enfileirados)
+Assim o usuário entende claramente por que 79 total pode aparecer como 37 no feed.
 
-**Frontend - Queue.tsx:**
-- No `ensureCanSend()`, verificar `profile.smtp_verified === true`
-- Se falso, exibir alerta explicativo com botao que leva para `/settings/email`:
-  - Titulo: "SMTP nao verificado"
-  - Mensagem: "Voce precisa testar e ativar sua conexao de email antes de enviar. Va em Configuracoes > Email e clique em 'Testar e Ativar'."
+7. Exibir status visual de autopilot:
+- Badge/linha: “Autopilot enviou X para fila nesta rodada”.
+- Opcional: mini lista “Movidos para fila recentemente”.
 
-**Backend - generate-job-email/index.ts:**
-- Adicionar verificacao: se `smtp_verified !== true`, retornar erro 403 com mensagem `smtp_not_verified`
-- Isso impede que a IA seja chamada mesmo via manipulacao direta
+Fase 4 — Validação ponta a ponta
+8. Testes funcionais obrigatórios:
+- Cenário A: Manual → gerar matches → ligar autopilot → confirmar que os matches válidos vão para fila automaticamente.
+- Cenário B: Confirmar que a fila sai de `pending`/`processing` para `sent/failed` sem travar.
+- Cenário C: Alterar filtro (ex. experiência) e validar que novos matches e autoqueue respeitam exatamente o critério selecionado.
+- Cenário D: Verificar que os contadores (bruto, na fila, visível) batem com banco.
 
-**Frontend - AuthContext.tsx:**
-- Adicionar `smtp_verified` na interface `Profile`
-- Incluir campo na query de `fetchProfile`
+Ordem de execução sugerida (segura):
+1) Fix `process-queue` + proteção de itens travados (impacto imediato no envio).
+2) Corrigir critérios do `process-radar` (consistência de regra).
+3) Melhorar transparência de contagem no Radar UI.
+4) Rodar validação E2E com você.
 
-**Frontend - SetupChecklist (useSetupChecklist.ts):**
-- Adicionar step "smtp_verified" que verifica `profile.smtp_verified`
-- Diferente do step "smtp" existente (que so verifica se tem senha salva)
-
-## Trava 2: Disjuntor Automatico (Circuit Breaker)
-
-### Como funciona
-
-Durante o envio em massa, se 5 falhas SMTP consecutivas ocorrerem, o sistema para imediatamente, reseta `smtp_verified = false`, e exibe alerta critico.
-
-### Fluxo
-
-```text
-1. Usuario inicia envio em massa
-2. Contador de falhas consecutivas: 0
-3. Email enviado com sucesso -> contador reseta para 0
-4. Email falha -> contador += 1
-5. Se contador >= 5:
-   a. Para o loop imediatamente
-   b. Atualiza profiles.smtp_verified = false
-   c. Exibe alerta: "Envio pausado: detectamos 5 falhas consecutivas.
-      Seu SMTP pode estar bloqueado ou suas credenciais expiraram.
-      Va em Configuracoes > Email e revalide sua conexao."
-   d. Usuario precisa re-testar SMTP para desbloquear
-```
-
-### Alteracoes
-
-**Frontend - Queue.tsx (funcao sendQueueItems):**
-- Adicionar variavel `consecutiveSmtpFailures = 0`
-- No bloco catch: incrementar contador. No bloco de sucesso: resetar para 0
-- Se `consecutiveSmtpFailures >= 5`:
-  - Chamar `supabase.from("profiles").update({ smtp_verified: false }).eq("id", profile.id)`
-  - Exibir toast destrutivo com mensagem explicativa e botao para configuracoes
-  - Fazer `break` no loop
-
-## Mensagens ao Usuario (i18n)
-
-Novas chaves de traducao nos 3 idiomas (en, pt, es):
-
-| Chave | PT | EN | ES |
-|-------|----|----|-----|
-| `smtp.not_verified_title` | SMTP nao verificado | SMTP not verified | SMTP no verificado |
-| `smtp.not_verified_desc` | Teste e ative sua conexao de email em Configuracoes antes de enviar. | Test and activate your email connection in Settings before sending. | Pruebe y active su conexion de email en Configuracion antes de enviar. |
-| `smtp.circuit_breaker_title` | Envio pausado automaticamente | Sending paused automatically | Envio pausado automaticamente |
-| `smtp.circuit_breaker_desc` | Detectamos 5 falhas consecutivas. Revalide seu SMTP em Configuracoes > Email. | We detected 5 consecutive failures. Re-validate your SMTP in Settings > Email. | Detectamos 5 fallos consecutivos. Revalide su SMTP en Configuracion > Email. |
-| `smtp.verify_and_activate` | Testar e Ativar | Test and Activate | Probar y Activar |
-| `smtp.verified_badge` | SMTP Verificado | SMTP Verified | SMTP Verificado |
-
-## Arquivos a Modificar
-
-| Arquivo | Mudanca |
-|---------|---------|
-| Nova migracao SQL | `smtp_verified` e `last_smtp_check` em `profiles` |
-| `frontend/src/contexts/AuthContext.tsx` | Adicionar `smtp_verified` na interface Profile |
-| `frontend/src/components/settings/EmailSettingsPanel.tsx` | Botao "Testar e Ativar", badge de verificado |
-| `frontend/src/pages/Queue.tsx` | Verificacao em `ensureCanSend()` + circuit breaker no loop |
-| `frontend/supabase/functions/generate-job-email/index.ts` | Bloquear chamadas se `smtp_verified = false` |
-| `frontend/src/hooks/useSetupChecklist.ts` | Novo step de verificacao SMTP |
-| `frontend/src/locales/en.json` | Novas chaves i18n |
-| `frontend/src/locales/pt.json` | Novas chaves i18n |
-| `frontend/src/locales/es.json` | Novas chaves i18n |
-
-## Impacto Esperado
-
-- **Custo zero em erros**: IA nunca sera chamada se SMTP estiver offline
-- **Protecao em tempo real**: circuit breaker para o envio antes de acumular centenas de falhas
-- **Clareza para o usuario**: mensagens explicitas sobre o que fazer para resolver
-- **Seguranca no backend**: edge function rejeita chamadas mesmo se o frontend for burlado
-
+Resultado esperado após correção:
+- Sem divergência “misteriosa” entre Radar e fila.
+- Autopilot realmente automático (sem precisar ação manual na Queue).
+- Critérios aplicados de forma consistente em toda a cadeia.
+- Números claros na interface: o que foi detectado, o que foi para fila e o que ainda está no feed.
