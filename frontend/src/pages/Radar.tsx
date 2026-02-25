@@ -23,7 +23,7 @@ import {
   CircleDollarSign,
   Briefcase,
   ChevronRight,
-  Satellite,
+  Crown,
   Sparkles,
   Clock,
   Activity,
@@ -595,7 +595,7 @@ export default function Radar() {
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-primary/6 border border-primary/15">
-                  <Satellite className="h-5 w-5 text-primary/70" />
+                  <Crown className="h-5 w-5 text-primary/70" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">Radar</h1>
