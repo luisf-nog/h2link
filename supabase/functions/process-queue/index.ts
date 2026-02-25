@@ -34,6 +34,8 @@ interface QueueRow {
   job_id: string | null;
   manual_job_id: string | null;
   tracking_id: string;
+  cached_subject: string | null;
+  cached_body: string | null;
 }
 
 interface ProfileRow {
@@ -925,7 +927,7 @@ async function processOneUser(params: {
 
   let q = serviceClient
     .from("my_queue")
-    .select("id,user_id,status,job_id,manual_job_id,tracking_id")
+    .select("id,user_id,status,job_id,manual_job_id,tracking_id,cached_subject,cached_body")
     .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: true });
@@ -1067,80 +1069,97 @@ async function processOneUser(params: {
       // Black (Dynamic method): AI generates unique email per job. Fallback to templates if AI fails or resume_data missing.
       const sendingMethod = getSendingMethod(p.plan_tier);
       if (sendingMethod === "dynamic" && row.job_id) {
-        try {
-          // Step 1: Determine the correct fallback resume based on visa_type
-          const isH2A = visaType === "H-2A" || (("visa_type" in job) && String((job as any).visa_type).startsWith("H-2A"));
-          let resumeDataForEmail = isH2A
-            ? (p.resume_data_h2a || p.resume_data)
-            : (p.resume_data_h2b || p.resume_data);
-          
-          console.log(`[process-queue] Resume selection: visa=${visaType}, isH2A=${isH2A}, hasH2A=${!!p.resume_data_h2a}, hasH2B=${!!p.resume_data_h2b}`);
-
-          // Step 2: Black tier - try to find a sector-specific resume (overrides fallback)
-          if (p.plan_tier === "black") {
-            const pj = job as PublicJobRow;
-            const jobCategory = (pj as any).category || "";
+        // CHECK CACHE FIRST: reuse previously generated email on retries
+        if (row.cached_subject && row.cached_body) {
+          console.log(`[process-queue] Using CACHED email for queue ${row.id} (saving AI credits)`);
+          finalSubject = row.cached_subject;
+          htmlBody = row.cached_body.replace(/\n/g, "<br>");
+        } else {
+          try {
+            // Step 1: Determine the correct fallback resume based on visa_type
+            const isH2A = visaType === "H-2A" || (("visa_type" in job) && String((job as any).visa_type).startsWith("H-2A"));
+            let resumeDataForEmail = isH2A
+              ? (p.resume_data_h2a || p.resume_data)
+              : (p.resume_data_h2b || p.resume_data);
             
-            if (jobCategory) {
-              const { data: normResult } = await serviceClient.rpc("get_normalized_category", { raw_cat: jobCategory });
-              const normalizedCategory = normResult || "";
+            console.log(`[process-queue] Resume selection: visa=${visaType}, isH2A=${isH2A}, hasH2A=${!!p.resume_data_h2a}, hasH2B=${!!p.resume_data_h2b}`);
+
+            // Step 2: Black tier - try to find a sector-specific resume (overrides fallback)
+            if (p.plan_tier === "black") {
+              const pj = job as PublicJobRow;
+              const jobCategory = (pj as any).category || "";
               
-              const categoryToSectorMap: Record<string, string> = {
-                "Campo e Colheita": "campo_colheita",
-                "Construção e Manutenção": "construcao_manutencao",
-                "Paisagismo e Jardinagem": "paisagismo_jardinagem",
-                "Hotelaria e Limpeza": "hotelaria_limpeza",
-                "Cozinha e Restaurante": "cozinha_restaurante",
-                "Logística e Transporte": "logistica_transporte",
-                "Indústria e Produção": "industria_producao",
-                "Mecânica e Reparo": "mecanica_reparo",
-                "Vendas e Escritório": "vendas_escritorio",
-                "Lazer e Serviços": "lazer_servicos",
-              };
-              
-              const sectorId = categoryToSectorMap[normalizedCategory];
-              
-              if (sectorId) {
-                const { data: sectorResume } = await serviceClient
-                  .from("sector_resumes")
-                  .select("resume_data")
-                  .eq("user_id", userId)
-                  .eq("category", sectorId)
-                  .maybeSingle();
+              if (jobCategory) {
+                const { data: normResult } = await serviceClient.rpc("get_normalized_category", { raw_cat: jobCategory });
+                const normalizedCategory = normResult || "";
                 
-                if (sectorResume?.resume_data) {
-                  resumeDataForEmail = sectorResume.resume_data;
-                  console.log(`[process-queue] Black tier: using SECTOR resume '${sectorId}' for job category '${jobCategory}'`);
+                const categoryToSectorMap: Record<string, string> = {
+                  "Campo e Colheita": "campo_colheita",
+                  "Construção e Manutenção": "construcao_manutencao",
+                  "Paisagismo e Jardinagem": "paisagismo_jardinagem",
+                  "Hotelaria e Limpeza": "hotelaria_limpeza",
+                  "Cozinha e Restaurante": "cozinha_restaurante",
+                  "Logística e Transporte": "logistica_transporte",
+                  "Indústria e Produção": "industria_producao",
+                  "Mecânica e Reparo": "mecanica_reparo",
+                  "Vendas e Escritório": "vendas_escritorio",
+                  "Lazer e Serviços": "lazer_servicos",
+                };
+                
+                const sectorId = categoryToSectorMap[normalizedCategory];
+                
+                if (sectorId) {
+                  const { data: sectorResume } = await serviceClient
+                    .from("sector_resumes")
+                    .select("resume_data")
+                    .eq("user_id", userId)
+                    .eq("category", sectorId)
+                    .maybeSingle();
+                  
+                  if (sectorResume?.resume_data) {
+                    resumeDataForEmail = sectorResume.resume_data;
+                    console.log(`[process-queue] Black tier: using SECTOR resume '${sectorId}' for job category '${jobCategory}'`);
+                  } else {
+                    console.log(`[process-queue] Black tier: no sector resume for '${sectorId}', using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
+                  }
                 } else {
-                  console.log(`[process-queue] Black tier: no sector resume for '${sectorId}', using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
+                  console.log(`[process-queue] Black tier: category '${normalizedCategory}' not in sector map, using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
                 }
-              } else {
-                console.log(`[process-queue] Black tier: category '${normalizedCategory}' not in sector map, using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
               }
             }
-          }
 
-          if (!resumeDataForEmail) throw new Error("resume_data_missing");
-          
-          // Fetch user's AI preferences
-          const { data: prefsRow } = await serviceClient
-            .from("ai_generation_preferences")
-            .select("*")
-            .eq("user_id", userId)
-            .maybeSingle();
-          
-          const userPrefs: AIPreferences = prefsRow 
-            ? { ...defaultPreferences, ...prefsRow } 
-            : defaultPreferences;
-          
-          const pj = job as PublicJobRow;
-          const ai = await generateDiamondEmail({ resumeData: resumeDataForEmail, job: pj, visaType, prefs: userPrefs });
-          finalSubject = ai.subject;
-          htmlBody = ai.body.replace(/\n/g, "<br>");
-        } catch (e) {
-          // If there's no template fallback, Black must fail explicitly.
-          if (!fallbackTpl) throw e;
-          // otherwise keep fallback
+            if (!resumeDataForEmail) throw new Error("resume_data_missing");
+            
+            // Fetch user's AI preferences
+            const { data: prefsRow } = await serviceClient
+              .from("ai_generation_preferences")
+              .select("*")
+              .eq("user_id", userId)
+              .maybeSingle();
+            
+            const userPrefs: AIPreferences = prefsRow 
+              ? { ...defaultPreferences, ...prefsRow } 
+              : defaultPreferences;
+            
+            const pj = job as PublicJobRow;
+            const ai = await generateDiamondEmail({ resumeData: resumeDataForEmail, job: pj, visaType, prefs: userPrefs });
+            finalSubject = ai.subject;
+            htmlBody = ai.body.replace(/\n/g, "<br>");
+
+            // CACHE the generated email for future retries
+            await (serviceClient
+              .from("my_queue")
+              .update({
+                cached_subject: ai.subject,
+                cached_body: ai.body,
+              } as any)
+              .eq("id", row.id)) as any;
+            console.log(`[process-queue] Cached AI email for queue ${row.id}`);
+          } catch (e) {
+            // If there's no template fallback, Black must fail explicitly.
+            if (!fallbackTpl) throw e;
+            // otherwise keep fallback
+          }
         }
       }
 

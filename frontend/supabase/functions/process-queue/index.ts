@@ -34,6 +34,8 @@ interface QueueRow {
   job_id: string | null;
   manual_job_id: string | null;
   tracking_id: string;
+  cached_subject: string | null;
+  cached_body: string | null;
 }
 
 interface ProfileRow {
@@ -779,31 +781,11 @@ async function processOneUser(params: {
   userId: string;
   maxItems: number;
   queueIds?: string[];
+  supabaseUrl: string;
 }): Promise<{ processed: number; sent: number; failed: number }>
 {
-  const { serviceClient, userId, maxItems, queueIds } = params;
+  const { serviceClient, userId, maxItems, queueIds, supabaseUrl } = params;
   console.log(`[processOneUser] Iniciando processamento para usuário ${userId}, maxItems: ${maxItems}, queueIds: ${queueIds?.length || 0}`);
-
-  // ── Recover stuck jobs: reset items stuck in "processing" for >10 min ──
-  try {
-    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data: stuckRows } = await serviceClient
-      .from("my_queue")
-      .update({
-        status: "pending",
-        processing_started_at: null,
-        last_error: "Recuperado automaticamente: travou em processamento",
-      } as any)
-      .eq("user_id", userId)
-      .eq("status", "processing")
-      .lt("processing_started_at", tenMinAgo)
-      .select("id");
-    if (stuckRows && stuckRows.length > 0) {
-      console.log(`[processOneUser] Recuperados ${stuckRows.length} itens travados para ${userId}`);
-    }
-  } catch (e) {
-    console.warn(`[processOneUser] Erro ao recuperar itens travados:`, e);
-  }
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
@@ -945,7 +927,7 @@ async function processOneUser(params: {
 
   let q = serviceClient
     .from("my_queue")
-    .select("id,user_id,status,job_id,manual_job_id,tracking_id")
+    .select("id,user_id,status,job_id,manual_job_id,tracking_id,cached_subject,cached_body")
     .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: true });
@@ -1087,80 +1069,97 @@ async function processOneUser(params: {
       // Black (Dynamic method): AI generates unique email per job. Fallback to templates if AI fails or resume_data missing.
       const sendingMethod = getSendingMethod(p.plan_tier);
       if (sendingMethod === "dynamic" && row.job_id) {
-        try {
-          // Step 1: Determine the correct fallback resume based on visa_type
-          const isH2A = visaType === "H-2A" || (("visa_type" in job) && String((job as any).visa_type).startsWith("H-2A"));
-          let resumeDataForEmail = isH2A
-            ? (p.resume_data_h2a || p.resume_data)
-            : (p.resume_data_h2b || p.resume_data);
-          
-          console.log(`[process-queue] Resume selection: visa=${visaType}, isH2A=${isH2A}, hasH2A=${!!p.resume_data_h2a}, hasH2B=${!!p.resume_data_h2b}`);
-
-          // Step 2: Black tier - try to find a sector-specific resume (overrides fallback)
-          if (p.plan_tier === "black") {
-            const pj = job as PublicJobRow;
-            const jobCategory = (pj as any).category || "";
+        // CHECK CACHE FIRST: reuse previously generated email on retries
+        if (row.cached_subject && row.cached_body) {
+          console.log(`[process-queue] Using CACHED email for queue ${row.id} (saving AI credits)`);
+          finalSubject = row.cached_subject;
+          htmlBody = row.cached_body.replace(/\n/g, "<br>");
+        } else {
+          try {
+            // Step 1: Determine the correct fallback resume based on visa_type
+            const isH2A = visaType === "H-2A" || (("visa_type" in job) && String((job as any).visa_type).startsWith("H-2A"));
+            let resumeDataForEmail = isH2A
+              ? (p.resume_data_h2a || p.resume_data)
+              : (p.resume_data_h2b || p.resume_data);
             
-            if (jobCategory) {
-              const { data: normResult } = await serviceClient.rpc("get_normalized_category", { raw_cat: jobCategory });
-              const normalizedCategory = normResult || "";
+            console.log(`[process-queue] Resume selection: visa=${visaType}, isH2A=${isH2A}, hasH2A=${!!p.resume_data_h2a}, hasH2B=${!!p.resume_data_h2b}`);
+
+            // Step 2: Black tier - try to find a sector-specific resume (overrides fallback)
+            if (p.plan_tier === "black") {
+              const pj = job as PublicJobRow;
+              const jobCategory = (pj as any).category || "";
               
-              const categoryToSectorMap: Record<string, string> = {
-                "Campo e Colheita": "campo_colheita",
-                "Construção e Manutenção": "construcao_manutencao",
-                "Paisagismo e Jardinagem": "paisagismo_jardinagem",
-                "Hotelaria e Limpeza": "hotelaria_limpeza",
-                "Cozinha e Restaurante": "cozinha_restaurante",
-                "Logística e Transporte": "logistica_transporte",
-                "Indústria e Produção": "industria_producao",
-                "Mecânica e Reparo": "mecanica_reparo",
-                "Vendas e Escritório": "vendas_escritorio",
-                "Lazer e Serviços": "lazer_servicos",
-              };
-              
-              const sectorId = categoryToSectorMap[normalizedCategory];
-              
-              if (sectorId) {
-                const { data: sectorResume } = await serviceClient
-                  .from("sector_resumes")
-                  .select("resume_data")
-                  .eq("user_id", userId)
-                  .eq("category", sectorId)
-                  .maybeSingle();
+              if (jobCategory) {
+                const { data: normResult } = await serviceClient.rpc("get_normalized_category", { raw_cat: jobCategory });
+                const normalizedCategory = normResult || "";
                 
-                if (sectorResume?.resume_data) {
-                  resumeDataForEmail = sectorResume.resume_data;
-                  console.log(`[process-queue] Black tier: using SECTOR resume '${sectorId}' for job category '${jobCategory}'`);
+                const categoryToSectorMap: Record<string, string> = {
+                  "Campo e Colheita": "campo_colheita",
+                  "Construção e Manutenção": "construcao_manutencao",
+                  "Paisagismo e Jardinagem": "paisagismo_jardinagem",
+                  "Hotelaria e Limpeza": "hotelaria_limpeza",
+                  "Cozinha e Restaurante": "cozinha_restaurante",
+                  "Logística e Transporte": "logistica_transporte",
+                  "Indústria e Produção": "industria_producao",
+                  "Mecânica e Reparo": "mecanica_reparo",
+                  "Vendas e Escritório": "vendas_escritorio",
+                  "Lazer e Serviços": "lazer_servicos",
+                };
+                
+                const sectorId = categoryToSectorMap[normalizedCategory];
+                
+                if (sectorId) {
+                  const { data: sectorResume } = await serviceClient
+                    .from("sector_resumes")
+                    .select("resume_data")
+                    .eq("user_id", userId)
+                    .eq("category", sectorId)
+                    .maybeSingle();
+                  
+                  if (sectorResume?.resume_data) {
+                    resumeDataForEmail = sectorResume.resume_data;
+                    console.log(`[process-queue] Black tier: using SECTOR resume '${sectorId}' for job category '${jobCategory}'`);
+                  } else {
+                    console.log(`[process-queue] Black tier: no sector resume for '${sectorId}', using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
+                  }
                 } else {
-                  console.log(`[process-queue] Black tier: no sector resume for '${sectorId}', using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
+                  console.log(`[process-queue] Black tier: category '${normalizedCategory}' not in sector map, using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
                 }
-              } else {
-                console.log(`[process-queue] Black tier: category '${normalizedCategory}' not in sector map, using ${isH2A ? 'H-2A' : 'H-2B'} fallback`);
               }
             }
-          }
 
-          if (!resumeDataForEmail) throw new Error("resume_data_missing");
-          
-          // Fetch user's AI preferences
-          const { data: prefsRow } = await serviceClient
-            .from("ai_generation_preferences")
-            .select("*")
-            .eq("user_id", userId)
-            .maybeSingle();
-          
-          const userPrefs: AIPreferences = prefsRow 
-            ? { ...defaultPreferences, ...prefsRow } 
-            : defaultPreferences;
-          
-          const pj = job as PublicJobRow;
-          const ai = await generateDiamondEmail({ resumeData: resumeDataForEmail, job: pj, visaType, prefs: userPrefs });
-          finalSubject = ai.subject;
-          htmlBody = ai.body.replace(/\n/g, "<br>");
-        } catch (e) {
-          // If there's no template fallback, Black must fail explicitly.
-          if (!fallbackTpl) throw e;
-          // otherwise keep fallback
+            if (!resumeDataForEmail) throw new Error("resume_data_missing");
+            
+            // Fetch user's AI preferences
+            const { data: prefsRow } = await serviceClient
+              .from("ai_generation_preferences")
+              .select("*")
+              .eq("user_id", userId)
+              .maybeSingle();
+            
+            const userPrefs: AIPreferences = prefsRow 
+              ? { ...defaultPreferences, ...prefsRow } 
+              : defaultPreferences;
+            
+            const pj = job as PublicJobRow;
+            const ai = await generateDiamondEmail({ resumeData: resumeDataForEmail, job: pj, visaType, prefs: userPrefs });
+            finalSubject = ai.subject;
+            htmlBody = ai.body.replace(/\n/g, "<br>");
+
+            // CACHE the generated email for future retries
+            await (serviceClient
+              .from("my_queue")
+              .update({
+                cached_subject: ai.subject,
+                cached_body: ai.body,
+              } as any)
+              .eq("id", row.id)) as any;
+            console.log(`[process-queue] Cached AI email for queue ${row.id}`);
+          } catch (e) {
+            // If there's no template fallback, Black must fail explicitly.
+            if (!fallbackTpl) throw e;
+            // otherwise keep fallback
+          }
         }
       }
 
@@ -1275,8 +1274,7 @@ async function processOneUser(params: {
     } catch (err: unknown) {
       const rawMessage = err instanceof Error ? err.message : "Falha ao enviar";
       const message = classifySmtpError(rawMessage);
-      const jobEmail = job && 'email' in job ? job.email : 'email desconhecido';
-      console.error(`[process-queue] Erro ao processar item ${row.id} para ${jobEmail}:`, err);
+      console.error(`[process-queue] Erro ao processar item ${row.id} para ${job?.email || 'email desconhecido'}:`, err);
       console.error(`[process-queue] Erro classificado: ${message}`);
       console.error(`[process-queue] Stack trace:`, err instanceof Error ? err.stack : 'N/A');
       await (serviceClient
@@ -1366,7 +1364,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: users, error: uErr } = await serviceClient
         .from("profiles")
         .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond", "black"])
+        .in("plan_tier", ["gold", "diamond"])
         .limit(200);
       if (uErr) throw uErr;
 
@@ -1376,16 +1374,11 @@ const handler = async (req: Request): Promise<Response> => {
       let failed = 0;
 
       for (const u of (users ?? []) as Array<{ id: string }>) {
-        try {
-          const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2 });
-          if (r.processed > 0) usersTouched += 1;
-          processed += r.processed;
-          sent += r.sent;
-          failed += r.failed;
-        } catch (userErr) {
-          console.error(`[process-queue] Erro ao processar usuário ${u.id} no cron:`, userErr);
-          failed += 1;
-        }
+        const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2, supabaseUrl });
+        if (r.processed > 0) usersTouched += 1;
+        processed += r.processed;
+        sent += r.sent;
+        failed += r.failed;
       }
 
       return json(200, { ok: true, mode: "cron", usersTouched, processed, sent, failed });
@@ -1452,7 +1445,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Fire-and-forget: start processing in the background and return immediately.
     // This prevents the browser from timing out (which shows up as "Failed to fetch").
     console.log(`[process-queue] Iniciando processamento em background...`);
-    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds });
+    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds, supabaseUrl });
     const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
     if (typeof waitUntil === "function") {
       waitUntil(
