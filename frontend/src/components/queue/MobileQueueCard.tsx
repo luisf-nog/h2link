@@ -162,9 +162,9 @@ export function MobileQueueCard({
             variant={item.status === "sent" ? "default" : "secondary"}
             className={cn("shrink-0 text-xs", getStatusBadgeClasses(item.status))}
           >
-            {item.status === "sent" && item.sent_at && item.send_count > 0 ? (
+            {item.status === "sent" && item.sent_at ? (
               <span className="flex items-center gap-1">
-                {item.send_count}x {format(
+                {Math.max(item.send_count, 1)}x {format(
                   new Date(item.sent_at),
                   i18n.language === "en" ? "MM/dd hh:mm a" : "dd/MM HH:mm",
                   { locale: dateLocaleMap[i18n.language] ?? enUS }

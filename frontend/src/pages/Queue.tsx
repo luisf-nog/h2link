@@ -1006,9 +1006,9 @@ export default function Queue() {
                                           : ""
                               }
                             >
-                              {item.status === "sent" && item.sent_at && item.send_count > 0 ? (
+                              {item.status === "sent" && item.sent_at ? (
                                 <span className="flex items-center gap-1">
-                                  {item.send_count}x{" "}
+                                  {Math.max(item.send_count, 1)}x{" "}
                                   {format(
                                     new Date(item.sent_at),
                                     i18n.language === "en" ? "MM/dd hh:mm a" : "dd/MM HH:mm",
