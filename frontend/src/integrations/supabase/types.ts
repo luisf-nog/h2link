@@ -1494,6 +1494,7 @@ export type Database = {
         Args: { p_queue_id?: string; p_token: string }
         Returns: string
       }
+      safe_parse_date: { Args: { raw: string }; Returns: string }
       track_profile_view: {
         Args: { p_queue_id?: string; p_token: string }
         Returns: {

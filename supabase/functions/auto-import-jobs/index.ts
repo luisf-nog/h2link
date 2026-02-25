@@ -20,43 +20,68 @@ function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-// ─── PROCESSO EM BACKGROUND (MODO TURBO) ──────────────────────────────────
-async function processSourceTurbo(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
+// ─── PROCESSO EM BACKGROUND (MODO LEAN) ──────────────────────────────────
+async function processSourceLean(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
   try {
     const today = getTodayNY();
     const apiUrl = `${source.url}/${today}`;
 
-    console.log(`[TURBO] Iniciando download: ${source.key}`);
+    console.log(`[LEAN] Iniciando download: ${source.key}`);
     const response = await fetch(apiUrl);
     if (!response.ok) throw new Error(`DOL Offline: ${response.status}`);
 
-    // 1. Extração eficiente (fflate é muito mais leve que jszip)
-    let zipBytes: any = new Uint8Array(await response.arrayBuffer());
+    // 1. Download em chunks para controlar memória
+    const chunks: Uint8Array[] = [];
+    const reader = response.body!.getReader();
+    let totalBytes = 0;
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      totalBytes += value.length;
+    }
+    
+    // Concatenar chunks
+    const zipBytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      zipBytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    // Liberar chunks
+    chunks.length = 0;
+
+    console.log(`[LEAN] ${source.key}: ZIP baixado (${(totalBytes / 1024 / 1024).toFixed(1)}MB)`);
+    
+    // 2. Extrair JSON do ZIP
     const unzipped = unzipSync(zipBytes);
-    zipBytes = null; // LIBERA MEMÓRIA
 
     const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
     if (!jsonFileName) throw new Error("Arquivo JSON não encontrado no ZIP");
 
-    let allItems: any[] = JSON.parse(new TextDecoder().decode(unzipped[jsonFileName]));
-    // @ts-ignore: Limpa o objeto unzipped
-    delete unzipped[jsonFileName];
+    const jsonText = new TextDecoder().decode(unzipped[jsonFileName]);
+    // Liberar memória do ZIP
+    for (const key of Object.keys(unzipped)) {
+      delete (unzipped as any)[key];
+    }
 
+    let allItems: any[] = JSON.parse(jsonText);
+    
     const totalRows = allItems.length;
     await supabase.from("import_jobs").update({ total_rows: totalRows, status: "processing" }).eq("id", jobId);
-    console.log(`[TURBO] ${source.key}: ${totalRows} itens carregados.`);
+    console.log(`[LEAN] ${source.key}: ${totalRows} itens carregados.`);
 
-    // 2. Configuração de Concorrência
-    const BATCH_SIZE = 150; // Equilíbrio entre velocidade e tamanho de payload
-    const CONCURRENCY = 4; // Processa 4 lotes ao mesmo tempo
+    // 3. Processamento com batches menores e concorrência reduzida para economizar RAM
+    const BATCH_SIZE = 100;
+    const CONCURRENCY = 2; // Menos concorrência = menos RAM
     let processed = 0;
 
-    // 3. Loop de Processamento Paralelo com Mutação (Splice)
     while (allItems.length > 0) {
       const tasks = [];
 
       for (let i = 0; i < CONCURRENCY && allItems.length > 0; i++) {
-        const batch = allItems.splice(0, BATCH_SIZE); // REMOVE do array original p/ liberar RAM
+        const batch = allItems.splice(0, BATCH_SIZE);
         tasks.push(
           supabase
             .rpc("process_dol_raw_batch", {
@@ -73,18 +98,21 @@ async function processSourceTurbo(source: (typeof DOL_SOURCES)[0], supabase: any
         );
       }
 
-      // Aguarda o grupo de lotes terminar
       await Promise.all(tasks);
 
-      // Atualiza progresso no banco a cada ciclo
+      // Atualiza progresso
       await supabase.from("import_jobs").update({ processed_rows: processed }).eq("id", jobId);
-      console.log(`[TURBO] ${source.key}: ${processed}/${totalRows}`);
+      
+      // Log a cada 500
+      if (processed % 500 < BATCH_SIZE * CONCURRENCY) {
+        console.log(`[LEAN] ${source.key}: ${processed}/${totalRows}`);
+      }
     }
 
     // 4. Finalização
     await supabase.rpc("deactivate_expired_jobs");
     await supabase.from("import_jobs").update({ status: "completed", processed_rows: processed }).eq("id", jobId);
-    console.log(`[SUCCESS] ${source.key} finalizado.`);
+    console.log(`[SUCCESS] ${source.key} finalizado: ${processed} processados.`);
   } catch (err: any) {
     console.error(`[FATAL] ${source.key}:`, err.message);
     await supabase.from("import_jobs").update({ status: "failed", error_message: err.message }).eq("id", jobId);
@@ -93,13 +121,11 @@ async function processSourceTurbo(source: (typeof DOL_SOURCES)[0], supabase: any
 
 // ─── SERVIDOR ─────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
-  // 1. Preflight CORS
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Tenta ler o corpo da requisição de forma segura
     const body = await req.json().catch(() => ({}));
     const sourceKey = body.source || "jo";
 
@@ -107,7 +133,7 @@ Deno.serve(async (req) => {
     if (!source)
       return new Response(JSON.stringify({ error: "Source inválida" }), { status: 400, headers: corsHeaders });
 
-    // 2. Registra o início do trabalho no banco
+    // Registra o início
     const { data: job, error: jobErr } = await supabase
       .from("import_jobs")
       .insert({ source: source.key, status: "processing", processed_rows: 0 })
@@ -116,9 +142,8 @@ Deno.serve(async (req) => {
 
     if (jobErr || !job) throw new Error("Falha ao registrar job no banco");
 
-    // 3. RESPOSTA IMEDIATA (Resolve o erro de Message Channel Closed)
-    // Usamos o waitUntil para o Deno continuar trabalhando após o return
-    EdgeRuntime.waitUntil(processSourceTurbo(source, supabase, job.id));
+    // Resposta imediata + background processing
+    EdgeRuntime.waitUntil(processSourceLean(source, supabase, job.id));
 
     return new Response(
       JSON.stringify({
