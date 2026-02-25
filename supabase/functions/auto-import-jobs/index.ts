@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,96 +19,129 @@ function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-// ─── PROCESSO EM BACKGROUND (MODO LEAN) ──────────────────────────────────
-async function processSourceLean(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
+/**
+ * Parses a large JSON array string in chunks to avoid OOM.
+ * Yields arrays of `chunkSize` items at a time.
+ */
+function* parseJsonArrayChunked(jsonText: string, chunkSize: number): Generator<any[]> {
+  // Find the opening bracket
+  let i = jsonText.indexOf('[');
+  if (i === -1) return;
+  i++; // skip '['
+
+  let depth = 0;
+  let objStart = -1;
+  let batch: any[] = [];
+
+  for (; i < jsonText.length; i++) {
+    const ch = jsonText[i];
+
+    if (ch === '"') {
+      // Skip string content
+      i++;
+      while (i < jsonText.length) {
+        if (jsonText[i] === '\\') { i++; } // skip escaped char
+        else if (jsonText[i] === '"') break;
+        i++;
+      }
+      continue;
+    }
+
+    if (ch === '{') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0 && objStart >= 0) {
+        const objStr = jsonText.substring(objStart, i + 1);
+        try {
+          batch.push(JSON.parse(objStr));
+        } catch {
+          // skip malformed
+        }
+        objStart = -1;
+
+        if (batch.length >= chunkSize) {
+          yield batch;
+          batch = [];
+        }
+      }
+    } else if (ch === ']' && depth === 0) {
+      break; // end of array
+    }
+  }
+
+  if (batch.length > 0) {
+    yield batch;
+  }
+}
+
+async function processSourceStreamed(source: (typeof DOL_SOURCES)[0], supabase: any, jobId: string) {
   try {
     const today = getTodayNY();
     const apiUrl = `${source.url}/${today}`;
 
-    console.log(`[LEAN] Iniciando download: ${source.key}`);
+    console.log(`[STREAM] Iniciando download: ${source.key}`);
     const response = await fetch(apiUrl);
     if (!response.ok) throw new Error(`DOL Offline: ${response.status}`);
 
-    // 1. Download em chunks para controlar memória
-    const chunks: Uint8Array[] = [];
-    const reader = response.body!.getReader();
-    let totalBytes = 0;
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      totalBytes += value.length;
-    }
-    
-    // Concatenar chunks
-    const zipBytes = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      zipBytes.set(chunk, offset);
-      offset += chunk.length;
-    }
-    // Liberar chunks
-    chunks.length = 0;
+    // Download ZIP as ArrayBuffer
+    const zipBuffer = await response.arrayBuffer();
+    console.log(`[STREAM] ${source.key}: ZIP baixado (${(zipBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)`);
 
-    console.log(`[LEAN] ${source.key}: ZIP baixado (${(totalBytes / 1024 / 1024).toFixed(1)}MB)`);
-    
-    // 2. Extrair JSON do ZIP
-    const unzipped = unzipSync(zipBytes);
+    // Use fflate for unzipping - import dynamically to control memory
+    const { unzipSync } = await import("https://esm.sh/fflate@0.8.2");
+    const unzipped = unzipSync(new Uint8Array(zipBuffer));
 
     const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
-    if (!jsonFileName) throw new Error("Arquivo JSON não encontrado no ZIP");
+    if (!jsonFileName) throw new Error("JSON não encontrado no ZIP");
 
+    // Decode to string - this is the big allocation
     const jsonText = new TextDecoder().decode(unzipped[jsonFileName]);
-    // Liberar memória do ZIP
+    
+    // Free ZIP memory immediately
     for (const key of Object.keys(unzipped)) {
       delete (unzipped as any)[key];
     }
 
-    let allItems: any[] = JSON.parse(jsonText);
-    
-    const totalRows = allItems.length;
-    await supabase.from("import_jobs").update({ total_rows: totalRows, status: "processing" }).eq("id", jobId);
-    console.log(`[LEAN] ${source.key}: ${totalRows} itens carregados.`);
+    // Count total items (cheap scan)
+    let totalRows = 0;
+    for (let j = 0; j < jsonText.length; j++) {
+      if (jsonText[j] === '"' && jsonText.substring(j, j + 12) === '"caseNumber"') totalRows++;
+      else if (jsonText[j] === '"' && jsonText.substring(j, j + 15) === '"jobOrderNumber"') totalRows++;
+    }
+    // Rough estimate if neither found
+    if (totalRows === 0) {
+      totalRows = (jsonText.match(/\{/g) || []).length - 1;
+    }
 
-    // 3. Processamento com batches menores e concorrência reduzida para economizar RAM
-    const BATCH_SIZE = 100;
-    const CONCURRENCY = 2; // Menos concorrência = menos RAM
+    await supabase.from("import_jobs").update({ total_rows: totalRows, status: "processing" }).eq("id", jobId);
+    console.log(`[STREAM] ${source.key}: ~${totalRows} itens estimados.`);
+
+    // Process in chunks of 80 items (smaller to reduce peak memory)
+    const CHUNK_SIZE = 80;
     let processed = 0;
 
-    while (allItems.length > 0) {
-      const tasks = [];
+    for (const batch of parseJsonArrayChunked(jsonText, CHUNK_SIZE)) {
+      const { error } = await supabase.rpc("process_dol_raw_batch", {
+        p_raw_items: batch,
+        p_visa_type: source.visaType,
+      });
 
-      for (let i = 0; i < CONCURRENCY && allItems.length > 0; i++) {
-        const batch = allItems.splice(0, BATCH_SIZE);
-        tasks.push(
-          supabase
-            .rpc("process_dol_raw_batch", {
-              p_raw_items: batch,
-              p_visa_type: source.visaType,
-            })
-            .then(({ error }: any) => {
-              if (!error) {
-                processed += batch.length;
-              } else {
-                console.error(`[BATCH ERROR] ${source.key}:`, error.message);
-              }
-            }),
-        );
+      if (error) {
+        console.error(`[BATCH ERROR] ${source.key}:`, error.message);
+      } else {
+        processed += batch.length;
       }
 
-      await Promise.all(tasks);
-
-      // Atualiza progresso
-      await supabase.from("import_jobs").update({ processed_rows: processed }).eq("id", jobId);
-      
-      // Log a cada 500
-      if (processed % 500 < BATCH_SIZE * CONCURRENCY) {
-        console.log(`[LEAN] ${source.key}: ${processed}/${totalRows}`);
+      // Update progress every ~240 items
+      if (processed % 240 < CHUNK_SIZE) {
+        await supabase.from("import_jobs").update({ processed_rows: processed }).eq("id", jobId);
+        console.log(`[STREAM] ${source.key}: ${processed}/${totalRows}`);
       }
     }
 
-    // 4. Finalização
+    // Finalize
     await supabase.rpc("deactivate_expired_jobs");
     await supabase.from("import_jobs").update({ status: "completed", processed_rows: processed }).eq("id", jobId);
     console.log(`[SUCCESS] ${source.key} finalizado: ${processed} processados.`);
@@ -133,7 +165,6 @@ Deno.serve(async (req) => {
     if (!source)
       return new Response(JSON.stringify({ error: "Source inválida" }), { status: 400, headers: corsHeaders });
 
-    // Registra o início
     const { data: job, error: jobErr } = await supabase
       .from("import_jobs")
       .insert({ source: source.key, status: "processing", processed_rows: 0 })
@@ -142,8 +173,7 @@ Deno.serve(async (req) => {
 
     if (jobErr || !job) throw new Error("Falha ao registrar job no banco");
 
-    // Resposta imediata + background processing
-    EdgeRuntime.waitUntil(processSourceLean(source, supabase, job.id));
+    EdgeRuntime.waitUntil(processSourceStreamed(source, supabase, job.id));
 
     return new Response(
       JSON.stringify({
