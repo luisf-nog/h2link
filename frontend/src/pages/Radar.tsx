@@ -771,7 +771,7 @@ export default function Radar() {
           />
         </HeroPanel>
         <HeroPanel className="p-0 overflow-hidden">
-          <MetricCard label="Scan Frequency" value="24/7" icon={Clock} subtitle="Continuous monitoring" />
+          <MetricCard label="Scan Frequency" value="Daily" icon={Clock} subtitle="New jobs imported daily" />
         </HeroPanel>
       </div>
 
@@ -1041,7 +1041,7 @@ export default function Radar() {
             {/* Main pitch */}
             <div className="space-y-3">
               <p className="text-sm text-foreground leading-relaxed">
-                O Radar monitora <span className="font-bold text-primary">24 horas por dia, 7 dias por semana</span> todas as novas vagas publicadas no sistema DOL. 
+                O Radar escaneia <span className="font-bold text-primary">diariamente</span> todas as novas vagas publicadas no sistema DOL. 
                 Quando uma vaga compatível com seus filtros é detectada, ele age automaticamente por você.
               </p>
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/5 border border-primary/15">
@@ -1094,7 +1094,7 @@ export default function Radar() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
-                  "Candidaturas enviadas 24/7",
+                  "Candidaturas enviadas automaticamente",
                   "E-mails personalizados com IA",
                   "Sem perder vagas novas",
                   "Zero trabalho manual",
