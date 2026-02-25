@@ -31,144 +31,180 @@ serve(async (req) => {
       );
     }
 
+    console.log(`[process-radar] Found ${radarProfiles.length} active profiles`);
+
     let totalMatches = 0;
     let totalQueued = 0;
 
     for (const radar of radarProfiles) {
-      // Verify user is still premium
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan_tier, credits_used_today")
-        .eq("id", radar.user_id)
-        .single();
+      try {
+        // Verify user is still premium
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan_tier, credits_used_today")
+          .eq("id", radar.user_id)
+          .single();
 
-      if (!profile || !["diamond", "black"].includes(profile.plan_tier)) {
-        continue;
-      }
-
-      // Get effective daily limit
-      const { data: limitData } = await supabase.rpc("get_effective_daily_limit", {
-        p_user_id: radar.user_id,
-      });
-      const dailyLimit = limitData || 5;
-      const creditsRemaining = dailyLimit - (profile.credits_used_today || 0);
-
-      if (creditsRemaining <= 0) continue;
-
-      // Build job query based on radar criteria
-      let jobQuery = supabase
-        .from("public_jobs")
-        .select("id")
-        .eq("is_banned", false)
-        .order("posted_date", { ascending: false })
-        .limit(50);
-
-      if (radar.visa_type) {
-        jobQuery = jobQuery.eq("visa_type", radar.visa_type);
-      }
-      if (radar.state) {
-        jobQuery = jobQuery.ilike("state", radar.state);
-      }
-      if (radar.min_wage) {
-        jobQuery = jobQuery.gte("salary", radar.min_wage);
-      }
-      if (radar.categories && radar.categories.length > 0) {
-        jobQuery = jobQuery.in("category", radar.categories);
-      }
-
-      const { data: matchingJobs, error: jobsError } = await jobQuery;
-      if (jobsError || !matchingJobs) continue;
-
-      // Filter out already matched jobs
-      const jobIds = matchingJobs.map((j: any) => j.id);
-      if (jobIds.length === 0) continue;
-
-      const { data: alreadyMatched } = await supabase
-        .from("radar_matched_jobs")
-        .select("job_id")
-        .eq("user_id", radar.user_id)
-        .in("job_id", jobIds);
-
-      const matchedSet = new Set((alreadyMatched || []).map((m: any) => m.job_id));
-      const newJobs = jobIds.filter((id: string) => !matchedSet.has(id));
-
-      if (newJobs.length === 0) continue;
-
-      // Also filter out jobs already in user's queue
-      const { data: queuedJobs } = await supabase
-        .from("my_queue")
-        .select("job_id")
-        .eq("user_id", radar.user_id)
-        .in("job_id", newJobs);
-
-      const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
-      const jobsToProcess = newJobs.filter((id: string) => !queuedSet.has(id));
-
-      // Limit to remaining credits
-      const jobsToQueue = jobsToProcess.slice(0, creditsRemaining);
-
-      totalMatches += jobsToQueue.length;
-
-      // Record matches
-      if (jobsToQueue.length > 0) {
-        const matchRecords = jobsToQueue.map((jobId: string) => ({
-          user_id: radar.user_id,
-          job_id: jobId,
-          auto_queued: radar.auto_send,
-        }));
-
-        await supabase.from("radar_matched_jobs").upsert(matchRecords, {
-          onConflict: "user_id,job_id",
-        });
-
-        // Add to queue
-        const queueRecords = jobsToQueue.map((jobId: string) => ({
-          user_id: radar.user_id,
-          job_id: jobId,
-          status: "pending",
-        }));
-
-        const { error: queueError } = await supabase
-          .from("my_queue")
-          .insert(queueRecords);
-
-        if (!queueError) {
-          totalQueued += queueRecords.length;
+        if (!profile || !["diamond", "black"].includes(profile.plan_tier)) {
+          console.log(`[process-radar] Skipping ${radar.user_id}: plan=${profile?.plan_tier}`);
+          continue;
         }
 
-        // If auto_send is on, trigger the process-queue function
-        if (radar.auto_send && !queueError) {
-          try {
-            await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${serviceRoleKey}`,
-              },
-              body: JSON.stringify({ user_id: radar.user_id }),
-            });
-          } catch (e) {
-            console.error("Failed to trigger process-queue for", radar.user_id, e);
+        // Get effective daily limit
+        const { data: limitData } = await supabase.rpc("get_effective_daily_limit", {
+          p_user_id: radar.user_id,
+        });
+        const dailyLimit = limitData || 5;
+        const creditsRemaining = dailyLimit - (profile.credits_used_today || 0);
+
+        if (creditsRemaining <= 0) {
+          console.log(`[process-radar] Skipping ${radar.user_id}: no credits remaining`);
+          continue;
+        }
+
+        // Build job query based on radar criteria - ALIGNED with frontend filters
+        let jobQuery = supabase
+          .from("public_jobs")
+          .select("id")
+          .eq("is_banned", false)
+          .eq("is_active", true)
+          .order("posted_date", { ascending: false })
+          .limit(500);
+
+        if (radar.visa_type && radar.visa_type !== "all") {
+          jobQuery = jobQuery.eq("visa_type", radar.visa_type);
+        }
+        if (radar.state && radar.state !== "all") {
+          jobQuery = jobQuery.ilike("state", radar.state);
+        }
+        if (radar.min_wage) {
+          jobQuery = jobQuery.gte("salary", radar.min_wage);
+        }
+        if (radar.categories && radar.categories.length > 0) {
+          jobQuery = jobQuery.in("category", radar.categories);
+        }
+        if (radar.max_experience != null) {
+          jobQuery = jobQuery.or(`experience_months.is.null,experience_months.lte.${radar.max_experience}`);
+        }
+        if (radar.randomization_group && radar.randomization_group !== "all") {
+          jobQuery = jobQuery.eq("randomization_group", radar.randomization_group);
+        }
+
+        const { data: matchingJobs, error: jobsError } = await jobQuery;
+        if (jobsError) {
+          console.error(`[process-radar] Job query error for ${radar.user_id}:`, jobsError);
+          continue;
+        }
+        if (!matchingJobs || matchingJobs.length === 0) {
+          console.log(`[process-radar] No matching jobs for ${radar.user_id}`);
+          continue;
+        }
+
+        console.log(`[process-radar] ${radar.user_id}: ${matchingJobs.length} matching jobs found`);
+
+        // Filter out already matched jobs
+        const jobIds = matchingJobs.map((j: any) => j.id);
+
+        const { data: alreadyMatched } = await supabase
+          .from("radar_matched_jobs")
+          .select("job_id")
+          .eq("user_id", radar.user_id)
+          .in("job_id", jobIds);
+
+        const matchedSet = new Set((alreadyMatched || []).map((m: any) => m.job_id));
+        const newJobs = jobIds.filter((id: string) => !matchedSet.has(id));
+
+        if (newJobs.length === 0) {
+          console.log(`[process-radar] ${radar.user_id}: all jobs already matched`);
+          continue;
+        }
+
+        // Also filter out jobs already in user's queue
+        const { data: queuedJobs } = await supabase
+          .from("my_queue")
+          .select("job_id")
+          .eq("user_id", radar.user_id)
+          .in("job_id", newJobs);
+
+        const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
+        const jobsToProcess = newJobs.filter((id: string) => !queuedSet.has(id));
+
+        // Limit to remaining credits
+        const jobsToQueue = jobsToProcess.slice(0, creditsRemaining);
+
+        totalMatches += jobsToQueue.length;
+
+        // Record matches and optionally add to queue
+        if (jobsToQueue.length > 0) {
+          const matchRecords = jobsToQueue.map((jobId: string) => ({
+            user_id: radar.user_id,
+            job_id: jobId,
+            auto_queued: radar.auto_send,
+          }));
+
+          await supabase.from("radar_matched_jobs").upsert(matchRecords, {
+            onConflict: "user_id,job_id",
+          });
+
+          if (radar.auto_send) {
+            const queueRecords = jobsToQueue.map((jobId: string) => ({
+              user_id: radar.user_id,
+              job_id: jobId,
+              status: "pending",
+            }));
+
+            const { error: queueError } = await supabase
+              .from("my_queue")
+              .insert(queueRecords);
+
+            if (!queueError) {
+              totalQueued += queueRecords.length;
+              console.log(`[process-radar] ${radar.user_id}: queued ${queueRecords.length} jobs`);
+            } else {
+              console.error(`[process-radar] Queue insert error for ${radar.user_id}:`, queueError);
+            }
+
+            if (!queueError) {
+              try {
+                await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${serviceRoleKey}`,
+                  },
+                  body: JSON.stringify({ user_id: radar.user_id }),
+                });
+              } catch (e) {
+                console.error("Failed to trigger process-queue for", radar.user_id, e);
+              }
+            }
+          } else {
+            console.log(`[process-radar] ${radar.user_id}: auto_send OFF, matches recorded only`);
           }
         }
-      }
 
-      // Update last_scan_at
-      await supabase
-        .from("radar_profiles")
-        .update({ last_scan_at: new Date().toISOString() })
-        .eq("user_id", radar.user_id);
+        // Update last_scan_at
+        await supabase
+          .from("radar_profiles")
+          .update({ last_scan_at: new Date().toISOString() })
+          .eq("user_id", radar.user_id);
+      } catch (userError) {
+        console.error(`[process-radar] Error processing user ${radar.user_id}:`, userError);
+        continue;
+      }
     }
 
-    return new Response(
-      JSON.stringify({
-        message: "Radar scan complete",
-        profiles_scanned: radarProfiles.length,
-        total_matches: totalMatches,
-        total_queued: totalQueued,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const result = {
+      message: "Radar scan complete",
+      profiles_scanned: radarProfiles.length,
+      total_matches: totalMatches,
+      total_queued: totalQueued,
+    };
+    console.log(`[process-radar] Done:`, result);
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Radar error:", error);
     return new Response(

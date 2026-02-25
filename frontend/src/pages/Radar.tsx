@@ -355,6 +355,8 @@ export default function Radar() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
+  const [queuedFromRadar, setQueuedFromRadar] = useState(0);
+  const [totalRawMatches, setTotalRawMatches] = useState(0);
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
   const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
   const [radarProfile, setRadarProfile] = useState<any>(null);
@@ -449,14 +451,20 @@ export default function Radar() {
       .eq("user_id", profile.id);
 
     if (data) {
-      // Filter to only valid matches: active, not banned, not already in queue
-      const validMatches = (data as any[]).filter((m: any) => {
+      const allData = data as any[];
+      setTotalRawMatches(allData.length);
+
+      // Filter to only valid matches: active, not banned
+      const validMatches = allData.filter((m: any) => {
         const job = m.public_jobs;
         if (!job) return false;
         if (job.is_active === false) return false;
         if (job.is_banned === true) return false;
         return true;
       });
+
+      // Count how many were auto-queued
+      const autoQueuedCount = allData.filter((m: any) => m.auto_queued).length;
 
       // Now filter out jobs already in my_queue
       const jobIds = validMatches.map((m: any) => m.job_id);
@@ -468,11 +476,14 @@ export default function Radar() {
           .in("job_id", jobIds);
 
         const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
+        const queuedCount = validMatches.filter((m: any) => queuedSet.has(m.job_id)).length;
         const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
 
+        setQueuedFromRadar(queuedCount);
         setMatchedJobs(finalMatches);
         setMatchCount(finalMatches.length);
       } else {
+        setQueuedFromRadar(0);
         setMatchedJobs(validMatches);
         setMatchCount(validMatches.length);
       }
@@ -726,7 +737,7 @@ export default function Radar() {
           <MetricCard label="Live Signals" value={formatNumber(totalSinaisGeral)} icon={Activity} subtitle="Opportunities detected" />
         </HeroPanel>
         <HeroPanel className="p-0 overflow-hidden">
-          <MetricCard label="Active Matches" value={formatNumber(matchCount)} icon={Target} subtitle="Ready to apply" />
+          <MetricCard label="Active Matches" value={formatNumber(matchCount)} icon={Target} subtitle={`${formatNumber(queuedFromRadar)} sent to queue`} />
         </HeroPanel>
         <HeroPanel className="p-0 overflow-hidden">
           <MetricCard

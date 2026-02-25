@@ -784,6 +784,27 @@ async function processOneUser(params: {
   const { serviceClient, userId, maxItems, queueIds } = params;
   console.log(`[processOneUser] Iniciando processamento para usuário ${userId}, maxItems: ${maxItems}, queueIds: ${queueIds?.length || 0}`);
 
+  // ── Recover stuck jobs: reset items stuck in "processing" for >10 min ──
+  try {
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: stuckRows } = await serviceClient
+      .from("my_queue")
+      .update({
+        status: "pending",
+        processing_started_at: null,
+        last_error: "Recuperado automaticamente: travou em processamento",
+      } as any)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .lt("processing_started_at", tenMinAgo)
+      .select("id");
+    if (stuckRows && stuckRows.length > 0) {
+      console.log(`[processOneUser] Recuperados ${stuckRows.length} itens travados para ${userId}`);
+    }
+  } catch (e) {
+    console.warn(`[processOneUser] Erro ao recuperar itens travados:`, e);
+  }
+
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
     .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_data_h2a,resume_data_h2b,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors")
@@ -996,11 +1017,13 @@ async function processOneUser(params: {
 
     console.log(`[process-queue] Processando item ${row.id} para usuário ${userId}`);
 
+    // Declare job OUTSIDE try so it's accessible in catch for error logging
+    let job:
+      | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
+      | (ManualJobRow & { visa_type?: string | null })
+      | null = null;
+
     try {
-      let job:
-        | (PublicJobRow & { eta_number?: string | null; phone?: string | null })
-        | (ManualJobRow & { visa_type?: string | null })
-        | null = null;
 
       if (row.job_id) {
         const { data: pj, error: pjErr } = await serviceClient
@@ -1252,7 +1275,8 @@ async function processOneUser(params: {
     } catch (err: unknown) {
       const rawMessage = err instanceof Error ? err.message : "Falha ao enviar";
       const message = classifySmtpError(rawMessage);
-      console.error(`[process-queue] Erro ao processar item ${row.id} para ${job?.email || 'email desconhecido'}:`, err);
+      const jobEmail = job && 'email' in job ? job.email : 'email desconhecido';
+      console.error(`[process-queue] Erro ao processar item ${row.id} para ${jobEmail}:`, err);
       console.error(`[process-queue] Erro classificado: ${message}`);
       console.error(`[process-queue] Stack trace:`, err instanceof Error ? err.stack : 'N/A');
       await (serviceClient
@@ -1342,7 +1366,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: users, error: uErr } = await serviceClient
         .from("profiles")
         .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond"])
+        .in("plan_tier", ["gold", "diamond", "black"])
         .limit(200);
       if (uErr) throw uErr;
 
@@ -1352,11 +1376,16 @@ const handler = async (req: Request): Promise<Response> => {
       let failed = 0;
 
       for (const u of (users ?? []) as Array<{ id: string }>) {
-        const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2 });
-        if (r.processed > 0) usersTouched += 1;
-        processed += r.processed;
-        sent += r.sent;
-        failed += r.failed;
+        try {
+          const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2 });
+          if (r.processed > 0) usersTouched += 1;
+          processed += r.processed;
+          sent += r.sent;
+          failed += r.failed;
+        } catch (userErr) {
+          console.error(`[process-queue] Erro ao processar usuário ${u.id} no cron:`, userErr);
+          failed += 1;
+        }
       }
 
       return json(200, { ok: true, mode: "cron", usersTouched, processed, sent, failed });
