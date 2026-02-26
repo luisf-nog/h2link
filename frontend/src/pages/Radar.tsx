@@ -117,7 +117,6 @@ const SectorCard = ({
         if (e.key === "Enter" || e.key === " ") onExpand();
       }}
     >
-      {/* Left indicator bar */}
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
@@ -147,30 +146,6 @@ const SectorCard = ({
               </h3>
               <div className="flex items-center gap-2 text-[11px] mt-1">
                 <span className="text-muted-foreground/70">{formatNumber(data.totalJobs)} opportunities</span>
-
-                {allSelected && (
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold"
-                  >
-                    Monitoring
-                  </Badge>
-                )}
-
-                {partialSelected && (
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/5 text-primary/70 border-primary/15 text-[9px] font-bold"
-                  >
-                    Partial
-                  </Badge>
-                )}
-
-                {totalInSector > 0 && (
-                  <span className="text-[10px] font-bold text-muted-foreground/50">
-                    {selectedInSector}/{totalInSector}
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -186,7 +161,6 @@ const SectorCard = ({
         )}
       </div>
 
-      {/* Expanded subcategories */}
       {isExpanded && data.items.length > 1 && (
         <div className="mt-5 pt-5 border-t border-border/30 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
           {data.items.map((item: any) => {
@@ -214,7 +188,6 @@ const SectorCard = ({
 
 const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
   <div className="group relative rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all duration-300 p-5 space-y-4">
-    {/* Top metadata */}
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="text-[9px] font-bold border-border bg-muted/40">
@@ -227,12 +200,10 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
       <span className="text-[9px] text-muted-foreground/45">Detected recently</span>
     </div>
 
-    {/* Job title */}
     <h3 className="text-base font-bold text-foreground leading-tight group-hover:text-primary transition-colors">
       {job.category}
     </h3>
 
-    {/* Key metrics */}
     <div className="grid grid-cols-2 gap-3">
       <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/30 border border-border">
         <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">Salary</span>
@@ -244,7 +215,6 @@ const JobCard = ({ job, match, onApply, onView, onDismiss }: any) => (
       </div>
     </div>
 
-    {/* Action buttons */}
     <div className="flex items-center gap-2 pt-2">
       <Button
         onClick={() => onApply(match.id, job.id)}
@@ -278,23 +248,9 @@ const SECTOR_KEYWORDS: Record<string, string[]> = {
   agriculture: ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
   farm_equipment: ["Agricultural Equipment", "Tractor"],
   construction: ["Construction", "Laborers", "Cement", "Masons", "Concrete", "Fence", "Brickmasons", "Iron", "Paving"],
-  carpentry: ["Carpenters", "Cabinetmakers", "Bench Carpenters", "Roofers"],
-  installation: ["Electricians", "Plumbers", "Installation", "Pipelayers", "Septic", "Repair Workers"],
-  mechanics: ["Mechanics", "Service Technicians", "Automotive", "Diesel"],
-  cleaning: ["Maids", "Housekeeping", "Janitors", "Cleaners"],
-  kitchen: ["Cooks", "Bakers", "Food Preparation", "Kitchen"],
-  dining: ["Waiters", "Waitresses", "Dining Room", "Hostess", "Dishwashers"],
-  hospitality: ["Hotel", "Resort", "Desk Clerks", "Concierges", "Baggage"],
-  bar: ["Baristas", "Bartenders"],
+  landscaping: ["Landscaping", "Groundskeeping", "Tree Trimmers"],
   logistics: ["Laborers and Freight", "Stockers", "Packers", "Material Movers", "Order Fillers"],
   transport: ["Truck Drivers", "Shuttle", "Chauffeurs", "Delivery"],
-  manufacturing: ["Assemblers", "Fabricators", "Production Workers", "Machine Feeders"],
-  welding: ["Welders", "Cutters", "Solderers", "Brazers"],
-  wood: ["Woodworking", "Sawing Machine"],
-  textile: ["Textile", "Laundry", "Sewing"],
-  meat: ["Meat, Poultry", "Butchers", "Slaughterers"],
-  landscaping: ["Landscaping", "Groundskeeping", "Tree Trimmers"],
-  sales: ["Salespersons", "Counter", "Cashiers", "Retail"],
 };
 
 const US_STATES = [
@@ -360,7 +316,6 @@ export default function Radar() {
   const [saving, setSaving] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
   const [queuedFromRadar, setQueuedFromRadar] = useState(0);
-  const [totalRawMatches, setTotalRawMatches] = useState(0);
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
   const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
   const [radarProfile, setRadarProfile] = useState<any>(null);
@@ -377,10 +332,7 @@ export default function Radar() {
   const [groupFilter, setGroupFilter] = useState("all");
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
-  const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
-
   const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
-
   const totalSinaisGeral = useMemo(
     () => Object.values(groupedCategories).reduce((acc, curr) => acc + (curr.totalJobs || 0), 0),
     [groupedCategories],
@@ -426,21 +378,18 @@ export default function Radar() {
         const grouped = (data as any[]).reduce((acc: any, curr: any) => {
           const raw = curr.raw_category || "";
           let segment = "other";
-
-          for (const [sectorKey, keywords] of Object.entries(SECTOR_KEYWORDS)) {
-            if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
-              segment = sectorKey;
+          for (const [key, kws] of Object.entries(SECTOR_KEYWORDS)) {
+            if (kws.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
+              segment = key;
               break;
             }
           }
-
-          const sectorName = t(`radar.sectors.${segment}`, segment);
-          if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
-          acc[sectorName].items.push(curr);
-          acc[sectorName].totalJobs += curr.count || 0;
+          const name = t(`radar.sectors.${segment}`, segment);
+          if (!acc[name]) acc[name] = { items: [], totalJobs: 0 };
+          acc[name].items.push(curr);
+          acc[name].totalJobs += curr.count || 0;
           return acc;
         }, {});
-
         setGroupedCategories(grouped);
       }
     } catch (e) {
@@ -454,32 +403,36 @@ export default function Radar() {
       .from("radar_matched_jobs" as any)
       .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
       .eq("user_id", profile.id);
-
     if (data) {
-      const allData = data as any[];
-      setTotalRawMatches(allData.length);
-      const validMatches = allData.filter(
-        (m: any) => m.public_jobs && m.public_jobs.is_active !== false && m.public_jobs.is_banned !== true,
+      const validMatches = (data as any[]).filter(
+        (m: any) => m.public_jobs && m.public_jobs.is_active !== false && !m.public_jobs.is_banned,
       );
-      const jobIds = validMatches.map((m: any) => m.job_id);
+      setMatchedJobs(validMatches);
+      setMatchCount(validMatches.length);
+    }
+  };
 
-      if (jobIds.length > 0) {
-        const { data: queuedJobs } = await supabase
-          .from("my_queue")
-          .select("job_id")
-          .eq("user_id", profile.id)
-          .in("job_id", jobIds);
+  // --- RESTORED HANDLERS ---
+  const handleSendApplication = async (matchId: string, jobId: string) => {
+    if (!profile?.id) return;
+    try {
+      await supabase.from("my_queue").insert([{ user_id: profile.id, job_id: jobId, status: "pending" }]);
+      await supabase.from("radar_matched_jobs").delete().eq("id", matchId);
+      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
+      setMatchCount((prev) => Math.max(0, prev - 1));
+      toast({ title: "Application added to queue" });
+    } catch (err) {
+      toast({ title: "Error", variant: "destructive" });
+    }
+  };
 
-        const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
-        const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
-        setQueuedFromRadar(validMatches.length - finalMatches.length);
-        setMatchedJobs(finalMatches);
-        setMatchCount(finalMatches.length);
-      } else {
-        setQueuedFromRadar(0);
-        setMatchedJobs(validMatches);
-        setMatchCount(validMatches.length);
-      }
+  const removeMatch = async (matchId: string) => {
+    try {
+      await supabase.from("radar_matched_jobs").delete().eq("id", matchId);
+      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
+      setMatchCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      toast({ title: "Error", variant: "destructive" });
     }
   };
 
@@ -498,20 +451,18 @@ export default function Radar() {
       randomization_group: groupFilter,
       ...overrides,
     };
-
     const { error } = radarProfile
       ? await supabase
           .from("radar_profiles" as any)
           .update(payload)
           .eq("user_id", profile.id)
       : await supabase.from("radar_profiles" as any).insert(payload);
-
     if (!error) {
       setRadarProfile({ ...radarProfile, ...payload });
       if (payload.is_active) {
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
-        await fetchMatches();
-        await updateStats();
+        fetchMatches();
+        updateStats();
       }
       toast({ title: t("radar.toast_recalibrated") });
     }
@@ -524,29 +475,23 @@ export default function Radar() {
         setLoading(false);
         return;
       }
-      try {
-        const { data } = await supabase
-          .from("radar_profiles" as any)
-          .select("*")
-          .eq("user_id", profile.id)
-          .single();
-        if (data) {
-          const d = data as any;
-          setRadarProfile(d);
-          setIsActive(d.is_active ?? false);
-          setRadarMode(d.auto_send ? "autopilot" : "manual");
-          setSelectedCategories(d.categories || []);
-          setMinWage(d.min_wage?.toString() || "");
-          setMaxExperience(d.max_experience?.toString() || "");
-          setVisaType(d.visa_type || "all");
-          setStateFilter(d.state || "all");
-          setGroupFilter(d.randomization_group || "all");
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+      const { data } = await supabase
+        .from("radar_profiles" as any)
+        .select("*")
+        .eq("user_id", profile.id)
+        .single();
+      if (data) {
+        setRadarProfile(data);
+        setIsActive(data.is_active ?? false);
+        setRadarMode(data.auto_send ? "autopilot" : "manual");
+        setSelectedCategories(data.categories || []);
+        setMinWage(data.min_wage?.toString() || "");
+        setMaxExperience(data.max_experience?.toString() || "");
+        setVisaType(data.visa_type || "all");
+        setStateFilter(data.state || "all");
+        setGroupFilter(data.randomization_group || "all");
       }
+      setLoading(false);
     };
     init();
   }, [profile?.id]);
@@ -584,7 +529,7 @@ export default function Radar() {
                       {t("radar.title", "Radar Jobs")}
                     </h1>
 
-                    {/* REFINED PREMIUM BADGE - Surgical Update */}
+                    {/* REFINED PREMIUM BADGE - Corrected */}
                     <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400">
                       <div className="relative flex h-1.5 w-1.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
@@ -610,30 +555,10 @@ export default function Radar() {
               >
                 <HelpCircle className="h-3.5 w-3.5" /> Como funciona?
               </Button>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/6 border border-success/20">
-                <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                <span className="text-xs font-bold text-success/80 uppercase tracking-widest">System Online</span>
-              </div>
             </div>
           </div>
-          <div className="h-px bg-border" />
-          <div className="flex flex-wrap gap-2">
-            {[
-              { icon: CircleDollarSign, label: minWage ? `$${formatNumber(Number(minWage))}+/hr` : "Any salary" },
-              { icon: MapPin, label: stateFilter !== "all" ? stateFilter : "All States" },
-              { icon: Briefcase, label: maxExperience ? `Up to ${maxExperience}mo exp` : "Any experience" },
-              { icon: Globe, label: visaType !== "all" ? visaType : "All Visas" },
-            ].map((f, i) => (
-              <button
-                key={i}
-                onClick={() => setShowFilters(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors shadow-sm"
-              >
-                <f.icon className="h-3.5 w-3.5 text-primary/60" /> {f.label}
-              </button>
-            ))}
-          </div>
-          <div className="h-px bg-border" />
+
+          {/* Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
@@ -645,10 +570,8 @@ export default function Radar() {
                     key={mode}
                     onClick={() => setRadarMode(mode)}
                     className={cn(
-                      "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all border",
-                      radarMode === mode
-                        ? "bg-primary/10 border-primary/30 text-primary shadow-sm"
-                        : "bg-muted/25 border-border text-foreground/70",
+                      "flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all border",
+                      radarMode === mode ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/25 border-border",
                     )}
                   >
                     {mode}
@@ -667,7 +590,7 @@ export default function Radar() {
                   performSave({ is_active: next });
                 }}
                 className={cn(
-                  "w-full h-12 rounded-lg font-bold uppercase tracking-wider",
+                  "w-full h-12 rounded-lg font-bold",
                   isActive
                     ? "bg-primary/10 text-primary border border-primary/30"
                     : "bg-primary text-primary-foreground",
@@ -680,53 +603,27 @@ export default function Radar() {
         </div>
       </HeroPanel>
 
+      {/* METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: "Live Signals", val: formatNumber(totalSinaisGeral), icon: Activity, sub: "Opportunities detected" },
-          {
-            label: "Active Matches",
-            val: formatNumber(matchCount),
-            icon: Target,
-            sub: `${formatNumber(queuedFromRadar)} sent to queue`,
-          },
-          {
-            label: "Sectors Monitored",
-            val: formatNumber(selectedCategories.length),
-            icon: Globe,
-            sub: "Active tracking",
-          },
-          { label: "Scan Frequency", val: "Daily", icon: Clock, sub: "New jobs daily" },
+          { label: "Live Signals", val: formatNumber(totalSinaisGeral), icon: Activity },
+          { label: "Active Matches", val: formatNumber(matchCount), icon: Target },
+          { label: "Sectors", val: formatNumber(selectedCategories.length), icon: Globe },
+          { label: "Frequency", val: "Daily", icon: Clock },
         ].map((m, i) => (
           <HeroPanel key={i} className="p-0 overflow-hidden">
-            <MetricCard label={m.label} value={m.val} icon={m.icon} subtitle={m.sub} />
+            <MetricCard label={m.label} value={m.val} icon={m.icon} />
           </HeroPanel>
         ))}
       </div>
 
-      <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-muted/30 border border-border">
-        <Sparkles className="h-4 w-4 text-primary/60" />
-        <p className="text-sm text-muted-foreground/80">
-          Matching based on <span className="font-semibold text-foreground">salary</span>,{" "}
-          <span className="font-semibold text-foreground">sector</span>, and{" "}
-          <span className="font-semibold text-foreground">location</span>.
-        </p>
-      </div>
-
-      {/* LEVEL 3: CONFIGURATION & LIVE FEED - HEIGHT SYNCED */}
+      {/* SYNCED HEIGHT COLUMNS */}
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 items-stretch">
-        <div className="lg:col-span-4 space-y-6 flex flex-col">
+        <div className="lg:col-span-4 flex flex-col space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Filter className="h-5 w-5 text-primary/60" /> Sector Targeting
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFilters(true)}
-              className="text-xs font-bold hover:bg-primary/5 h-8"
-            >
-              <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Filters
-            </Button>
           </div>
           <div className="rounded-3xl bg-muted/20 border border-border p-1.5 flex-1">
             <HeroPanel className="p-0 border-0 shadow-none h-full">
@@ -758,60 +655,33 @@ export default function Radar() {
               </ScrollArea>
             </HeroPanel>
           </div>
-          {hasChangesComputed && (
-            <Button
-              onClick={() => performSave()}
-              disabled={saving}
-              className="w-full h-12 rounded-lg bg-foreground text-background font-bold uppercase tracking-wider"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />} Save
-              Configuration
-            </Button>
-          )}
         </div>
 
-        <div className="lg:col-span-3 space-y-6 flex flex-col">
+        <div className="lg:col-span-3 flex flex-col space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary/60" /> Live Feed
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-muted-foreground/50 uppercase">Real-time</span>
-              <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            </div>
           </div>
           <div className="rounded-3xl bg-muted/20 border border-border p-1.5 flex-1">
-            <HeroPanel className="p-0 border-0 shadow-none h-full flex flex-col">
+            <HeroPanel className="p-0 border-0 shadow-none h-full">
               <ScrollArea className="h-[600px]">
                 <div className="p-6 space-y-4">
                   {matchedJobs.length > 0 ? (
-                    matchedJobs.map(
-                      (match) =>
-                        match.public_jobs && (
-                          <JobCard
-                            key={match.id}
-                            job={match.public_jobs}
-                            match={match}
-                            onApply={handleSendApplication}
-                            onView={(id: any) => window.open(`/jobs/${id}`, "_blank")}
-                            onDismiss={removeMatch}
-                          />
-                        ),
-                    )
+                    matchedJobs.map((match) => (
+                      <JobCard
+                        key={match.id}
+                        job={match.public_jobs}
+                        match={match}
+                        onApply={handleSendApplication}
+                        onView={(id: any) => window.open(`/jobs/${id}`, "_blank")}
+                        onDismiss={removeMatch}
+                      />
+                    ))
                   ) : (
-                    <div className="h-[550px] flex flex-col items-center justify-center text-center space-y-6">
-                      <div className="relative">
-                        <div className="absolute inset-0 animate-pulse rounded-full bg-primary/10 blur-xl" />
-                        <div className="relative p-6 rounded-full bg-primary/5 border border-primary/10">
-                          <Search className="h-8 w-8 text-primary/40" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold">Scanning frequencies...</p>
-                        <p className="text-xs text-muted-foreground/70 max-w-[240px]">
-                          No signals detected. Configure targeting to begin.
-                        </p>
-                      </div>
+                    <div className="h-[550px] flex flex-col items-center justify-center text-center opacity-40">
+                      <Search className="h-10 w-10 mb-4" />
+                      <p className="text-xs font-bold uppercase tracking-widest">Scanning...</p>
                     </div>
                   )}
                 </div>
@@ -821,71 +691,29 @@ export default function Radar() {
         </div>
       </div>
 
+      {/* FILTER DIALOG */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
         <DialogContent className="max-w-2xl rounded-3xl p-8">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Advanced Filters</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase text-muted-foreground/60">Minimum Salary</Label>
-                <div className="relative">
-                  <CircleDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                  <Input
-                    type="number"
-                    value={minWage}
-                    onChange={(e) => setMinWage(e.target.value)}
-                    className="h-11 pl-11 rounded-lg"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase text-muted-foreground/60">Max Experience</Label>
-                <div className="relative">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
-                  <Input
-                    type="number"
-                    value={maxExperience}
-                    onChange={(e) => setMaxExperience(e.target.value)}
-                    className="h-11 pl-11 rounded-lg"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
+          <DialogTitle>Advanced Filters</DialogTitle>
+          <div className="grid grid-cols-2 gap-8 py-6">
+            <div className="space-y-4">
+              <Label>Min Salary</Label>
+              <Input type="number" value={minWage} onChange={(e) => setMinWage(e.target.value)} />
             </div>
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase text-muted-foreground/60">State</Label>
-                <Select value={stateFilter} onValueChange={setStateFilter}>
-                  <SelectTrigger className="h-11 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {US_STATES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase text-muted-foreground/60">Visa Type</Label>
-                <Select value={visaType} onValueChange={setVisaType}>
-                  <SelectTrigger className="h-11 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VISA_TYPE_OPTIONS.map((v) => (
-                      <SelectItem key={v.value} value={v.value}>
-                        {v.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-4">
+              <Label>State</Label>
+              <Select value={stateFilter} onValueChange={setStateFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {US_STATES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <Button
@@ -893,17 +721,12 @@ export default function Radar() {
               setShowFilters(false);
               performSave();
             }}
-            className="w-full h-11 rounded-lg"
+            className="w-full h-11"
           >
-            Apply Filters
+            Apply
           </Button>
         </DialogContent>
       </Dialog>
-
-      <div className="pt-8 border-t border-border flex items-center justify-between text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
-        <span>H2 Link Radar • Premium Edition</span>
-        <span>v4.1.0</span>
-      </div>
     </div>
   );
 }
