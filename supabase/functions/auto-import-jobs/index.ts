@@ -158,7 +158,65 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ── AUTH: Validate cron token or admin JWT ──
     const body = await req.json().catch(() => ({}));
+    const cronToken = body.cron_token;
+
+    if (cronToken) {
+      // Validate cron token against app_settings
+      const { data: settings } = await supabase
+        .from("app_settings")
+        .select("cron_token")
+        .eq("id", 1)
+        .single();
+
+      if (!settings || settings.cron_token !== cronToken) {
+        return new Response(JSON.stringify({ error: "Invalid cron token" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      // Validate JWT + admin role
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const anonClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claims, error: claimsErr } = await anonClient.auth.getClaims(token);
+      if (claimsErr || !claims?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "Invalid token" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const userId = claims.claims.sub as string;
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: "Admin role required" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const sourceKey = body.source || "jo";
 
     const source = DOL_SOURCES.find((s) => s.key === sourceKey);
