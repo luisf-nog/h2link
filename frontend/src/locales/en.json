@@ -1474,6 +1474,7 @@
     },
     "ui": {
       "premium_edition": "Premium Edition",
+      "premium_access": "Premium Access",
       "how_it_works": "How it works?",
       "system_online": "System Online",
       "system_offline": "System Offline",
