@@ -63,12 +63,12 @@ const TOOL_SCHEMA = {
           type: "object",
           description: "Work authorization and availability details for recruiter reference. ALWAYS include this section.",
           properties: {
-            visa_type: { type: "string" },
-            current_location: { type: "string" },
-            passport_status: { type: "string" },
-            previous_h2_experience: { type: "string" },
-            availability: { type: "string" },
-            visa_denial_history: { type: "string" },
+            visa_type: { type: "string", description: "e.g. 'Requires H-2B Visa Sponsorship' or 'H-2A Visa Candidate'" },
+            current_location: { type: "string", description: "e.g. 'Outside the U.S.' or 'Currently in the U.S.'" },
+            passport_status: { type: "string", description: "e.g. 'Valid passport' or 'Renewal in progress'" },
+            previous_h2_experience: { type: "string", description: "e.g. 'First-time applicant' or '2 previous H-2B seasons'" },
+            availability: { type: "string", description: "e.g. 'Immediately available — Full season'" },
+            visa_denial_history: { type: "string", description: "e.g. 'No prior visa denials'" },
           },
         },
       },
@@ -79,55 +79,147 @@ const TOOL_SCHEMA = {
 
 // Sector category mapping (mirrors frontend SECTOR_CATEGORIES)
 const SECTOR_FOCUS: Record<string, { name: string; focus: string; keywords: string[] }> = {
-  campo_colheita: {
+  agricultura_colheita: {
     name: "Agriculture & Harvesting",
-    focus: "Crop harvesting, planting, livestock care, greenhouse/nursery, forestry, irrigation, soil management, farm equipment operation",
+    focus: "Crop harvesting, planting, livestock care, greenhouse/nursery, forestry, irrigation, soil management, farm equipment support",
     keywords: ["farming", "harvesting", "livestock", "agriculture", "crop", "nursery", "greenhouse"],
   },
-  construcao_manutencao: {
-    name: "Construction & Maintenance",
-    focus: "Building construction, heavy labor, masonry, concrete, roofing, framing, general maintenance, equipment operation",
-    keywords: ["construction", "building", "masonry", "concrete", "roofing", "carpentry", "maintenance"],
+  equipamentos_agricolas: {
+    name: "Farm Equipment",
+    focus: "Tractor operation support, agricultural machinery handling, preventive checks, field equipment readiness",
+    keywords: ["tractor", "equipment", "farm machinery", "ag equipment", "maintenance"],
   },
-  paisagismo_jardinagem: {
-    name: "Landscaping & Gardening",
-    focus: "Grounds maintenance, mowing, tree trimming, irrigation systems, hardscaping, pesticide application",
-    keywords: ["landscaping", "gardening", "groundskeeping", "tree", "mowing", "irrigation"],
+  construcao_geral: {
+    name: "General Construction",
+    focus: "Building construction, heavy labor, masonry, concrete, framing, site prep, general maintenance",
+    keywords: ["construction", "building", "masonry", "concrete", "labor", "site"],
   },
-  hotelaria_limpeza: {
-    name: "Hospitality & Cleaning",
-    focus: "Hotel housekeeping, janitorial, deep cleaning, laundry, guest services, room attendant duties",
-    keywords: ["hotel", "housekeeping", "cleaning", "janitorial", "hospitality"],
+  carpintaria_telhados: {
+    name: "Carpentry & Roofing",
+    focus: "Wood framing, roof installation/repair, finishing carpentry, measuring/cutting, structure assembly",
+    keywords: ["carpentry", "roofer", "roofing", "wood", "framing", "cabinet"],
   },
-  cozinha_restaurante: {
-    name: "Kitchen & Restaurant",
-    focus: "Food preparation, cooking, dishwashing, kitchen sanitation, line cooking, baking, food safety compliance",
-    keywords: ["cooking", "kitchen", "restaurant", "food prep", "chef", "baker", "dishwasher"],
-  },
-  logistica_transporte: {
-    name: "Logistics & Transport",
-    focus: "Driving, delivery, warehousing, forklift operation, inventory management, loading/unloading",
-    keywords: ["driving", "transport", "warehouse", "logistics", "forklift", "delivery"],
-  },
-  industria_producao: {
-    name: "Manufacturing & Production",
-    focus: "Assembly line, quality control, machine operation, packaging, meat/seafood processing, production line work",
-    keywords: ["factory", "manufacturing", "production", "assembly", "processing", "packaging"],
+  instalacao_eletrica: {
+    name: "Installation & Electrical",
+    focus: "Electrical/plumbing installation support, piping, system setup, troubleshooting assistance, safe tool usage",
+    keywords: ["electric", "electrical", "plumbing", "installation", "pipe", "wiring"],
   },
   mecanica_reparo: {
     name: "Mechanics & Repair",
-    focus: "Vehicle maintenance, engine repair, equipment troubleshooting, welding, electrical systems",
-    keywords: ["mechanic", "repair", "automotive", "welding", "technician"],
+    focus: "Vehicle and equipment maintenance, diagnostics support, parts replacement, repair workflows",
+    keywords: ["mechanic", "repair", "automotive", "diesel", "technician", "maintenance"],
+  },
+  limpeza_zeladoria: {
+    name: "Cleaning & Janitorial",
+    focus: "Commercial/residential cleaning, sanitization, housekeeping standards, janitorial routines",
+    keywords: ["cleaning", "janitorial", "housekeeping", "sanitation", "maid", "cleaner"],
+  },
+  cozinha_preparacao: {
+    name: "Kitchen & Food Prep",
+    focus: "Food preparation, cooking support, kitchen organization, food safety, prep-line efficiency",
+    keywords: ["kitchen", "cook", "food prep", "chef", "baker", "prep"],
+  },
+  servico_mesa: {
+    name: "Dining & Table Service",
+    focus: "Guest service, table setup, order support, dining room workflow, fast and attentive service",
+    keywords: ["waiter", "waitress", "server", "dining", "host", "dishwasher"],
+  },
+  hotelaria_recepcao: {
+    name: "Hospitality & Front Desk",
+    focus: "Front desk operations, guest assistance, check-in/out support, hotel workflow and service quality",
+    keywords: ["hotel", "hospitality", "front desk", "concierge", "lodging", "reception"],
+  },
+  bar_bebidas: {
+    name: "Bar & Beverages",
+    focus: "Beverage prep, bar support, station organization, customer service, cleanliness and safety",
+    keywords: ["bar", "barista", "bartender", "beverages", "drink"],
+  },
+  logistica_estoque: {
+    name: "Logistics & Warehousing",
+    focus: "Inventory movement, loading/unloading, stock control, warehouse organization, shipping/receiving",
+    keywords: ["logistics", "warehouse", "inventory", "freight", "loading", "stock"],
+  },
+  transporte_motorista: {
+    name: "Transport & Driving",
+    focus: "Commercial driving support, route discipline, safe transport, delivery operations, fleet routines",
+    keywords: ["driver", "transport", "delivery", "truck", "shuttle", "driving"],
+  },
+  manufatura_montagem: {
+    name: "Manufacturing & Assembly",
+    focus: "Assembly line production, machine support, process discipline, quality-oriented repetitive tasks",
+    keywords: ["manufacturing", "assembly", "production", "operator", "fabrication", "factory"],
+  },
+  soldagem_corte: {
+    name: "Welding & Cutting",
+    focus: "Welding/cutting support, metal preparation, torch/tool handling, safety-first execution",
+    keywords: ["welding", "welder", "cutting", "metal", "brazer", "solder"],
+  },
+  marcenaria_madeira: {
+    name: "Woodworking",
+    focus: "Wood processing, finishing, machine-assisted cutting, precision in wood fabrication tasks",
+    keywords: ["woodworking", "sawmill", "wood", "carpentry", "wood machine"],
+  },
+  carnes_frigorifico: {
+    name: "Meat Processing",
+    focus: "Meat/poultry processing workflows, sanitation discipline, cutting/packing support, cold-chain readiness",
+    keywords: ["meat", "poultry", "processing", "butcher", "slaughter", "packing"],
+  },
+  textil_lavanderia: {
+    name: "Textile & Laundry",
+    focus: "Laundry operations, textile handling, garment processing, pressing/folding workflow quality",
+    keywords: ["textile", "laundry", "garment", "sewing", "pressing"],
+  },
+  paisagismo_jardinagem: {
+    name: "Landscaping & Gardening",
+    focus: "Grounds maintenance, mowing, pruning, irrigation support, outdoor service quality",
+    keywords: ["landscaping", "gardening", "groundskeeping", "tree", "mowing", "irrigation"],
+  },
+  vendas_atendimento: {
+    name: "Sales & Customer Service",
+    focus: "Customer-facing service, retail operations, cashier support, communication and attention to detail",
+    keywords: ["sales", "retail", "cashier", "customer service", "reception"],
+  },
+
+  // Legacy aliases (backward compatibility)
+  campo_colheita: {
+    name: "Agriculture & Harvesting",
+    focus: "Crop harvesting, planting, livestock care, greenhouse/nursery, forestry, irrigation, soil management, farm equipment support",
+    keywords: ["farming", "harvesting", "livestock", "agriculture", "crop", "nursery", "greenhouse"],
+  },
+  construcao_manutencao: {
+    name: "General Construction",
+    focus: "Building construction, heavy labor, masonry, concrete, framing, site prep, general maintenance",
+    keywords: ["construction", "building", "masonry", "concrete", "labor", "site"],
+  },
+  hotelaria_limpeza: {
+    name: "Cleaning & Janitorial",
+    focus: "Commercial/residential cleaning, sanitization, housekeeping standards, janitorial routines",
+    keywords: ["cleaning", "janitorial", "housekeeping", "sanitation", "maid", "cleaner"],
+  },
+  cozinha_restaurante: {
+    name: "Kitchen & Food Prep",
+    focus: "Food preparation, cooking support, kitchen organization, food safety, prep-line efficiency",
+    keywords: ["kitchen", "cook", "food prep", "chef", "baker", "prep"],
+  },
+  logistica_transporte: {
+    name: "Logistics & Warehousing",
+    focus: "Inventory movement, loading/unloading, stock control, warehouse organization, shipping/receiving",
+    keywords: ["logistics", "warehouse", "inventory", "freight", "loading", "stock"],
+  },
+  industria_producao: {
+    name: "Manufacturing & Assembly",
+    focus: "Assembly line production, machine support, process discipline, quality-oriented repetitive tasks",
+    keywords: ["manufacturing", "assembly", "production", "operator", "fabrication", "factory"],
   },
   vendas_escritorio: {
-    name: "Sales & Office",
-    focus: "Retail, cashier, customer service, inventory tracking, reception, administrative support",
-    keywords: ["sales", "retail", "cashier", "customer service", "office", "reception"],
+    name: "Sales & Customer Service",
+    focus: "Customer-facing service, retail operations, cashier support, communication and attention to detail",
+    keywords: ["sales", "retail", "cashier", "customer service", "reception"],
   },
   lazer_servicos: {
     name: "Leisure & Services",
-    focus: "Amusement parks, recreation, tour operations, childcare, fitness, lifeguarding, personal services",
-    keywords: ["recreation", "amusement", "tour", "lifeguard", "fitness", "childcare"],
+    focus: "Amusement/recreation routines, service consistency, client interaction, adaptable operational support",
+    keywords: ["recreation", "amusement", "tour", "lifeguard", "fitness", "service"],
   },
 };
 
@@ -144,7 +236,7 @@ FOCUS AREAS (pick the 2-3 most relevant to the candidate's ACTUAL background):
 - Greenhouse & nursery operations
 - Forestry & logging
 - Irrigation & soil management
-- Farm equipment support
+- Farm equipment operation
 
 TONE GUIDELINES:
 - Be SPECIFIC to the candidate's REAL experience. Do NOT list focus areas the candidate has never done.
@@ -169,15 +261,15 @@ TONE GUIDELINES:
   }
 
   const practicalLines = practical_experience?.length
-    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE (from questionnaire):\n${practical_experience.map((e: any) => typeof e === "string" ? `- ${e}` : `- ${e.area} (${e.duration})`).join("\n")}`
+    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE (from questionnaire):\n${practical_experience.map((e: any) => typeof e === 'string' ? `- ${e}` : `- ${e.area} (${e.duration})`).join("\n")}`
     : "";
 
   const physicalLines = physical_skills?.length
-    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: any) => typeof s === "string" ? `- ${s}` : `- ${s.skill}${s.detail ? ` (${s.detail})` : ""}`).join("\n")}`
+    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: any) => typeof s === 'string' ? `- ${s}` : `- ${s.skill}${s.detail ? ` (${s.detail})` : ''}`).join("\n")}`
     : "";
 
   const langLines = languages
-    ? `\nLANGUAGE PROFICIENCY:\n- English: ${languages.english || "not specified"}\n- Spanish: ${languages.spanish || "not specified"}`
+    ? `\nLANGUAGE PROFICIENCY:\n- English: ${languages.english || 'not specified'}\n- Spanish: ${languages.spanish || 'not specified'}`
     : "";
 
   const migrationLines = migration_status
@@ -204,18 +296,19 @@ RULES:
 2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
-5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below.
-6. Preserve original job titles semantically and clean grammar only. NEVER add annotations such as "reframed".
-7. Keep it professional, 1-2 pages maximum.
-8. NEVER list more than 3 focus areas in the Summary — specificity beats breadth.
+5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
+6. JOB TITLES IN EXPERIENCE: Use ONLY the exact job title the candidate held as stated in their resume. Translate it to English if needed, but NEVER upgrade, inflate, or infer a title. For example, if someone says they "coordinated tasks" that does NOT make them a "Coordinator". If no explicit title is given for an experience, use a generic descriptor like "General Worker" or "Worker". NEVER add annotations such as "reframed".
+7. Keep it professional, 1-2 pages maximum
+8. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
 9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
 
 ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
 - NEVER invent skills the candidate did not mention.
 - NEVER add "reframed" or "training-based" wording anywhere (summary, skills, titles, bullets, notes).
-- NEVER add parenthetical context to job titles like "(Reframed for X Context)".
-- The SKILLS section must ONLY contain skills that are explicitly listed in the candidate's original resume text OR explicitly selected in the questionnaire below.
-- If the candidate lacks skills for the target visa type, focus on transferable qualities (physical stamina, reliability, fast learner) — do NOT fabricate technical skills.
+- NEVER add parenthetical context to job titles like "(Reframed for Agricultural Context)". Job titles must be clean and professional.
+- NEVER infer or upgrade job titles based on responsibilities described. "Coordinated tasks" does NOT mean the title is "Coordinator". Use ONLY the title explicitly stated by the candidate.
+- The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
+- If the candidate lacks skills for the target visa type, focus on transferable qualities (physical stamina, reliability, fast learner) — do NOT fabricate specific technical skills.
 - NEVER add certifications the candidate did not mention.
 ${practicalLines}
 ${physicalLines}
@@ -237,15 +330,15 @@ function buildSectorPrompt(rawText: string, sectorId: string, context: any): str
   const { practical_experience, physical_skills, migration_status, availability, extra_notes, languages } = context || {};
 
   const practicalLines = practical_experience?.length
-    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE:\n${practical_experience.map((e: any) => typeof e === "string" ? `- ${e}` : `- ${e.area} (${e.duration})`).join("\n")}`
+    ? `\nCANDIDATE'S PRACTICAL EXPERIENCE:\n${practical_experience.map((e: any) => typeof e === 'string' ? `- ${e}` : `- ${e.area} (${e.duration})`).join("\n")}`
     : "";
 
   const physicalLines = physical_skills?.length
-    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: any) => typeof s === "string" ? `- ${s}` : `- ${s.skill}${s.detail ? ` (${s.detail})` : ""}`).join("\n")}`
+    ? `\nPHYSICAL CAPABILITIES:\n${physical_skills.map((s: any) => typeof s === 'string' ? `- ${s}` : `- ${s.skill}${s.detail ? ` (${s.detail})` : ''}`).join("\n")}`
     : "";
 
   const langLines = languages
-    ? `\nLANGUAGE PROFICIENCY:\n- English: ${languages.english || "not specified"}\n- Spanish: ${languages.spanish || "not specified"}`
+    ? `\nLANGUAGE PROFICIENCY:\n- English: ${languages.english || 'not specified'}\n- Spanish: ${languages.spanish || 'not specified'}`
     : "";
 
   const migrationLines = migration_status
@@ -271,26 +364,27 @@ SECTOR FOCUS AREAS: ${sector.focus}
 This resume covers BOTH H-2A and H-2B visa positions within ${sector.name}. The candidate may work on either visa type depending on the employer.
 
 CRITICAL INSTRUCTIONS:
-- The Professional Summary MUST specifically reference ${sector.name} competencies the candidate ACTUALLY has.
-- Skills section MUST prioritize skills relevant to: ${sector.keywords.join(", ")} — but ONLY if the candidate actually has them.
-- Experience bullets should highlight ${sector.name}-relevant achievements where they genuinely exist.
-- If the candidate has NO direct experience in this sector, emphasize transferable qualities (reliability, physical stamina, fast learner) — do NOT invent sector-specific skills.
+- The Professional Summary MUST specifically reference ${sector.name} competencies the candidate ACTUALLY has
+- Skills section MUST prioritize skills relevant to: ${sector.keywords.join(", ")} — but ONLY if the candidate actually has them
+- Experience bullets should highlight ${sector.name}-relevant achievements where they genuinely exist
+- If the candidate has NO direct experience in this sector, emphasize transferable qualities (reliability, physical stamina, fast learner) — do NOT invent sector-specific skills
 
 RULES:
-1. Translate everything to English.
-2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth.
-3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.).
+1. Translate everything to English
+2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth
+3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. Summary: 2-3 sentences MAX. Mention sector focus, top skills, availability.
 5. ENHANCE with questionnaire data below.
-6. Keep it professional, 1-2 pages maximum.
-7. NEVER list more than 3 focus areas in Summary.
+6. Keep it professional, 1-2 pages maximum
+7. NEVER list more than 3 focus areas in Summary
 8. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
 
 ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
 - NEVER invent skills the candidate did not mention in their resume or questionnaire.
 - NEVER add "reframed" or "training-based" wording anywhere.
-- NEVER add parenthetical context to job titles like "(Reframed for X Context)".
-- The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) questionnaire selections below.
+- NEVER add parenthetical context to job titles like "(Reframed for X Context)". Job titles must be clean and professional.
+- NEVER infer or upgrade job titles based on responsibilities described. "Coordinated tasks" does NOT mean the title is "Coordinator". Use ONLY the title explicitly stated by the candidate.
+- The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
 - If the candidate lacks sector skills, use transferable qualities — do NOT fabricate technical skills.
 - NEVER add certifications the candidate did not mention.
 ${practicalLines}
@@ -587,7 +681,7 @@ serve(async (req) => {
     }
 
     // Track AI usage
-    await serviceClient.rpc("increment_ai_usage", { p_user_id: user.id, p_function_type: "resume" });
+    await serviceClient.rpc("increment_ai_usage", { p_user_id: user.id, p_function_type: "resume_conversion" });
 
     return json(200, result);
   } catch (error: any) {

@@ -297,7 +297,7 @@ RULES:
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
 5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
-6. Preserve original job titles semantically and clean grammar only. NEVER add annotations such as "reframed".
+6. JOB TITLES IN EXPERIENCE: Use ONLY the exact job title the candidate held as stated in their resume. Translate it to English if needed, but NEVER upgrade, inflate, or infer a title. For example, if someone says they "coordinated tasks" that does NOT make them a "Coordinator". If no explicit title is given for an experience, use a generic descriptor like "General Worker" or "Worker". NEVER add annotations such as "reframed".
 7. Keep it professional, 1-2 pages maximum
 8. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
 9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
@@ -306,7 +306,8 @@ ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
 - NEVER invent skills the candidate did not mention.
 - NEVER add "reframed" or "training-based" wording anywhere (summary, skills, titles, bullets, notes).
 - NEVER add parenthetical context to job titles like "(Reframed for Agricultural Context)". Job titles must be clean and professional.
-- The SKILLS section must ONLY contain skills that are: (a) explicitly listed in the candidate's original resume text, OR (b) explicitly selected in the PRACTICAL EXPERIENCE or PHYSICAL CAPABILITIES questionnaire below.
+- NEVER infer or upgrade job titles based on responsibilities described. "Coordinated tasks" does NOT mean the title is "Coordinator". Use ONLY the title explicitly stated by the candidate.
+- The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
 - If the candidate lacks skills for the target visa type, focus on transferable qualities (physical stamina, reliability, fast learner) — do NOT fabricate specific technical skills.
 - NEVER add certifications the candidate did not mention.
 ${practicalLines}
@@ -382,6 +383,7 @@ ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
 - NEVER invent skills the candidate did not mention in their resume or questionnaire.
 - NEVER add "reframed" or "training-based" wording anywhere.
 - NEVER add parenthetical context to job titles like "(Reframed for X Context)". Job titles must be clean and professional.
+- NEVER infer or upgrade job titles based on responsibilities described. "Coordinated tasks" does NOT mean the title is "Coordinator". Use ONLY the title explicitly stated by the candidate.
 - The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
 - If the candidate lacks sector skills, use transferable qualities — do NOT fabricate technical skills.
 - NEVER add certifications the candidate did not mention.
