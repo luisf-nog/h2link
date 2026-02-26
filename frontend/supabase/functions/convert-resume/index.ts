@@ -230,7 +230,7 @@ function buildPrompt(rawText: string, visaType: "H-2A" | "H-2B", context: any): 
   if (visaType === "H-2A") {
     industryFocus = `This resume is for H-2A (AGRICULTURAL) visa positions.
 
-FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
+FOCUS AREAS (pick the 2-3 most relevant to the candidate's ACTUAL background):
 - Crop harvesting & planting
 - Livestock care & feeding
 - Greenhouse & nursery operations
@@ -238,31 +238,25 @@ FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
 - Irrigation & soil management
 - Farm equipment operation
 
-CRITICAL TONE GUIDELINES:
-- Be SPECIFIC, not generic. Instead of "eager to contribute to farm work, crop harvesting, livestock, nursery, greenhouse, or forestry" → pick the 2-3 areas that best match the candidate's experience.
-- For equipment/machinery skills: if the candidate has NO direct experience, write "Familiar with [equipment] (training-based knowledge)" instead of implying hands-on operation.
-- MUST include a strong Availability Signal in the Summary:
-  ✔ "Fully available for the entire contract season"
-  ✔ "Open to relocation within the U.S."
-  ✔ "Willing to work overtime, weekends, and holidays"
+TONE GUIDELINES:
+- Be SPECIFIC to the candidate's REAL experience. Do NOT list focus areas the candidate has never done.
+- MUST include a strong Availability Signal in the Summary.
 - Emphasize outdoor endurance, extreme weather tolerance, and physical stamina.`;
   } else {
     industryFocus = `This resume is for H-2B (NON-AGRICULTURAL TEMPORARY) visa positions.
 
-FOCUS AREAS (pick the 2-3 most relevant to the candidate's background):
+FOCUS AREAS (pick the 2-3 most relevant to the candidate's ACTUAL background):
 - Construction & heavy labor
 - Landscaping & groundskeeping
 - Hospitality & housekeeping
 - Food service & kitchen operations
 - Warehouse & logistics
 - Manufacturing & production
-- Seafood processing
 
-CRITICAL TONE GUIDELINES:
+TONE GUIDELINES:
 - The Professional Summary MUST be direct and assertive, American-style.
-- Be SPECIFIC about the candidate's strongest 2-3 sectors, don't list everything.
-- For equipment/machinery skills: if the candidate has NO direct experience, write "Familiar with [equipment] (training-based knowledge)" instead of implying hands-on operation.
-- MUST include availability signal: "Ready for immediate deployment" or "Available for full seasonal contract".
+- Be SPECIFIC about the candidate's REAL strongest 2-3 sectors.
+- MUST include availability signal.
 - Emphasize safety compliance, teamwork, and reliability.`;
   }
 
@@ -303,13 +297,18 @@ RULES:
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
 5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
-6. If the candidate has office/desk experience but is applying for manual labor, REFRAME their skills (e.g., "project management" → "team coordination", "data entry" → "attention to detail and precision")
-7. Add relevant certifications section if applicable (safety training, equipment operation, food handling, etc.)
-8. Keep it professional, 1-2 pages maximum
-9. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
-10. For skills the candidate learned via training (not hands-on), use "Familiar with X (training-based)" wording
-11. Include an Availability section or integrate availability signals into the Summary
-12. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is critical for recruiter decision-making.
+6. If the candidate has office/desk experience, reframe their job TITLES to be professional and clean (e.g. "Administrative Assistant" stays as is, do NOT add parenthetical notes like "(Reframed for X)")
+7. Keep it professional, 1-2 pages maximum
+8. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
+9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
+
+ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
+- NEVER invent skills the candidate did not mention. If the candidate's resume or questionnaire does not mention "Hand Tools", "5S Methodology", "Site Cleanup" or any other specific skill, DO NOT add it.
+- NEVER add "(training-based knowledge)" labels to skills unless the candidate EXPLICITLY stated they learned it in training without hands-on practice. If in doubt, DO NOT add the skill at all.
+- NEVER add parenthetical context to job titles like "(Reframed for Agricultural Context)". Job titles must be clean and professional.
+- The SKILLS section must ONLY contain skills that are: (a) explicitly listed in the candidate's original resume text, OR (b) explicitly selected in the PRACTICAL EXPERIENCE or PHYSICAL CAPABILITIES questionnaire below.
+- If the candidate lacks skills for the target visa type, focus on transferable qualities (physical stamina, reliability, fast learner) — do NOT fabricate specific technical skills.
+- NEVER add certifications the candidate did not mention.
 ${practicalLines}
 ${physicalLines}
 ${langLines}
@@ -364,23 +363,28 @@ SECTOR FOCUS AREAS: ${sector.focus}
 This resume covers BOTH H-2A and H-2B visa positions within ${sector.name}. The candidate may work on either visa type depending on the employer.
 
 CRITICAL INSTRUCTIONS:
-- The Professional Summary MUST specifically reference ${sector.name} competencies
-- Skills section MUST prioritize skills relevant to: ${sector.keywords.join(", ")}
-- Experience bullets MUST be reframed to highlight ${sector.name}-relevant achievements
-- If the candidate has NO direct experience in this sector, emphasize transferable skills and willingness to learn
-- For equipment/machinery skills without hands-on experience, use "Familiar with [equipment] (training-based knowledge)"
-- Summary MUST include availability signal and visa readiness
+- The Professional Summary MUST specifically reference ${sector.name} competencies the candidate ACTUALLY has
+- Skills section MUST prioritize skills relevant to: ${sector.keywords.join(", ")} — but ONLY if the candidate actually has them
+- Experience bullets should highlight ${sector.name}-relevant achievements where they genuinely exist
+- If the candidate has NO direct experience in this sector, emphasize transferable qualities (reliability, physical stamina, fast learner) — do NOT invent sector-specific skills
 
 RULES:
 1. Translate everything to English
 2. REMOVE: Age, Photo, Marital Status, National IDs (CPF/RG/CURP), date of birth
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. Summary: 2-3 sentences MAX. Mention sector focus, top skills, availability.
-5. ENHANCE with questionnaire data below. REFRAME non-sector experience.
+5. ENHANCE with questionnaire data below.
 6. Keep it professional, 1-2 pages maximum
 7. NEVER list more than 3 focus areas in Summary
-8. Skills learned via training → "Familiar with X (training-based)"
-9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is critical for recruiter decision-making.
+8. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
+
+ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
+- NEVER invent skills the candidate did not mention in their resume or questionnaire.
+- NEVER add "(training-based knowledge)" labels unless the candidate EXPLICITLY stated they learned it in training. If in doubt, omit the skill entirely.
+- NEVER add parenthetical context to job titles like "(Reframed for X Context)". Job titles must be clean and professional.
+- The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
+- If the candidate lacks sector skills, use transferable qualities — do NOT fabricate technical skills.
+- NEVER add certifications the candidate did not mention.
 ${practicalLines}
 ${physicalLines}
 ${langLines}
