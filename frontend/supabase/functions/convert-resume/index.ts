@@ -59,8 +59,20 @@ const TOOL_SCHEMA = {
         },
         languages: { type: "array", items: { type: "string" } },
         certifications: { type: "array", items: { type: "string" } },
+        work_authorization: {
+          type: "object",
+          description: "Work authorization and availability details for recruiter reference. ALWAYS include this section.",
+          properties: {
+            visa_type: { type: "string", description: "e.g. 'Requires H-2B Visa Sponsorship' or 'H-2A Visa Candidate'" },
+            current_location: { type: "string", description: "e.g. 'Outside the U.S.' or 'Currently in the U.S.'" },
+            passport_status: { type: "string", description: "e.g. 'Valid passport' or 'Renewal in progress'" },
+            previous_h2_experience: { type: "string", description: "e.g. 'First-time applicant' or '2 previous H-2B seasons'" },
+            availability: { type: "string", description: "e.g. 'Immediately available — Full season'" },
+            visa_denial_history: { type: "string", description: "e.g. 'No prior visa denials'" },
+          },
+        },
       },
-      required: ["personal_info", "summary", "skills", "experience"],
+      required: ["personal_info", "summary", "skills", "experience", "work_authorization"],
     },
   },
 };
@@ -297,6 +309,7 @@ RULES:
 9. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
 10. For skills the candidate learned via training (not hands-on), use "Familiar with X (training-based)" wording
 11. Include an Availability section or integrate availability signals into the Summary
+12. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is critical for recruiter decision-making.
 ${practicalLines}
 ${physicalLines}
 ${langLines}
@@ -367,6 +380,7 @@ RULES:
 6. Keep it professional, 1-2 pages maximum
 7. NEVER list more than 3 focus areas in Summary
 8. Skills learned via training → "Familiar with X (training-based)"
+9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is critical for recruiter decision-making.
 ${practicalLines}
 ${physicalLines}
 ${langLines}

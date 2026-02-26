@@ -22,6 +22,14 @@ export interface ResumeData {
     year: string;
   }[];
   languages: string[];
+  work_authorization?: {
+    visa_type?: string;
+    current_location?: string;
+    passport_status?: string;
+    previous_h2_experience?: string;
+    availability?: string;
+    visa_denial_history?: string;
+  };
 }
 
 export function generateResumePDF(data: ResumeData): jsPDF {
@@ -139,6 +147,31 @@ export function generateResumePDF(data: ResumeData): jsPDF {
       doc.text(edu.school || "", marginL, y);
       y += 16;
     });
+  }
+
+  // WORK AUTHORIZATION & AVAILABILITY
+  if (data.work_authorization) {
+    sectionHeader("Work Authorization & Availability");
+    doc.setFontSize(10);
+    const wa = data.work_authorization;
+    const items: { label: string; value: string }[] = [];
+    if (wa.visa_type) items.push({ label: "Visa Status", value: wa.visa_type });
+    if (wa.current_location) items.push({ label: "Current Location", value: wa.current_location });
+    if (wa.passport_status) items.push({ label: "Passport", value: wa.passport_status });
+    if (wa.previous_h2_experience) items.push({ label: "H-2 Experience", value: wa.previous_h2_experience });
+    if (wa.availability) items.push({ label: "Availability", value: wa.availability });
+    if (wa.visa_denial_history) items.push({ label: "Visa Denials", value: wa.visa_denial_history });
+
+    items.forEach((item) => {
+      checkPage(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${item.label}:  `, marginL, y);
+      const labelW = doc.getTextWidth(`${item.label}:  `);
+      doc.setFont("helvetica", "normal");
+      doc.text(item.value, marginL + labelW, y);
+      y += 15;
+    });
+    y += 4;
   }
 
   // LANGUAGES
