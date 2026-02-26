@@ -187,6 +187,14 @@ export default function Queue() {
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (!cancelled) fetchQueue();
+      }, 800);
+    };
 
     const run = async () => {
       const { data } = await supabase.auth.getUser();
@@ -194,19 +202,26 @@ export default function Queue() {
       if (!userId || cancelled) return;
 
       channel = supabase
-        .channel("my_queue_open_tracking")
+        .channel("my_queue_realtime")
         .on(
           "postgres_changes",
           {
-            event: "UPDATE",
+            event: "*",
             schema: "public",
             table: "my_queue",
             filter: `user_id=eq.${userId}`,
           },
           (payload: any) => {
-            const next = payload?.new;
-            if (!next?.id) return;
-            setQueue((prev) => prev.map((it) => (it.id === next.id ? { ...it, ...next } : it)));
+            if (payload.eventType === "UPDATE") {
+              const next = payload?.new;
+              if (!next?.id) return;
+              setQueue((prev) => prev.map((it) => (it.id === next.id ? { ...it, ...next } : it)));
+              // Also refetch to get fresh joined data (company, job_title)
+              debouncedFetch();
+            } else {
+              // INSERT or DELETE — refetch to get full joined data
+              debouncedFetch();
+            }
           },
         )
         .subscribe();
@@ -216,6 +231,7 @@ export default function Queue() {
 
     return () => {
       cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
