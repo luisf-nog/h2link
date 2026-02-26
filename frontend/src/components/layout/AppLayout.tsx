@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { WhatsNewDialog } from "@/components/dialogs/WhatsNewDialog";
 import { AppSidebar } from "./AppSidebar";
 import { AppFooter } from "./AppFooter";
 import { SetupBanner } from "@/components/sidebar/SetupBanner";
@@ -118,6 +119,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
           <AppFooter />
           <SetupBanner />
+          <WhatsNewDialog />
         </main>
       </div>
     </SidebarProvider>
