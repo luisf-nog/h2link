@@ -297,14 +297,14 @@ RULES:
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
 5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
-6. If the candidate has office/desk experience, reframe their job TITLES to be professional and clean (e.g. "Administrative Assistant" stays as is, do NOT add parenthetical notes like "(Reframed for X)")
+6. Preserve original job titles semantically and clean grammar only. NEVER add annotations such as "reframed".
 7. Keep it professional, 1-2 pages maximum
 8. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
 9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
 
 ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
-- NEVER invent skills the candidate did not mention. If the candidate's resume or questionnaire does not mention "Hand Tools", "5S Methodology", "Site Cleanup" or any other specific skill, DO NOT add it.
-- NEVER add "(training-based knowledge)" labels to skills unless the candidate EXPLICITLY stated they learned it in training without hands-on practice. If in doubt, DO NOT add the skill at all.
+- NEVER invent skills the candidate did not mention.
+- NEVER add "reframed" or "training-based" wording anywhere (summary, skills, titles, bullets, notes).
 - NEVER add parenthetical context to job titles like "(Reframed for Agricultural Context)". Job titles must be clean and professional.
 - The SKILLS section must ONLY contain skills that are: (a) explicitly listed in the candidate's original resume text, OR (b) explicitly selected in the PRACTICAL EXPERIENCE or PHYSICAL CAPABILITIES questionnaire below.
 - If the candidate lacks skills for the target visa type, focus on transferable qualities (physical stamina, reliability, fast learner) — do NOT fabricate specific technical skills.
@@ -380,7 +380,7 @@ RULES:
 
 ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
 - NEVER invent skills the candidate did not mention in their resume or questionnaire.
-- NEVER add "(training-based knowledge)" labels unless the candidate EXPLICITLY stated they learned it in training. If in doubt, omit the skill entirely.
+- NEVER add "reframed" or "training-based" wording anywhere.
 - NEVER add parenthetical context to job titles like "(Reframed for X Context)". Job titles must be clean and professional.
 - The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
 - If the candidate lacks sector skills, use transferable qualities — do NOT fabricate technical skills.
@@ -408,7 +408,101 @@ function parseToolResponse(aiData: any): any {
   return JSON.parse(clean);
 }
 
-async function generateResume(apiKey: string, prompt: string): Promise<any> {
+function cleanText(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/\((?:[^)]*reframed[^)]*|[^)]*training[-\s]?based[^)]*)\)/gi, "")
+    .replace(/\breframed for [^,.;)\n]+/gi, "")
+    .replace(/\breframed\b/gi, "")
+    .replace(/\btraining[-\s]?based knowledge\b/gi, "")
+    .replace(/\btraining[-\s]?based\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .trim();
+}
+
+function cleanArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map(cleanText).filter(Boolean))];
+}
+
+function extractContextSkillNames(context: any): string[] {
+  const physical = Array.isArray(context?.physical_skills)
+    ? context.physical_skills.map((item: any) => cleanText(typeof item === "string" ? item : item?.skill))
+    : [];
+  const practical = Array.isArray(context?.practical_experience)
+    ? context.practical_experience.map((item: any) => cleanText(typeof item === "string" ? item : item?.area))
+    : [];
+  return [...new Set([...physical, ...practical].filter(Boolean))];
+}
+
+function buildWorkAuthorization(context: any) {
+  const migration = context?.migration_status ?? {};
+  const availability = context?.availability ?? {};
+  const when = cleanText(availability.when || "Immediately available");
+  const duration = cleanText(availability.duration || "Full season");
+
+  return {
+    visa_type: cleanText(migration.work_auth || "Requires H-2 Visa Sponsorship"),
+    current_location: cleanText(migration.location || "Outside the U.S."),
+    passport_status: cleanText(migration.passport || "Valid passport"),
+    previous_h2_experience: cleanText(migration.h2_history || "None - first time applicant"),
+    availability: cleanText(`${when}${duration ? ` — ${duration}` : ""}`),
+    visa_denial_history: cleanText(migration.visa_denials || "No visa denials"),
+  };
+}
+
+function sanitizeResumeOutput(resume: any, context: any, rawText: string): any {
+  const sourceText = `${String(rawText || "")} ${JSON.stringify(context || {})}`.toLowerCase();
+  const contextSkills = extractContextSkillNames(context).map((item) => item.toLowerCase());
+
+  const sanitizedSkills = cleanArray(resume?.skills).filter((skill) => {
+    const normalized = skill.toLowerCase();
+    if (!normalized) return false;
+    if (/\breframed\b|training[-\s]?based/.test(normalized)) return false;
+    if (contextSkills.some((ctxSkill) => ctxSkill && (normalized.includes(ctxSkill) || ctxSkill.includes(normalized)))) return true;
+    if (sourceText.includes(normalized)) return true;
+    const tokens = normalized.split(/\s+/).filter((token) => token.length >= 4);
+    return tokens.length > 0 && tokens.every((token) => sourceText.includes(token));
+  });
+
+  const waFromModel = resume?.work_authorization ?? {};
+  const waFallback = buildWorkAuthorization(context);
+
+  return {
+    ...resume,
+    summary: cleanText(resume?.summary),
+    skills: sanitizedSkills.length > 0 ? sanitizedSkills : extractContextSkillNames(context),
+    experience: Array.isArray(resume?.experience)
+      ? resume.experience.map((exp: any) => ({
+          title: cleanText(exp?.title),
+          company: cleanText(exp?.company),
+          location: cleanText(exp?.location),
+          dates: cleanText(exp?.dates),
+          points: cleanArray(exp?.points),
+        }))
+      : [],
+    education: Array.isArray(resume?.education)
+      ? resume.education.map((edu: any) => ({
+          degree: cleanText(edu?.degree),
+          school: cleanText(edu?.school),
+          year: cleanText(edu?.year),
+        }))
+      : [],
+    languages: cleanArray(resume?.languages),
+    certifications: cleanArray(resume?.certifications),
+    work_authorization: {
+      visa_type: cleanText(waFromModel?.visa_type) || waFallback.visa_type,
+      current_location: cleanText(waFromModel?.current_location) || waFallback.current_location,
+      passport_status: cleanText(waFromModel?.passport_status) || waFallback.passport_status,
+      previous_h2_experience: cleanText(waFromModel?.previous_h2_experience) || waFallback.previous_h2_experience,
+      availability: cleanText(waFromModel?.availability) || waFallback.availability,
+      visa_denial_history: cleanText(waFromModel?.visa_denial_history) || waFallback.visa_denial_history,
+    },
+  };
+}
+
+async function generateResume(apiKey: string, prompt: string, context: any, rawText: string): Promise<any> {
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -428,7 +522,8 @@ async function generateResume(apiKey: string, prompt: string): Promise<any> {
   }
 
   const data = await resp.json();
-  return parseToolResponse(data);
+  const parsed = parseToolResponse(data);
+  return sanitizeResumeOutput(parsed, context, rawText);
 }
 
 serve(async (req) => {
@@ -481,7 +576,7 @@ serve(async (req) => {
       const visaChoice = context?.gold_visa_choice === "h2a" ? "H-2A" : "H-2B";
       console.log(`Gold tier: generating ${visaChoice} resume`);
       const prompt = buildPrompt(raw_text, visaChoice as "H-2A" | "H-2B", context);
-      const resume = await generateResume(LOVABLE_API_KEY, prompt);
+      const resume = await generateResume(LOVABLE_API_KEY, prompt, context, raw_text);
 
       if (visaChoice === "H-2A") {
         result.h2a = resume;
@@ -505,8 +600,8 @@ serve(async (req) => {
       // Diamond: generate both H-2A and H-2B
       console.log("Diamond tier: generating H-2A and H-2B resumes");
       const [h2aResume, h2bResume] = await Promise.all([
-        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2A", context)),
-        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2B", context)),
+        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2A", context), context, raw_text),
+        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2B", context), context, raw_text),
       ]);
 
       result.h2a = h2aResume;
@@ -537,7 +632,7 @@ serve(async (req) => {
           selectedSectors.map(async (sectorId) => {
             try {
               const prompt = buildSectorPrompt(raw_text, sectorId, context);
-              const resume = await generateResume(LOVABLE_API_KEY, prompt);
+              const resume = await generateResume(LOVABLE_API_KEY, prompt, context, raw_text);
               return { category: sectorId, resume_data: resume, success: true };
             } catch (err) {
               console.error(`Failed to generate sector resume for ${sectorId}:`, err);
@@ -545,11 +640,11 @@ serve(async (req) => {
             }
           })
         ),
-        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2A", context)).catch((err) => {
+        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2A", context), context, raw_text).catch((err) => {
           console.error("Failed to generate H-2A fallback:", err);
           return null;
         }),
-        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2B", context)).catch((err) => {
+        generateResume(LOVABLE_API_KEY, buildPrompt(raw_text, "H-2B", context), context, raw_text).catch((err) => {
           console.error("Failed to generate H-2B fallback:", err);
           return null;
         }),
