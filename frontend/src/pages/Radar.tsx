@@ -298,7 +298,7 @@ const SonarRadarIcon = ({ isActive }: { isActive: boolean }) => (
         <div className="absolute inset-0 rounded-xl bg-primary/5 animate-ping" style={{ animationDuration: "3s", animationDelay: "0.5s" }} />
       </>
     )}
-    <RadarIcon className={cn("h-5 w-5 relative z-10", isActive ? "text-primary" : "text-primary/70")} />
+    <RadarIcon className={cn("h-7 w-7 relative z-10", isActive ? "text-primary" : "text-primary/70")} />
   </div>
 );
 
@@ -666,9 +666,9 @@ export default function Radar() {
               <div className="flex items-center gap-3">
                 <SonarRadarIcon isActive={isActive} />
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
-                  <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
-                    {t("radar.ui.premium_edition")}
+                  <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-plan-gold animate-pulse" style={{ animationDuration: "3s" }}>
+                    {t("radar.ui.premium_access")}
                   </p>
                 </div>
               </div>
