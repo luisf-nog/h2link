@@ -106,7 +106,7 @@ const PRACTICAL_EXPERIENCE = [
   { id: "food_processing", label: "Food Processing & Packing", icon: Package, tags: ["h2a", "h2b"] },
   { id: "cleaning_janitorial", label: "Cleaning & Janitorial", icon: Building2, tags: ["h2b"] },
   { id: "factory_manufacturing", label: "Factory / Manufacturing", icon: HardHat, tags: ["h2b"] },
-  { id: "office_admin", label: "Office / Administrative (will be reframed)", icon: FileText, tags: [] },
+  { id: "office_admin", label: "Office / Administrative", icon: FileText, tags: [] },
 ];
 
 // --- Physical skills with optional sub-options ---
@@ -428,9 +428,52 @@ export default function ResumeConverter() {
     maxFiles: 1,
   });
 
+  const buildWorkAuthorizationFallback = () => {
+    const when = availableWhen === "immediately" ? "Immediately available"
+      : availableWhen === "30_days" ? "Available within 30 days"
+      : availableWhen === "60_days" ? "Available within 60 days"
+      : "Specific date (flexible)";
+
+    const duration = durationPref === "full_season" ? "Full season"
+      : durationPref === "6_months" ? "Up to 6 months"
+      : durationPref === "1_year" ? "Up to 1 year"
+      : "Flexible";
+
+    return {
+      visa_type: workAuth === "needs_sponsorship"
+        ? "Requires H-2 Visa Sponsorship"
+        : workAuth === "citizen_resident"
+          ? "U.S. Citizen / Permanent Resident"
+          : "Other Legal Work Status",
+      current_location: currentLocation === "outside_us" ? "Outside the U.S." : "Currently in the U.S.",
+      passport_status: passportStatus === "valid" ? "Valid passport" : passportStatus === "expired" ? "Expired - renewing" : "No passport yet",
+      previous_h2_experience: hasH2History === "yes" ? (h2Details || "Has previous H-2 experience") : "None - first time applicant",
+      availability: `${when} — ${duration}`,
+      visa_denial_history: visaDenials === "yes" ? "Has had a previous visa denial" : "No visa denials",
+    };
+  };
+
+  const withWorkAuthorizationFallback = (resume: any): ResumeData => {
+    const fallback = buildWorkAuthorizationFallback();
+    const current = resume?.work_authorization ?? {};
+
+    return {
+      ...resume,
+      work_authorization: {
+        visa_type: current.visa_type || fallback.visa_type,
+        current_location: current.current_location || fallback.current_location,
+        passport_status: current.passport_status || fallback.passport_status,
+        previous_h2_experience: current.previous_h2_experience || fallback.previous_h2_experience,
+        availability: current.availability || fallback.availability,
+        visa_denial_history: current.visa_denial_history || fallback.visa_denial_history,
+      },
+    } as ResumeData;
+  };
+
   const handleDownload = (resume: any, type: string) => {
-    const doc = generateResumePDF(resume as ResumeData);
-    const name = (resume.personal_info?.full_name || "Resume").replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_");
+    const normalizedResume = withWorkAuthorizationFallback(resume);
+    const doc = generateResumePDF(normalizedResume);
+    const name = (normalizedResume.personal_info?.full_name || "Resume").replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_");
     doc.save(`${name}_${type}_Resume.pdf`);
   };
 
@@ -587,6 +630,33 @@ export default function ResumeConverter() {
                       </div>
                     </div>
                   )}
+                  {(() => {
+                    const wa = withWorkAuthorizationFallback(resume).work_authorization;
+                    const waItems = [
+                      { label: "Visa Status", value: wa?.visa_type },
+                      { label: "Current Location", value: wa?.current_location },
+                      { label: "Passport", value: wa?.passport_status },
+                      { label: "H-2 Experience", value: wa?.previous_h2_experience },
+                      { label: "Availability", value: wa?.availability },
+                      { label: "Visa Denials", value: wa?.visa_denial_history },
+                    ].filter((item) => Boolean(item.value));
+
+                    if (waItems.length === 0) return null;
+
+                    return (
+                      <div>
+                        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Work Authorization & Availability</p>
+                        <div className="grid gap-1.5 sm:grid-cols-2">
+                          {waItems.map((item) => (
+                            <div key={item.label} className="rounded-md border border-border bg-muted/40 px-2.5 py-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                              <p className="text-xs text-foreground">{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {resume.languages?.length > 0 && (
                     <div>
                       <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Languages</p>
