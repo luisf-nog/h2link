@@ -813,13 +813,14 @@ async function processOneUser(params: {
   }
   const dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
 
-  // Diamond: timezone awareness (send only during daytime)
+  // Diamond: manter processamento automático também fora da janela local
+  // (itens vindos do Radar devem sair da fila automaticamente)
   if (p.plan_tier === "diamond") {
     const tz = String(p.timezone ?? "UTC");
     const localHour = getLocalHour({ timeZone: tz });
     const withinWindow = localHour >= 8 && localHour < 19;
     if (!withinWindow) {
-      return { processed: 0, sent: 0, failed: 0 };
+      console.log(`[processOneUser] Diamond fora da janela (${localHour}h em ${tz}), continuando processamento automático`);
     }
   }
 
