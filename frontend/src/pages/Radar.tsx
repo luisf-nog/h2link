@@ -84,6 +84,7 @@ const SectorCard = ({
   isTracked,
   isExpanded,
   onToggleAllInSector,
+  onToggleSubcategory,
   onExpand,
 }: {
   segment: string;
@@ -91,6 +92,7 @@ const SectorCard = ({
   isTracked: string[];
   isExpanded: boolean;
   onToggleAllInSector: () => void;
+  onToggleSubcategory: (rawCategory: string) => void;
   onExpand: () => void;
 }) => {
   const totalInSector = data.items.length;
@@ -135,9 +137,9 @@ const SectorCard = ({
               onPointerDown={(e) => e.stopPropagation()}
             >
               <Checkbox
-                checked={allSelected}
+                checked={allSelected ? true : partialSelected ? "indeterminate" : false}
                 onCheckedChange={() => onToggleAllInSector()}
-                className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=indeterminate]:bg-primary/60 data-[state=indeterminate]:border-primary/60"
               />
             </div>
 
@@ -153,7 +155,7 @@ const SectorCard = ({
                     variant="outline"
                     className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold"
                   >
-                    Monitoring
+                    All selected
                   </Badge>
                 )}
 
@@ -162,14 +164,8 @@ const SectorCard = ({
                     variant="outline"
                     className="bg-primary/5 text-primary/70 border-primary/15 text-[9px] font-bold"
                   >
-                    Partial
+                    {selectedInSector} of {totalInSector}
                   </Badge>
-                )}
-
-                {totalInSector > 0 && (
-                  <span className="text-[10px] font-bold text-muted-foreground/50">
-                    {selectedInSector}/{totalInSector}
-                  </span>
                 )}
               </div>
             </div>
@@ -186,23 +182,43 @@ const SectorCard = ({
         )}
       </div>
 
-      {/* Expanded subcategories */}
+      {/* Expanded subcategories with individual checkboxes */}
       {isExpanded && data.items.length > 1 && (
-        <div className="mt-5 pt-5 border-t border-border/30 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="mt-5 pt-5 border-t border-border/30 space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] pl-9 pb-2">
+            Subcategories
+          </p>
           {data.items.map((item: any) => {
             const checked = isTracked.includes(item.raw_category);
             return (
-              <div key={item.raw_category} className="flex items-center justify-between pl-9">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={cn(
-                      "inline-block h-1.5 w-1.5 rounded-full",
-                      checked ? "bg-primary" : "bg-muted-foreground/30",
-                    )}
+              <div
+                key={item.raw_category}
+                className={cn(
+                  "flex items-center justify-between pl-9 pr-2 py-2 rounded-lg transition-colors",
+                  checked ? "bg-primary/[0.04]" : "hover:bg-muted/30",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSubcategory(item.raw_category);
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => onToggleSubcategory(item.raw_category)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="border-border/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary h-3.5 w-3.5"
                   />
-                  <span className="text-[12px] text-muted-foreground/80 truncate">{item.raw_category}</span>
+                  <span className={cn(
+                    "text-[12px] truncate transition-colors",
+                    checked ? "text-foreground font-medium" : "text-muted-foreground/80",
+                  )}>
+                    {item.raw_category}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-muted-foreground/45">{formatNumber(item.count)}</span>
+                <span className="text-[10px] font-bold text-muted-foreground/45 tabular-nums">{formatNumber(item.count)}</span>
               </div>
             );
           })}
@@ -664,9 +680,27 @@ export default function Radar() {
                 <HelpCircle className="h-3.5 w-3.5" />
                 Como funciona?
               </Button>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-success/6 border border-success/20 shadow-sm">
-                <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                <span className="text-xs font-bold text-success/80 uppercase tracking-widest">System Online</span>
+              <div className={cn(
+                "flex items-center gap-2.5 px-5 py-2.5 rounded-xl border shadow-sm transition-all duration-300",
+                isActive
+                  ? "bg-emerald-500/10 border-emerald-500/25 shadow-emerald-500/10"
+                  : "bg-destructive/10 border-destructive/25 shadow-destructive/10",
+              )}>
+                <div className="relative flex items-center justify-center">
+                  {isActive && (
+                    <div className="absolute h-3 w-3 rounded-full bg-emerald-500/40 animate-ping" />
+                  )}
+                  <div className={cn(
+                    "h-2.5 w-2.5 rounded-full",
+                    isActive ? "bg-emerald-500" : "bg-destructive",
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-sm font-bold uppercase tracking-wider",
+                  isActive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
+                )}>
+                  {isActive ? "System Online" : "System Offline"}
+                </span>
               </div>
             </div>
           </div>
@@ -710,20 +744,34 @@ export default function Radar() {
                 Radar Mode
               </label>
               <div className="flex gap-3">
-                {(["manual", "autopilot"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setRadarMode(mode)}
-                    className={cn(
-                      "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
-                      radarMode === mode
-                        ? "bg-primary/10 border-primary/30 text-primary shadow-[0_0_18px_-10px_rgba(var(--primary),0.18)]"
-                        : "bg-muted/25 border-border text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
-                    )}
-                  >
-                    {mode === "manual" ? "Manual" : "Autopilot"}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setRadarMode("manual")}
+                  className={cn(
+                    "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
+                    radarMode === "manual"
+                      ? "bg-primary/10 border-primary/30 text-primary shadow-[0_0_18px_-10px_hsl(var(--primary)/0.18)]"
+                      : "bg-muted/25 border-border text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
+                  )}
+                >
+                  Manual
+                </button>
+                <button
+                  onClick={() => setRadarMode("autopilot")}
+                  className={cn(
+                    "flex-1 py-3.5 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border relative overflow-hidden",
+                    radarMode === "autopilot"
+                      ? "bg-gradient-to-r from-primary/15 to-primary/10 border-primary/40 text-primary shadow-[0_0_24px_-8px_hsl(var(--primary)/0.3)] ring-1 ring-primary/20"
+                      : "bg-muted/25 border-primary/20 text-primary/70 hover:border-primary/30 hover:bg-primary/5 shadow-[0_0_12px_-6px_hsl(var(--primary)/0.15)]",
+                  )}
+                >
+                  {radarMode === "autopilot" && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 animate-pulse" />
+                  )}
+                  <span className="relative flex items-center justify-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Autopilot
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -830,6 +878,13 @@ export default function Radar() {
                             allSelected
                               ? prev.filter((c) => !sectorCats.includes(c))
                               : [...new Set([...prev, ...sectorCats])],
+                          );
+                        }}
+                        onToggleSubcategory={(rawCat) => {
+                          setSelectedCategories((prev) =>
+                            prev.includes(rawCat)
+                              ? prev.filter((c) => c !== rawCat)
+                              : [...prev, rawCat],
                           );
                         }}
                         onExpand={() => {
