@@ -74,12 +74,7 @@ export function AppSidebar() {
     { title: t("nav.plans"), url: "/plans", icon: Diamond },
 
     // ITEM: H2 Resume
-    {
-      title: "H2 Resume",
-      url: "/resume-converter",
-      icon: FileText,
-      comingSoon: true,
-    },
+    { title: "H2 Resume", url: "/resume-converter", icon: FileText },
     { title: t("nav.settings"), url: "/settings", icon: Settings, needsAttention: needsSmtpSetup },
   ];
 
