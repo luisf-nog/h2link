@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Lock, Crown } from "lucide-react";
 import { PlanTier } from "@/config/plans.config";
+import { useTranslation } from "react-i18next";
 
 const TIER_RESUME_LIMITS: Record<PlanTier, { max: number; label: string }> = {
   free: { max: 0, label: "Upgrade to unlock" },
@@ -128,6 +129,7 @@ type Step = "loading" | "form" | "uploading" | "generating" | "generating_sector
 export default function ResumeConverter() {
   const { profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>("loading");
 
   // Practical experience with duration
@@ -175,7 +177,7 @@ export default function ResumeConverter() {
   const [showVisa, setShowVisa] = useState(true);
 
   const planTier = (profile?.plan_tier || "free") as PlanTier;
-  const tierConfig = TIER_RESUME_LIMITS[planTier];
+  const tierLabel = t(`resume.tier_labels.${planTier}`);
 
   // Load saved data on mount
   useEffect(() => {
@@ -319,7 +321,7 @@ export default function ResumeConverter() {
     setSelectedSectors(prev => {
       if (prev.includes(id)) return prev.filter(s => s !== id);
       if (prev.length >= 5) {
-        toast.error("Maximum 5 sectors allowed");
+        toast.error(t("resume.max_sectors"));
         return prev;
       }
       return [...prev, id];
@@ -347,15 +349,11 @@ export default function ResumeConverter() {
       const context = {
         practical_experience: selectedExpList,
         physical_skills: selectedPhysList,
-        languages: {
-          english: englishLevel,
-          spanish: spanishLevel,
-        },
+        languages: { english: englishLevel, spanish: spanishLevel },
         migration_status: {
           location: currentLocation === "outside_us" ? "Outside the U.S." : "Currently in the U.S.",
           work_auth: workAuth === "needs_sponsorship" ? "Requires H-2 Visa Sponsorship"
-            : workAuth === "citizen_resident" ? "U.S. Citizen / Permanent Resident"
-            : "Other Legal Work Status",
+            : workAuth === "citizen_resident" ? "U.S. Citizen / Permanent Resident" : "Other Legal Work Status",
           h2_history: hasH2History === "yes" ? h2Details : "None - first time applicant",
           visa_denials: visaDenials === "yes" ? "Has had a previous visa denial" : "No visa denials",
           passport: passportStatus === "valid" ? "Valid passport" : passportStatus === "expired" ? "Expired - renewing" : "No passport yet",
@@ -363,15 +361,12 @@ export default function ResumeConverter() {
         availability: {
           when: availableWhen === "immediately" ? "Immediately available"
             : availableWhen === "30_days" ? "Available within 30 days"
-            : availableWhen === "60_days" ? "Available within 60 days"
-            : "Specific date (flexible)",
+            : availableWhen === "60_days" ? "Available within 60 days" : "Specific date (flexible)",
           duration: durationPref === "full_season" ? "Full season"
             : durationPref === "6_months" ? "Up to 6 months"
-            : durationPref === "1_year" ? "Up to 1 year"
-            : "Flexible",
+            : durationPref === "1_year" ? "Up to 1 year" : "Flexible",
         },
         extra_notes: extraNotes || undefined,
-        // Tier-specific context
         gold_visa_choice: planTier === "gold" ? goldVisaChoice : undefined,
         selected_sectors: planTier === "black" ? selectedSectors : undefined,
         plan_tier: planTier,
@@ -410,16 +405,16 @@ export default function ResumeConverter() {
       setHasSavedResumes(true);
       setStep("done");
 
-      const resumeCount = planTier === "black" 
+      const resumeCount = planTier === "black"
         ? (data.sector_resumes?.length || 0) + (data.h2a ? 1 : 0) + (data.h2b ? 1 : 0)
         : planTier === "gold" ? 1 : 2;
-      toast.success(`${resumeCount} optimized resume(s) generated and saved!`);
+      toast.success(t("resume.toast_success", { count: resumeCount }));
     } catch (err: any) {
       console.error("Resume conversion error:", err);
       setStep("error");
-      toast.error(err.message || "Failed to generate resumes");
+      toast.error(err.message || t("resume.toast_error"));
     }
-  }, [selectedExpList, selectedPhysList, englishLevel, spanishLevel, currentLocation, workAuth, hasH2History, h2Details, visaDenials, passportStatus, availableWhen, durationPref, extraNotes, planTier, goldVisaChoice, selectedSectors]);
+  }, [selectedExpList, selectedPhysList, englishLevel, spanishLevel, currentLocation, workAuth, hasH2History, h2Details, visaDenials, passportStatus, availableWhen, durationPref, extraNotes, planTier, goldVisaChoice, selectedSectors, t]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: (files) => files.length > 0 && processFile(files[0]),
@@ -431,13 +426,11 @@ export default function ResumeConverter() {
   const buildWorkAuthorizationFallback = () => {
     const when = availableWhen === "immediately" ? "Immediately available"
       : availableWhen === "30_days" ? "Available within 30 days"
-      : availableWhen === "60_days" ? "Available within 60 days"
-      : "Specific date (flexible)";
+      : availableWhen === "60_days" ? "Available within 60 days" : "Specific date (flexible)";
 
     const duration = durationPref === "full_season" ? "Full season"
       : durationPref === "6_months" ? "Up to 6 months"
-      : durationPref === "1_year" ? "Up to 1 year"
-      : "Flexible";
+      : durationPref === "1_year" ? "Up to 1 year" : "Flexible";
 
     return {
       visa_type: workAuth === "needs_sponsorship"
@@ -477,16 +470,14 @@ export default function ResumeConverter() {
     doc.save(`${name}_${type}_Resume.pdf`);
   };
 
-  const handleReset = () => {
-    setStep("form");
-  };
+  const handleReset = () => setStep("form");
 
   // LOADING STATE
   if (step === "loading") {
     return (
       <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[40vh] text-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Loading your profile...</p>
+        <p className="text-sm text-muted-foreground">{t("resume.loading")}</p>
       </div>
     );
   }
@@ -499,22 +490,20 @@ export default function ResumeConverter() {
           <Lock className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-foreground">Resume Builder — Paid Plans Only</h2>
-          <p className="text-sm text-muted-foreground max-w-md">
-            Upgrade to <strong>Gold</strong> or higher to unlock AI-optimized resumes tailored for H-2 visa employers.
-          </p>
+          <h2 className="text-xl font-bold text-foreground">{t("resume.gate.title")}</h2>
+          <p className="text-sm text-muted-foreground max-w-md" dangerouslySetInnerHTML={{ __html: t("resume.gate.description") }} />
         </div>
         <div className="grid gap-2 text-left text-xs max-w-xs w-full">
-          {(["gold", "diamond", "black"] as PlanTier[]).map((t) => (
-            <div key={t} className="flex items-center gap-2 p-2 rounded-lg border border-border">
+          {(["gold", "diamond", "black"] as PlanTier[]).map((tier) => (
+            <div key={tier} className="flex items-center gap-2 p-2 rounded-lg border border-border">
               <Crown className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-              <span className="font-medium capitalize">{t}:</span>
-              <span className="text-muted-foreground">{TIER_RESUME_LIMITS[t].label}</span>
+              <span className="font-medium capitalize">{tier}:</span>
+              <span className="text-muted-foreground">{t(`resume.tier_labels.${tier}`)}</span>
             </div>
           ))}
         </div>
         <Button onClick={() => navigate("/plans")} className="gap-2">
-          <Crown className="h-4 w-4" /> View Plans & Upgrade
+          <Crown className="h-4 w-4" /> {t("resume.gate.view_plans")}
         </Button>
       </div>
     );
@@ -527,15 +516,9 @@ export default function ResumeConverter() {
       ...(h2bResume ? [{ key: "h2b", resume: h2bResume, label: "H-2B" }] : []),
       ...sectorResumes.map((sr) => {
         const sectorDef = SECTOR_CATEGORIES.find(s => s.id === sr.category);
-        return {
-          key: `sector_${sr.category}`,
-          resume: sr.resume_data,
-          label: sectorDef?.labelEn || sr.category,
-        };
+        return { key: `sector_${sr.category}`, resume: sr.resume_data, label: sectorDef?.labelEn || sr.category };
       }),
     ];
-
-    // Auto-select first available tab
     const firstTab = availableResumes[0]?.key || "h2a";
 
     return (
@@ -547,35 +530,32 @@ export default function ResumeConverter() {
             </div>
             <div>
               <h2 className="font-bold text-foreground">
-                {hasSavedResumes ? "Your Saved Resumes" : "Resumes Generated Successfully!"}
+                {hasSavedResumes ? t("resume.done_title_saved") : t("resume.done_title")}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {planTier === "black" 
-                  ? `${availableResumes.length} sector-optimized resume(s) saved.`
+                {planTier === "black"
+                  ? t("resume.done_desc_black", { count: availableResumes.length })
                   : planTier === "gold"
-                    ? `Your ${goldVisaChoice.toUpperCase()} resume is saved.`
-                    : "Both H-2A and H-2B versions are saved to your profile."
-                }
+                    ? t("resume.done_desc_gold", { visa: goldVisaChoice.toUpperCase() })
+                    : t("resume.done_desc_diamond")}
               </p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleReset}>
-              <RefreshCw className="h-3.5 w-3.5" /> Update & Regenerate
+              <RefreshCw className="h-3.5 w-3.5" /> {t("resume.done_regenerate")}
             </Button>
           </div>
         </div>
 
         <Tabs defaultValue={firstTab} value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={cn("grid w-full", 
+          <TabsList className={cn("grid w-full",
             availableResumes.length <= 2 ? "grid-cols-2" :
             availableResumes.length <= 3 ? "grid-cols-3" :
             availableResumes.length <= 4 ? "grid-cols-4" : "grid-cols-5"
           )} style={{ height: "auto" }}>
             {availableResumes.map(({ key, label }) => (
-              <TabsTrigger key={key} value={key} className="gap-1 text-xs font-bold py-2 px-1">
-                {label}
-              </TabsTrigger>
+              <TabsTrigger key={key} value={key} className="gap-1 text-xs font-bold py-2 px-1">{label}</TabsTrigger>
             ))}
           </TabsList>
 
@@ -585,19 +565,19 @@ export default function ResumeConverter() {
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-base">{resume.personal_info?.full_name} — {label} Resume</CardTitle>
                   <Button size="sm" className="gap-2" onClick={() => handleDownload(resume, label.replace(/\s+/g, "_"))}>
-                    <Download className="h-4 w-4" /> Download PDF
+                    <Download className="h-4 w-4" /> {t("resume.done_download")}
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {resume.summary && (
                     <div>
-                      <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Professional Summary</p>
+                      <p className="text-xs font-bold uppercase text-muted-foreground mb-1">{t("resume.preview_summary")}</p>
                       <p className="text-sm text-foreground leading-relaxed">{resume.summary}</p>
                     </div>
                   )}
                   {resume.skills?.length > 0 && (
                     <div>
-                      <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Skills</p>
+                      <p className="text-xs font-bold uppercase text-muted-foreground mb-2">{t("resume.preview_skills")}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {resume.skills.map((s: string, i: number) => (
                           <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
@@ -607,7 +587,7 @@ export default function ResumeConverter() {
                   )}
                   {resume.experience?.length > 0 && (
                     <div>
-                      <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Experience</p>
+                      <p className="text-xs font-bold uppercase text-muted-foreground mb-2">{t("resume.preview_experience")}</p>
                       <div className="space-y-3">
                         {resume.experience.map((exp: any, i: number) => (
                           <div key={i} className="border-l-2 border-primary/30 pl-3">
@@ -633,19 +613,19 @@ export default function ResumeConverter() {
                   {(() => {
                     const wa = withWorkAuthorizationFallback(resume).work_authorization;
                     const waItems = [
-                      { label: "Visa Status", value: wa?.visa_type },
-                      { label: "Current Location", value: wa?.current_location },
-                      { label: "Passport", value: wa?.passport_status },
-                      { label: "H-2 Experience", value: wa?.previous_h2_experience },
-                      { label: "Availability", value: wa?.availability },
-                      { label: "Visa Denials", value: wa?.visa_denial_history },
+                      { label: t("resume.preview_wa_visa"), value: wa?.visa_type },
+                      { label: t("resume.preview_wa_location"), value: wa?.current_location },
+                      { label: t("resume.preview_wa_passport"), value: wa?.passport_status },
+                      { label: t("resume.preview_wa_h2exp"), value: wa?.previous_h2_experience },
+                      { label: t("resume.preview_wa_availability"), value: wa?.availability },
+                      { label: t("resume.preview_wa_denials"), value: wa?.visa_denial_history },
                     ].filter((item) => Boolean(item.value));
 
                     if (waItems.length === 0) return null;
 
                     return (
                       <div>
-                        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Work Authorization & Availability</p>
+                        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">{t("resume.preview_work_auth")}</p>
                         <div className="grid gap-1.5 sm:grid-cols-2">
                           {waItems.map((item) => (
                             <div key={item.label} className="rounded-md border border-border bg-muted/40 px-2.5 py-2">
@@ -659,7 +639,7 @@ export default function ResumeConverter() {
                   })()}
                   {resume.languages?.length > 0 && (
                     <div>
-                      <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Languages</p>
+                      <p className="text-xs font-bold uppercase text-muted-foreground mb-1">{t("resume.preview_languages")}</p>
                       <p className="text-sm">{resume.languages.join(" • ")}</p>
                     </div>
                   )}
@@ -681,14 +661,14 @@ export default function ResumeConverter() {
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">
-            {step === "uploading" ? "Reading your resume..." 
-              : step === "generating_sectors" ? "Generating sector-specific resumes..."
-              : "AI is generating your optimized resume(s)..."}
+            {step === "uploading" ? t("resume.generating_reading")
+              : step === "generating_sectors" ? t("resume.generating_sectors")
+              : t("resume.generating_ai")}
           </h2>
           <p className="text-sm text-muted-foreground mt-2">
-            {step === "generating" && planTier === "black" 
-              ? `Generating ${selectedSectors.length} sector-optimized resumes. This may take 1-2 minutes.`
-              : step === "generating" && "This may take 30-60 seconds."}
+            {step === "generating" && planTier === "black"
+              ? t("resume.generating_black_hint", { count: selectedSectors.length })
+              : step === "generating" && t("resume.generating_hint")}
           </p>
         </div>
       </div>
@@ -700,36 +680,37 @@ export default function ResumeConverter() {
     return (
       <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[40vh] text-center gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <h2 className="text-xl font-bold">Something went wrong</h2>
-        <p className="text-sm text-muted-foreground">The AI couldn't process your resume. Please try again.</p>
-        <Button onClick={() => setStep("form")}>Try Again</Button>
+        <h2 className="text-xl font-bold">{t("resume.error_title")}</h2>
+        <p className="text-sm text-muted-foreground">{t("resume.error_desc")}</p>
+        <Button onClick={() => setStep("form")}>{t("resume.error_retry")}</Button>
       </div>
     );
   }
 
   const selectedExpCount = Object.values(selectedExperience).filter(Boolean).length;
+  const canUpload = selectedExpCount > 0 && (planTier !== "black" || selectedSectors.length > 0);
 
-  // Check if upload should be enabled
-  const canUpload = selectedExpCount > 0 && (
-    planTier !== "black" || selectedSectors.length > 0
-  );
+  const langOptions = [
+    { value: "none", label: t("resume.lang_none") },
+    { value: "basic", label: t("resume.lang_basic") },
+    { value: "intermediate", label: t("resume.lang_intermediate") },
+    { value: "advanced", label: t("resume.lang_advanced") },
+    { value: "fluent", label: t("resume.lang_fluent") },
+  ];
 
   // FORM VIEW
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">H-2 Smart Resume Builder</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{t("resume.page_title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {planTier === "black" 
-            ? "Answer the questions, select up to 5 target sectors, upload your CV, and we'll generate sector-optimized resumes."
-            : planTier === "gold"
-              ? "Answer a few questions, upload your CV, and we'll generate one optimized resume for the visa type you choose."
-              : "Answer a few questions, upload your CV, and we'll generate two optimized resumes — one for H-2A and one for H-2B positions."
-          }
+          {planTier === "black" ? t("resume.desc_black")
+            : planTier === "gold" ? t("resume.desc_gold")
+            : t("resume.desc_diamond")}
         </p>
         <Badge variant="secondary" className="text-xs">
-          <Crown className="h-3 w-3 mr-1" /> {tierConfig.label}
+          <Crown className="h-3 w-3 mr-1" /> {tierLabel}
         </Badge>
       </div>
 
@@ -740,12 +721,12 @@ export default function ResumeConverter() {
             <div className="flex items-center gap-3">
               <Eye className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-foreground">You already have saved resumes</p>
-                <p className="text-xs text-muted-foreground">View or download your resumes, or update your preferences and regenerate.</p>
+                <p className="text-sm font-semibold text-foreground">{t("resume.saved_banner_title")}</p>
+                <p className="text-xs text-muted-foreground">{t("resume.saved_banner_desc")}</p>
               </div>
             </div>
             <Button size="sm" variant="default" className="gap-1.5 whitespace-nowrap" onClick={() => setStep("done")}>
-              <Eye className="h-3.5 w-3.5" /> View Resumes
+              <Eye className="h-3.5 w-3.5" /> {t("resume.saved_banner_view")}
             </Button>
           </CardContent>
         </Card>
@@ -760,10 +741,9 @@ export default function ResumeConverter() {
             <Card className="border-primary/20">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2 text-primary">
-                  <Crown className="h-4 w-4" />
-                  Choose Your Visa Type
+                  <Crown className="h-4 w-4" /> {t("resume.gold_visa_title")}
                 </CardTitle>
-                <CardDescription>Gold plan generates 1 optimized resume. Choose H-2A or H-2B.</CardDescription>
+                <CardDescription>{t("resume.gold_visa_desc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
@@ -771,16 +751,10 @@ export default function ResumeConverter() {
                     { value: "h2a" as const, label: "H-2A (Agricultural)", icon: Tractor },
                     { value: "h2b" as const, label: "H-2B (Non-Agricultural)", icon: HardHat },
                   ].map(({ value, label, icon: Icon }) => (
-                    <div
-                      key={value}
-                      onClick={() => setGoldVisaChoice(value)}
-                      className={cn(
-                        "p-4 rounded-lg border-2 cursor-pointer transition-all flex flex-col items-center gap-2 text-center",
-                        goldVisaChoice === value
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border hover:border-primary/30"
-                      )}
-                    >
+                    <div key={value} onClick={() => setGoldVisaChoice(value)}
+                      className={cn("p-4 rounded-lg border-2 cursor-pointer transition-all flex flex-col items-center gap-2 text-center",
+                        goldVisaChoice === value ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"
+                      )}>
                       <Icon className={cn("h-6 w-6", goldVisaChoice === value ? "text-primary" : "text-muted-foreground")} />
                       <span className="text-xs font-bold">{label}</span>
                     </div>
@@ -795,12 +769,9 @@ export default function ResumeConverter() {
             <Card className="border-primary/20">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2 text-primary">
-                  <Crown className="h-4 w-4" />
-                  Select Target Sectors (up to 5)
+                  <Crown className="h-4 w-4" /> {t("resume.black_sector_title")}
                 </CardTitle>
-                <CardDescription>
-                  Each sector generates a unique, optimized resume. Your resume will be matched to jobs in these sectors automatically.
-                </CardDescription>
+                <CardDescription>{t("resume.black_sector_desc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -808,17 +779,11 @@ export default function ResumeConverter() {
                     const isSelected = selectedSectors.includes(sector.id);
                     const Icon = sector.icon;
                     return (
-                      <div
-                        key={sector.id}
-                        onClick={() => toggleSector(sector.id)}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                            : "border-border hover:border-primary/30",
+                      <div key={sector.id} onClick={() => toggleSector(sector.id)}
+                        className={cn("flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30",
                           !isSelected && selectedSectors.length >= 5 && "opacity-40 cursor-not-allowed"
-                        )}
-                      >
+                        )}>
                         <Checkbox checked={isSelected} className="pointer-events-none" />
                         <Icon className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
                         <div className="flex-1 min-w-0">
@@ -831,10 +796,10 @@ export default function ResumeConverter() {
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <Badge variant={selectedSectors.length > 0 ? "default" : "secondary"} className="text-xs">
-                    {selectedSectors.length}/5 selected
+                    {t("resume.black_sector_count", { count: selectedSectors.length })}
                   </Badge>
                   {selectedSectors.length === 0 && (
-                    <span className="text-[10px] text-destructive">Select at least 1 sector</span>
+                    <span className="text-[10px] text-destructive">{t("resume.black_sector_min")}</span>
                   )}
                 </div>
               </CardContent>
@@ -846,9 +811,9 @@ export default function ResumeConverter() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                {planTier === "black" ? "2" : planTier === "gold" ? "2" : "1"}. Practical Experience
+                {planTier === "black" || planTier === "gold" ? "2" : "1"}. {t("resume.experience_title")}
               </CardTitle>
-              <CardDescription>Select all work experience you have and how long you worked in each area</CardDescription>
+              <CardDescription>{t("resume.experience_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -856,36 +821,26 @@ export default function ResumeConverter() {
                   const isSelected = !!selectedExperience[exp.id];
                   return (
                     <div key={exp.id} className="space-y-1.5">
-                      <div
-                        onClick={() => toggleExperience(exp.id)}
-                        className={cn(
-                          "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                            : "border-border hover:border-primary/30"
-                        )}
-                      >
+                      <div onClick={() => toggleExperience(exp.id)}
+                        className={cn("flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
+                          isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"
+                        )}>
                         <Checkbox checked={isSelected} className="pointer-events-none" />
                         <exp.icon className={cn("h-4 w-4 flex-shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
                         <span className="text-xs font-medium leading-tight flex-1">{exp.label}</span>
                         {exp.tags.length > 0 && (
                           <div className="flex gap-1">
-                            {exp.tags.map(t => (
-                              <Badge key={t} variant="outline" className="text-[8px] px-1 py-0 h-4">{t.toUpperCase()}</Badge>
+                            {exp.tags.map(tag => (
+                              <Badge key={tag} variant="outline" className="text-[8px] px-1 py-0 h-4">{tag.toUpperCase()}</Badge>
                             ))}
                           </div>
                         )}
                       </div>
                       {isSelected && (
                         <div className="ml-8 flex items-center gap-2">
-                          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">How long:</Label>
-                          <Select
-                            value={experienceDuration[exp.id] || ""}
-                            onValueChange={(v) => setExperienceDuration(p => ({ ...p, [exp.id]: v }))}
-                          >
-                            <SelectTrigger className="h-7 text-[11px] w-32">
-                              <SelectValue placeholder="Select..." />
-                            </SelectTrigger>
+                          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">{t("resume.how_long")}</Label>
+                          <Select value={experienceDuration[exp.id] || ""} onValueChange={(v) => setExperienceDuration(p => ({ ...p, [exp.id]: v }))}>
+                            <SelectTrigger className="h-7 text-[11px] w-32"><SelectValue placeholder={t("common.select")} /></SelectTrigger>
                             <SelectContent>
                               {DURATION_OPTIONS.filter(d => d.value).map(d => (
                                 <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
@@ -902,32 +857,20 @@ export default function ResumeConverter() {
               {/* Language levels */}
               <div className="mt-4 flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs font-bold whitespace-nowrap">🇺🇸 English:</Label>
+                  <Label className="text-xs font-bold whitespace-nowrap">🇺🇸 {t("resume.english_label")}:</Label>
                   <Select value={englishLevel} onValueChange={setEnglishLevel}>
-                    <SelectTrigger className="h-8 text-xs w-36">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs w-36"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                      <SelectItem value="fluent">Fluent / Native</SelectItem>
+                      {langOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs font-bold whitespace-nowrap">🇪🇸 Spanish:</Label>
+                  <Label className="text-xs font-bold whitespace-nowrap">🇪🇸 {t("resume.spanish_label")}:</Label>
                   <Select value={spanishLevel} onValueChange={setSpanishLevel}>
-                    <SelectTrigger className="h-8 text-xs w-36">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs w-36"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                      <SelectItem value="fluent">Fluent / Native</SelectItem>
+                      {langOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -941,9 +884,9 @@ export default function ResumeConverter() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <HardHat className="h-4 w-4 text-primary" />
-                  {planTier === "black" || planTier === "gold" ? "3" : "2"}. Physical Skills & Capabilities
+                  {planTier === "black" || planTier === "gold" ? "3" : "2"}. {t("resume.physical_title")}
                   {Object.values(selectedPhysical).filter(Boolean).length > 0 && (
-                    <Badge variant="secondary" className="text-[10px]">{Object.values(selectedPhysical).filter(Boolean).length} selected</Badge>
+                    <Badge variant="secondary" className="text-[10px]">{t("resume.physical_selected", { count: Object.values(selectedPhysical).filter(Boolean).length })}</Badge>
                   )}
                 </CardTitle>
                 {showPhysical ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
@@ -956,44 +899,29 @@ export default function ResumeConverter() {
                     const isSelected = !!selectedPhysical[skill.id];
                     return (
                       <div key={skill.id} className="space-y-1.5">
-                        <div
-                          onClick={() => togglePhysical(skill.id)}
-                          className={cn(
-                            "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                              : "border-border hover:border-primary/30"
-                          )}
-                        >
+                        <div onClick={() => togglePhysical(skill.id)}
+                          className={cn("flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
+                            isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"
+                          )}>
                           <Checkbox checked={isSelected} className="pointer-events-none" />
                           <span className="text-xs font-medium">{skill.label}</span>
                         </div>
                         {isSelected && skill.hasDetail === "weight" && (
                           <div className="ml-8 flex items-center gap-2">
-                            <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Max weight:</Label>
-                            <Select
-                              value={physicalDetails[skill.id] || ""}
-                              onValueChange={(v) => setPhysicalDetails(p => ({ ...p, [skill.id]: v }))}
-                            >
-                              <SelectTrigger className="h-7 text-[11px] w-44">
-                                <SelectValue placeholder="Select capacity..." />
-                              </SelectTrigger>
+                            <Label className="text-[10px] text-muted-foreground whitespace-nowrap">{t("resume.max_weight")}</Label>
+                            <Select value={physicalDetails[skill.id] || ""} onValueChange={(v) => setPhysicalDetails(p => ({ ...p, [skill.id]: v }))}>
+                              <SelectTrigger className="h-7 text-[11px] w-44"><SelectValue placeholder={t("resume.select_capacity")} /></SelectTrigger>
                               <SelectContent>
-                                {LIFTING_OPTIONS.map(o => (
-                                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                                ))}
+                                {LIFTING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
                         )}
                         {isSelected && skill.hasDetail === "text" && (
                           <div className="ml-8">
-                            <Input
-                              className="h-7 text-[11px]"
-                              placeholder={skill.placeholder || "Specify details..."}
+                            <Input className="h-7 text-[11px]" placeholder={skill.placeholder || "Specify details..."}
                               value={physicalDetails[skill.id] || ""}
-                              onChange={(e) => setPhysicalDetails(p => ({ ...p, [skill.id]: e.target.value }))}
-                            />
+                              onChange={(e) => setPhysicalDetails(p => ({ ...p, [skill.id]: e.target.value }))} />
                           </div>
                         )}
                       </div>
@@ -1010,82 +938,73 @@ export default function ResumeConverter() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2 text-primary">
                   <ShieldCheck className="h-4 w-4" />
-                  {planTier === "black" || planTier === "gold" ? "4" : "3"}. Visa & Work Authorization
+                  {planTier === "black" || planTier === "gold" ? "4" : "3"}. {t("resume.visa_title")}
                 </CardTitle>
                 {showVisa ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </div>
-              <CardDescription>This info helps tailor your resume for US employers</CardDescription>
+              <CardDescription>{t("resume.visa_desc")}</CardDescription>
             </CardHeader>
             {showVisa && (
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold">Where are you now?</Label>
+                    <Label className="text-xs font-bold">{t("resume.visa_location")}</Label>
                     <Select value={currentLocation} onValueChange={setCurrentLocation}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="outside_us">Outside the U.S.</SelectItem>
-                        <SelectItem value="inside_us">Inside the U.S. (Legal Status)</SelectItem>
+                        <SelectItem value="outside_us">{t("resume.visa_location_outside")}</SelectItem>
+                        <SelectItem value="inside_us">{t("resume.visa_location_inside")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold">Work Authorization</Label>
+                    <Label className="text-xs font-bold">{t("resume.visa_work_auth")}</Label>
                     <Select value={workAuth} onValueChange={setWorkAuth}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="needs_sponsorship">Needs H-2 Visa Sponsorship</SelectItem>
-                        <SelectItem value="citizen_resident">U.S. Citizen / Permanent Resident</SelectItem>
-                        <SelectItem value="other_status">Other Legal Status</SelectItem>
+                        <SelectItem value="needs_sponsorship">{t("resume.visa_needs_sponsorship")}</SelectItem>
+                        <SelectItem value="citizen_resident">{t("resume.visa_citizen")}</SelectItem>
+                        <SelectItem value="other_status">{t("resume.visa_other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold">Previous H-2 Visa Experience?</Label>
+                    <Label className="text-xs font-bold">{t("resume.visa_h2_history")}</Label>
                     <Select value={hasH2History} onValueChange={setHasH2History}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="no">No — First time</SelectItem>
-                        <SelectItem value="yes">Yes — Worked on H-2 before</SelectItem>
+                        <SelectItem value="no">{t("resume.visa_h2_no")}</SelectItem>
+                        <SelectItem value="yes">{t("resume.visa_h2_yes")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   {hasH2History === "yes" && (
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-bold">H-2 Details</Label>
-                      <Input
-                        className="h-9 text-xs"
-                        placeholder="E.g.: 2 seasons in Montana (H-2A), 1 year Florida (H-2B)"
-                        value={h2Details}
-                        onChange={(e) => setH2Details(e.target.value)}
-                      />
+                      <Label className="text-xs font-bold">{t("resume.visa_h2_details")}</Label>
+                      <Input className="h-9 text-xs" placeholder={t("resume.visa_h2_placeholder")}
+                        value={h2Details} onChange={(e) => setH2Details(e.target.value)} />
                     </div>
                   )}
-
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold">Passport Status</Label>
+                    <Label className="text-xs font-bold">{t("resume.visa_passport")}</Label>
                     <Select value={passportStatus} onValueChange={setPassportStatus}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="valid">Valid passport</SelectItem>
-                        <SelectItem value="expired">Expired — renewing</SelectItem>
-                        <SelectItem value="none">No passport yet</SelectItem>
+                        <SelectItem value="valid">{t("resume.visa_passport_valid")}</SelectItem>
+                        <SelectItem value="expired">{t("resume.visa_passport_expired")}</SelectItem>
+                        <SelectItem value="none">{t("resume.visa_passport_none")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold flex items-center gap-1">
-                      Any Visa Denials? <Info className="h-3 w-3 text-muted-foreground" />
+                      {t("resume.visa_denials")} <Info className="h-3 w-3 text-muted-foreground" />
                     </Label>
                     <Select value={visaDenials} onValueChange={setVisaDenials}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="no">No — Never denied</SelectItem>
-                        <SelectItem value="yes">Yes — Had a visa denied</SelectItem>
+                        <SelectItem value="no">{t("resume.visa_denials_no")}</SelectItem>
+                        <SelectItem value="yes">{t("resume.visa_denials_yes")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1095,28 +1014,28 @@ export default function ResumeConverter() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> When can you start?
+                      <Calendar className="h-3 w-3" /> {t("resume.availability_when")}
                     </Label>
                     <Select value={availableWhen} onValueChange={setAvailableWhen}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="immediately">Immediately</SelectItem>
-                        <SelectItem value="30_days">Within 30 days</SelectItem>
-                        <SelectItem value="60_days">Within 60 days</SelectItem>
-                        <SelectItem value="flexible">Flexible / Specific date</SelectItem>
+                        <SelectItem value="immediately">{t("resume.availability_immediately")}</SelectItem>
+                        <SelectItem value="30_days">{t("resume.availability_30")}</SelectItem>
+                        <SelectItem value="60_days">{t("resume.availability_60")}</SelectItem>
+                        <SelectItem value="flexible">{t("resume.availability_flexible")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold">Duration Preference</Label>
+                    <Label className="text-xs font-bold">{t("resume.availability_duration")}</Label>
                     <Select value={durationPref} onValueChange={setDurationPref}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="full_season">Full season</SelectItem>
-                        <SelectItem value="6_months">Up to 6 months</SelectItem>
-                        <SelectItem value="1_year">Up to 1 year</SelectItem>
-                        <SelectItem value="flexible">Flexible</SelectItem>
+                        <SelectItem value="full_season">{t("resume.availability_full_season")}</SelectItem>
+                        <SelectItem value="6_months">{t("resume.availability_6_months")}</SelectItem>
+                        <SelectItem value="1_year">{t("resume.availability_1_year")}</SelectItem>
+                        <SelectItem value="flexible">{t("resume.availability_flexible")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1127,14 +1046,9 @@ export default function ResumeConverter() {
 
           {/* Extra notes */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-muted-foreground">Additional Notes (optional)</Label>
-            <Textarea
-              className="text-xs min-h-[60px]"
-              placeholder="Anything else you want the AI to know when building your resume..."
-              value={extraNotes}
-              onChange={(e) => setExtraNotes(e.target.value)}
-              maxLength={500}
-            />
+            <Label className="text-xs font-bold text-muted-foreground">{t("resume.extra_notes")}</Label>
+            <Textarea className="text-xs min-h-[60px]" placeholder={t("resume.extra_notes_placeholder")}
+              value={extraNotes} onChange={(e) => setExtraNotes(e.target.value)} maxLength={500} />
           </div>
         </div>
 
@@ -1148,35 +1062,35 @@ export default function ResumeConverter() {
                 <div className="space-y-2 text-xs">
                   {planTier === "gold" && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Visa type:</span>
+                      <span className="text-muted-foreground">{t("resume.visa_type_label")}</span>
                       <Badge variant="default" className="text-[10px]">{goldVisaChoice.toUpperCase()}</Badge>
                     </div>
                   )}
                   {planTier === "black" && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Sectors:</span>
+                      <span className="text-muted-foreground">{t("resume.sectors_label")}</span>
                       <Badge variant={selectedSectors.length > 0 ? "default" : "secondary"} className="text-[10px]">{selectedSectors.length}/5</Badge>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Experience areas:</span>
+                    <span className="text-muted-foreground">{t("resume.experience_areas")}</span>
                     <Badge variant="secondary">{selectedExpCount}</Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Physical skills:</span>
+                    <span className="text-muted-foreground">{t("resume.physical_skills_label")}</span>
                     <Badge variant="secondary">{Object.values(selectedPhysical).filter(Boolean).length}</Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">English:</span>
+                    <span className="text-muted-foreground">{t("resume.english_label")}:</span>
                     <span className="font-medium capitalize">{englishLevel}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Spanish:</span>
+                    <span className="text-muted-foreground">{t("resume.spanish_label")}:</span>
                     <span className="font-medium capitalize">{spanishLevel}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">H-2 history:</span>
-                    <span className="font-medium">{hasH2History === "yes" ? "Yes" : "First time"}</span>
+                    <span className="text-muted-foreground">{t("resume.h2_history_label")}</span>
+                    <span className="font-medium">{hasH2History === "yes" ? t("common.yes") : t("resume.h2_first_time")}</span>
                   </div>
                 </div>
               </CardContent>
@@ -1197,26 +1111,24 @@ export default function ResumeConverter() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-foreground">
-                    {hasSavedResumes ? "Upload New CV to Regenerate" : "Upload Your CV"}
+                    {hasSavedResumes ? t("resume.upload_title_regen") : t("resume.upload_title")}
                   </h3>
-                  <p className="text-[10px] text-muted-foreground mt-1">PDF or DOCX — any language</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{t("resume.upload_hint")}</p>
                 </div>
                 <div className="bg-primary/5 rounded-lg p-3 w-full">
                   <p className="text-[10px] font-medium text-primary">
-                    {planTier === "black" 
-                      ? `AI will generate ${selectedSectors.length} sector-optimized resume(s)`
+                    {planTier === "black"
+                      ? t("resume.upload_ai_black", { count: selectedSectors.length })
                       : planTier === "gold"
-                        ? `AI will generate 1 optimized ${goldVisaChoice.toUpperCase()} resume`
-                        : "AI will generate 2 resumes: one for H-2A and another for H-2B"
-                    }
+                        ? t("resume.upload_ai_gold", { visa: goldVisaChoice.toUpperCase() })
+                        : t("resume.upload_ai_diamond")}
                   </p>
                 </div>
                 {!canUpload && (
                   <p className="text-[10px] text-destructive font-medium">
                     {planTier === "black" && selectedSectors.length === 0
-                      ? "← Select at least one target sector first"
-                      : "← Select at least one experience area first"
-                    }
+                      ? t("resume.upload_need_sector")
+                      : t("resume.upload_need_exp")}
                   </p>
                 )}
               </CardContent>
