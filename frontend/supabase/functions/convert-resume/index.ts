@@ -297,7 +297,7 @@ RULES:
 3. Use strong Action Verbs (Managed, Operated, Maintained, Supervised, etc.)
 4. The Summary MUST be 2-3 sentences MAX. Mention: visa type, top 2-3 relevant skills, and availability. No fluff.
 5. ENHANCE the resume by incorporating the practical experience and physical skills from the questionnaire below
-6. JOB TITLES IN EXPERIENCE: Use ONLY the exact job title the candidate held as stated in their resume. Translate it to English if needed, but NEVER upgrade, inflate, or infer a title. For example, if someone says they "coordinated tasks" that does NOT make them a "Coordinator". If no explicit title is given for an experience, use a generic descriptor like "General Worker" or "Worker". NEVER add annotations such as "reframed".
+6. JOB TITLES IN EXPERIENCE: Use ONLY simple, generic American job titles. Safe examples: "General Laborer", "Warehouse Worker", "Production Worker", "Construction Helper", "Material Handler", "Manufacturing Assistant", "Logistics Assistant", "Farm Worker", "Cleaning Worker", "Kitchen Helper", "Landscaping Worker". NEVER use inflated titles like Coordinator, Supervisor, Manager, Specialist, Technician unless the candidate EXPLICITLY held that title. If unsure, default to "General Laborer". NEVER add annotations like "(reframed)" or "(training-based)".
 7. Keep it professional, 1-2 pages maximum
 8. NEVER list more than 3 focus areas in the Summary — specificity beats breadth
 9. MUST populate the work_authorization field using the MIGRATION/VISA CONTEXT and AVAILABILITY data below. This is MANDATORY.
@@ -383,7 +383,7 @@ ANTI-HALLUCINATION RULES (CRITICAL — VIOLATION IS UNACCEPTABLE):
 - NEVER invent skills the candidate did not mention in their resume or questionnaire.
 - NEVER add "reframed" or "training-based" wording anywhere.
 - NEVER add parenthetical context to job titles like "(Reframed for X Context)". Job titles must be clean and professional.
-- NEVER infer or upgrade job titles based on responsibilities described. "Coordinated tasks" does NOT mean the title is "Coordinator". Use ONLY the title explicitly stated by the candidate.
+- NEVER infer or upgrade job titles. "Coordinated tasks" does NOT mean "Coordinator". Use ONLY simple generic titles: General Laborer, Warehouse Worker, Production Worker, Construction Helper, Farm Worker, Kitchen Helper, Cleaning Worker, Landscaping Worker, etc.
 - The SKILLS section must ONLY contain skills from: (a) the candidate's original resume, OR (b) the questionnaire selections below.
 - If the candidate lacks sector skills, use transferable qualities — do NOT fabricate technical skills.
 - NEVER add certifications the candidate did not mention.
@@ -454,6 +454,59 @@ function buildWorkAuthorization(context: any) {
   };
 }
 
+// Blocked inflated titles — if the AI outputs one of these and the candidate never held it, replace it
+const INFLATED_TITLES = new Set([
+  "coordinator", "supervisor", "manager", "specialist", "technician",
+  "director", "administrator", "lead", "foreman", "superintendent",
+  "inspector", "analyst", "engineer", "executive", "officer",
+]);
+
+// Keyword → safe generic title mapping
+const TITLE_KEYWORD_MAP: Array<{ keywords: string[]; title: string }> = [
+  { keywords: ["warehouse", "estoque", "armazém", "armazem", "stock", "inventory", "loading", "unloading", "carga", "descarga"], title: "Warehouse Worker" },
+  { keywords: ["production", "produção", "producao", "linha", "assembly", "montagem", "factory", "fábrica", "fabrica"], title: "Production Worker" },
+  { keywords: ["construction", "construção", "construcao", "building", "obra", "pedreiro", "mason"], title: "Construction Helper" },
+  { keywords: ["material", "handling", "movimentação", "movimentacao", "freight"], title: "Material Handler" },
+  { keywords: ["manufacturing", "manufatura", "fabrication", "fabricação"], title: "Manufacturing Assistant" },
+  { keywords: ["logistics", "logística", "logistica", "shipping", "receiving", "expedição", "expedicao"], title: "Logistics Assistant" },
+  { keywords: ["landscaping", "paisagismo", "gardening", "jardinagem", "mowing", "lawn", "grounds"], title: "Landscaping Worker" },
+  { keywords: ["cleaning", "limpeza", "janitorial", "housekeeping", "faxina", "zeladoria"], title: "Cleaning Worker" },
+  { keywords: ["kitchen", "cozinha", "cook", "food prep", "preparação", "preparacao"], title: "Kitchen Helper" },
+  { keywords: ["farm", "farming", "fazenda", "harvest", "colheita", "crop", "planting", "plantio", "agriculture", "agricultura"], title: "Farm Worker" },
+  { keywords: ["meat", "carne", "poultry", "frango", "butcher", "açougue", "slaughter", "abatedouro", "packing", "frigorífico", "frigorifico"], title: "Processing Worker" },
+  { keywords: ["welding", "solda", "soldagem", "welder", "cutting", "corte"], title: "Welding Helper" },
+  { keywords: ["carpentry", "carpintaria", "wood", "madeira", "roofing", "telhado"], title: "Carpentry Helper" },
+  { keywords: ["mechanic", "mecânico", "mecanico", "repair", "reparo", "automotive"], title: "Mechanic Helper" },
+  { keywords: ["hotel", "hospitality", "front desk", "recepção", "recepcao", "lodging"], title: "Hospitality Worker" },
+  { keywords: ["waiter", "waitress", "garçom", "garcom", "server", "dining", "mesa"], title: "Dining Room Attendant" },
+  { keywords: ["driver", "motorista", "transport", "delivery", "entrega", "truck", "caminhão", "caminhao"], title: "Driver Helper" },
+  { keywords: ["bar", "barista", "bartender", "bebida", "beverage"], title: "Bar Attendant" },
+  { keywords: ["textile", "têxtil", "textil", "laundry", "lavanderia", "sewing", "costura"], title: "Laundry Worker" },
+  { keywords: ["electric", "elétrica", "eletrica", "plumbing", "encanamento", "installation", "instalação", "instalacao"], title: "Installation Helper" },
+  { keywords: ["sales", "vendas", "cashier", "caixa", "retail", "atendimento", "customer service"], title: "Sales Attendant" },
+];
+
+function sanitizeJobTitle(aiTitle: string, sourceText: string): string {
+  const cleaned = cleanText(aiTitle);
+  const lower = cleaned.toLowerCase();
+
+  // Check if AI inflated the title — only block if the original text doesn't contain it
+  const words = lower.split(/\s+/);
+  const isInflated = words.some((w) => INFLATED_TITLES.has(w));
+
+  if (isInflated && !sourceText.includes(lower)) {
+    // Try to map to a safe title based on the bullet points / context
+    for (const mapping of TITLE_KEYWORD_MAP) {
+      if (mapping.keywords.some((kw) => sourceText.includes(kw))) {
+        return mapping.title;
+      }
+    }
+    return "General Laborer";
+  }
+
+  return cleaned;
+}
+
 function sanitizeResumeOutput(resume: any, context: any, rawText: string): any {
   const sourceText = `${String(rawText || "")} ${JSON.stringify(context || {})}`.toLowerCase();
   const contextSkills = extractContextSkillNames(context).map((item) => item.toLowerCase());
@@ -476,13 +529,16 @@ function sanitizeResumeOutput(resume: any, context: any, rawText: string): any {
     summary: cleanText(resume?.summary),
     skills: sanitizedSkills.length > 0 ? sanitizedSkills : extractContextSkillNames(context),
     experience: Array.isArray(resume?.experience)
-      ? resume.experience.map((exp: any) => ({
-          title: cleanText(exp?.title),
-          company: cleanText(exp?.company),
-          location: cleanText(exp?.location),
-          dates: cleanText(exp?.dates),
-          points: cleanArray(exp?.points),
-        }))
+      ? resume.experience.map((exp: any) => {
+          const expContext = `${sourceText} ${(exp?.points || []).join(" ").toLowerCase()}`;
+          return {
+            title: sanitizeJobTitle(exp?.title || "", expContext),
+            company: cleanText(exp?.company),
+            location: cleanText(exp?.location),
+            dates: cleanText(exp?.dates),
+            points: cleanArray(exp?.points),
+          };
+        })
       : [],
     education: Array.isArray(resume?.education)
       ? resume.education.map((edu: any) => ({
