@@ -1367,7 +1367,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: users, error: uErr } = await serviceClient
         .from("profiles")
         .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond"])
+        .in("plan_tier", ["gold", "diamond", "black"])
         .limit(200);
       if (uErr) throw uErr;
 
