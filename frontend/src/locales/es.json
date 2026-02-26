@@ -1793,23 +1793,21 @@
     "title": "Novedades",
     "close": "¡Entendido!",
     "footer_link": "Novedades",
-    "h2resume": {
-      "badge": "NUEVO",
-      "title": "H2 Resume (Premium)",
-      "subtitle": "Convierte cualquier CV al formato que los empleadores de EE.UU. prefieren recibir.",
-      "intro": "Nuestro H2 Resume AI convierte y reestructura tu experiencia en un CV limpio y profesional en estándar americano — optimizado para solicitudes H-2A y H-2B.",
-      "not_just": "Esto no es solo formato.",
-      "built_way": "Está construido como los reclutadores americanos esperan:",
-      "check1": "Títulos de cargo claros",
-      "check2": "Puntos enfocados en el empleador",
-      "check3": "Sección de autorización de trabajo adecuada",
-      "check4": "Estructura limpia y profesional",
-      "check5": "Formato 100% compatible con ATS",
-      "ats_info": "La mayoría de los empleadores de EE.UU. usan un ATS (Applicant Tracking System) para escanear CVs antes de que un humano los revise. Diseños complejos, imágenes o decoraciones pueden impedir que tu CV sea leído correctamente.",
-      "structured": "H2 Resume está estructurado para pasar sistemas de selección y presentar tu experiencia de forma clara y profesional.",
-      "value": "Muchas personas cobran por crear CVs H-2. Con H2 Linker, esta es una herramienta extra incluida para ayudar a nuestros usuarios a ser más competitivos y aumentar sus posibilidades de contratación.",
-      "cta": "No dejes que el formato te cueste la oportunidad.",
-      "lock": "Disponible exclusivamente para usuarios Premium."
+    "updates": {
+      "h2resume": {
+        "badge": "NUEVO",
+        "title": "H2 Resume",
+        "problem": "La mayoría de empleadores en EE.UU. descartan CVs que no siguen el estándar americano — antes de leerlos. Los sistemas ATS rechazan diseños complejos, imágenes y formatos no estándar.",
+        "solution": "Por eso creamos H2 Resume:",
+        "check1": "Títulos de cargo claros y honestos",
+        "check2": "Puntos enfocados en el empleador",
+        "check3": "Sección de autorización de trabajo",
+        "check4": "Estructura limpia y profesional",
+        "check5": "Formato 100% compatible con ATS",
+        "value": "Muchos cobran aparte por CVs H-2. En H2 Linker, está incluido para ayudarte a competir y ser contratado.",
+        "cta": "No dejes que el formato te cueste la oportunidad.",
+        "lock": "Disponible exclusivamente para usuarios Premium."
+      }
     }
   }
 }

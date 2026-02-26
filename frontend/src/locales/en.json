@@ -1793,23 +1793,21 @@
     "title": "What's New",
     "close": "Got it!",
     "footer_link": "What's New",
-    "h2resume": {
-      "badge": "NEW",
-      "title": "H2 Resume (Premium)",
-      "subtitle": "Turn any resume into the format U.S. employers prefer to receive.",
-      "intro": "Our H2 Resume AI converts and restructures your experience into a clean, professional U.S.-standard resume — optimized for H-2A and H-2B job applications.",
-      "not_just": "This is not just formatting.",
-      "built_way": "It's built the way American recruiters expect:",
-      "check1": "Clear job titles",
-      "check2": "Employer-focused bullet points",
-      "check3": "Proper work authorization section",
-      "check4": "Clean, professional structure",
-      "check5": "100% ATS-friendly format",
-      "ats_info": "Most U.S. employers use an ATS (Applicant Tracking System) to scan resumes before a human ever reviews them. Complex layouts, images, or decorative designs can prevent your resume from being properly read.",
-      "structured": "H2 Resume is structured to pass resume screening systems and present your experience clearly and professionally.",
-      "value": "Many people charge to create H-2 resumes. With H2 Linker, this is an extra tool included to help our users become more competitive and increase their chances of getting hired.",
-      "cta": "Don't let formatting cost you the opportunity.",
-      "lock": "Available exclusively for Premium users."
+    "updates": {
+      "h2resume": {
+        "badge": "NEW",
+        "title": "H2 Resume",
+        "problem": "Most U.S. employers discard resumes that don't follow the American standard — before anyone even reads them. ATS systems reject complex layouts, images, and non-standard formats.",
+        "solution": "That's why we built H2 Resume:",
+        "check1": "Clear, honest job titles",
+        "check2": "Employer-focused bullet points",
+        "check3": "Work authorization section",
+        "check4": "Clean, professional structure",
+        "check5": "100% ATS-friendly format",
+        "value": "Many charge separately for H-2 resumes. With H2 Linker, it's included to help you compete and get hired.",
+        "cta": "Don't let formatting cost you the opportunity.",
+        "lock": "Available exclusively for Premium users."
+      }
     }
   }
 }

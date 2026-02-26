@@ -1793,23 +1793,21 @@
     "title": "Novidades",
     "close": "Entendi!",
     "footer_link": "Novidades",
-    "h2resume": {
-      "badge": "NOVO",
-      "title": "H2 Resume (Premium)",
-      "subtitle": "Transforme qualquer currículo no formato que empregadores dos EUA preferem receber.",
-      "intro": "Nosso H2 Resume AI converte e reestrutura sua experiência em um currículo limpo e profissional no padrão americano — otimizado para vagas H-2A e H-2B.",
-      "not_just": "Isso não é apenas formatação.",
-      "built_way": "É construído da forma que recrutadores americanos esperam:",
-      "check1": "Títulos de cargo claros",
-      "check2": "Bullet points focados no empregador",
-      "check3": "Seção de autorização de trabalho adequada",
-      "check4": "Estrutura limpa e profissional",
-      "check5": "Formato 100% compatível com ATS",
-      "ats_info": "A maioria dos empregadores dos EUA usa um ATS (Applicant Tracking System) para escanear currículos antes de qualquer humano revisá-los. Layouts complexos, imagens ou designs decorativos podem impedir que seu currículo seja lido corretamente.",
-      "structured": "O H2 Resume é estruturado para passar por sistemas de triagem e apresentar sua experiência de forma clara e profissional.",
-      "value": "Muitas pessoas cobram para criar currículos H-2. Com o H2 Linker, esta é uma ferramenta extra incluída para ajudar nossos usuários a se tornarem mais competitivos e aumentarem suas chances de contratação.",
-      "cta": "Não deixe a formatação custar sua oportunidade.",
-      "lock": "Disponível exclusivamente para usuários Premium."
+    "updates": {
+      "h2resume": {
+        "badge": "NOVO",
+        "title": "H2 Resume",
+        "problem": "A maioria dos empregadores dos EUA descarta currículos fora do padrão americano — antes mesmo de ler. Sistemas ATS rejeitam layouts complexos, imagens e formatos não padronizados.",
+        "solution": "Pensando nisso, lançamos o H2 Resume:",
+        "check1": "Títulos de cargo claros e honestos",
+        "check2": "Bullet points focados no empregador",
+        "check3": "Seção de autorização de trabalho",
+        "check4": "Estrutura limpa e profissional",
+        "check5": "Formato 100% compatível com ATS",
+        "value": "Muitos cobram à parte por currículos H-2. No H2 Linker, está incluído para te ajudar a competir e ser contratado.",
+        "cta": "Não deixe a formatação custar sua oportunidade.",
+        "lock": "Disponível exclusivamente para usuários Premium."
+      }
     }
   }
 }
