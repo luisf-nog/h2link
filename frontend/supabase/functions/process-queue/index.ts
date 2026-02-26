@@ -54,6 +54,7 @@ interface ProfileRow {
   timezone?: string | null;
   consecutive_errors?: number | null;
   referral_bonus_limit?: number | null;
+  smtp_verified?: boolean | null;
 }
 
 function getLocalHour(params: { timeZone: string; now?: Date }): number {
@@ -792,7 +793,7 @@ async function processOneUser(params: {
 
   const { data: profile, error: profileErr } = await serviceClient
     .from("profiles")
-    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_data_h2a,resume_data_h2b,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors")
+    .select("id,plan_tier,full_name,age,phone_e164,contact_email,resume_data,resume_data_h2a,resume_data_h2b,resume_url,credits_used_today,credits_reset_date,referral_bonus_limit,timezone,consecutive_errors,smtp_verified")
     .eq("id", userId)
     .single();
 
@@ -908,6 +909,31 @@ async function processOneUser(params: {
         .update({
           status: "failed",
           last_error: "SMTP não configurado",
+          last_attempt_at: new Date().toISOString(),
+        } as any)
+        .eq("id", row.id)) as any;
+      return { processed: 1, sent: 0, failed: 1 };
+    }
+    return { processed: 0, sent: 0, failed: 0 };
+  }
+
+  // Anti-Waste: Block sends if SMTP not verified via "Testar e Ativar"
+  if (!p.smtp_verified) {
+    console.log(`[processOneUser] SMTP não verificado para usuário ${userId}, bloqueando envios`);
+    const { data: one } = await serviceClient
+      .from("my_queue")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(1);
+    const row = (one ?? [])[0] as { id: string } | undefined;
+    if (row?.id) {
+      await (serviceClient
+        .from("my_queue")
+        .update({
+          status: "failed",
+          last_error: "SMTP não verificado. Vá em Configurações > E-mail e clique em 'Testar e Ativar' para validar suas credenciais.",
           last_attempt_at: new Date().toISOString(),
         } as any)
         .eq("id", row.id)) as any;
