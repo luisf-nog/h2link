@@ -31,7 +31,7 @@ import {
   Settings2,
   Eye,
   HelpCircle,
-  Zap,
+  
   CheckCircle2,
   Rocket,
   Radar as RadarIcon,
@@ -665,11 +665,17 @@ export default function Radar() {
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <SonarRadarIcon isActive={isActive} />
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-plan-gold animate-pulse" style={{ animationDuration: "3s" }}>
-                    {t("radar.ui.premium_access")}
-                  </p>
+              <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-plan-gold/60 via-yellow-300/40 to-plan-gold/60 rounded-full blur-sm opacity-75 group-hover:opacity-100 animate-pulse" style={{ animationDuration: "2s" }} />
+                      <Badge className="relative border-0 bg-gradient-to-r from-plan-gold to-yellow-500 text-white font-bold text-[10px] uppercase tracking-[0.12em] px-3 py-0.5 shadow-[0_2px_12px_-2px_hsl(var(--plan-gold)/0.5)]">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        {t("radar.ui.premium_access")}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -762,18 +768,17 @@ export default function Radar() {
                 <button
                   onClick={() => setRadarMode("autopilot")}
                   className={cn(
-                    "flex-1 py-3.5 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border relative overflow-hidden",
+                    "flex-1 py-3.5 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
                     radarMode === "autopilot"
-                      ? "bg-gradient-to-r from-primary/15 to-primary/10 border-primary/40 text-primary shadow-[0_0_24px_-8px_hsl(var(--primary)/0.3)] ring-1 ring-primary/20"
-                      : "bg-muted/25 border-primary/20 text-primary/70 hover:border-primary/30 hover:bg-primary/5 shadow-[0_0_12px_-6px_hsl(var(--primary)/0.15)]",
+                      ? "bg-emerald-600 border-emerald-500 text-white shadow-[0_0_20px_-6px_hsl(142_76%_36%/0.4)]"
+                      : "bg-muted/25 border-border text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
                   )}
                 >
-                  {radarMode === "autopilot" && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 animate-pulse" />
-                  )}
-                  <span className="relative flex items-center justify-center gap-2">
-                    <Zap className="h-4 w-4" />
+                  <span className="flex items-center justify-center gap-2">
                     Autopilot
+                    {radarMode === "autopilot" && (
+                      <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded">ON</span>
+                    )}
                   </span>
                 </button>
               </div>
@@ -1069,7 +1074,7 @@ export default function Radar() {
                 {t("radar.ui.hiw_pitch")}
               </p>
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/5 border border-primary/15">
-                <Zap className="h-5 w-5 text-primary shrink-0" />
+                <Rocket className="h-5 w-5 text-primary shrink-0" />
                 <p className="text-sm font-semibold text-primary">
                   {t("radar.ui.hiw_cta_line")}
                 </p>
