@@ -173,7 +173,7 @@ const SectorCard = ({
           </div>
         </div>
 
-        {data.items.length > 1 && (
+      {data.items.length > 0 && (
           <ChevronRight
             className={cn(
               "h-3.5 w-3.5 text-muted-foreground/50 transition-transform duration-300 mt-1",
@@ -184,7 +184,7 @@ const SectorCard = ({
       </div>
 
       {/* Expanded subcategories with individual checkboxes */}
-      {isExpanded && data.items.length > 1 && (
+      {isExpanded && data.items.length > 0 && (
         <div className="mt-4 pt-3 border-t border-border/30 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-300">
           <p className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] pl-8 pb-1.5">
             {t("radar.ui.subcategories")}
@@ -669,9 +669,13 @@ export default function Radar() {
                   <div className="flex items-center gap-3">
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
                     <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-plan-gold/60 via-yellow-300/40 to-plan-gold/60 rounded-full blur-sm opacity-75 group-hover:opacity-100 animate-pulse" style={{ animationDuration: "2s" }} />
-                      <Badge className="relative border-0 bg-gradient-to-r from-plan-gold to-yellow-500 text-white font-bold text-[10px] uppercase tracking-[0.12em] px-3 py-0.5 shadow-[0_2px_12px_-2px_hsl(var(--plan-gold)/0.5)]">
-                        <Sparkles className="h-3 w-3 mr-1" />
+                      {/* Outer glow layer */}
+                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-yellow-400/50 via-plan-gold/60 to-yellow-400/50 blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-500" />
+                      {/* Shimmer sweep */}
+                      <div className="absolute inset-0 rounded-full overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]" />
+                      </div>
+                      <Badge className="relative border border-yellow-400/40 bg-gradient-to-r from-yellow-500 via-plan-gold to-yellow-600 text-white font-extrabold text-[10px] uppercase tracking-[0.15em] px-4 py-1 shadow-[0_0_20px_-4px_hsl(45_100%_50%/0.6),0_0_8px_-2px_hsl(45_100%_50%/0.4)]">
                         {t("radar.ui.premium_access")}
                       </Badge>
                     </div>
