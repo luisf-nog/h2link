@@ -548,6 +548,11 @@ export default function ResumeConverter() {
           </div>
         </div>
 
+        <div className="flex items-center gap-2 bg-accent/50 border border-accent rounded-lg px-4 py-3 text-sm text-muted-foreground">
+          <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+          <span>{t("resume.done_smart_profile_hint")}</span>
+        </div>
+
         <Tabs defaultValue={firstTab} value={activeTab} onValueChange={setActiveTab}>
           <TabsList className={cn("grid w-full",
             availableResumes.length <= 2 ? "grid-cols-2" :

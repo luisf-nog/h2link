@@ -1762,6 +1762,7 @@
     "done_title": "Currículos Gerados com Sucesso!",
     "done_title_saved": "Seus Currículos Salvos",
     "done_desc_black": "{{count}} currículo(s) otimizado(s) por setor salvos.",
+    "done_smart_profile_hint": "Seus currículos já estão automaticamente anexados ao seu Smart Profile — não precisa salvar ou anexar em nenhum lugar.",
     "done_desc_gold": "Seu currículo {{visa}} está salvo.",
     "done_desc_diamond": "Ambas as versões H-2A e H-2B estão salvas no seu perfil.",
     "done_regenerate": "Atualizar & Regenerar",

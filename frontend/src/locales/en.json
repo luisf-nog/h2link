@@ -1762,6 +1762,7 @@
     "done_title": "Resumes Generated Successfully!",
     "done_title_saved": "Your Saved Resumes",
     "done_desc_black": "{{count}} sector-optimized resume(s) saved.",
+    "done_smart_profile_hint": "Your resumes are automatically attached to your Smart Profile — no need to save or upload anything.",
     "done_desc_gold": "Your {{visa}} resume is saved.",
     "done_desc_diamond": "Both H-2A and H-2B versions are saved to your profile.",
     "done_regenerate": "Update & Regenerate",
