@@ -103,52 +103,49 @@ serve(async (req) => {
         // Filter out already matched jobs
         const jobIds = matchingJobs.map((j: any) => j.id);
 
-        const { data: alreadyMatched } = await supabase
-          .from("radar_matched_jobs")
-          .select("job_id")
-          .eq("user_id", radar.user_id)
-          .in("job_id", jobIds);
+        const [{ data: alreadyMatched }, { data: queuedJobs }] = await Promise.all([
+          supabase
+            .from("radar_matched_jobs")
+            .select("job_id")
+            .eq("user_id", radar.user_id)
+            .in("job_id", jobIds),
+          supabase
+            .from("my_queue")
+            .select("job_id")
+            .eq("user_id", radar.user_id)
+            .in("job_id", jobIds),
+        ]);
 
         const matchedSet = new Set((alreadyMatched || []).map((m: any) => m.job_id));
-        const newJobs = jobIds.filter((id: string) => !matchedSet.has(id));
-
-        if (newJobs.length === 0) {
-          console.log(`[process-radar] ${radar.user_id}: all jobs already matched`);
-          continue;
-        }
-
-        // Filter out jobs already in user's queue
-        const { data: queuedJobs } = await supabase
-          .from("my_queue")
-          .select("job_id")
-          .eq("user_id", radar.user_id)
-          .in("job_id", newJobs);
-
         const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
-        const jobsToProcess = newJobs.filter((id: string) => !queuedSet.has(id));
 
-        if (jobsToProcess.length === 0) {
-          console.log(`[process-radar] ${radar.user_id}: all new jobs already in queue`);
-          continue;
+        // NEW matches (for metrics/history)
+        const newMatchJobs = jobIds.filter((id: string) => !matchedSet.has(id));
+
+        // Queue candidates: ALL matching jobs not yet queued (including previously matched)
+        const queueCandidates = jobIds.filter((id: string) => !queuedSet.has(id));
+
+        if (newMatchJobs.length > 0) {
+          const allMatchRecords = newMatchJobs.map((jobId: string) => ({
+            user_id: radar.user_id,
+            job_id: jobId,
+            auto_queued: canQueue && radar.auto_send,
+          }));
+
+          await supabase.from("radar_matched_jobs").upsert(allMatchRecords, {
+            onConflict: "user_id,job_id",
+          });
+
+          totalMatches += newMatchJobs.length;
+          console.log(`[process-radar] ${radar.user_id}: recorded ${newMatchJobs.length} new matches`);
+        } else {
+          console.log(`[process-radar] ${radar.user_id}: no new matches (already tracked)`);
         }
 
-        // FIX: ALWAYS record ALL matches, regardless of credits
-        const allMatchRecords = jobsToProcess.map((jobId: string) => ({
-          user_id: radar.user_id,
-          job_id: jobId,
-          auto_queued: canQueue && radar.auto_send,
-        }));
-
-        await supabase.from("radar_matched_jobs").upsert(allMatchRecords, {
-          onConflict: "user_id,job_id",
-        });
-
-        totalMatches += jobsToProcess.length;
-        console.log(`[process-radar] ${radar.user_id}: recorded ${jobsToProcess.length} new matches`);
-
-        // FIX: Only queue if credits available AND auto_send is on
-        if (canQueue && radar.auto_send) {
-          const jobsToQueue = jobsToProcess.slice(0, creditsRemaining);
+        if (queueCandidates.length === 0) {
+          console.log(`[process-radar] ${radar.user_id}: all matching jobs already in queue`);
+        } else if (canQueue && radar.auto_send) {
+          const jobsToQueue = queueCandidates.slice(0, creditsRemaining);
           const queueRecords = jobsToQueue.map((jobId: string) => ({
             user_id: radar.user_id,
             job_id: jobId,
@@ -166,7 +163,7 @@ serve(async (req) => {
           if (!queueError) {
             const actualQueued = queueResult?.length || 0;
             totalQueued += actualQueued;
-            console.log(`[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${queueRecords.length})`);
+            console.log(`[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${queueRecords.length}, candidates ${queueCandidates.length})`);
           } else {
             console.error(`[process-radar] Queue insert error for ${radar.user_id}:`, queueError);
           }
@@ -187,9 +184,9 @@ serve(async (req) => {
             }
           }
         } else if (!canQueue) {
-          console.log(`[process-radar] ${radar.user_id}: no credits (${creditsRemaining}), matches recorded but not queued`);
+          console.log(`[process-radar] ${radar.user_id}: no credits (${creditsRemaining}), ${queueCandidates.length} matching jobs waiting to be queued`);
         } else {
-          console.log(`[process-radar] ${radar.user_id}: auto_send OFF, matches recorded only`);
+          console.log(`[process-radar] ${radar.user_id}: auto_send OFF, ${queueCandidates.length} matching jobs not queued`);
         }
 
         // Update last_scan_at
