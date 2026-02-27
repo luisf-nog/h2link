@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { MultiJsonImporter } from '@/components/admin/MultiJsonImporter';
+import { ImportHistory } from '@/components/admin/ImportHistory';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2 } from 'lucide-react';
+import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2, History } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 
@@ -278,13 +279,13 @@ export default function AdminImport() {
             <FileJson className="h-4 w-4 mr-2" />
             Importar
           </TabsTrigger>
+          <TabsTrigger value="history">
+            <History className="h-4 w-4 mr-2" />
+            Histórico
+          </TabsTrigger>
           <TabsTrigger value="groups">
             <UploadCloud className="h-4 w-4 mr-2" />
             Grupos
-          </TabsTrigger>
-          <TabsTrigger value="stats">
-            <Database className="h-4 w-4 mr-2" />
-            Estatísticas
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="h-4 w-4 mr-2" />
@@ -342,16 +343,8 @@ export default function AdminImport() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="stats" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Estatísticas de Importação</CardTitle>
-              <CardDescription>Resumo das vagas no banco de dados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Estatísticas em desenvolvimento...</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="history" className="space-y-4">
+          <ImportHistory />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
