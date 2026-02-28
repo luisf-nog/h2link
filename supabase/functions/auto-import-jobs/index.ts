@@ -118,9 +118,11 @@ async function processSourceStreamed(source: (typeof DOL_SOURCES)[0], supabase: 
     await supabase.from("import_jobs").update({ total_rows: totalRows, status: "processing" }).eq("id", jobId);
     console.log(`[STREAM] ${source.key}: ~${totalRows} itens estimados.`);
 
-    // Process in chunks of 80 items (smaller to reduce peak memory)
-    const CHUNK_SIZE = 80;
+    // Smaller chunks to avoid SQL statement timeouts (H2A data is heavier)
+    const CHUNK_SIZE = 25;
+    const RETRY_CHUNK = 10;
     let processed = 0;
+    let consecutiveErrors = 0;
 
     for (const batch of parseJsonArrayChunked(jsonText, CHUNK_SIZE)) {
       const { error } = await supabase.rpc("process_dol_raw_batch", {
@@ -129,13 +131,44 @@ async function processSourceStreamed(source: (typeof DOL_SOURCES)[0], supabase: 
       });
 
       if (error) {
-        console.error(`[BATCH ERROR] ${source.key}:`, error.message);
+        const isTimeout = error.message?.includes("timeout") || error.message?.includes("520");
+        console.error(`[BATCH ERROR] ${source.key}: ${error.message?.substring(0, 100)}`);
+
+        if (isTimeout && batch.length > RETRY_CHUNK) {
+          // Retry in smaller sub-batches
+          console.log(`[RETRY] ${source.key}: splitting batch of ${batch.length} into chunks of ${RETRY_CHUNK}`);
+          for (let i = 0; i < batch.length; i += RETRY_CHUNK) {
+            const subBatch = batch.slice(i, i + RETRY_CHUNK);
+            // Small delay between retries to let DB recover
+            await new Promise(r => setTimeout(r, 500));
+            const { error: retryErr } = await supabase.rpc("process_dol_raw_batch", {
+              p_raw_items: subBatch,
+              p_visa_type: source.visaType,
+            });
+            if (retryErr) {
+              console.error(`[RETRY ERROR] ${source.key}: ${retryErr.message?.substring(0, 80)}`);
+              consecutiveErrors++;
+            } else {
+              processed += subBatch.length;
+              consecutiveErrors = 0;
+            }
+          }
+        } else {
+          consecutiveErrors++;
+        }
+
+        // If too many consecutive errors, abort to avoid wasting time
+        if (consecutiveErrors >= 10) {
+          console.error(`[ABORT] ${source.key}: ${consecutiveErrors} consecutive errors, stopping.`);
+          break;
+        }
       } else {
         processed += batch.length;
+        consecutiveErrors = 0;
       }
 
-      // Update progress every ~240 items
-      if (processed % 240 < CHUNK_SIZE) {
+      // Update progress every ~100 items
+      if (processed % 100 < CHUNK_SIZE) {
         await supabase.from("import_jobs").update({ processed_rows: processed }).eq("id", jobId);
         console.log(`[STREAM] ${source.key}: ${processed}/${totalRows}`);
       }
