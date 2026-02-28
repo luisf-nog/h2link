@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
 
     // ── AUTH: Validate cron token or admin JWT ──
     const body = await req.json().catch(() => ({}));
-    const cronToken = body.cron_token;
+    const cronToken = body?.cron_token || req.headers.get("x-cron-token");
 
     if (cronToken) {
       // Validate cron token against app_settings
