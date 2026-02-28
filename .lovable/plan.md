@@ -1,118 +1,81 @@
 
+Objetivo: eliminar de vez os timeouts do H2A, aceitando processamento longo (até ~1h de ponta a ponta) sem quebrar a atualização automática da madrugada.
 
-# Correcao: Radar Autopilot nao processa vagas automaticamente
+1) Diagnóstico confirmado (causa raiz real)
+- Hoje existem 2 problemas simultâneos:
+  1. Timeout “falso” no frontend:
+     - A tela `/admin/import` força falha após 5 minutos (`waitForJob`), e ainda marca jobs antigos como failed no mount.
+     - Isso gera erro visual mesmo quando o backend ainda poderia continuar.
+  2. Timeout “real” no backend:
+     - `auto-import-jobs` processa tudo em uma execução só (via `waitUntil`).
+     - Pelos logs, H2A para no meio (~1115/1940) e o runtime encerra (`shutdown`) antes de concluir.
+     - Reduzir chunk ajuda, mas não resolve limite de duração da execução.
 
-## Diagnostico
+2) Estratégia definitiva (resumível por etapas)
+Vamos transformar o importador em “job resumível” com checkpoints, em vez de “uma execução gigante”.
 
-Comparei a funcao SQL `trigger_immediate_radar` (chamada quando voce liga/desliga o Radar) com a Edge Function `process-radar` (cron automatico a cada 5 min) e encontrei **3 diferencas criticas** que explicam por que voce precisa desligar e ligar o radar manualmente:
+2.1 Mudanças de banco (migration)
+- Evoluir `import_jobs` para suportar retomada:
+  - `run_id` (uuid/text para correlacionar tentativas)
+  - `phase` (`queued | downloading | processing | finalizing | completed | failed`)
+  - `cursor` (inteiro: quantos itens já processados)
+  - `last_heartbeat_at` (timestamp)
+  - `attempt_count` (int)
+  - `meta` (jsonb opcional com métricas)
+- Índices úteis:
+  - `(status, source, created_at desc)`
+  - `(phase, last_heartbeat_at)`
 
-### Bug 1: Cron pula o usuario quando creditos acabam (e nunca mais volta)
+2.2 Refatorar `supabase/functions/auto-import-jobs/index.ts`
+- Novo fluxo por “janela de trabalho” (ex.: 60–90s por invocação):
+  - Recebe `{ source, job_id?, cursor? }`.
+  - Se `job_id` não vier, cria job novo em `queued/processing`.
+  - Processa só uma fatia de lotes por invocação (não o arquivo inteiro).
+  - Atualiza checkpoint (`cursor`, `processed_rows`, `last_heartbeat_at`) a cada progresso.
+  - Antes de estourar orçamento de tempo, agenda/encadeia próxima invocação com mesmo `job_id`.
+- Finalização:
+  - Quando cursor alcançar total, roda `deactivate_expired_jobs`, marca `completed`.
+- Resiliência:
+  - Mantém retry em sub-lotes pequenos para statement timeout.
+  - Em erro persistente: salva `error_message`, `failed`, com contexto de cursor.
+- Proteção de concorrência:
+  - Não permitir 2 execuções ativas para mesma source/job (lock lógico por status/phase).
 
-A Edge Function `process-radar` tem este trecho:
+2.3 Agendamento da madrugada (evitar contenção)
+- Ajustar cron para não sobrepor fontes pesadas:
+  - Exemplo seguro: JO 06:00, H2A 06:30, H2B 07:00 UTC
+  - Ou manter disparo inicial e deixar o próprio job-chain continuar sem colisão.
+- Se já existir job ativo da source, cron apenas “não duplica” e sai com log claro.
 
-```text
-if (creditsRemaining <= 0) {
-  console.log("Skipping user: no credits remaining");
-  continue;  // PULA O USUARIO INTEIRO
-}
-```
+3) Correções de frontend (tirar falsos negativos)
+Arquivo: `frontend/src/pages/AdminImport.tsx`
+- Remover marcação automática de failed após 5 minutos:
+  - Eliminar timeout fixo de `waitForJob` (ou aumentar para modo “sem timeout hard”, só avisar “ainda processando”).
+  - Remover cleanup agressivo no mount que falha jobs com `created_at < 5min`.
+- Trocar por lógica de “stale inteligente”:
+  - Só considerar travado se `last_heartbeat_at` estiver muito antigo (ex.: >20–30 min) E status ainda processing.
+- Histórico:
+  - Exibir fase (`phase`) e “último heartbeat”, deixando claro que H2A pode levar mais tempo.
 
-Quando seus creditos do dia acabam, o cron **para de detectar novas vagas** para voce. Ele nao registra os matches, nao faz nada. No dia seguinte, quando os creditos resetam, ele deveria voltar a funcionar, mas se entre ontem e hoje chegaram vagas novas, elas ja podem ter saido do top 500 (veja Bug 2).
+4) Observabilidade para fechar o problema
+- Logs estruturados por job_id/source:
+  - início, progresso (cursor/total), retries, fim.
+- Mensagens de erro mais úteis:
+  - distinguir timeout SQL vs runtime cutoff vs falha de autenticação.
+- (Opcional) badge no histórico: “retomado X vezes”.
 
-A funcao SQL `trigger_immediate_radar` (do botao) **nao tem essa limitacao** -- ela encontra e enfileira tudo, independente de creditos.
+5) Sequência de implementação (ordem segura)
+1. Migration de `import_jobs` (campos de checkpoint/heartbeat/phase).
+2. Refactor do `auto-import-jobs` para execução resumível com encadeamento.
+3. Ajuste dos cron jobs para evitar overlap e duplicidade.
+4. Ajustes de UI em `AdminImport.tsx` para remover timeout de 5 min e ler heartbeat/phase.
+5. Validação com teste real H2A:
+   - disparar manualmente,
+   - confirmar progresso contínuo por várias invocações,
+   - confirmar `completed` e histórico correto sem “failed” falso.
 
-### Bug 2: Cron ve apenas 500 vagas (`.limit(500)`)
-
-A Edge Function filtra vagas com `.limit(500)` ordenando por data. Se existem mais de 500 vagas que batem com seus criterios, as vagas mais antigas ficam **invisiveis** para o cron.
-
-A funcao SQL `trigger_immediate_radar` faz `JOIN` sem limite -- ela ve TODAS as vagas.
-
-### Bug 3: Cron duplicado (menor)
-
-Existem **dois cron jobs** chamando `process-radar`:
-- `process-radar-every-30min` (job 4) -- a cada 30 min
-- `invoke-process-radar-every-5min` (job 9) -- a cada 5 min
-
-O de 30 min e redundante e desperdiça recursos.
-
-## Evidencia nos dados
-
-```text
-02:05 UTC - Cron enfileira 6 vagas
-02:06 UTC - Cron enfileira 13 vagas  
-06:00 UTC - Auto-import roda (novas vagas entram)
-06:05 a 12:22 UTC - ZERO vagas enfileiradas pelo cron (10+ horas)
-12:22 UTC - Voce desliga/liga o radar -> 14 vagas enfileiradas
-12:25 UTC - Cron roda agora e encontra 276 (porque trigger_immediate_radar limpou os matches antigos)
-```
-
-## Plano de Correcao
-
-### 1. Separar deteccao de matches do enfileiramento
-
-O cron deve SEMPRE detectar e registrar matches em `radar_matched_jobs`, mesmo quando os creditos acabam. Apenas a insercao na fila (`my_queue`) deve respeitar o limite de creditos. Assim, quando creditos ficarem disponiveis novamente, as vagas ja estarao marcadas e prontas para envio.
-
-```text
-ANTES: creditos = 0 -> pula usuario inteiro (nao detecta nada)
-DEPOIS: creditos = 0 -> detecta e registra matches, mas nao enfileira
-```
-
-### 2. Remover o `.limit(500)` da query de vagas
-
-Substituir por uma busca sem limite fixo (ou pelo menos `.limit(2000)`), para garantir que todas as vagas que batem com os criterios sejam detectadas, nao apenas as 500 mais recentes.
-
-### 3. Remover cron duplicado
-
-Deletar o cron job 4 (`process-radar-every-30min`) que e redundante com o job 9 (a cada 5 min).
-
-### 4. Melhorar logging
-
-O contador `totalQueued` hoje conta o tamanho do array (tentativas), nao insercoes reais. Vamos usar o retorno do upsert para logar quantas vagas REALMENTE foram inseridas.
-
-## Arquivos a alterar
-
-- `frontend/supabase/functions/process-radar/index.ts` -- correcoes 1, 2 e 4
-- `supabase/functions/process-radar/index.ts` -- espelhar as mesmas correcoes
-- Migracao SQL -- remover cron duplicado (job 4)
-
-## Detalhes tecnicos
-
-Mudanca principal no `process-radar/index.ts`:
-
-```text
-// ANTES: pula usuario inteiro se sem creditos
-if (creditsRemaining <= 0) {
-  continue;
-}
-
-// DEPOIS: separa deteccao de enfileiramento
-const canQueue = creditsRemaining > 0;
-
-// Sempre registra matches
-await supabase.from("radar_matched_jobs").upsert(matchRecords, {
-  onConflict: "user_id,job_id",
-});
-
-// So enfileira se tem creditos
-if (canQueue && radar.auto_send) {
-  const jobsToQueue = jobsToProcess.slice(0, creditsRemaining);
-  // ... insere em my_queue
-}
-```
-
-Para a query de vagas:
-
-```text
-// ANTES:
-.limit(500)
-
-// DEPOIS:
-.limit(2000)
-```
-
-SQL para remover cron duplicado:
-
-```sql
-SELECT cron.unschedule('process-radar-every-30min');
-```
-
+6) Resultado esperado após aprovação
+- H2A deixa de “morrer no meio” por limite de execução.
+- Jobs longos continuam por múltiplas etapas até concluir (mesmo levando 30–60 min).
+- Histórico passa a refletir estado real (sem falso timeout de 5 min).
+- Rotina da madrugada fica estável e previsível.
