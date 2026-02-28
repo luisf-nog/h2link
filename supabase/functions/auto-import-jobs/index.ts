@@ -118,9 +118,11 @@ async function processSourceStreamed(source: (typeof DOL_SOURCES)[0], supabase: 
     await supabase.from("import_jobs").update({ total_rows: totalRows, status: "processing" }).eq("id", jobId);
     console.log(`[STREAM] ${source.key}: ~${totalRows} itens estimados.`);
 
-    // Smaller chunks to avoid SQL statement timeouts (H2A data is heavier)
-    const CHUNK_SIZE = 25;
-    const RETRY_CHUNK = 10;
+    // Lotes menores para reduzir timeout em fontes mais pesadas (H-2A)
+    const CHUNK_SIZE = source.key === "h2a" ? 10 : 20;
+    const RETRY_CHUNK = source.key === "h2a" ? 5 : 10;
+    const PROGRESS_EVERY = source.key === "h2a" ? 50 : 100;
+
     let processed = 0;
     let consecutiveErrors = 0;
 
@@ -135,12 +137,12 @@ async function processSourceStreamed(source: (typeof DOL_SOURCES)[0], supabase: 
         console.error(`[BATCH ERROR] ${source.key}: ${error.message?.substring(0, 100)}`);
 
         if (isTimeout && batch.length > RETRY_CHUNK) {
-          // Retry in smaller sub-batches
+          // Retry em sub-lotes menores
           console.log(`[RETRY] ${source.key}: splitting batch of ${batch.length} into chunks of ${RETRY_CHUNK}`);
           for (let i = 0; i < batch.length; i += RETRY_CHUNK) {
             const subBatch = batch.slice(i, i + RETRY_CHUNK);
-            // Small delay between retries to let DB recover
-            await new Promise(r => setTimeout(r, 500));
+            // Delay curto para reduzir pressão no banco sem inflar muito o tempo total
+            await new Promise(r => setTimeout(r, 150));
             const { error: retryErr } = await supabase.rpc("process_dol_raw_batch", {
               p_raw_items: subBatch,
               p_visa_type: source.visaType,
@@ -157,18 +159,23 @@ async function processSourceStreamed(source: (typeof DOL_SOURCES)[0], supabase: 
           consecutiveErrors++;
         }
 
-        // If too many consecutive errors, abort to avoid wasting time
-        if (consecutiveErrors >= 10) {
-          console.error(`[ABORT] ${source.key}: ${consecutiveErrors} consecutive errors, stopping.`);
-          break;
+        // Se houver muitos erros consecutivos, marca como failed e encerra
+        if (consecutiveErrors >= 20) {
+          const abortMessage = `${consecutiveErrors} consecutive batch errors (timeout/DB)`;
+          console.error(`[ABORT] ${source.key}: ${abortMessage}`);
+          await supabase
+            .from("import_jobs")
+            .update({ status: "failed", processed_rows: processed, error_message: abortMessage })
+            .eq("id", jobId);
+          return;
         }
       } else {
         processed += batch.length;
         consecutiveErrors = 0;
       }
 
-      // Update progress every ~100 items
-      if (processed % 100 < CHUNK_SIZE) {
+      // Atualiza progresso periodicamente
+      if (processed % PROGRESS_EVERY < CHUNK_SIZE) {
         await supabase.from("import_jobs").update({ processed_rows: processed }).eq("id", jobId);
         console.log(`[STREAM] ${source.key}: ${processed}/${totalRows}`);
       }
