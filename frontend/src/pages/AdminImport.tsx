@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2 } from 'lucide-react';
+import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2, History, XCircle, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
-
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 interface ImportJobStatus {
   jobId: string;
   source: string;
@@ -24,8 +25,21 @@ export default function AdminImport() {
   const [result, setResult] = useState<{ updated: number; notFound: number } | null>(null);
   const [importingSource, setImportingSource] = useState<string | null>(null);
   const [activeJobs, setActiveJobs] = useState<ImportJobStatus[]>([]);
+  const [historyJobs, setHistoryJobs] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    const { data } = await supabase
+      .from('import_jobs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setHistoryJobs(data || []);
+    setLoadingHistory(false);
+  };
 
   // Cleanup stale "processing" jobs on mount
   useEffect(() => {
@@ -273,10 +287,14 @@ export default function AdminImport() {
       </div>
 
       <Tabs defaultValue="import" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           <TabsTrigger value="import">
             <FileJson className="h-4 w-4 mr-2" />
             Importar
+          </TabsTrigger>
+          <TabsTrigger value="history" onClick={fetchHistory}>
+            <History className="h-4 w-4 mr-2" />
+            Histórico
           </TabsTrigger>
           <TabsTrigger value="groups">
             <UploadCloud className="h-4 w-4 mr-2" />
@@ -294,6 +312,73 @@ export default function AdminImport() {
 
         <TabsContent value="import" className="space-y-4">
           <MultiJsonImporter />
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" /> Histórico de Importações
+              </CardTitle>
+              <CardDescription>Últimas 50 execuções (automáticas e manuais)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : historyJobs.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum registro encontrado.</p>
+              ) : (
+                <div className="space-y-2">
+                  {historyJobs.map((job) => {
+                    const isCompleted = job.status === 'completed';
+                    const isFailed = job.status === 'failed';
+                    const isProcessing = job.status === 'processing';
+                    const pct = job.total_rows ? Math.round((job.processed_rows / job.total_rows) * 100) : 0;
+                    const createdAt = job.created_at
+                      ? format(new Date(job.created_at), 'dd/MM/yyyy HH:mm')
+                      : '—';
+
+                    return (
+                      <div
+                        key={job.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isCompleted ? 'bg-green-50 border-green-200' :
+                          isFailed ? 'bg-destructive/5 border-destructive/20' :
+                          'bg-muted/50 border-border'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isCompleted && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
+                          {isFailed && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
+                          {isProcessing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                                {job.source}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{createdAt}</span>
+                            </div>
+                            {isFailed && job.error_message && (
+                              <p className="text-xs text-destructive mt-1 max-w-md truncate">{job.error_message}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right text-xs">
+                          <span className="font-mono font-bold">
+                            {job.processed_rows}/{job.total_rows}
+                          </span>
+                          {isCompleted && <span className="ml-2 text-green-600">✓</span>}
+                          {isProcessing && <span className="ml-2 text-muted-foreground">{pct}%</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="groups" className="space-y-4">
