@@ -193,9 +193,14 @@ export type Database = {
       }
       import_jobs: {
         Row: {
+          attempt_count: number
           created_at: string
+          cursor_pos: number
           error_message: string | null
           id: string
+          last_heartbeat_at: string | null
+          meta: Json | null
+          phase: string
           processed_rows: number
           source: string
           status: string
@@ -203,9 +208,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attempt_count?: number
           created_at?: string
+          cursor_pos?: number
           error_message?: string | null
           id?: string
+          last_heartbeat_at?: string | null
+          meta?: Json | null
+          phase?: string
           processed_rows?: number
           source: string
           status?: string
@@ -213,9 +223,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attempt_count?: number
           created_at?: string
+          cursor_pos?: number
           error_message?: string | null
           id?: string
+          last_heartbeat_at?: string | null
+          meta?: Json | null
+          phase?: string
           processed_rows?: number
           source?: string
           status?: string

@@ -10,14 +10,21 @@ import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+
 interface ImportJobStatus {
   jobId: string;
   source: string;
   status: 'processing' | 'completed' | 'failed';
+  phase?: string;
   processedRows: number;
   totalRows: number;
   error?: string;
+  lastHeartbeat?: string;
+  attemptCount?: number;
 }
+
+// Stale threshold: 20 minutes without heartbeat
+const STALE_THRESHOLD_MS = 20 * 60 * 1000;
 
 export default function AdminImport() {
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
@@ -41,15 +48,25 @@ export default function AdminImport() {
     setLoadingHistory(false);
   };
 
-  // Cleanup stale "processing" jobs on mount
+  // Cleanup truly stale jobs on mount (20+ min without heartbeat)
   useEffect(() => {
     const cleanupStaleJobs = async () => {
-      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString();
+      // Only mark as failed if no heartbeat for 20+ minutes
       await supabase
         .from('import_jobs')
-        .update({ status: 'failed', error_message: 'Timeout: job ficou preso por mais de 5 minutos' } as any)
+        .update({ status: 'failed', phase: 'failed', error_message: 'Stale: sem heartbeat por mais de 20 minutos' } as any)
         .eq('status', 'processing')
-        .lt('created_at', fiveMinAgo);
+        .lt('last_heartbeat_at', staleThreshold);
+      
+      // Also catch old jobs that never got a heartbeat (legacy)
+      const oldThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      await supabase
+        .from('import_jobs')
+        .update({ status: 'failed', phase: 'failed', error_message: 'Stale: job antigo sem heartbeat' } as any)
+        .eq('status', 'processing')
+        .is('last_heartbeat_at' as any, null)
+        .lt('created_at', oldThreshold);
     };
     cleanupStaleJobs();
     return () => {
@@ -66,7 +83,7 @@ export default function AdminImport() {
     pollingRef.current = setInterval(async () => {
       const { data, error } = await supabase
         .from('import_jobs')
-        .select('id, source, status, processed_rows, total_rows, error_message')
+        .select('id, source, status, processed_rows, total_rows, error_message, phase, last_heartbeat_at, attempt_count')
         .in('id', jobIds);
 
       if (error || !data) return;
@@ -75,9 +92,12 @@ export default function AdminImport() {
         jobId: d.id,
         source: d.source,
         status: d.status as ImportJobStatus['status'],
+        phase: (d as any).phase as string | undefined,
         processedRows: d.processed_rows ?? 0,
         totalRows: d.total_rows ?? 0,
         error: d.error_message ?? undefined,
+        lastHeartbeat: (d as any).last_heartbeat_at as string | undefined,
+        attemptCount: (d as any).attempt_count as number | undefined,
       }));
 
       setActiveJobs(updated);
@@ -107,40 +127,18 @@ export default function AdminImport() {
           });
         }
       }
-    }, 2000);
+    }, 3000);
   };
 
-  // Wait for a single job to complete by polling (with 5-minute timeout)
+  // Wait for a single job to complete by polling (no hard timeout — heartbeat-based)
   const waitForJob = (jobId: string): Promise<ImportJobStatus> => {
-    const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-    const POLL_INTERVAL = 2000;
+    const POLL_INTERVAL = 3000;
 
     return new Promise((resolve) => {
-      const startTime = Date.now();
-
       const interval = setInterval(async () => {
-        // Check timeout
-        if (Date.now() - startTime > TIMEOUT_MS) {
-          clearInterval(interval);
-          // Mark as failed in DB
-          await supabase
-            .from('import_jobs')
-            .update({ status: 'failed', error_message: 'Timeout: processamento excedeu 5 minutos' } as any)
-            .eq('id', jobId)
-            .eq('status', 'processing');
-
-          const timedOut: ImportJobStatus = {
-            jobId, source: '', status: 'failed', processedRows: 0, totalRows: 0,
-            error: 'Timeout: processamento excedeu 5 minutos',
-          };
-          setActiveJobs(prev => prev.map(j => j.jobId === jobId ? timedOut : j));
-          resolve(timedOut);
-          return;
-        }
-
         const { data } = await supabase
           .from('import_jobs')
-          .select('id, source, status, processed_rows, total_rows, error_message')
+          .select('id, source, status, processed_rows, total_rows, error_message, phase, last_heartbeat_at, attempt_count')
           .eq('id', jobId)
           .single();
 
@@ -150,17 +148,41 @@ export default function AdminImport() {
           jobId: data.id,
           source: data.source,
           status: data.status as ImportJobStatus['status'],
+          phase: (data as any).phase as string | undefined,
           processedRows: data.processed_rows ?? 0,
           totalRows: data.total_rows ?? 0,
           error: data.error_message ?? undefined,
+          lastHeartbeat: (data as any).last_heartbeat_at as string | undefined,
+          attemptCount: (data as any).attempt_count as number | undefined,
         };
 
-        // Update UI with latest progress
         setActiveJobs(prev => prev.map(j => j.jobId === jobId ? job : j));
 
         if (job.status === 'completed' || job.status === 'failed') {
           clearInterval(interval);
           resolve(job);
+          return;
+        }
+
+        // Check for stale heartbeat (20 min)
+        if (job.lastHeartbeat) {
+          const heartbeatAge = Date.now() - new Date(job.lastHeartbeat).getTime();
+          if (heartbeatAge > STALE_THRESHOLD_MS) {
+            clearInterval(interval);
+            await supabase
+              .from('import_jobs')
+              .update({ status: 'failed', phase: 'failed', error_message: 'Stale: sem heartbeat por mais de 20 minutos' } as any)
+              .eq('id', jobId)
+              .eq('status', 'processing');
+            
+            const staleJob: ImportJobStatus = {
+              ...job,
+              status: 'failed',
+              error: 'Stale: sem heartbeat por mais de 20 minutos',
+            };
+            setActiveJobs(prev => prev.map(j => j.jobId === jobId ? staleJob : j));
+            resolve(staleJob);
+          }
         }
       }, POLL_INTERVAL);
     });
@@ -171,12 +193,11 @@ export default function AdminImport() {
     setActiveJobs([]);
     try {
       if (source === 'all') {
-        // Process each source ONE AT A TIME — wait for completion before next
         const sources = ['jo', 'h2a', 'h2b'];
 
         for (let i = 0; i < sources.length; i++) {
           const s = sources[i];
-          const skipRadar = i < sources.length - 1; // radar only on last
+          const skipRadar = i < sources.length - 1;
 
           const { data, error } = await supabase.functions.invoke('auto-import-jobs', {
             body: { source: s, skip_radar: skipRadar },
@@ -188,7 +209,6 @@ export default function AdminImport() {
           const newJob: ImportJobStatus = { jobId, source: s, status: 'processing', processedRows: 0, totalRows: 0 };
           setActiveJobs(prev => [...prev, newJob]);
 
-          // WAIT for this job to finish before starting the next one
           const result = await waitForJob(jobId);
 
           if (result.status === 'completed') {
@@ -277,6 +297,17 @@ export default function AdminImport() {
     }
   };
 
+  const formatPhase = (phase?: string) => {
+    switch (phase) {
+      case 'downloading': return '⬇️ Baixando';
+      case 'processing': return '⚙️ Processando';
+      case 'finalizing': return '✅ Finalizando';
+      case 'completed': return '✅ Concluído';
+      case 'failed': return '❌ Falhou';
+      default: return phase || '';
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div>
@@ -339,6 +370,8 @@ export default function AdminImport() {
                     const createdAt = job.created_at
                       ? format(new Date(job.created_at), 'dd/MM/yyyy HH:mm')
                       : '—';
+                    const phase = (job as any).phase;
+                    const attemptCount = (job as any).attempt_count;
 
                     return (
                       <div
@@ -359,6 +392,14 @@ export default function AdminImport() {
                                 {job.source}
                               </Badge>
                               <span className="text-xs text-muted-foreground">{createdAt}</span>
+                              {phase && isProcessing && (
+                                <span className="text-xs text-muted-foreground">{formatPhase(phase)}</span>
+                              )}
+                              {attemptCount > 1 && (
+                                <Badge variant="secondary" className="text-[9px]">
+                                  {attemptCount}x
+                                </Badge>
+                              )}
                             </div>
                             {isFailed && job.error_message && (
                               <p className="text-xs text-destructive mt-1 max-w-md truncate">{job.error_message}</p>
@@ -446,7 +487,6 @@ export default function AdminImport() {
               <CardDescription>Dispare manualmente a importação de cada fonte. O cron roda automaticamente às 06:00 UTC.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Import All button */}
               <Button
                 onClick={() => runManualImport('all')}
                 disabled={!!importingSource}
@@ -471,24 +511,29 @@ export default function AdminImport() {
                 </Button>
               ))}
 
-              {/* Active jobs progress */}
               {activeJobs.filter(j => j.status === 'processing').map(job => {
                 const pct = job.totalRows ? Math.round((job.processedRows / job.totalRows) * 100) : 0;
                 return (
                   <div key={job.jobId} className="mt-2 space-y-2 p-4 rounded-lg border bg-muted/50">
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium">Importando {job.source.toUpperCase()}...</span>
+                      <span className="font-medium">
+                        Importando {job.source.toUpperCase()}...
+                        {job.phase && <span className="ml-2 text-xs text-muted-foreground">({formatPhase(job.phase)})</span>}
+                      </span>
                       <span className="text-muted-foreground">
                         {job.processedRows} / {job.totalRows || '?'}
                       </span>
                     </div>
                     <Progress value={job.totalRows ? pct : undefined} className="h-2" />
+                    {job.attemptCount && job.attemptCount > 1 && (
+                      <p className="text-[10px] text-muted-foreground">Tentativa #{job.attemptCount} (auto-retomada)</p>
+                    )}
                   </div>
                 );
               })}
 
               {activeJobs.length > 0 && activeJobs.some(j => j.status === 'processing') && (
-                <p className="text-xs text-muted-foreground">Processando em background. Atualiza a cada 2s.</p>
+                <p className="text-xs text-muted-foreground">Processando em background com auto-retomada. Atualiza a cada 3s.</p>
               )}
 
               {activeJobs.filter(j => j.status === 'completed').map(job => (
