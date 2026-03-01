@@ -226,26 +226,48 @@ async function processSlice(
   return { newCursor: processed, done: true };
 }
 
-/** Self-chain: invoke this function again to continue processing */
-async function selfChain(supabase: any, source: string, jobId: string) {
+/** Self-chain: invoke this function again to continue processing (with retry) */
+async function selfChain(supabase: any, source: string, jobId: string, maxRetries = 3) {
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
   const invokeUrl = `${url}/functions/v1/auto-import-jobs`;
-  console.log(`[CHAIN] Scheduling continuation for ${source} job=${jobId}`);
 
-  try {
-    await fetch(invokeUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({ source, job_id: jobId, _chain: true }),
-    });
-  } catch (err: any) {
-    console.error(`[CHAIN ERR] Failed to self-chain: ${err.message}`);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log(`[CHAIN] Attempt ${attempt}/${maxRetries} for ${source} job=${jobId}`);
+    try {
+      const resp = await fetch(invokeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ source, job_id: jobId, _chain: true }),
+      });
+
+      const bodyText = await resp.text();
+
+      if (resp.ok) {
+        console.log(`[CHAIN OK] ${source} job=${jobId} status=${resp.status}`);
+        return; // success
+      }
+
+      console.error(`[CHAIN FAIL] ${source} attempt=${attempt} status=${resp.status} body=${bodyText.substring(0, 200)}`);
+    } catch (err: any) {
+      console.error(`[CHAIN ERR] ${source} attempt=${attempt}: ${err.message}`);
+    }
+
+    // Wait before retry (1s, 2s, 3s)
+    if (attempt < maxRetries) {
+      await new Promise(r => setTimeout(r, attempt * 1000));
+    }
   }
+
+  // All retries failed — update job with explicit error so it can be retried later
+  console.error(`[CHAIN EXHAUSTED] ${source} job=${jobId}: all ${maxRetries} chain attempts failed`);
+  await supabase.from("import_jobs").update({
+    error_message: `Self-chain failed after ${maxRetries} attempts. Job can be resumed manually.`,
+    last_heartbeat_at: new Date().toISOString(),
+  }).eq("id", jobId);
 }
 
 // ─── SERVER ──────────────────────────────────────────────────────────────
