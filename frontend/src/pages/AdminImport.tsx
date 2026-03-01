@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2, History, XCircle, Clock } from 'lucide-react';
+import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2, History, XCircle, Clock, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,35 @@ interface ImportJobStatus {
 // Stale threshold: 20 minutes without heartbeat
 const STALE_THRESHOLD_MS = 20 * 60 * 1000;
 
+// Cron schedule (UTC): JO 06:00, H2A 06:30, H2B 06:10
+const CRON_SCHEDULE_UTC = [
+  { source: 'JO', hour: 6, minute: 0 },
+  { source: 'H2B', hour: 6, minute: 10 },
+  { source: 'H2A', hour: 6, minute: 30 },
+];
+
+function getNextCronRun(): { source: string; timeUntil: string; date: Date } {
+  const now = new Date();
+  let nearest: { source: string; date: Date } | null = null;
+
+  for (const cron of CRON_SCHEDULE_UTC) {
+    const todayRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), cron.hour, cron.minute, 0));
+    const tomorrowRun = new Date(todayRun.getTime() + 86400000);
+    const nextRun = todayRun > now ? todayRun : tomorrowRun;
+    if (!nearest || nextRun < nearest.date) {
+      nearest = { source: cron.source, date: nextRun };
+    }
+  }
+
+  const diff = nearest!.date.getTime() - now.getTime();
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const timeUntil = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+  return { source: nearest!.source, timeUntil, date: nearest!.date };
+}
+
 export default function AdminImport() {
   const [xlsxFile, setXlsxFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -34,8 +63,15 @@ export default function AdminImport() {
   const [activeJobs, setActiveJobs] = useState<ImportJobStatus[]>([]);
   const [historyJobs, setHistoryJobs] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [nextCron, setNextCron] = useState(getNextCronRun);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  // Update countdown every second
+  useEffect(() => {
+    const timer = setInterval(() => setNextCron(getNextCronRun()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchHistory = async () => {
     setLoadingHistory(true);
@@ -481,6 +517,24 @@ export default function AdminImport() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="flex items-center gap-4 py-4">
+              <Timer className="h-8 w-8 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Próxima importação automática</p>
+                <p className="text-2xl font-bold font-mono text-primary">{nextCron.timeUntil}</p>
+                <p className="text-xs text-muted-foreground">
+                  {nextCron.source} — {format(nextCron.date, 'dd/MM HH:mm')} UTC
+                </p>
+              </div>
+              <div className="ml-auto text-right text-xs text-muted-foreground space-y-0.5">
+                {CRON_SCHEDULE_UTC.map(c => (
+                  <p key={c.source}>{c.source}: {String(c.hour).padStart(2,'0')}:{String(c.minute).padStart(2,'0')} UTC</p>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Importação Manual do DOL</CardTitle>
