@@ -1513,61 +1513,154 @@ export type Database = {
       }
       sponsored_jobs: {
         Row: {
+          additional_compensation: string | null
+          additional_notes: string | null
+          bonuses: string | null
+          city: string | null
           click_count: number
+          compliance_acknowledged: boolean | null
           consular_only: boolean
           created_at: string
+          daily_meal_cost: number | null
+          deductions_additional: string | null
+          deductions_standard: boolean | null
           description: string | null
+          dol_case_number: string | null
           employer_id: string
+          employer_legal_name: string | null
           end_date: string | null
+          english_level: string | null
+          equipment_used: string | null
+          flsa_compliant: boolean | null
+          hourly_wage: number | null
+          housing_provided: boolean | null
           id: string
           is_active: boolean
+          is_claimed: boolean | null
           is_sponsored: boolean
+          lifting_weight_lbs: number | null
           location: string | null
+          meals_provided: boolean | null
+          num_positions: number | null
+          overtime_rate: number | null
+          pay_frequency: string | null
+          primary_duties: string | null
+          prior_experience_required: boolean | null
           priority_level: string
           req_drivers_license: boolean
           req_english: boolean
           req_experience: boolean
+          skill_level: string | null
+          source_type: string | null
           start_date: string | null
+          state: string | null
           title: string
+          training_provided: boolean | null
+          transportation_provided: boolean | null
           view_count: number
+          visa_fee_reimbursement: boolean | null
+          visa_type: string | null
+          work_environment: string | null
         }
         Insert: {
+          additional_compensation?: string | null
+          additional_notes?: string | null
+          bonuses?: string | null
+          city?: string | null
           click_count?: number
+          compliance_acknowledged?: boolean | null
           consular_only?: boolean
           created_at?: string
+          daily_meal_cost?: number | null
+          deductions_additional?: string | null
+          deductions_standard?: boolean | null
           description?: string | null
+          dol_case_number?: string | null
           employer_id: string
+          employer_legal_name?: string | null
           end_date?: string | null
+          english_level?: string | null
+          equipment_used?: string | null
+          flsa_compliant?: boolean | null
+          hourly_wage?: number | null
+          housing_provided?: boolean | null
           id?: string
           is_active?: boolean
+          is_claimed?: boolean | null
           is_sponsored?: boolean
+          lifting_weight_lbs?: number | null
           location?: string | null
+          meals_provided?: boolean | null
+          num_positions?: number | null
+          overtime_rate?: number | null
+          pay_frequency?: string | null
+          primary_duties?: string | null
+          prior_experience_required?: boolean | null
           priority_level?: string
           req_drivers_license?: boolean
           req_english?: boolean
           req_experience?: boolean
+          skill_level?: string | null
+          source_type?: string | null
           start_date?: string | null
+          state?: string | null
           title: string
+          training_provided?: boolean | null
+          transportation_provided?: boolean | null
           view_count?: number
+          visa_fee_reimbursement?: boolean | null
+          visa_type?: string | null
+          work_environment?: string | null
         }
         Update: {
+          additional_compensation?: string | null
+          additional_notes?: string | null
+          bonuses?: string | null
+          city?: string | null
           click_count?: number
+          compliance_acknowledged?: boolean | null
           consular_only?: boolean
           created_at?: string
+          daily_meal_cost?: number | null
+          deductions_additional?: string | null
+          deductions_standard?: boolean | null
           description?: string | null
+          dol_case_number?: string | null
           employer_id?: string
+          employer_legal_name?: string | null
           end_date?: string | null
+          english_level?: string | null
+          equipment_used?: string | null
+          flsa_compliant?: boolean | null
+          hourly_wage?: number | null
+          housing_provided?: boolean | null
           id?: string
           is_active?: boolean
+          is_claimed?: boolean | null
           is_sponsored?: boolean
+          lifting_weight_lbs?: number | null
           location?: string | null
+          meals_provided?: boolean | null
+          num_positions?: number | null
+          overtime_rate?: number | null
+          pay_frequency?: string | null
+          primary_duties?: string | null
+          prior_experience_required?: boolean | null
           priority_level?: string
           req_drivers_license?: boolean
           req_english?: boolean
           req_experience?: boolean
+          skill_level?: string | null
+          source_type?: string | null
           start_date?: string | null
+          state?: string | null
           title?: string
+          training_provided?: boolean | null
+          transportation_provided?: boolean | null
           view_count?: number
+          visa_fee_reimbursement?: boolean | null
+          visa_type?: string | null
+          work_environment?: string | null
         }
         Relationships: [
           {

@@ -5,6 +5,7 @@ import { WhatsNewDialog } from "@/components/dialogs/WhatsNewDialog";
 import { AppSidebar } from "./AppSidebar";
 import { AppFooter } from "./AppFooter";
 import { SetupBanner } from "@/components/sidebar/SetupBanner";
+import { useIsEmployer } from "@/hooks/useIsEmployer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { isEmployer } = useIsEmployer();
 
   const options: LanguageOption[] = useMemo(
     () => [
@@ -118,7 +120,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </header>
           <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
           <AppFooter />
-          <SetupBanner />
+          {!isEmployer && <SetupBanner />}
           <WhatsNewDialog />
         </main>
       </div>
