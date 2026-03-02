@@ -18,7 +18,22 @@ const supabase = createClient(
 );
 
 // Keep mapping consistent with `stripe-webhook`.
-const PRICE_TO_PLAN: Record<string, "gold" | "diamond"> = {
+const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
+  // Current prices
+  "price_1T6UOXKliiuLyRPmdKHaaHye": "gold",
+  "price_1Suea8KliiuLyRPmQjhJrZdA": "gold",
+  "price_1T6UOYKliiuLyRPmu9EmXIAH": "diamond",
+  "price_1SueaAKliiuLyRPmo48RI0R9": "diamond",
+  "price_1T6UOZKliiuLyRPmrrp3AQQR": "black",
+  "price_1SueaDKliiuLyRPmjqiMMWAs": "black",
+  // Legacy promo prices
+  "price_1SueZyKliiuLyRPmL9R7Sdxm": "gold",
+  "price_1Sv6f3KliiuLyRPmXpH9Tuhq": "gold",
+  "price_1Suea9KliiuLyRPmrRCXm6TP": "diamond",
+  "price_1Sv6f4KliiuLyRPmONdH2NOt": "diamond",
+  "price_1SueaCKliiuLyRPmevGCARiq": "black",
+  "price_1Sv6f5KliiuLyRPmoMTWZXyT": "black",
+  // Old test prices
   "price_1SsohfKliiuLyRPm2t81CuGj": "gold",
   "price_1SsovLKliiuLyRPmIqN11GXC": "gold",
   "price_1SsojDKliiuLyRPmyXXkAI9o": "diamond",
