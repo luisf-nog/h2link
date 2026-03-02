@@ -161,6 +161,58 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          application_id: string | null
+          created_at: string
+          employer_id: string | null
+          id: string
+          job_id: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          application_id?: string | null
+          created_at?: string
+          employer_id?: string | null
+          id?: string
+          job_id?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          application_id?: string | null
+          created_at?: string
+          employer_id?: string | null
+          id?: string
+          job_id?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "sponsored_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           body: string
@@ -186,6 +238,51 @@ export type Database = {
           id?: string
           name?: string
           subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      employer_profiles: {
+        Row: {
+          company_name: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_verified: boolean
+          status: Database["public"]["Enums"]["employer_status"]
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tier: Database["public"]["Enums"]["employer_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          status?: Database["public"]["Enums"]["employer_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: Database["public"]["Enums"]["employer_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          status?: Database["public"]["Enums"]["employer_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: Database["public"]["Enums"]["employer_tier"]
           updated_at?: string
           user_id?: string
         }
@@ -265,6 +362,65 @@ export type Database = {
           reason?: string | null
         }
         Relationships: []
+      }
+      job_applications: {
+        Row: {
+          citizenship_status: string
+          created_at: string
+          email: string
+          employer_status: string
+          full_name: string
+          has_english: boolean
+          has_experience: boolean
+          has_license: boolean
+          id: string
+          is_in_us: boolean
+          job_id: string
+          phone: string | null
+          rejection_reason: string | null
+          score_color: string | null
+        }
+        Insert: {
+          citizenship_status?: string
+          created_at?: string
+          email: string
+          employer_status?: string
+          full_name: string
+          has_english?: boolean
+          has_experience?: boolean
+          has_license?: boolean
+          id?: string
+          is_in_us?: boolean
+          job_id: string
+          phone?: string | null
+          rejection_reason?: string | null
+          score_color?: string | null
+        }
+        Update: {
+          citizenship_status?: string
+          created_at?: string
+          email?: string
+          employer_status?: string
+          full_name?: string
+          has_english?: boolean
+          has_experience?: boolean
+          has_license?: boolean
+          id?: string
+          is_in_us?: boolean
+          job_id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          score_color?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "sponsored_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_reports: {
         Row: {
@@ -1325,6 +1481,74 @@ export type Database = {
           },
         ]
       }
+      sponsored_jobs: {
+        Row: {
+          click_count: number
+          consular_only: boolean
+          created_at: string
+          description: string | null
+          employer_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          is_sponsored: boolean
+          location: string | null
+          priority_level: string
+          req_drivers_license: boolean
+          req_english: boolean
+          req_experience: boolean
+          start_date: string | null
+          title: string
+          view_count: number
+        }
+        Insert: {
+          click_count?: number
+          consular_only?: boolean
+          created_at?: string
+          description?: string | null
+          employer_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          is_sponsored?: boolean
+          location?: string | null
+          priority_level?: string
+          req_drivers_license?: boolean
+          req_english?: boolean
+          req_experience?: boolean
+          start_date?: string | null
+          title: string
+          view_count?: number
+        }
+        Update: {
+          click_count?: number
+          consular_only?: boolean
+          created_at?: string
+          description?: string | null
+          employer_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          is_sponsored?: boolean
+          location?: string | null
+          priority_level?: string
+          req_drivers_license?: boolean
+          req_english?: boolean
+          req_experience?: boolean
+          start_date?: string | null
+          title?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsored_jobs_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1422,7 +1646,28 @@ export type Database = {
         }
         Returns: number
       }
+      check_employer_job_limit: {
+        Args: { p_employer_id: string }
+        Returns: boolean
+      }
+      compute_application_score: {
+        Args: {
+          p_consular_only: boolean
+          p_has_english: boolean
+          p_has_experience: boolean
+          p_has_license: boolean
+          p_is_in_us: boolean
+          p_req_drivers_license: boolean
+          p_req_english: boolean
+          p_req_experience: boolean
+        }
+        Returns: string
+      }
       deactivate_all_jobs: { Args: never; Returns: undefined }
+      deactivate_employer_jobs: {
+        Args: { p_employer_id: string }
+        Returns: undefined
+      }
       deactivate_expired_jobs: { Args: never; Returns: number }
       downgrade_smtp_warmup: { Args: { p_user_id: string }; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
@@ -1501,6 +1746,16 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      insert_audit_log: {
+        Args: {
+          p_action: string
+          p_application_id: string
+          p_employer_id: string
+          p_job_id: string
+          p_reason?: string
+        }
+        Returns: string
+      }
       process_daily_smtp_warmup: { Args: never; Returns: undefined }
       process_dol_raw_batch: {
         Args: { p_raw_items: Json; p_visa_type: string }
@@ -1557,8 +1812,10 @@ export type Database = {
       update_view_duration: { Args: { p_view_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "employer"
       email_risk_profile: "conservative" | "standard" | "aggressive"
+      employer_status: "active" | "inactive"
+      employer_tier: "essential" | "professional" | "enterprise"
       plan_tier: "free" | "gold" | "diamond" | "black"
     }
     CompositeTypes: {
@@ -1687,8 +1944,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "employer"],
       email_risk_profile: ["conservative", "standard", "aggressive"],
+      employer_status: ["active", "inactive"],
+      employer_tier: ["essential", "professional", "enterprise"],
       plan_tier: ["free", "gold", "diamond", "black"],
     },
   },
