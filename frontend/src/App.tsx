@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useIsEmployer } from "@/hooks/useIsEmployer";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useTranslation } from "react-i18next";
 import Auth from "./pages/Auth";
@@ -40,9 +41,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
 
   // 1. Se estiver carregando a sessão inicial
-  if (loading) {
+  if (loading || employerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -55,11 +57,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // 3. Verificação de Onboarding (treat missing smtpStatus as needs onboarding)
+  // 3. Employers skip SMTP onboarding entirely
+  if (isEmployer) {
+    return <AppLayout>{children}</AppLayout>;
+  }
+
+  // 4. Verificação de Onboarding for workers
   const needsOnboarding = !smtpStatus || !smtpStatus.hasPassword || !smtpStatus.hasRiskProfile;
   const isSettingsRoute = location.pathname.startsWith("/settings");
 
-  // Se precisa de onboarding e NÃO está tentando acessar as configurações
   if (needsOnboarding && !isSettingsRoute) {
     console.log("DEBUG: Onboarding pendente. Redirecionando...");
     return <Navigate to="/onboarding" replace />;
@@ -89,9 +95,10 @@ function EmployerRoute({ children }: { children: React.ReactNode }) {
 // --- ONBOARDING ROUTE ---
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
   const { t } = useTranslation();
 
-  if (loading) {
+  if (loading || employerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -100,6 +107,11 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+
+  // Employers don't need SMTP onboarding
+  if (isEmployer) {
+    return <Navigate to="/employer/dashboard" replace />;
+  }
 
   // Se já completou tudo, não deixa ficar no onboarding
   if (smtpStatus?.hasPassword && smtpStatus?.hasRiskProfile) {
@@ -112,10 +124,11 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 // --- PUBLIC ROUTE ---
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
   const { t } = useTranslation();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || employerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -129,7 +142,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     const isAuthCallback = params.has("code") || params.has("token_hash");
 
     if (!(isAuthRoute && isAuthCallback)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to={isEmployer ? "/employer/dashboard" : "/dashboard"} replace />;
     }
   }
 
