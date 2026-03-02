@@ -25,7 +25,7 @@ import { formatNumber } from "@/lib/number";
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Loader2 } from "lucide-react";
-import { PromotionCountdown } from "@/components/plans/PromotionCountdown";
+
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 
@@ -63,25 +63,10 @@ export default function Plans() {
     const plan = PLANS_CONFIG[planId];
     const amount = getPlanAmountForCurrency(plan, currency);
 
-    const originalBrl = plan.price.brl_original;
-    const originalUsd = plan.price.usd_original;
-
-    let hasPromo = false;
-    let originalAmount: number | undefined;
-
-    if (currency === "BRL" && originalBrl && originalBrl > amount) {
-      hasPromo = true;
-      originalAmount = originalBrl;
-    } else if (currency === "USD" && originalUsd && originalUsd > amount) {
-      hasPromo = true;
-      originalAmount = originalUsd;
-    }
-
-    if (amount === 0) return { current: t("plans.free") as string, original: null };
+    if (amount === 0) return { current: t("plans.free") as string };
 
     return {
       current: formatCurrency(amount, currency, locale),
-      original: hasPromo && originalAmount ? formatCurrency(originalAmount, currency, locale) : null,
     };
   };
 
@@ -284,8 +269,6 @@ export default function Plans() {
     <TooltipProvider>
       <div className="space-y-12 pb-12">
         <div className="text-center space-y-6 pt-8">
-          <PromotionCountdown />
-
           <div className="space-y-4 max-w-3xl mx-auto px-4">
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">{t("plans.title")}</h1>
             <p className="text-xl text-slate-600">{t("plans.subtitle")}</p>
@@ -342,9 +325,6 @@ export default function Plans() {
                   </h3>
 
                   <div className="mt-4 flex flex-col items-center justify-center min-h-[80px]">
-                    {priceInfo.original && (
-                      <span className="text-slate-400 line-through text-sm font-medium">{priceInfo.original}</span>
-                    )}
                     <div className="flex items-baseline justify-center gap-1">
                       <span className="text-4xl font-extrabold text-slate-900">{priceInfo.current}</span>
                     </div>

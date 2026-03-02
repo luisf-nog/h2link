@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatNumber } from "@/lib/number";
 import { Button } from "@/components/ui/button";
 import { WarmupStatusWidget } from "@/components/dashboard/WarmupStatusWidget";
-import { PromoBanner } from "@/components/dashboard/PromoBanner";
+
 import { getCurrencyForLanguage } from "@/lib/pricing";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -281,7 +281,7 @@ export default function Dashboard() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-8 pb-12 animate-in fade-in duration-700">
-        {profile && isFreeUser && currency === "BRL" && <PromoBanner />}
+        
 
         {/* --- HERO SECTION --- */}
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl">

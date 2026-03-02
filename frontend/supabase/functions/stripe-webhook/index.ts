@@ -12,23 +12,33 @@ const supabase = createClient(
 );
 
 // Map price IDs to plan tiers (Production)
+// Includes both current and legacy (promotional) price IDs for backward compatibility
 const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
-  // TEST (R$1,00) - upgrades to gold for testing
+  // TEST (R$1,00)
   "price_1Suek1KliiuLyRPmSG0MMBGH": "gold",
-  // Gold BRL (original) / USD (original)
-  "price_1SueZyKliiuLyRPmL9R7Sdxm": "gold",
+  // Gold - current BRL R$64,99
+  "price_1T6UOXKliiuLyRPmdKHaaHye": "gold",
+  // Gold - current USD $19,99
   "price_1Suea8KliiuLyRPmQjhJrZdA": "gold",
-  // Gold USD (promotional $9.99)
+  // Gold - legacy promo BRL R$47,99
+  "price_1SueZyKliiuLyRPmL9R7Sdxm": "gold",
+  // Gold - legacy promo USD $9,99
   "price_1Sv6f3KliiuLyRPmXpH9Tuhq": "gold",
-  // Diamond BRL (original) / USD (original)
-  "price_1Suea9KliiuLyRPmrRCXm6TP": "diamond",
+  // Diamond - current BRL R$114,99
+  "price_1T6UOYKliiuLyRPmu9EmXIAH": "diamond",
+  // Diamond - current USD $34,99
   "price_1SueaAKliiuLyRPmo48RI0R9": "diamond",
-  // Diamond USD (promotional $19.99)
+  // Diamond - legacy promo BRL R$69,99
+  "price_1Suea9KliiuLyRPmrRCXm6TP": "diamond",
+  // Diamond - legacy promo USD $19,99
   "price_1Sv6f4KliiuLyRPmONdH2NOt": "diamond",
-  // Black BRL (original) / USD (original)
-  "price_1SueaCKliiuLyRPmevGCARiq": "black",
+  // Black - current BRL R$299,00
+  "price_1T6UOZKliiuLyRPmrrp3AQQR": "black",
+  // Black - current USD $89,99
   "price_1SueaDKliiuLyRPmjqiMMWAs": "black",
-  // Black USD (promotional $49.99)
+  // Black - legacy promo BRL R$97,99
+  "price_1SueaCKliiuLyRPmevGCARiq": "black",
+  // Black - legacy promo USD $49,99
   "price_1Sv6f5KliiuLyRPmoMTWZXyT": "black",
 };
 
