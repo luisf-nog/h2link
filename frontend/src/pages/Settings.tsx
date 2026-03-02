@@ -15,6 +15,7 @@ import { TemplatesSettingsPanel } from "@/components/settings/TemplatesSettingsP
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsEmployer } from "@/hooks/useIsEmployer";
 import { ResumeSettingsSection } from "@/components/settings/ResumeSettingsSection";
 
 type SettingsTab = "profile" | "account" | "email" | "templates";
@@ -25,6 +26,7 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
   const [isLoading, setIsLoading] = useState(false);
   const { t, i18n } = useTranslation();
   const { isAdmin } = useIsAdmin();
+  const { isEmployer } = useIsEmployer();
 
   // Estados do Admin (mantidos caso precise reativar)
   const [adminTargetEmail, setAdminTargetEmail] = useState("");
@@ -112,20 +114,29 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
       </div>
 
       <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-          <TabsTrigger value="profile" className="gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("settings.tabs.profile")}</span>
-          </TabsTrigger>
-          <TabsTrigger value="email" className="gap-2">
-            <Mail className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("settings.tabs.smtp")}</span>
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-2">
-            <Mail className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("settings.tabs.templates")}</span>
-          </TabsTrigger>
-        </TabsList>
+        {!isEmployer ? (
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+            <TabsTrigger value="profile" className="gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("settings.tabs.profile")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="email" className="gap-2">
+              <Mail className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("settings.tabs.smtp")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="gap-2">
+              <Mail className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("settings.tabs.templates")}</span>
+            </TabsTrigger>
+          </TabsList>
+        ) : (
+          <TabsList className="max-w-2xl">
+            <TabsTrigger value="profile" className="gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("settings.tabs.profile")}</span>
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="profile" className="space-y-6 max-w-2xl">
           <Card>
@@ -172,18 +183,20 @@ export default function Settings({ defaultTab }: { defaultTab?: SettingsTab }) {
               </form>
             </CardContent>
           </Card>
-          <ResumeSettingsSection />
+          {!isEmployer && <ResumeSettingsSection />}
         </TabsContent>
 
-        <TabsContent value="email" className="space-y-6 max-w-3xl">
-          {/* AQUI ESTAVA O ERRO: Removi o card duplicado daqui. 
-              Agora só chamamos o componente que resolve tudo. */}
-          <EmailSettingsPanel />
-        </TabsContent>
+        {!isEmployer && (
+          <TabsContent value="email" className="space-y-6 max-w-3xl">
+            <EmailSettingsPanel />
+          </TabsContent>
+        )}
 
-        <TabsContent value="templates" className="space-y-6">
-          <TemplatesSettingsPanel />
-        </TabsContent>
+        {!isEmployer && (
+          <TabsContent value="templates" className="space-y-6">
+            <TemplatesSettingsPanel />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
