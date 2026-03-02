@@ -5,26 +5,9 @@ import { useIsEmployer } from "@/hooks/useIsEmployer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Eye, MapPin, Calendar, Power, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail } from "lucide-react";
 import { getTierJobLimit } from "@/config/employer-plans.config";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface SponsoredJob {
   id: string;
@@ -37,203 +20,205 @@ interface SponsoredJob {
   end_date: string | null;
   created_at: string;
   _app_count?: number;
+  _new_app_count?: number;
 }
 
 export default function EmployerJobs() {
   const navigate = useNavigate();
   const { employerProfile } = useIsEmployer();
-  const { toast } = useToast();
   const [jobs, setJobs] = useState<SponsoredJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<SponsoredJob | null>(null);
-
-  const loadJobs = async () => {
-    if (!employerProfile) return;
-    const { data } = await supabase
-      .from("sponsored_jobs")
-      .select("*")
-      .eq("employer_id", employerProfile.id)
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      const jobIds = data.map((j) => j.id);
-      const { data: apps } = await supabase
-        .from("job_applications")
-        .select("job_id")
-        .in("job_id", jobIds);
-
-      const countMap: Record<string, number> = {};
-      apps?.forEach((a) => {
-        countMap[a.job_id] = (countMap[a.job_id] || 0) + 1;
-      });
-
-      setJobs(data.map((j) => ({ ...j, _app_count: countMap[j.id] || 0 })));
-    }
-    setLoading(false);
-  };
 
   useEffect(() => {
     if (!employerProfile) return;
-    loadJobs();
+    const load = async () => {
+      const { data } = await supabase
+        .from("sponsored_jobs")
+        .select("*")
+        .eq("employer_id", employerProfile.id)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        // Puxa as aplicações e o status para saber quem é "Novo"
+        const jobIds = data.map((j) => j.id);
+        const { data: apps } = await supabase
+          .from("job_applications")
+          .select("job_id, employer_status")
+          .in("job_id", jobIds);
+
+        const countMap: Record<string, { total: number; new: number }> = {};
+        apps?.forEach((a) => {
+          if (!countMap[a.job_id]) countMap[a.job_id] = { total: 0, new: 0 };
+          countMap[a.job_id].total += 1;
+          if (a.employer_status === "new") countMap[a.job_id].new += 1;
+        });
+
+        setJobs(
+          data.map((j) => ({
+            ...j,
+            _app_count: countMap[j.id]?.total || 0,
+            _new_app_count: countMap[j.id]?.new || 0,
+          })),
+        );
+      }
+      setLoading(false);
+    };
+    load();
   }, [employerProfile]);
-
-  const toggleActive = async (job: SponsoredJob, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newStatus = !job.is_active;
-    const { error } = await supabase
-      .from("sponsored_jobs")
-      .update({ is_active: newStatus })
-      .eq("id", job.id);
-
-    if (error) {
-      toast({ title: "Error", description: error.message });
-    } else {
-      toast({ title: newStatus ? "Job activated" : "Job deactivated" });
-      setJobs((prev) => prev.map((j) => j.id === job.id ? { ...j, is_active: newStatus } : j));
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    const { error } = await supabase
-      .from("sponsored_jobs")
-      .delete()
-      .eq("id", deleteTarget.id);
-
-    if (error) {
-      toast({ title: "Error", description: error.message });
-    } else {
-      toast({ title: "Job deleted" });
-      setJobs((prev) => prev.filter((j) => j.id !== deleteTarget.id));
-    }
-    setDeleteTarget(null);
-  };
 
   const activeCount = jobs.filter((j) => j.is_active).length;
   const jobLimit = employerProfile ? getTierJobLimit(employerProfile.tier) : 0;
   const canCreate = activeCount < jobLimit && employerProfile?.status === "active";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Cabeçalho e Controles */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-brand">My Jobs</h1>
-          <p className="text-sm text-muted-foreground">
-            {activeCount} / {jobLimit} active jobs
+          <h1 className="text-2xl font-bold font-brand text-slate-900">My Jobs</h1>
+          <p className="text-sm text-slate-500">
+            {activeCount} / {jobLimit} active sponsored jobs
           </p>
+
+          {/* Alerta de Limite do Plano */}
+          {!canCreate && employerProfile?.status === "active" && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200">
+              <AlertCircle className="h-4 w-4" />
+              <span>You've reached your plan's limit. Upgrade to post more.</span>
+            </div>
+          )}
         </div>
-        <Button onClick={() => navigate("/employer/jobs/new")} disabled={!canCreate}>
+
+        <Button
+          onClick={() => navigate("/employer/jobs/new")}
+          disabled={!canCreate}
+          className="bg-slate-900 hover:bg-slate-800"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Post Job
         </Button>
       </div>
 
-      {!canCreate && employerProfile?.status !== "active" && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="p-4 flex items-center justify-between">
-            <p className="text-sm text-destructive font-medium">
-              Active subscription required to post jobs.
-            </p>
-            <Button size="sm" onClick={() => navigate("/employer/plans")}>
-              View Plans
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
+      {/* Lista de Vagas */}
       {loading ? (
-        <p className="text-muted-foreground animate-pulse">Loading...</p>
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="h-24" />
+            </Card>
+          ))}
+        </div>
       ) : jobs.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center space-y-3">
-            <p className="text-muted-foreground">No jobs yet. Create your first posting!</p>
-            <Button onClick={() => navigate("/employer/jobs/new")} disabled={!canCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Job
+        <Card className="border-dashed border-2">
+          <CardContent className="p-12 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <Plus className="h-6 w-6 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">No jobs posted yet</h3>
+            <p className="text-slate-500 max-w-sm mx-auto">
+              Create your first sponsored job posting to start receiving qualified candidates in your dashboard.
+            </p>
+            <Button onClick={() => navigate("/employer/jobs/new")} disabled={!canCreate} className="mt-4">
+              Create First Job
             </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {jobs.map((job) => (
-            <Card
-              key={job.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/employer/jobs/${job.id}/applicants`)}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold truncate">{job.title}</span>
-                    <Badge variant={job.is_active ? "default" : "secondary"}>
-                      {job.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    {job.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {job.location}
+          {jobs.map((job) => {
+            const conversionRate =
+              job.view_count > 0 ? (((job._app_count || 0) / job.view_count) * 100).toFixed(1) : "0.0";
+
+            return (
+              <Card
+                key={job.id}
+                className="cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group"
+                onClick={() => navigate(`/employer/jobs/${job.id}/applicants`)}
+              >
+                <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Info da Vaga */}
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                        {job.title}
                       </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(job.created_at), "MMM d, yyyy")}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Eye className="h-3.5 w-3.5" />
-                    {job.view_count}
-                  </div>
-                  <div className="flex items-center gap-1 text-sm font-semibold">
-                    <Users className="h-3.5 w-3.5" />
-                    {job._app_count ?? 0}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem onClick={(e) => toggleActive(job, e)}>
-                        <Power className="h-4 w-4 mr-2" />
-                        {job.is_active ? "Deactivate" : "Activate"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(job); }}
+                      <Badge
+                        variant={job.is_active ? "default" : "secondary"}
+                        className={job.is_active ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                        {job.is_active ? "Active" : "Draft/Inactive"}
+                      </Badge>
+
+                      {/* Badge de Novos Candidatos */}
+                      {job._new_app_count && job._new_app_count > 0 ? (
+                        <Badge variant="destructive" className="bg-blue-600">
+                          {job._new_app_count} New
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+                      {job.location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {job.location}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {job.created_at ? format(new Date(job.created_at), "MMM d, yyyy") : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Métricas e Stats */}
+                  <div className="flex items-center gap-6 text-sm shrink-0 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    <div className="text-center px-2" title="Total Views">
+                      <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
+                        <Eye className="h-4 w-4" />
+                        <span className="font-medium text-slate-700">{job.view_count}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider">Views</div>
+                    </div>
+
+                    <div className="w-px h-8 bg-slate-200"></div>
+
+                    <div className="text-center px-2" title="Conversion Rate">
+                      <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="font-medium text-slate-700">{conversionRate}%</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider">Conv. Rate</div>
+                    </div>
+
+                    <div className="w-px h-8 bg-slate-200"></div>
+
+                    <div className="text-center px-2" title="Total Candidates">
+                      <div className="flex items-center gap-1.5 font-semibold text-blue-600 mb-0.5">
+                        <Users className="h-4 w-4" />
+                        <span>{job._app_count ?? 0}</span>
+                      </div>
+                      <div className="text-[10px] text-blue-400/80 uppercase tracking-wider">Applicants</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {/* Rodapé B2B Escape */}
+          {jobs.length > 0 && (
+            <div className="pt-6 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+              <Mail className="w-4 h-4" />
+              Need a larger number of jobs?{" "}
+              <a href="mailto:help@h2linker.com" className="text-blue-600 hover:underline font-medium">
+                Contact our Enterprise team
+              </a>
+              .
+            </div>
+          )}
         </div>
       )}
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Job</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete "{deleteTarget?.title}"? This will also remove all applicant data. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
