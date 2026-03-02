@@ -1,128 +1,164 @@
 
-Objetivo: parar definitivamente o travamento do H2A no meio, mesmo que o processo demore até 1h, adotando uma abordagem “contrária” ao desenho atual.
 
-Resumo do que encontrei (evidência real)
-1) O padrão de falha é consistente:
-- H2A para em `processed_rows=1050`, `attempt_count=1`, `last_heartbeat_at` ~3-4 min após início.
-- JO e H2B concluem normalmente.
-- Isso aconteceu ao menos 2 vezes no mesmo ponto (1050/1928), então não é aleatório.
+# H2 Linker B2B Pivot -- Phase 1: Foundation
 
-2) O encadeamento atual não está efetivamente retomando:
-- Se houvesse retomada real, `attempt_count` deveria subir para 2+.
-- Como fica em 1, a próxima execução não acontece (ou não persiste).
+## Overview
+Add an employer portal alongside the existing worker system. Phase 1 covers: database schema, role separation (RBAC), employer profiles, sponsored jobs, guest application flow, and Stripe subscription billing for employers.
 
-3) O erro real está sendo mascarado pelo frontend:
-- `AdminImport.tsx` atualiza jobs “stale” para failed e sobrescreve `error_message`.
-- Resultado: perdemos a causa raiz e enxergamos apenas “sem heartbeat por 20 min”.
+## Pricing (USD only for employers, subscription model)
 
-4) Gargalo provável técnico:
-- O loop de processamento pode ficar preso em uma chamada RPC longa (ou bloqueada) e não volta para executar `selfChain`.
-- Como a verificação de deadline ocorre “entre batches”, uma chamada bloqueada pode matar a função antes do encadeamento.
+| Tier | Monthly | Annual |
+|------|---------|--------|
+| Essential | $49/mo | $470/yr |
+| Professional | $99/mo | $950/yr |
+| Enterprise | $149/mo | $1,430/yr |
 
-Estratégia “fora da caixa” (recomendada)
-Parar de depender de self-chain HTTP interno. Em vez disso:
-“Pull-based resume” com cron frequente + lock de banco + janelas curtas.
+---
 
-Ideia central:
-- Um cron roda a cada 1 minuto por fonte (ou um dispatcher único).
-- Cada execução pega o job ativo da fonte e processa só uma fatia curta (ex.: 20–40s).
-- Salva checkpoint e sai.
-- Próximo tick continua do cursor.
-- Sem auto-invocação HTTP entre funções.
+## Step 1: Stripe Products & Prices
 
-Por que isso é melhor aqui:
-- Remove o ponto frágil principal (função chamando a si mesma).
-- Evita dependência de rede interna, DNS, permissões, timeout de fetch interno.
-- Deixa retomada garantida por scheduler, não por “best effort” da mesma execução.
+Create 6 Stripe prices (monthly + annual for each tier) using Stripe tools before writing any code.
 
-Plano de implementação
-Fase 1 — Blindar diagnóstico (não mascarar erro)
-1. Backend
-- Em `auto-import-jobs`, gravar erro estruturado em `meta`:
-  - `last_stage`, `last_batch_start`, `last_batch_size`, `last_exception`, `chain_status` (se ainda existir).
-- Em falhas, nunca perder erro anterior: concatenar/append em `meta.errors[]`.
+---
 
-2. Frontend
-- Em `AdminImport.tsx`, parar de sobrescrever `error_message` ao marcar stale.
-- Se precisar marcar stale, usar:
-  - `status='failed'`,
-  - `phase='failed'`,
-  - `error_message = COALESCE(error_message, 'Stale ...')`.
-- Exibir `meta.last_stage` e “erro original” no histórico.
+## Step 2: Database Migration
 
-Fase 2 — Troca de arquitetura (contrária ao self-chain)
-1. Refactor da função `supabase/functions/auto-import-jobs/index.ts`
-- Remover dependência do `selfChain`.
-- Novo modo padrão:
-  - resolve/abre job ativo da source (ou cria novo),
-  - processa janela curta com deadline rígido,
-  - salva `cursor_pos`, `processed_rows`, `last_heartbeat_at`, `phase`,
-  - retorna 200 com `done=true/false`.
-- Se `done=false`, não invoca nada; só encerra.
-- No próximo cron tick, a função reentra e continua.
+### New Enum
+```text
+employer_tier: 'essential' | 'professional' | 'enterprise'
+employer_status: 'active' | 'inactive'
+```
 
-2. Lock de concorrência por source
-- Garantir um único worker por source:
-  - lock lógico via status/phase + atualização atômica de “lease” no job,
-  - (opcional forte) advisory lock por source.
-- Se lock ocupado, responder “skip already running”.
+### New Tables
 
-3. Timeout explícito por batch RPC
-- Envolver cada chamada RPC com timeout via `AbortController` (ex.: 15–25s).
-- Se timeout:
-  - quebrar batch em sub-batch menor,
-  - registrar no `meta`,
-  - continuar sem travar a execução inteira.
-- Isso evita “morrer preso” no mesmo ponto 1050.
+**employer_profiles**
+- id (uuid PK), user_id (uuid, references auth.users, unique), company_name, tier (employer_tier), is_verified (bool, default false), contact_email, contact_phone, status (employer_status, default 'active'), stripe_customer_id, stripe_subscription_id, created_at, updated_at
+- Indexes: user_id, tier, status
 
-Fase 3 — Scheduler resiliente
-1. Cron
-- Manter horários de início (JO 06:00, H2B 06:10, H2A 06:30), mas adicionar ticks de continuidade:
-  - Ex.: a cada minuto entre 06:30 e 07:30 para H2A, chamando mesma função/source.
-  - A função só trabalha se houver job pendente/processing.
-- Alternativa mais limpa: 1 cron/min por source 24h, com early-exit instantâneo se não há trabalho.
+**sponsored_jobs**
+- id (uuid PK), employer_id (uuid FK -> employer_profiles), title, description, location, start_date, end_date, is_active (bool, default true), is_sponsored (bool, default true), priority_level (text: free/essential/professional/enterprise), req_english, req_experience, req_drivers_license, consular_only (booleans), view_count, click_count (integers, default 0), created_at
+- Indexes: employer_id, is_active, priority_level, created_at
 
-2. Critério de stale no backend (não no frontend)
-- Criar rotina backend de watchdog:
-  - stale só quando `last_heartbeat_at` muito antigo E `attempt_count` não mudou E sem lock ativo.
-- UI passa a refletir, não decidir estado final.
+**job_applications** (immutable -- no delete)
+- id (uuid PK), job_id (FK -> sponsored_jobs), full_name, email, phone, has_english, has_experience, has_license, is_in_us (booleans), citizenship_status (text enum), employer_status (text: new/contacted/rejected, default 'new'), rejection_reason, score_color (text: green/yellow/red), created_at
+- UNIQUE(email, job_id)
+- Indexes: job_id, employer_status, citizenship_status, created_at
 
-Fase 4 — UX/observabilidade
-1. Histórico admin
-- Mostrar:
-  - fase,
-  - heartbeat age,
-  - tentativa atual,
-  - último erro técnico (sem truncar demais),
-  - “retomado por cron” badge.
-2. Contador
-- Manter countdown já existente e incluir:
-  - “janela de continuidade ativa” quando houver job long-running.
+**audit_logs** (immutable -- INSERT only, no UPDATE/DELETE)
+- id (uuid PK), job_id, application_id, employer_id (uuid FK), action (text: contacted/rejected), reason, created_at
 
-Riscos e mitigação
-- Risco: aumentar chamadas cron.
-  Mitigação: early-exit em <100ms quando não há job ativo.
-- Risco: duplicidade de processamento.
-  Mitigação: lock por source + cursor monotônico + idempotência via fingerprint no UPSERT.
-- Risco: jobs presos sem erro claro.
-  Mitigação: timeout por batch + meta de estágio + watchdog backend.
+### Add 'employer' to existing app_role enum
+```sql
+ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'employer';
+```
 
-Critérios de sucesso (aceite)
-1) H2A completa sem travar em 1050 em 3 execuções consecutivas.
-2) `attempt_count` cresce ao longo do job (retomadas reais).
-3) Sem “failed por stale” enquanto houver progresso por cron.
-4) Erro original preservado no histórico (sem sobrescrita cega).
-5) JO e H2B permanecem estáveis.
+### RLS Policies
 
-Arquivos que serão alterados
-- `supabase/functions/auto-import-jobs/index.ts` (arquitetura pull-resume + timeout RPC + lock)
-- `frontend/src/pages/AdminImport.tsx` (não sobrescrever erro, exibir meta/estado técnico)
-- SQL de cron/data (ajuste de agendamentos para continuidade)
-- (Opcional) migration leve para colunas de lease/watchdog, caso necessário
+- **employer_profiles**: SELECT/UPDATE only where user_id = auth.uid()
+- **sponsored_jobs**: Employer CRUD on own jobs; Public SELECT where is_active = true
+- **job_applications**: Anon INSERT only; Employer SELECT/UPDATE(employer_status only) on own jobs' applications
+- **audit_logs**: Employer SELECT on own jobs; INSERT via server function only
 
-Sequência segura de execução
-1. Ajustar frontend para não mascarar erro.
-2. Refatorar função para modo pull-resume sem self-chain.
-3. Ajustar cron de continuidade.
-4. Rodar validação controlada com H2A manual e automática.
-5. Ajustar thresholds finos (janela, timeout batch, sub-batch size) baseado em métricas reais.
+### DB Functions
+- `check_employer_job_limit(employer_id)`: enforces tier-based active job limits (1/3/5)
+- `compute_application_score(job_id, application_id)`: server-side green/yellow/red scoring
+- `deactivate_employer_jobs(employer_id)`: sets all sponsored jobs to free when subscription lapses
+
+---
+
+## Step 3: Edge Functions
+
+### create-employer-checkout
+- Accepts tier + billing_interval (month/year)
+- Creates Stripe checkout session with mode: 'subscription'
+- Stores user_id in metadata
+
+### check-employer-subscription
+- Queries Stripe for active subscription by customer email
+- Returns: subscribed, tier, subscription_end
+- Called on login + periodically
+
+### employer-portal (customer portal)
+- Creates Stripe billing portal session for subscription management
+
+### submit-application (public, no auth)
+- Validates honeypot field, rate limits by IP
+- Normalizes email, checks UNIQUE(email, job_id)
+- Computes score_color server-side
+- Inserts into job_applications
+
+### Update existing stripe-webhook
+- Handle `customer.subscription.updated` and `customer.subscription.deleted` events
+- On cancellation/failure: update employer_profiles.status = 'inactive', call deactivate_employer_jobs()
+- On reactivation: restore status = 'active'
+
+---
+
+## Step 4: Frontend -- Role-Based Routing
+
+### Auth Page Updates
+- Add role selector on signup: "I'm looking for work" (worker) vs "I'm hiring" (employer)
+- Store role in user_roles table on signup
+- Worker signup keeps current flow (no SMTP required initially per spec -- but existing onboarding stays for now)
+- Employer signup skips SMTP onboarding entirely
+
+### Route Guards
+- New `EmployerRoute` component that checks user role
+- Worker routes remain unchanged
+- Employer routes: /employer/dashboard, /employer/jobs, /employer/jobs/:id/applicants, /employer/plans, /employer/settings
+
+---
+
+## Step 5: Frontend -- Employer Pages
+
+### Employer Plans Page (/employer/plans)
+- 3 cards: Essential ($49/mo), Professional ($99/mo), Enterprise ($149/mo)
+- Annual toggle showing discounted prices
+- Checkout via create-employer-checkout edge function
+
+### Employer Dashboard (/employer/dashboard)
+- Active jobs count (with tier limit indicator)
+- Total applications count
+- Quick actions: Create Job, View Applicants
+- When status = 'inactive': blurred dashboard with "Reactivate" CTA
+
+### Create/Edit Job (/employer/jobs/new)
+- Form: title, description, location, dates, screening toggles
+- Tier limit enforcement (1/3/5 active jobs)
+
+### Applicant Table (/employer/jobs/:id/applicants)
+- Columns: Name, Email, Phone, Citizenship Badge, Score (traffic light), Status, Date
+- Contact buttons (mailto, tel) that log to audit_logs
+- Reject button with modal + reason dropdown
+- Paginated, sortable
+
+### Guest Application Page (/apply/:jobId)
+- Public route, no login required
+- Fetches job details, renders form based on screening toggles
+- Honeypot field, basic rate limiting
+- Success message after submission
+
+---
+
+## Step 6: Hub Integration
+
+Update the existing Jobs page to display sponsored jobs with priority ordering:
+1. Enterprise (Gold badge)
+2. Professional (Silver badge)
+3. Essential (Sponsored badge)
+4. Free (existing DOL jobs)
+
+Add "Sponsored" / "Verified Employer" badges to job cards.
+
+---
+
+## Technical Notes
+
+- All existing worker functionality (mailing queue, worker plans, radar, etc.) remains completely untouched
+- Employer billing is subscription-based (Stripe subscriptions), separate from worker one-time payments
+- The profiles table is NOT modified -- employer data lives in employer_profiles
+- Role check uses existing `has_role()` function and user_roles table
+- Scoring computation happens server-side only (edge function), never on the client
+- US citizen/permanent resident applications get "Priority Review" badge, pinned above others
+- Compliance disclaimer shown on screening setup page
+
