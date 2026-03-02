@@ -27,6 +27,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [tab, setTab] = useState<"signin" | "signup">("signin");
+  const [signupRole, setSignupRole] = useState<"worker" | "employer">("worker");
   const [signinPanel, setSigninPanel] = useState<"signin" | "forgot" | "reset">("signin");
   const [forgotState, setForgotState] = useState({ email: "", sent: false, cooldownUntilMs: 0 });
   const [resetState, setResetState] = useState({ password: "", confirmPassword: "" });
@@ -147,8 +148,16 @@ export default function Auth() {
     const fd = new FormData(e.currentTarget);
     const { error } = await signIn(fd.get("email") as string, fd.get("password") as string);
     if (error) openError(t("auth.toasts.signin_error_title"), error.message);
-    else navigate("/dashboard");
-    setIsLoading(false);
+    else {
+      // Check if user is employer to redirect correctly
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      if (sess) {
+        const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", sess.user.id).eq("role", "employer").maybeSingle();
+        navigate(roleData ? "/employer/dashboard" : "/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    }
   };
 
   const handleRequestPasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -215,8 +224,19 @@ export default function Auth() {
       const { data: sessionData } = await supabase.auth.getSession();
       const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
       if (sessionData.session && isConfirmed) {
+        const userId = sessionData.session.user.id;
+        // Insert role
+        const role = signupRole === "employer" ? "employer" : "user";
+        await supabase.from("user_roles").insert({ user_id: userId, role } as any);
+        // If employer, create employer_profiles
+        if (signupRole === "employer") {
+          await supabase.from("employer_profiles").insert({
+            user_id: userId,
+            company_name: fullName, // Use name as initial company name
+          } as any);
+        }
         if (normalizedReferral) { try { await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/apply-referral-code`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ code: normalizedReferral }) }); } catch {} }
-        navigate("/dashboard");
+        navigate(signupRole === "employer" ? "/employer/dashboard" : "/dashboard");
       } else { setTab("signin"); setSignupNotice({ visible: true, email }); toast({ title: t("auth.signup_notice.toast_title"), description: t("auth.signup_notice.toast_desc") }); }
     }
     setIsLoading(false);
@@ -519,6 +539,17 @@ export default function Auth() {
             {/* ── SIGN UP ── */}
             {tab === "signup" && (
               <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+                {/* Role selector */}
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button type="button" onClick={() => setSignupRole("worker")}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${signupRole === "worker" ? "auth-tab-active" : "border-white/10 text-white/30 hover:text-white/50"}`}>
+                    🔧 I'm looking for work
+                  </button>
+                  <button type="button" onClick={() => setSignupRole("employer")}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${signupRole === "employer" ? "auth-tab-active" : "border-white/10 text-white/30 hover:text-white/50"}`}>
+                    💼 I'm hiring
+                  </button>
+                </div>
                 <div className="space-y-2">
                   <label className={labelCls}>{t("auth.fields.full_name")}</label>
                   <Input name="fullName" required className={inputCls} />
