@@ -125,7 +125,7 @@ const initialForm: JobForm = {
   training_provided: false,
   additional_notes: "",
   compliance_acknowledged: false,
-  publish_type: "standard",
+  publish_type: "sponsored",
 };
 
 const STEP_ICONS = [Search, Briefcase, DollarSign, Home, FileWarning, Shield, FileText, AlertTriangle, Eye];
@@ -220,8 +220,8 @@ export default function CreateJob() {
       req_experience: form.req_experience,
       req_drivers_license: form.req_drivers_license,
       consular_only: form.consular_only,
-      priority_level: form.publish_type === "sponsored" ? employerProfile.tier : "free",
-      is_sponsored: form.publish_type === "sponsored",
+      priority_level: employerProfile.tier,
+      is_sponsored: true,
       visa_type: form.visa_type,
       employer_legal_name: form.employer_legal_name.trim() || null,
       city: form.city.trim() || null,
@@ -588,45 +588,40 @@ export default function CreateJob() {
           </div>
         );
 
-      case 9:
+      case 9: {
+        const hasActiveSub = employerProfile?.status === "active";
         return (
           <div className="space-y-6">
-            <div className="space-y-4">
-              <Label className="text-base font-semibold">Publication Type</Label>
-              {[
-                {
-                  value: "sponsored",
-                  title: "Publish as Sponsored",
-                  desc: "Higher visibility, priority placement in the Jobs Hub.",
-                  icon: "⭐",
-                },
-                {
-                  value: "standard",
-                  title: "Publish as Standard",
-                  desc: "Listed in the Jobs Hub with no priority boost.",
-                  icon: "📋",
-                },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => set("publish_type", opt.value)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                    form.publish_type === opt.value
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-muted-foreground/30"
-                  }`}
-                >
+            {hasActiveSub ? (
+              <div className="space-y-4">
+                <div className="w-full text-left p-4 rounded-lg border-2 border-primary bg-primary/5">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{opt.icon}</span>
+                    <span className="text-2xl">⭐</span>
                     <div>
-                      <p className="font-semibold text-sm">{opt.title}</p>
-                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                      <p className="font-semibold text-sm">Sponsored Job Posting</p>
+                      <p className="text-xs text-muted-foreground">
+                        Priority placement in the Jobs Hub based on your plan tier ({employerProfile?.tier}).
+                      </p>
                     </div>
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <Card className="border-destructive/30 bg-destructive/5">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <span className="font-semibold text-destructive">Active Subscription Required</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You need an active employer subscription to publish job postings. All jobs are sponsored listings with priority placement.
+                  </p>
+                  <Button onClick={() => navigate("/employer/plans")} variant="default">
+                    View Plans & Subscribe
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Summary */}
             <Card className="bg-muted/30">
@@ -644,6 +639,7 @@ export default function CreateJob() {
             </Card>
           </div>
         );
+      }
     }
   };
 
@@ -719,7 +715,7 @@ export default function CreateJob() {
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={loading || !form.compliance_acknowledged}>
+              <Button onClick={handleSubmit} disabled={loading || !form.compliance_acknowledged || employerProfile?.status !== "active"}>
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Publish Job
               </Button>
