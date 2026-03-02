@@ -286,42 +286,45 @@ Deno.serve(async (req) => {
         })
         .eq("id", jobId);
     } else {
-      // ─── GUARD: Se já completou hoje, não criar novo job ───
+      // ─── GUARD: Se já completou hoje, não criar novo job (apenas para cron, não manual) ───
+      const isManualTrigger = !!body.skip_radar;
       const todayStart = new Date();
       todayStart.setUTCHours(0, 0, 0, 0);
-      const { data: completedToday } = await supabase
-        .from("import_jobs")
-        .select("id")
-        .eq("source", source.key)
-        .eq("status", "completed")
-        .gte("created_at", todayStart.toISOString())
-        .limit(1)
-        .maybeSingle();
 
-      if (completedToday) {
-        console.log(`[SKIP] ${source.key}: Já completado hoje (${completedToday.id}). Tick de continuidade ignorado.`);
-        return new Response(
-          JSON.stringify({ success: true, message: `Já completado hoje`, skipped: true, completed_id: completedToday.id }),
-          { headers: corsHeaders },
-        );
-      }
+      if (!isManualTrigger) {
+        const { data: completedToday } = await supabase
+          .from("import_jobs")
+          .select("id")
+          .eq("source", source.key)
+          .eq("status", "completed")
+          .gte("created_at", todayStart.toISOString())
+          .limit(1)
+          .maybeSingle();
 
-      // Também checar se há um job failed hoje (evitar retry infinito)
-      const { data: failedToday } = await supabase
-        .from("import_jobs")
-        .select("id, error_message")
-        .eq("source", source.key)
-        .eq("status", "failed")
-        .gte("created_at", todayStart.toISOString())
-        .limit(1)
-        .maybeSingle();
+        if (completedToday) {
+          console.log(`[SKIP] ${source.key}: Já completado hoje (${completedToday.id}). Tick de continuidade ignorado.`);
+          return new Response(
+            JSON.stringify({ success: true, message: `Já completado hoje`, skipped: true, completed_id: completedToday.id }),
+            { headers: corsHeaders },
+          );
+        }
 
-      if (failedToday) {
-        console.log(`[SKIP] ${source.key}: Falhou hoje (${failedToday.id}). Não recriar automaticamente.`);
-        return new Response(
-          JSON.stringify({ success: true, message: `Falhou hoje, aguardando intervenção`, skipped: true }),
-          { headers: corsHeaders },
-        );
+        const { data: failedToday } = await supabase
+          .from("import_jobs")
+          .select("id, error_message")
+          .eq("source", source.key)
+          .eq("status", "failed")
+          .gte("created_at", todayStart.toISOString())
+          .limit(1)
+          .maybeSingle();
+
+        if (failedToday) {
+          console.log(`[SKIP] ${source.key}: Falhou hoje (${failedToday.id}). Não recriar automaticamente.`);
+          return new Response(
+            JSON.stringify({ success: true, message: `Falhou hoje, aguardando intervenção`, skipped: true }),
+            { headers: corsHeaders },
+          );
+        }
       }
 
       const { data: job, error: jobErr } = await supabase

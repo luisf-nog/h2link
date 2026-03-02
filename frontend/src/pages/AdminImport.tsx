@@ -234,6 +234,11 @@ export default function AdminImport() {
           body: { source, skip_radar: true },
         });
         if (error) throw error;
+        if (data?.skipped) {
+          toast({ title: `${source.toUpperCase()} ignorado`, description: data.message || 'Já processado hoje' });
+          setImportingSource(null);
+          return;
+        }
         const jobId = data?.job_id;
         if (!jobId) throw new Error('No job_id returned');
         const newJob: ImportJobStatus = { jobId, source, status: 'processing', processedRows: 0, totalRows: 0 };
