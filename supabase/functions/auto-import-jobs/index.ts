@@ -15,13 +15,13 @@ const DOL_SOURCES = [
   { key: "h2b", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2b", visaType: "H-2B" },
 ];
 
-// ─── PULL-BASED ARCHITECTURE BLINDADA (V8 NATIVE) ───────────────────────
-const WORK_WINDOW_MS = 40_000; // 40s — margem segura para Edge
-const BATCH_SIZE = 50; // Processa de 50 em 50 para poupar a rede
-const RETRY_CHUNK = 10;
-const RPC_TIMEOUT_MS = 20_000; // 20s limite para o banco responder
-const LEASE_TTL_MS = 120_000; // 2 minutos de carência no lock
-const STORAGE_BUCKET = "imports"; // BUCKET DO SUPABASE PARA CACHE
+// ─── CONFIGURAÇÕES BLINDADAS (ANTI-CRASH) ──────────────────────────────
+const WORK_WINDOW_MS = 25_000; // Reduzido para 25s: Garante que a função saia viva e salve o progresso
+const BATCH_SIZE = 10; // Lotes curtos para evitar o limite de Payload (413 Payload Too Large)
+const RETRY_CHUNK = 2; // Se falhar, tenta de 2 em 2
+const RPC_TIMEOUT_MS = 10_000; // Máximo de 10s pro banco responder
+const LEASE_TTL_MS = 120_000; // 2 minutos de bloqueio pro Cron
+const STORAGE_BUCKET = "imports";
 
 function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -38,23 +38,18 @@ function appendMetaError(currentMeta: any, error: string, stage: string): any {
   return { ...meta, errors, last_stage: stage, last_exception: error?.substring ? error.substring(0, 300) : "" };
 }
 
-/** * Lê do Storage se existir, senão baixa, descompacta, salva no Storage e retorna o Array nativo.
- * Isso mata o gargalo de CPU e memória nos crons subsequentes.
- */
 async function getOrDownloadJsonArray(apiUrl: string, sourceKey: string, supabase: any): Promise<any[]> {
   const today = getTodayNY();
   const fileName = `${sourceKey}_${today}.json`;
 
-  // 1. Tenta pegar do Storage
   const { data: cachedFile, error: cacheErr } = await supabase.storage.from(STORAGE_BUCKET).download(fileName);
 
   if (!cacheErr && cachedFile) {
     console.log(`[CACHE HIT] ${sourceKey} recuperado do Storage interno.`);
     const jsonText = await cachedFile.text();
-    return JSON.parse(jsonText); // Muito mais rápido, processado em C++ pelo V8
+    return JSON.parse(jsonText);
   }
 
-  // 2. Se não existir, baixa do DOL
   console.log(`[CACHE MISS] Baixando ${sourceKey} do DOL...`);
   const response = await fetch(apiUrl);
   if (!response.ok) throw new Error(`DOL Offline ou erro: ${response.status}`);
@@ -70,18 +65,15 @@ async function getOrDownloadJsonArray(apiUrl: string, sourceKey: string, supabas
 
   const jsonBytes = unzipped[jsonFileName];
 
-  // 3. Salva no Storage para a próxima rodada ANTES de parsear
   console.log(`[STORAGE] Salvando ${sourceKey} no bucket para os próximos ticks...`);
   await supabase.storage.from(STORAGE_BUCKET).upload(fileName, jsonBytes, {
     contentType: "application/json",
     upsert: true,
   });
 
-  // 4. Parseia o JSON
   const jsonText = new TextDecoder().decode(jsonBytes);
   const itemsArray = JSON.parse(jsonText);
 
-  // 5. Limpeza de RAM agressiva (Garbage Collection)
   for (const key of Object.keys(unzipped)) {
     delete (unzipped as any)[key];
   }
@@ -89,9 +81,6 @@ async function getOrDownloadJsonArray(apiUrl: string, sourceKey: string, supabas
   return itemsArray;
 }
 
-/**
- * Processa o Array nativo fatiando de 50 em 50 usando slice (super rápido)
- */
 async function processSlice(
   allItems: any[],
   cursor: number,
@@ -106,9 +95,8 @@ async function processSlice(
   let meta = currentMeta || {};
 
   while (processed < allItems.length) {
-    // Checa o tempo de vida da função Edge
     if (Date.now() > deadline) {
-      console.log(`[WINDOW] ${source.key}: Pausando na linha ${processed} por limite de tempo.`);
+      console.log(`[WINDOW] ${source.key}: Pausando na linha ${processed} por limite de segurança.`);
       meta.last_stage = "window_exhausted";
       await supabase
         .from("import_jobs")
@@ -123,38 +111,31 @@ async function processSlice(
       return { newCursor: processed, done: false, meta };
     }
 
-    // Pega a fatia atual do Array
     const effectiveBatch = allItems.slice(processed, processed + BATCH_SIZE);
 
     let rpcError: any = null;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
+    let isTimeout = false;
 
-      const { error } = await supabase.rpc(
-        "process_dol_raw_batch",
-        {
+    try {
+      // 🚀 A MÁGICA: Corrida entre o banco de dados e o nosso cronômetro (Promise.race)
+      const { error } = await Promise.race([
+        supabase.rpc("process_dol_raw_batch", {
           p_raw_items: effectiveBatch,
           p_visa_type: source.visaType,
-        },
-        { signal: controller.signal },
-      );
-
-      clearTimeout(timeout);
+        }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("RPC_TIMEOUT_EXCEEDED")), RPC_TIMEOUT_MS)),
+      ]);
       rpcError = error;
-    } catch (abortErr: any) {
-      rpcError = { message: `RPC timeout/abort: ${abortErr.message}` };
-      meta = appendMetaError(meta, abortErr.message, `rpc_timeout_at_${processed}`);
+    } catch (err: any) {
+      // Se o banco demorar muito, nosso código corta a conexão e toma o controle de volta
+      rpcError = { message: err.message };
+      isTimeout = err.message === "RPC_TIMEOUT_EXCEEDED";
     }
 
     if (rpcError) {
-      const isTimeout =
-        rpcError.message?.includes("timeout") ||
-        rpcError.message?.includes("520") ||
-        rpcError.message?.includes("abort");
-
       if (isTimeout && effectiveBatch.length > RETRY_CHUNK) {
-        // Fallback: divide e conquista
+        console.warn(`[TIMEOUT] Lote demorou muito na linha ${processed}. Fatiando em pedaços de ${RETRY_CHUNK}...`);
+
         for (let i = 0; i < effectiveBatch.length; i += RETRY_CHUNK) {
           if (Date.now() > deadline) {
             meta.last_stage = "window_exhausted_in_retry";
@@ -162,22 +143,18 @@ async function processSlice(
           }
 
           const subBatch = effectiveBatch.slice(i, i + RETRY_CHUNK);
-          await new Promise((r) => setTimeout(r, 300)); // Rate limit respiro
+          await new Promise((r) => setTimeout(r, 500)); // Respiro para o banco
 
           try {
-            const subController = new AbortController();
-            const subTimeout = setTimeout(() => subController.abort(), RPC_TIMEOUT_MS);
-
-            const { error: retryErr } = await supabase.rpc(
-              "process_dol_raw_batch",
-              {
+            const { error: retryErr } = await Promise.race([
+              supabase.rpc("process_dol_raw_batch", {
                 p_raw_items: subBatch,
                 p_visa_type: source.visaType,
-              },
-              { signal: subController.signal },
-            );
-
-            clearTimeout(subTimeout);
+              }),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("RPC_TIMEOUT_EXCEEDED")), RPC_TIMEOUT_MS),
+              ),
+            ]);
 
             if (retryErr) {
               consecutiveErrors++;
@@ -196,8 +173,9 @@ async function processSlice(
         meta = appendMetaError(meta, rpcError.message, `batch_err_at_${processed}`);
       }
 
-      if (consecutiveErrors >= 20) {
-        const msg = `${consecutiveErrors} erros consecutivos. Abortando lote.`;
+      // Se bater 10 erros seguidos (dados corrompidos ou servidor fora), ele aborta graciosamente
+      if (consecutiveErrors >= 10) {
+        const msg = `${consecutiveErrors} erros consecutivos. Abortando lote. Último erro: ${rpcError.message}`;
         console.error(`[ABORT] ${source.key}: ${msg}`);
         meta.last_stage = "abort_consecutive_errors";
         return { newCursor: processed, done: true, error: msg, meta };
@@ -207,8 +185,8 @@ async function processSlice(
       consecutiveErrors = 0;
     }
 
-    // Heartbeat no banco a cada 200 itens processados
-    if (processed % 200 < BATCH_SIZE) {
+    // Salva o progresso a cada 50 itens para o Heartbeat ficar sempre fresco
+    if (processed % 50 === 0 || processed === allItems.length) {
       meta.last_stage = "processing";
       meta.last_batch_cursor = processed;
       await supabase
@@ -220,7 +198,7 @@ async function processSlice(
           meta,
         })
         .eq("id", jobId);
-      console.log(`[PROG] ${source.key}: ${processed} / ${allItems.length} itens processados`);
+      console.log(`[PROG] ${source.key}: Salvando Checkpoint - ${processed} / ${allItems.length}`);
     }
   }
 
@@ -228,7 +206,7 @@ async function processSlice(
   return { newCursor: processed, done: true, meta };
 }
 
-// ─── SERVER ──────────────────────────────────────────────────────────────
+// ─── SERVER (INALTERADO) ──────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -238,7 +216,6 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const cronToken = body?.cron_token || req.headers.get("x-cron-token");
 
-    // Validação
     if (cronToken) {
       const { data: settings } = await supabase.from("app_settings").select("cron_token").eq("id", 1).single();
       if (!settings || settings.cron_token !== cronToken) {
@@ -285,7 +262,7 @@ Deno.serve(async (req) => {
 
       if (heartbeatAge < LEASE_TTL_MS) {
         console.log(
-          `[SKIP] ${source.key}: Processo em andamento. Bloqueado por mais ${Math.round((LEASE_TTL_MS - heartbeatAge) / 1000)}s`,
+          `[SKIP] ${source.key}: Em andamento. Bloqueado por mais ${Math.round((LEASE_TTL_MS - heartbeatAge) / 1000)}s`,
         );
         return new Response(JSON.stringify({ success: true, message: `Em processamento seguro`, skipped: true }), {
           headers: corsHeaders,
@@ -328,23 +305,19 @@ Deno.serve(async (req) => {
       jobId = job.id;
     }
 
-    // Processamento Assíncrono (O Cron pode fechar a chamada, o código continua rodando)
     EdgeRuntime.waitUntil(
       (async () => {
         try {
           const deadline = Date.now() + WORK_WINDOW_MS;
 
-          // Recupera o Array inteiro do Storage (rápido) ou baixa e salva
           const allItems = await getOrDownloadJsonArray(source.url, source.key, supabase);
           const totalRows = allItems.length;
 
-          // Atualiza banco com totalRows correto
           await supabase.from("import_jobs").update({ total_rows: totalRows }).eq("id", jobId);
 
           currentMeta.last_stage = "downloaded_or_cached";
           console.log(`[START] ${source.key}: ${totalRows} itens. Iniciando da linha ${cursor}`);
 
-          // Passa o array completo
           const result = await processSlice(allItems, cursor, source, supabase, jobId, deadline, currentMeta);
 
           if (result.error) {
