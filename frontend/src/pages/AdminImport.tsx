@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2, History, XCircle, Clock, Timer } from 'lucide-react';
+import { Database, FileJson, Settings, UploadCloud, Loader2, CheckCircle2, History, XCircle, Clock, Timer, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +21,12 @@ interface ImportJobStatus {
   error?: string;
   lastHeartbeat?: string;
   attemptCount?: number;
+  meta?: any;
 }
 
-// Stale threshold: 20 minutes without heartbeat
-const STALE_THRESHOLD_MS = 20 * 60 * 1000;
+// Stale threshold: 5 minutes without heartbeat (reduced since cron ticks every 1 min)
+// The BACKEND decides when to take over a stale lease (90s). The UI just shows status.
+const STALE_DISPLAY_THRESHOLD_MS = 5 * 60 * 1000;
 
 // Cron schedule (UTC): JO 06:00, H2A 06:30, H2B 06:10
 const CRON_SCHEDULE_UTC = [
@@ -84,27 +86,9 @@ export default function AdminImport() {
     setLoadingHistory(false);
   };
 
-  // Cleanup truly stale jobs on mount (20+ min without heartbeat)
+  // On mount: NO MORE stale cleanup from frontend.
+  // The backend handles lease expiry and job resumption via cron.
   useEffect(() => {
-    const cleanupStaleJobs = async () => {
-      const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString();
-      // Only mark as failed if no heartbeat for 20+ minutes
-      await supabase
-        .from('import_jobs')
-        .update({ status: 'failed', phase: 'failed', error_message: 'Stale: sem heartbeat por mais de 20 minutos' } as any)
-        .eq('status', 'processing')
-        .lt('last_heartbeat_at', staleThreshold);
-      
-      // Also catch old jobs that never got a heartbeat (legacy)
-      const oldThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      await supabase
-        .from('import_jobs')
-        .update({ status: 'failed', phase: 'failed', error_message: 'Stale: job antigo sem heartbeat' } as any)
-        .eq('status', 'processing')
-        .is('last_heartbeat_at' as any, null)
-        .lt('created_at', oldThreshold);
-    };
-    cleanupStaleJobs();
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
@@ -119,7 +103,7 @@ export default function AdminImport() {
     pollingRef.current = setInterval(async () => {
       const { data, error } = await supabase
         .from('import_jobs')
-        .select('id, source, status, processed_rows, total_rows, error_message, phase, last_heartbeat_at, attempt_count')
+        .select('id, source, status, processed_rows, total_rows, error_message, phase, last_heartbeat_at, attempt_count, meta')
         .in('id', jobIds);
 
       if (error || !data) return;
@@ -134,6 +118,7 @@ export default function AdminImport() {
         error: d.error_message ?? undefined,
         lastHeartbeat: (d as any).last_heartbeat_at as string | undefined,
         attemptCount: (d as any).attempt_count as number | undefined,
+        meta: d.meta,
       }));
 
       setActiveJobs(updated);
@@ -166,7 +151,8 @@ export default function AdminImport() {
     }, 3000);
   };
 
-  // Wait for a single job to complete by polling (no hard timeout — heartbeat-based)
+  // Wait for a single job to complete by polling
+  // NO MORE stale marking from frontend — backend handles it
   const waitForJob = (jobId: string): Promise<ImportJobStatus> => {
     const POLL_INTERVAL = 3000;
 
@@ -174,7 +160,7 @@ export default function AdminImport() {
       const interval = setInterval(async () => {
         const { data } = await supabase
           .from('import_jobs')
-          .select('id, source, status, processed_rows, total_rows, error_message, phase, last_heartbeat_at, attempt_count')
+          .select('id, source, status, processed_rows, total_rows, error_message, phase, last_heartbeat_at, attempt_count, meta')
           .eq('id', jobId)
           .single();
 
@@ -190,6 +176,7 @@ export default function AdminImport() {
           error: data.error_message ?? undefined,
           lastHeartbeat: (data as any).last_heartbeat_at as string | undefined,
           attemptCount: (data as any).attempt_count as number | undefined,
+          meta: data.meta,
         };
 
         setActiveJobs(prev => prev.map(j => j.jobId === jobId ? job : j));
@@ -200,26 +187,8 @@ export default function AdminImport() {
           return;
         }
 
-        // Check for stale heartbeat (20 min)
-        if (job.lastHeartbeat) {
-          const heartbeatAge = Date.now() - new Date(job.lastHeartbeat).getTime();
-          if (heartbeatAge > STALE_THRESHOLD_MS) {
-            clearInterval(interval);
-            await supabase
-              .from('import_jobs')
-              .update({ status: 'failed', phase: 'failed', error_message: 'Stale: sem heartbeat por mais de 20 minutos' } as any)
-              .eq('id', jobId)
-              .eq('status', 'processing');
-            
-            const staleJob: ImportJobStatus = {
-              ...job,
-              status: 'failed',
-              error: 'Stale: sem heartbeat por mais de 20 minutos',
-            };
-            setActiveJobs(prev => prev.map(j => j.jobId === jobId ? staleJob : j));
-            resolve(staleJob);
-          }
-        }
+        // Display-only stale warning (does NOT mark as failed anymore)
+        // The cron will resume it automatically
       }, POLL_INTERVAL);
     });
   };
@@ -242,14 +211,19 @@ export default function AdminImport() {
           const jobId = data?.job_id;
           if (!jobId) throw new Error(`No job_id for ${s}`);
 
+          // If skipped (already running), still track it
           const newJob: ImportJobStatus = { jobId, source: s, status: 'processing', processedRows: 0, totalRows: 0 };
           setActiveJobs(prev => [...prev, newJob]);
+
+          if (data?.skipped) {
+            toast({ title: `${s.toUpperCase()} já em andamento`, description: `Job ${jobId} continua via cron.` });
+          }
 
           const result = await waitForJob(jobId);
 
           if (result.status === 'completed') {
             toast({ title: `${s.toUpperCase()} concluída`, description: `${result.processedRows} vagas processadas` });
-          } else {
+          } else if (result.status === 'failed') {
             toast({ title: `${s.toUpperCase()} falhou`, description: result.error || 'Erro', variant: 'destructive' });
           }
         }
@@ -344,6 +318,15 @@ export default function AdminImport() {
     }
   };
 
+  const getHeartbeatAge = (heartbeat?: string) => {
+    if (!heartbeat) return null;
+    const ageMs = Date.now() - new Date(heartbeat).getTime();
+    const secs = Math.round(ageMs / 1000);
+    if (secs < 60) return `${secs}s atrás`;
+    const mins = Math.round(secs / 60);
+    return `${mins}m atrás`;
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div>
@@ -408,6 +391,8 @@ export default function AdminImport() {
                       : '—';
                     const phase = (job as any).phase;
                     const attemptCount = (job as any).attempt_count;
+                    const meta = job.meta as any;
+                    const heartbeatAge = getHeartbeatAge((job as any).last_heartbeat_at);
 
                     return (
                       <div
@@ -423,7 +408,7 @@ export default function AdminImport() {
                           {isFailed && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
                           {isProcessing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className="text-[10px] uppercase font-bold">
                                 {job.source}
                               </Badge>
@@ -432,13 +417,27 @@ export default function AdminImport() {
                                 <span className="text-xs text-muted-foreground">{formatPhase(phase)}</span>
                               )}
                               {attemptCount > 1 && (
-                                <Badge variant="secondary" className="text-[9px]">
-                                  {attemptCount}x
+                                <Badge variant="secondary" className="text-[9px] gap-1">
+                                  <RefreshCw className="h-2.5 w-2.5" />
+                                  {attemptCount}x retomada
                                 </Badge>
+                              )}
+                              {isProcessing && heartbeatAge && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  ♥ {heartbeatAge}
+                                </span>
                               )}
                             </div>
                             {isFailed && job.error_message && (
-                              <p className="text-xs text-destructive mt-1 max-w-md truncate">{job.error_message}</p>
+                              <p className="text-xs text-destructive mt-1 max-w-md truncate" title={job.error_message}>
+                                {job.error_message}
+                              </p>
+                            )}
+                            {meta?.last_stage && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                Estágio: {meta.last_stage}
+                                {meta.last_exception && ` — ${meta.last_exception.substring(0, 80)}`}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -531,6 +530,7 @@ export default function AdminImport() {
                 {CRON_SCHEDULE_UTC.map(c => (
                   <p key={c.source}>{c.source}: {String(c.hour).padStart(2,'0')}:{String(c.minute).padStart(2,'0')} UTC</p>
                 ))}
+                <p className="text-[10px] mt-1">+ ticks de continuidade a cada 1 min</p>
               </div>
             </CardContent>
           </Card>
@@ -538,7 +538,9 @@ export default function AdminImport() {
           <Card>
             <CardHeader>
               <CardTitle>Importação Manual do DOL</CardTitle>
-              <CardDescription>Dispare manualmente a importação de cada fonte. O cron roda automaticamente às 06:00 UTC.</CardDescription>
+              <CardDescription>
+                Dispare manualmente a importação de cada fonte. O cron roda automaticamente e retoma jobs incompletos a cada minuto.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
@@ -580,14 +582,24 @@ export default function AdminImport() {
                     </div>
                     <Progress value={job.totalRows ? pct : undefined} className="h-2" />
                     {job.attemptCount && job.attemptCount > 1 && (
-                      <p className="text-[10px] text-muted-foreground">Tentativa #{job.attemptCount} (auto-retomada)</p>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <RefreshCw className="h-3 w-3" />
+                        Tentativa #{job.attemptCount} (retomada por cron)
+                      </p>
+                    )}
+                    {job.lastHeartbeat && (
+                      <p className="text-[10px] text-muted-foreground">
+                        ♥ Heartbeat: {getHeartbeatAge(job.lastHeartbeat)}
+                      </p>
                     )}
                   </div>
                 );
               })}
 
               {activeJobs.length > 0 && activeJobs.some(j => j.status === 'processing') && (
-                <p className="text-xs text-muted-foreground">Processando em background com auto-retomada. Atualiza a cada 3s.</p>
+                <p className="text-xs text-muted-foreground">
+                  Processando com retomada automática por cron (a cada ~1 min). Atualiza a cada 3s.
+                </p>
               )}
 
               {activeJobs.filter(j => j.status === 'completed').map(job => (
