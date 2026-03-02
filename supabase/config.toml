@@ -32,3 +32,15 @@ verify_jwt = false
 
 [functions.summarize-resume]
 verify_jwt = false
+
+[functions.create-employer-checkout]
+verify_jwt = false
+
+[functions.check-employer-subscription]
+verify_jwt = false
+
+[functions.employer-portal]
+verify_jwt = false
+
+[functions.submit-application]
+verify_jwt = false
