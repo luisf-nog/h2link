@@ -15,127 +15,16 @@ const DOL_SOURCES = [
   { key: "h2b", url: "https://api.seasonaljobs.dol.gov/datahub-search/sjCaseData/zip/h2b", visaType: "H-2B" },
 ];
 
-// ─── PULL-BASED ARCHITECTURE BLINDADA ───────────────────────────────────
-const WORK_WINDOW_MS = 40_000; // 40s — margem extremamente segura para Edge
-const BATCH_SIZE = 50; // Lotes maiores reduzem o overhead de rede das RPCs
+// ─── PULL-BASED ARCHITECTURE BLINDADA (V8 NATIVE) ───────────────────────
+const WORK_WINDOW_MS = 40_000; // 40s — margem segura para Edge
+const BATCH_SIZE = 50; // Processa de 50 em 50 para poupar a rede
 const RETRY_CHUNK = 10;
 const RPC_TIMEOUT_MS = 20_000; // 20s limite para o banco responder
-const LEASE_TTL_MS = 120_000; // 2 minutos de carência no lock (evita concorrência)
-const STORAGE_BUCKET = "imports"; // NOME DO BUCKET NO SUPABASE
+const LEASE_TTL_MS = 120_000; // 2 minutos de carência no lock
+const STORAGE_BUCKET = "imports"; // BUCKET DO SUPABASE PARA CACHE
 
 function getTodayNY(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-}
-
-function* parseJsonArrayChunked(jsonText: string, chunkSize: number): Generator<any[]> {
-  let i = jsonText.indexOf("[");
-  if (i === -1) return;
-  i++;
-
-  let depth = 0;
-  let objStart = -1;
-  let batch: any[] = [];
-
-  for (; i < jsonText.length; i++) {
-    const ch = jsonText[i];
-
-    if (ch === '"') {
-      i++;
-      while (i < jsonText.length) {
-        if (jsonText[i] === "\\") {
-          i++;
-        } else if (jsonText[i] === '"') break;
-        i++;
-      }
-      continue;
-    }
-
-    if (ch === "{") {
-      if (depth === 0) objStart = i;
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 0 && objStart >= 0) {
-        const objStr = jsonText.substring(objStart, i + 1);
-        try {
-          batch.push(JSON.parse(objStr));
-        } catch {
-          // ignora malformados
-        }
-        objStart = -1;
-
-        if (batch.length >= chunkSize) {
-          yield batch;
-          batch = [];
-        }
-      }
-    } else if (ch === "]" && depth === 0) {
-      break;
-    }
-  }
-
-  if (batch.length > 0) {
-    yield batch;
-  }
-}
-
-function countItems(jsonText: string): number {
-  let count = 0;
-  for (let j = 0; j < jsonText.length; j++) {
-    if (jsonText[j] === '"' && jsonText.substring(j, j + 12) === '"caseNumber"') count++;
-    else if (jsonText[j] === '"' && jsonText.substring(j, j + 15) === '"jobOrderNumber"') count++;
-  }
-  if (count === 0) {
-    count = (jsonText.match(/\{/g) || []).length - 1;
-  }
-  return Math.max(count, 0);
-}
-
-/** * Lógica "Cache & Stream": Lê do Storage se existir, senão baixa, descompacta e salva.
- * Isso mata o gargalo de CPU e memória nos crons subsequentes.
- */
-async function getOrDownloadJson(apiUrl: string, sourceKey: string, supabase: any): Promise<string> {
-  const today = getTodayNY();
-  const fileName = `${sourceKey}_${today}.json`;
-
-  // 1. Tenta pegar do Storage
-  const { data: cachedFile, error: cacheErr } = await supabase.storage.from(STORAGE_BUCKET).download(fileName);
-
-  if (!cacheErr && cachedFile) {
-    console.log(`[CACHE HIT] ${sourceKey} recuperado instantaneamente do Storage.`);
-    return await cachedFile.text();
-  }
-
-  // 2. Se não existir, baixa do DOL
-  console.log(`[CACHE MISS] Baixando ${sourceKey} do DOL...`);
-  const response = await fetch(apiUrl);
-  if (!response.ok) throw new Error(`DOL Offline ou erro: ${response.status}`);
-
-  const zipBuffer = await response.arrayBuffer();
-  console.log(`[DL] ${sourceKey}: ZIP de ${(zipBuffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
-
-  const { unzipSync } = await import("https://esm.sh/fflate@0.8.2");
-  const unzipped = unzipSync(new Uint8Array(zipBuffer));
-
-  const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
-  if (!jsonFileName) throw new Error("JSON não encontrado dentro do ZIP");
-
-  const jsonBytes = unzipped[jsonFileName];
-  const jsonText = new TextDecoder().decode(jsonBytes);
-
-  // 3. Salva no Storage para a próxima rodada (roda em paralelo)
-  console.log(`[STORAGE] Salvando ${sourceKey} no bucket para os próximos ticks...`);
-  await supabase.storage.from(STORAGE_BUCKET).upload(fileName, jsonBytes, {
-    contentType: "application/json",
-    upsert: true,
-  });
-
-  // 4. Limpeza de RAM agressiva (Garbage Collection)
-  for (const key of Object.keys(unzipped)) {
-    delete (unzipped as any)[key];
-  }
-
-  return jsonText;
 }
 
 function appendMetaError(currentMeta: any, error: string, stage: string): any {
@@ -144,13 +33,67 @@ function appendMetaError(currentMeta: any, error: string, stage: string): any {
   errors.push({
     ts: new Date().toISOString(),
     stage,
-    msg: error.substring(0, 500),
+    msg: error?.substring ? error.substring(0, 500) : "Erro desconhecido",
   });
-  return { ...meta, errors, last_stage: stage, last_exception: error.substring(0, 300) };
+  return { ...meta, errors, last_stage: stage, last_exception: error?.substring ? error.substring(0, 300) : "" };
 }
 
+/** * Lê do Storage se existir, senão baixa, descompacta, salva no Storage e retorna o Array nativo.
+ * Isso mata o gargalo de CPU e memória nos crons subsequentes.
+ */
+async function getOrDownloadJsonArray(apiUrl: string, sourceKey: string, supabase: any): Promise<any[]> {
+  const today = getTodayNY();
+  const fileName = `${sourceKey}_${today}.json`;
+
+  // 1. Tenta pegar do Storage
+  const { data: cachedFile, error: cacheErr } = await supabase.storage.from(STORAGE_BUCKET).download(fileName);
+
+  if (!cacheErr && cachedFile) {
+    console.log(`[CACHE HIT] ${sourceKey} recuperado do Storage interno.`);
+    const jsonText = await cachedFile.text();
+    return JSON.parse(jsonText); // Muito mais rápido, processado em C++ pelo V8
+  }
+
+  // 2. Se não existir, baixa do DOL
+  console.log(`[CACHE MISS] Baixando ${sourceKey} do DOL...`);
+  const response = await fetch(apiUrl);
+  if (!response.ok) throw new Error(`DOL Offline ou erro: ${response.status}`);
+
+  const zipBuffer = await response.arrayBuffer();
+  console.log(`[DL] ${sourceKey}: ZIP baixado (${(zipBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)`);
+
+  const { unzipSync } = await import("https://esm.sh/fflate@0.8.2");
+  const unzipped = unzipSync(new Uint8Array(zipBuffer));
+
+  const jsonFileName = Object.keys(unzipped).find((f) => f.endsWith(".json"));
+  if (!jsonFileName) throw new Error("JSON não encontrado dentro do ZIP");
+
+  const jsonBytes = unzipped[jsonFileName];
+
+  // 3. Salva no Storage para a próxima rodada ANTES de parsear
+  console.log(`[STORAGE] Salvando ${sourceKey} no bucket para os próximos ticks...`);
+  await supabase.storage.from(STORAGE_BUCKET).upload(fileName, jsonBytes, {
+    contentType: "application/json",
+    upsert: true,
+  });
+
+  // 4. Parseia o JSON
+  const jsonText = new TextDecoder().decode(jsonBytes);
+  const itemsArray = JSON.parse(jsonText);
+
+  // 5. Limpeza de RAM agressiva (Garbage Collection)
+  for (const key of Object.keys(unzipped)) {
+    delete (unzipped as any)[key];
+  }
+
+  return itemsArray;
+}
+
+/**
+ * Processa o Array nativo fatiando de 50 em 50 usando slice (super rápido)
+ */
 async function processSlice(
-  jsonText: string,
+  allItems: any[],
   cursor: number,
   source: (typeof DOL_SOURCES)[0],
   supabase: any,
@@ -160,22 +103,10 @@ async function processSlice(
 ): Promise<{ newCursor: number; done: boolean; error?: string; meta: any }> {
   let processed = cursor;
   let consecutiveErrors = 0;
-  let itemIndex = 0;
   let meta = currentMeta || {};
 
-  for (const batch of parseJsonArrayChunked(jsonText, BATCH_SIZE)) {
-    if (itemIndex + batch.length <= cursor) {
-      itemIndex += batch.length;
-      continue;
-    }
-
-    let effectiveBatch = batch;
-    if (itemIndex < cursor) {
-      const skip = cursor - itemIndex;
-      effectiveBatch = batch.slice(skip);
-      itemIndex = cursor;
-    }
-
+  while (processed < allItems.length) {
+    // Checa o tempo de vida da função Edge
     if (Date.now() > deadline) {
       console.log(`[WINDOW] ${source.key}: Pausando na linha ${processed} por limite de tempo.`);
       meta.last_stage = "window_exhausted";
@@ -191,6 +122,9 @@ async function processSlice(
         .eq("id", jobId);
       return { newCursor: processed, done: false, meta };
     }
+
+    // Pega a fatia atual do Array
+    const effectiveBatch = allItems.slice(processed, processed + BATCH_SIZE);
 
     let rpcError: any = null;
     try {
@@ -273,10 +207,8 @@ async function processSlice(
       consecutiveErrors = 0;
     }
 
-    itemIndex += batch.length;
-
+    // Heartbeat no banco a cada 200 itens processados
     if (processed % 200 < BATCH_SIZE) {
-      // Heartbeat menos frequente (reduz escritas)
       meta.last_stage = "processing";
       meta.last_batch_cursor = processed;
       await supabase
@@ -288,7 +220,7 @@ async function processSlice(
           meta,
         })
         .eq("id", jobId);
-      console.log(`[PROG] ${source.key}: ${processed} itens processados`);
+      console.log(`[PROG] ${source.key}: ${processed} / ${allItems.length} itens processados`);
     }
   }
 
@@ -306,6 +238,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const cronToken = body?.cron_token || req.headers.get("x-cron-token");
 
+    // Validação
     if (cronToken) {
       const { data: settings } = await supabase.from("app_settings").select("cron_token").eq("id", 1).single();
       if (!settings || settings.cron_token !== cronToken) {
@@ -317,7 +250,6 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
       const token = authHeader.replace("Bearer ", "");
       if (token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-        // Validação resumida de permissão para leitura manual
         const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
           global: { headers: { Authorization: authHeader } },
         });
@@ -345,7 +277,6 @@ Deno.serve(async (req) => {
     let cursor = 0;
     let currentMeta: any = {};
     let isResume = false;
-    let cachedTotalRows = 0;
 
     if (activeJob) {
       const heartbeatAge = activeJob.last_heartbeat_at
@@ -354,9 +285,9 @@ Deno.serve(async (req) => {
 
       if (heartbeatAge < LEASE_TTL_MS) {
         console.log(
-          `[SKIP] ${source.key}: Processo em andamento seguro. Bloqueado por ${Math.round(heartbeatAge / 1000)}s`,
+          `[SKIP] ${source.key}: Processo em andamento. Bloqueado por mais ${Math.round((LEASE_TTL_MS - heartbeatAge) / 1000)}s`,
         );
-        return new Response(JSON.stringify({ success: true, message: `Em processamento`, skipped: true }), {
+        return new Response(JSON.stringify({ success: true, message: `Em processamento seguro`, skipped: true }), {
           headers: corsHeaders,
         });
       }
@@ -364,7 +295,6 @@ Deno.serve(async (req) => {
       jobId = activeJob.id;
       cursor = activeJob.cursor_pos || 0;
       currentMeta = activeJob.meta || {};
-      cachedTotalRows = activeJob.total_rows || 0;
       isResume = true;
 
       const newAttempt = (activeJob.attempt_count || 0) + 1;
@@ -398,25 +328,24 @@ Deno.serve(async (req) => {
       jobId = job.id;
     }
 
+    // Processamento Assíncrono (O Cron pode fechar a chamada, o código continua rodando)
     EdgeRuntime.waitUntil(
       (async () => {
         try {
           const deadline = Date.now() + WORK_WINDOW_MS;
 
-          // Recupera do storage (rápido) ou baixa (lento apenas na 1ª vez)
-          const jsonText = await getOrDownloadJson(source.url, source.key, supabase);
+          // Recupera o Array inteiro do Storage (rápido) ou baixa e salva
+          const allItems = await getOrDownloadJsonArray(source.url, source.key, supabase);
+          const totalRows = allItems.length;
 
-          // BYPASS DE CPU: Se já sabemos o total de linhas (resume), não contamos de novo!
-          let totalRows = cachedTotalRows;
-          if (totalRows === 0) {
-            totalRows = countItems(jsonText);
-            await supabase.from("import_jobs").update({ total_rows: totalRows }).eq("id", jobId);
-          }
+          // Atualiza banco com totalRows correto
+          await supabase.from("import_jobs").update({ total_rows: totalRows }).eq("id", jobId);
 
           currentMeta.last_stage = "downloaded_or_cached";
-          console.log(`[START] ${source.key}: ~${totalRows} itens totais. Iniciando da linha ${cursor}`);
+          console.log(`[START] ${source.key}: ${totalRows} itens. Iniciando da linha ${cursor}`);
 
-          const result = await processSlice(jsonText, cursor, source, supabase, jobId, deadline, currentMeta);
+          // Passa o array completo
+          const result = await processSlice(allItems, cursor, source, supabase, jobId, deadline, currentMeta);
 
           if (result.error) {
             await supabase
