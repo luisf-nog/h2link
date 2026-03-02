@@ -67,7 +67,7 @@ export default function Auth() {
     [],
   );
 
-  const signupSchema = z.object({
+  const workerSignupSchema = z.object({
     fullName: z.string().trim().min(1).max(120),
     email: z.string().trim().email().max(255),
     password: z.string().min(6).max(200),
@@ -76,6 +76,28 @@ export default function Auth() {
     phone: z.string().trim().min(1).refine((v) => Boolean(parsePhoneNumberFromString(v)?.isValid()), { message: "invalid_phone" }),
     contactEmail: z.string().trim().email().max(255),
     referralCode: z.string().trim().transform((v) => v.toUpperCase()).refine((v) => v === "" || /^[A-Z0-9]{6}$/.test(v), { message: "invalid_referral_code" }),
+    acceptTerms: z.preprocess((v) => v === "on" || v === true, z.boolean().refine((v) => v === true, { message: "accept_required" })),
+  }).superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword)
+      ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "password_mismatch" });
+  });
+
+  const employerSignupSchema = z.object({
+    fullName: z.string().trim().min(1).max(120),
+    email: z.string().trim().email().max(255),
+    password: z.string().min(6).max(200),
+    confirmPassword: z.string().min(6).max(200),
+    companyName: z.string().trim().min(1).max(200),
+    legalEntityName: z.string().trim().max(200).optional().default(""),
+    einTaxId: z.string().trim().max(30).optional().default(""),
+    companySize: z.string().trim().min(1),
+    industry: z.string().trim().min(1).max(120),
+    website: z.string().trim().max(255).optional().default(""),
+    country: z.string().trim().min(1).max(60),
+    state: z.string().trim().min(1).max(60),
+    primaryHiringLocation: z.string().trim().min(1).max(200),
+    workerTypes: z.string().trim().min(1),
+    estimatedMonthlyVolume: z.string().trim().min(1),
     acceptTerms: z.preprocess((v) => v === "on" || v === true, z.boolean().refine((v) => v === true, { message: "accept_required" })),
   }).superRefine(({ password, confirmPassword }, ctx) => {
     if (password !== confirmPassword)
@@ -193,51 +215,102 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setIsLoading(true);
     const fd = new FormData(e.currentTarget);
-    const raw = {
-      fullName: String(fd.get("fullName") ?? ""), email: String(fd.get("email") ?? ""),
-      password: String(fd.get("password") ?? ""), confirmPassword: String(fd.get("confirmPassword") ?? ""),
-      age: String(fd.get("age") ?? ""), phone: String(fd.get("phone") ?? ""),
-      contactEmail: String(fd.get("contactEmail") ?? ""), referralCode: String(fd.get("referralCode") ?? ""),
-      acceptTerms: fd.get("acceptTerms") ?? undefined,
-    };
-    const parsed = signupSchema.safeParse(raw);
-    if (!parsed.success) {
-      const first = parsed.error.issues[0]; const field = String(first?.path?.[0] ?? ""); const code = typeof first?.message === "string" ? first.message : "";
-      const description = field === "age" || code === "invalid_age" ? t("auth.validation.invalid_age")
-        : field === "phone" || code === "invalid_phone" ? t("auth.validation.invalid_phone")
-        : field === "referralCode" || code === "invalid_referral_code" ? t("auth.validation.invalid_referral_code")
-        : field === "confirmPassword" || code === "password_mismatch" ? t("auth.validation.password_mismatch")
-        : field === "acceptTerms" || code === "accept_required" ? t("auth.validation.accept_required")
-        : t("auth.validation.invalid_contact_email");
-      openError(t("auth.toasts.signup_error_title"), description); setIsLoading(false); return;
-    }
-    const { fullName, email, password, age, phone, contactEmail, referralCode } = parsed.data;
-    const normalizedReferral = String(referralCode ?? "").trim();
-    if (normalizedReferral) localStorage.setItem("pending_referral_code", normalizedReferral);
-    const { error } = await signUp(email, password, fullName, { age, phone_e164: phone, contact_email: contactEmail });
-    if (error) {
-      const code = String((error as any)?.code ?? ""); const msg = String(error.message ?? "");
-      const isRateLimit = code === "over_email_send_rate_limit" || /rate limit/i.test(msg);
-      const isWeakPassword = code === "weak_password" || /weak.*password|password.*weak/i.test(msg);
-      openError(t("auth.toasts.signup_error_title"), isRateLimit ? t("auth.errors.email_rate_limit_desc") : isWeakPassword ? t("auth.errors.weak_password_desc") : error.message);
+
+    if (signupRole === "worker") {
+      const raw = {
+        fullName: String(fd.get("fullName") ?? ""), email: String(fd.get("email") ?? ""),
+        password: String(fd.get("password") ?? ""), confirmPassword: String(fd.get("confirmPassword") ?? ""),
+        age: String(fd.get("age") ?? ""), phone: String(fd.get("phone") ?? ""),
+        contactEmail: String(fd.get("contactEmail") ?? ""), referralCode: String(fd.get("referralCode") ?? ""),
+        acceptTerms: fd.get("acceptTerms") ?? undefined,
+      };
+      const parsed = workerSignupSchema.safeParse(raw);
+      if (!parsed.success) {
+        const first = parsed.error.issues[0]; const field = String(first?.path?.[0] ?? ""); const code = typeof first?.message === "string" ? first.message : "";
+        const description = field === "age" || code === "invalid_age" ? t("auth.validation.invalid_age")
+          : field === "phone" || code === "invalid_phone" ? t("auth.validation.invalid_phone")
+          : field === "referralCode" || code === "invalid_referral_code" ? t("auth.validation.invalid_referral_code")
+          : field === "confirmPassword" || code === "password_mismatch" ? t("auth.validation.password_mismatch")
+          : field === "acceptTerms" || code === "accept_required" ? t("auth.validation.accept_required")
+          : t("auth.validation.invalid_contact_email");
+        openError(t("auth.toasts.signup_error_title"), description); setIsLoading(false); return;
+      }
+      const { fullName, email, password, age, phone, contactEmail, referralCode } = parsed.data;
+      const normalizedReferral = String(referralCode ?? "").trim();
+      if (normalizedReferral) localStorage.setItem("pending_referral_code", normalizedReferral);
+      const { error } = await signUp(email, password, fullName, { age, phone_e164: phone, contact_email: contactEmail });
+      if (error) {
+        const errCode = String((error as any)?.code ?? ""); const msg = String(error.message ?? "");
+        const isRateLimit = errCode === "over_email_send_rate_limit" || /rate limit/i.test(msg);
+        const isWeakPassword = errCode === "weak_password" || /weak.*password|password.*weak/i.test(msg);
+        openError(t("auth.toasts.signup_error_title"), isRateLimit ? t("auth.errors.email_rate_limit_desc") : isWeakPassword ? t("auth.errors.weak_password_desc") : error.message);
+      } else {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
+        if (sessionData.session && isConfirmed) {
+          const userId = sessionData.session.user.id;
+          await supabase.from("user_roles").insert({ user_id: userId, role: "user" } as any);
+          if (normalizedReferral) { try { await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/apply-referral-code`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ code: normalizedReferral }) }); } catch {} }
+          navigate("/dashboard");
+        } else { setTab("signin"); setSignupNotice({ visible: true, email }); toast({ title: t("auth.signup_notice.toast_title"), description: t("auth.signup_notice.toast_desc") }); }
+      }
     } else {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
-      if (sessionData.session && isConfirmed) {
-        const userId = sessionData.session.user.id;
-        // Insert role
-        const role = signupRole === "employer" ? "employer" : "user";
-        await supabase.from("user_roles").insert({ user_id: userId, role } as any);
-        // If employer, create employer_profiles
-        if (signupRole === "employer") {
+      // Employer signup
+      const raw = {
+        fullName: String(fd.get("fullName") ?? ""), email: String(fd.get("email") ?? ""),
+        password: String(fd.get("password") ?? ""), confirmPassword: String(fd.get("confirmPassword") ?? ""),
+        companyName: String(fd.get("companyName") ?? ""),
+        legalEntityName: String(fd.get("legalEntityName") ?? ""),
+        einTaxId: String(fd.get("einTaxId") ?? ""),
+        companySize: String(fd.get("companySize") ?? ""),
+        industry: String(fd.get("industry") ?? ""),
+        website: String(fd.get("website") ?? ""),
+        country: String(fd.get("country") ?? ""),
+        state: String(fd.get("state") ?? ""),
+        primaryHiringLocation: String(fd.get("primaryHiringLocation") ?? ""),
+        workerTypes: String(fd.get("workerTypes") ?? ""),
+        estimatedMonthlyVolume: String(fd.get("estimatedMonthlyVolume") ?? ""),
+        acceptTerms: fd.get("acceptTerms") ?? undefined,
+      };
+      const parsed = employerSignupSchema.safeParse(raw);
+      if (!parsed.success) {
+        const first = parsed.error.issues[0]; const field = String(first?.path?.[0] ?? "");
+        const code = typeof first?.message === "string" ? first.message : "";
+        const description = field === "confirmPassword" || code === "password_mismatch" ? t("auth.validation.password_mismatch")
+          : field === "acceptTerms" || code === "accept_required" ? t("auth.validation.accept_required")
+          : `Please fill in the required field: ${field}`;
+        openError(t("auth.toasts.signup_error_title"), description); setIsLoading(false); return;
+      }
+      const { fullName, email, password, companyName, legalEntityName, einTaxId, companySize, industry, website, country, state, primaryHiringLocation, workerTypes, estimatedMonthlyVolume } = parsed.data;
+      const { error } = await signUp(email, password, fullName);
+      if (error) {
+        const errCode = String((error as any)?.code ?? ""); const msg = String(error.message ?? "");
+        const isRateLimit = errCode === "over_email_send_rate_limit" || /rate limit/i.test(msg);
+        const isWeakPassword = errCode === "weak_password" || /weak.*password|password.*weak/i.test(msg);
+        openError(t("auth.toasts.signup_error_title"), isRateLimit ? t("auth.errors.email_rate_limit_desc") : isWeakPassword ? t("auth.errors.weak_password_desc") : error.message);
+      } else {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
+        if (sessionData.session && isConfirmed) {
+          const userId = sessionData.session.user.id;
+          await supabase.from("user_roles").insert({ user_id: userId, role: "employer" } as any);
           await supabase.from("employer_profiles").insert({
             user_id: userId,
-            company_name: fullName, // Use name as initial company name
+            company_name: companyName,
+            legal_entity_name: legalEntityName || null,
+            ein_tax_id: einTaxId || null,
+            company_size: companySize,
+            industry,
+            website: website || null,
+            country,
+            state,
+            primary_hiring_location: primaryHiringLocation,
+            worker_types: workerTypes.split(",").map((s: string) => s.trim()),
+            estimated_monthly_volume: estimatedMonthlyVolume,
           } as any);
-        }
-        if (normalizedReferral) { try { await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/apply-referral-code`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ code: normalizedReferral }) }); } catch {} }
-        navigate(signupRole === "employer" ? "/employer/dashboard" : "/dashboard");
-      } else { setTab("signin"); setSignupNotice({ visible: true, email }); toast({ title: t("auth.signup_notice.toast_title"), description: t("auth.signup_notice.toast_desc") }); }
+          navigate("/employer/dashboard");
+        } else { setTab("signin"); setSignupNotice({ visible: true, email }); toast({ title: t("auth.signup_notice.toast_title"), description: t("auth.signup_notice.toast_desc") }); }
+      }
     }
     setIsLoading(false);
   };
@@ -538,54 +611,153 @@ export default function Auth() {
 
             {/* ── SIGN UP ── */}
             {tab === "signup" && (
-              <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+              <form onSubmit={handleSignUp} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
                 {/* Role selector */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <button type="button" onClick={() => setSignupRole("worker")}
                     className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${signupRole === "worker" ? "auth-tab-active" : "border-white/10 text-white/30 hover:text-white/50"}`}>
-                    🔧 I'm looking for work
+                    🔧 {t("auth.roles.worker")}
                   </button>
                   <button type="button" onClick={() => setSignupRole("employer")}
                     className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${signupRole === "employer" ? "auth-tab-active" : "border-white/10 text-white/30 hover:text-white/50"}`}>
-                    💼 I'm hiring
+                    💼 {t("auth.roles.employer")}
                   </button>
                 </div>
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.full_name")}</label>
-                  <Input name="fullName" required className={inputCls} />
-                </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className={labelCls}>{t("auth.fields.age")}</label>
-                    <Input name="age" type="number" min={14} max={90} required className={inputCls} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>{t("auth.fields.phone")}</label>
-                    <PhoneE164Input id="phone" name="phone" defaultCountry="BR" required inputClassName={inputCls} />
-                  </div>
-                </div>
+                {signupRole === "worker" ? (
+                  <>
+                    {/* ── WORKER FIELDS ── */}
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.full_name")}</label>
+                      <Input name="fullName" required className={inputCls} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className={labelCls}>{t("auth.fields.age")}</label>
+                        <Input name="age" type="number" min={14} max={90} required className={inputCls} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className={labelCls}>{t("auth.fields.phone")}</label>
+                        <PhoneE164Input id="phone" name="phone" defaultCountry="BR" required inputClassName={inputCls} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.email")}</label>
+                      <Input name="email" type="email" required className={inputCls} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.contact_email")}</label>
+                      <Input name="contactEmail" type="email" required className={inputCls} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.referral_code")}</label>
+                      <Input name="referralCode" maxLength={12} className={inputCls} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* ── EMPLOYER FIELDS ── */}
+                    <div className="text-[10px] uppercase tracking-[0.15em] text-sky-400/60 font-bold mt-1">Personal Info</div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>Full Name</label>
+                      <Input name="fullName" required className={inputCls} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>Email</label>
+                      <Input name="email" type="email" required className={inputCls} />
+                    </div>
 
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.email")}</label>
-                  <Input name="email" type="email" required className={inputCls} />
-                </div>
+                    <div className="text-[10px] uppercase tracking-[0.15em] text-sky-400/60 font-bold mt-3">Company Info</div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>Company Name *</label>
+                      <Input name="companyName" required className={inputCls} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className={labelCls}>Legal Entity Name</label>
+                        <Input name="legalEntityName" className={inputCls} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className={labelCls}>EIN / Tax ID</label>
+                        <Input name="einTaxId" maxLength={30} className={inputCls} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className={labelCls}>Company Size *</label>
+                        <select name="companySize" required className={`${inputCls} w-full h-11 rounded-xl px-3 text-sm`}>
+                          <option value="">Select...</option>
+                          <option value="1-10">1–10</option>
+                          <option value="11-50">11–50</option>
+                          <option value="51-200">51–200</option>
+                          <option value="201-500">201–500</option>
+                          <option value="500+">500+</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className={labelCls}>Industry *</label>
+                        <select name="industry" required className={`${inputCls} w-full h-11 rounded-xl px-3 text-sm`}>
+                          <option value="">Select...</option>
+                          <option value="Agriculture">Agriculture</option>
+                          <option value="Construction">Construction</option>
+                          <option value="Hospitality">Hospitality</option>
+                          <option value="Landscaping">Landscaping</option>
+                          <option value="Food Processing">Food Processing</option>
+                          <option value="Manufacturing">Manufacturing</option>
+                          <option value="Forestry">Forestry</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className={labelCls}>Website</label>
+                        <Input name="website" type="url" placeholder="https://" className={inputCls} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className={labelCls}>Country *</label>
+                        <Input name="country" required defaultValue="US" className={inputCls} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>State *</label>
+                      <Input name="state" required placeholder="e.g. Texas" className={inputCls} />
+                    </div>
 
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.contact_email")}</label>
-                  <Input name="contactEmail" type="email" required className={inputCls} />
-                </div>
+                    <div className="text-[10px] uppercase tracking-[0.15em] text-sky-400/60 font-bold mt-3">Hiring Details</div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>Primary Hiring Location *</label>
+                      <Input name="primaryHiringLocation" required placeholder="City, State" className={inputCls} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className={labelCls}>Worker Types *</label>
+                        <select name="workerTypes" required className={`${inputCls} w-full h-11 rounded-xl px-3 text-sm`}>
+                          <option value="">Select...</option>
+                          <option value="H-2A">H-2A (Agricultural)</option>
+                          <option value="H-2B">H-2B (Non-Agricultural)</option>
+                          <option value="H-2A,H-2B">Both H-2A & H-2B</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className={labelCls}>Monthly Volume *</label>
+                        <select name="estimatedMonthlyVolume" required className={`${inputCls} w-full h-11 rounded-xl px-3 text-sm`}>
+                          <option value="">Select...</option>
+                          <option value="1-10">1–10 workers</option>
+                          <option value="11-50">11–50 workers</option>
+                          <option value="51-100">51–100 workers</option>
+                          <option value="100+">100+ workers</option>
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.referral_code")}</label>
-                  <Input name="referralCode" maxLength={12} className={inputCls} />
-                </div>
-
+                {/* Shared: Password + Terms */}
                 <div className="space-y-2">
                   <label className={labelCls}>{t("auth.fields.password")}</label>
                   <Input name="password" type="password" minLength={6} required className={inputCls} />
                 </div>
-
                 <div className="space-y-2">
                   <label className={labelCls}>{t("auth.fields.confirm_password")}</label>
                   <Input name="confirmPassword" type="password" minLength={6} required className={inputCls} />

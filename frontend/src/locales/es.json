@@ -30,6 +30,10 @@
       "signin": "Iniciar sesión",
       "signup": "Crear cuenta"
     },
+    "roles": {
+      "worker": "Busco trabajo",
+      "employer": "Estoy contratando"
+    },
     "signin": {
       "title": "Bienvenido de nuevo",
       "description": "Inicia sesión para continuar"
