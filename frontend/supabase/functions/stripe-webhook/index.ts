@@ -13,6 +13,7 @@ const supabase = createClient(
 
 // Map price IDs to plan tiers (Production)
 // Includes both current and legacy (promotional) price IDs for backward compatibility
+// Worker plan price mappings
 const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
   // TEST (R$1,00)
   "price_1Suek1KliiuLyRPmSG0MMBGH": "gold",
@@ -42,6 +43,81 @@ const PRICE_TO_PLAN: Record<string, "gold" | "diamond" | "black"> = {
   "price_1Sv6f5KliiuLyRPmoMTWZXyT": "black",
 };
 
+// Employer subscription price mappings
+const PRICE_TO_EMPLOYER_TIER: Record<string, "essential" | "professional" | "enterprise"> = {
+  "price_1T6bxlKliiuLyRPmO9GFlS6r": "essential",
+  "price_1T6bxsKliiuLyRPmgvfvRGIP": "essential",
+  "price_1T6bxmKliiuLyRPmwJR0R7v3": "professional",
+  "price_1T6bxtKliiuLyRPmS25a2n9i": "professional",
+  "price_1T6bxnKliiuLyRPmqVuaZkco": "enterprise",
+  "price_1T6bxuKliiuLyRPmsb45WH0y": "enterprise",
+};
+
+function isEmployerPrice(priceId: string): boolean {
+  return priceId in PRICE_TO_EMPLOYER_TIER;
+}
+
+async function handleEmployerSubscriptionChange(
+  customerId: string,
+  subscriptionId: string,
+  priceId: string | undefined,
+  status: string
+) {
+  const customer = await stripe.customers.retrieve(customerId);
+  if (!customer || (customer as any).deleted) return;
+  const email = (customer as Stripe.Customer).email;
+  if (!email) return;
+
+  // Find user by email
+  const { data: users } = await supabase.auth.admin.listUsers();
+  const user = users?.users?.find((u) => u.email === email);
+  if (!user) {
+    console.log(`[stripe-webhook] No user found for email ${email}`);
+    return;
+  }
+
+  if (status === "active" && priceId && isEmployerPrice(priceId)) {
+    const tier = PRICE_TO_EMPLOYER_TIER[priceId];
+    // Upsert employer profile
+    const { data: existing } = await supabase
+      .from("employer_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from("employer_profiles")
+        .update({
+          tier,
+          status: "active",
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+        })
+        .eq("user_id", user.id);
+    }
+    console.log(`[stripe-webhook] Employer ${user.id} activated/updated to ${tier}`);
+  } else if (["canceled", "unpaid", "past_due", "incomplete_expired"].includes(status)) {
+    // Deactivate employer
+    const { data: employer } = await supabase
+      .from("employer_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (employer) {
+      await supabase
+        .from("employer_profiles")
+        .update({ status: "inactive" })
+        .eq("user_id", user.id);
+
+      // Deactivate sponsored jobs
+      await supabase.rpc("deactivate_employer_jobs", { p_employer_id: employer.id });
+      console.log(`[stripe-webhook] Employer ${user.id} deactivated, jobs set to free`);
+    }
+  }
+}
+
 serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
@@ -52,7 +128,6 @@ serve(async (req) => {
   let event: Stripe.Event;
 
   try {
-    // In Deno (Lovable Cloud Functions runtime), webhook signature verification must be async.
     event = await stripe.webhooks.constructEventAsync(
       body,
       signature,
@@ -66,14 +141,30 @@ serve(async (req) => {
 
   console.log(`[stripe-webhook] Event received: ${event.type}`);
 
+  // Handle employer subscription events
+  if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const priceId = subscription.items.data[0]?.price?.id;
+    const customerId = typeof subscription.customer === "string" ? subscription.customer : (subscription.customer as Stripe.Customer).id;
+    
+    if (priceId && isEmployerPrice(priceId)) {
+      await handleEmployerSubscriptionChange(
+        customerId,
+        subscription.id,
+        priceId,
+        subscription.status
+      );
+      return new Response(JSON.stringify({ received: true }), { status: 200 });
+    }
+  }
+
+  // Existing worker checkout flow
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
 
     console.log(`[stripe-webhook] Processing checkout session: ${session.id}, userId: ${userId}, customer: ${session.customer}`);
 
-    // checkout.session.completed does NOT include line_items by default.
-    // We must retrieve the session with expanded line items.
     let priceId: string | undefined;
     let customerId: string | undefined;
     
@@ -83,8 +174,6 @@ serve(async (req) => {
       });
       priceId = fullSession.line_items?.data?.[0]?.price?.id ?? undefined;
       
-      // customer may be null for guest checkouts (customer_creation: "if_required")
-      // Try to get customer from the session's customer field first
       if (fullSession.customer) {
         customerId = typeof fullSession.customer === "string"
           ? fullSession.customer
@@ -98,37 +187,62 @@ serve(async (req) => {
       return new Response("Failed to retrieve session", { status: 500 });
     }
 
-    // If still no customer, try to find/create one from payment_intent
+    // Check if this is an employer checkout
+    if (priceId && isEmployerPrice(priceId) && userId) {
+      const tier = PRICE_TO_EMPLOYER_TIER[priceId];
+      
+      // Get or create employer profile
+      const { data: existing } = await supabase
+        .from("employer_profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+
+      if (existing) {
+        await supabase
+          .from("employer_profiles")
+          .update({
+            tier,
+            status: "active",
+            stripe_customer_id: customerId || null,
+            stripe_subscription_id: session.subscription ? String(session.subscription) : null,
+          })
+          .eq("user_id", userId);
+      }
+
+      // Ensure employer role
+      await supabase.from("user_roles").upsert(
+        { user_id: userId, role: "employer" },
+        { onConflict: "user_id,role" }
+      );
+
+      console.log(`[stripe-webhook] Employer ${userId} checkout completed, tier: ${tier}`);
+      return new Response(JSON.stringify({ received: true }), { status: 200 });
+    }
+
+    // Worker flow continues...
     if (!customerId && session.payment_intent) {
       try {
         const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string);
         if (pi.customer) {
           customerId = typeof pi.customer === "string" ? pi.customer : (pi.customer as Stripe.Customer).id;
-          console.log(`[stripe-webhook] Got customerId from payment_intent: ${customerId}`);
         }
       } catch (e) {
         console.warn(`[stripe-webhook] Could not retrieve payment_intent customer: ${e}`);
       }
     }
 
-    // If still no customer, try to find by email (guest checkout scenario)
     if (!customerId && session.customer_details?.email) {
       try {
-        const customers = await stripe.customers.list({
-          email: session.customer_details.email,
-          limit: 1,
-        });
+        const customers = await stripe.customers.list({ email: session.customer_details.email, limit: 1 });
         if (customers.data.length > 0) {
           customerId = customers.data[0].id;
-          console.log(`[stripe-webhook] Found customer by email: ${customerId}`);
         } else {
-          // Create a customer for this guest so future purchases are linked
           const newCustomer = await stripe.customers.create({
             email: session.customer_details.email,
             name: session.customer_details.name ?? undefined,
           });
           customerId = newCustomer.id;
-          console.log(`[stripe-webhook] Created new customer for guest: ${customerId}`);
         }
       } catch (e) {
         console.warn(`[stripe-webhook] Could not find/create customer by email: ${e}`);
@@ -136,11 +250,7 @@ serve(async (req) => {
     }
 
     if (!userId || !priceId) {
-      console.error("Missing user_id or priceId in session metadata/line_items", {
-        userId,
-        priceId,
-        metadata: session.metadata,
-      });
+      console.error("Missing user_id or priceId", { userId, priceId });
       return new Response("Missing data", { status: 400 });
     }
 
@@ -151,21 +261,15 @@ serve(async (req) => {
     }
 
     const updateData: Record<string, string> = { plan_tier: planTier };
-    if (customerId) {
-      updateData.stripe_customer_id = customerId;
-    }
+    if (customerId) updateData.stripe_customer_id = customerId;
 
-    const { error } = await supabase
-      .from("profiles")
-      .update(updateData)
-      .eq("id", userId);
-
+    const { error } = await supabase.from("profiles").update(updateData).eq("id", userId);
     if (error) {
       console.error("Failed to update profile:", error);
       return new Response("Database error", { status: 500 });
     }
 
-    console.log(`[stripe-webhook] User ${userId} upgraded to ${planTier} (customer: ${customerId ?? "none"})`);
+    console.log(`[stripe-webhook] User ${userId} upgraded to ${planTier}`);
   }
 
   return new Response(JSON.stringify({ received: true }), { status: 200 });
