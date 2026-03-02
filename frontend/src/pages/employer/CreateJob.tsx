@@ -9,9 +9,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Search, Lock, Briefcase, DollarSign, Filter, Save, AlertTriangle } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Search,
+  Lock,
+  Briefcase,
+  DollarSign,
+  Filter,
+  Save,
+  AlertTriangle,
+  Pencil,
+} from "lucide-react";
 
-// Navegação Lateral com todos os passos originais integrados
 const FORM_SECTIONS = [
   { id: "dol-lookup", label: "1. DOL Lookup", icon: Search },
   { id: "job-info", label: "2. Job Info", icon: Briefcase },
@@ -30,7 +40,9 @@ export default function CreateJob() {
   const [dolCaseNumber, setDolCaseNumber] = useState("");
   const [dolDataFetched, setDolDataFetched] = useState(false);
 
-  // Estado unificado com os campos extras (Compensation, Benefits, etc)
+  // Armazena os dados exatos que vieram da API para saber o que travar
+  const [dolOriginalData, setDolOriginalData] = useState<Record<string, any>>({});
+
   const [form, setForm] = useState({
     title: "",
     visa_type: "H-2B (Non-Agricultural)",
@@ -58,7 +70,14 @@ export default function CreateJob() {
     }
   };
 
-  // Simulação de busca no DOL (Aqui você conectará sua API real)
+  // Lógica inteligente: Verifica se o campo veio preenchido do DOL
+  const isFieldLocked = (fieldName: keyof typeof form) => {
+    if (!dolDataFetched) return true; // Trava tudo antes da busca
+    const originalValue = dolOriginalData[fieldName];
+    // Se o valor original existir e não for vazio, o campo fica trancado
+    return originalValue !== undefined && originalValue !== null && originalValue !== "";
+  };
+
   const handleDolLookup = async () => {
     if (!dolCaseNumber) {
       toast({
@@ -70,39 +89,36 @@ export default function CreateJob() {
     }
 
     setIsFetchingDol(true);
-    // Simula delay de rede
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Preenche com dados mockados (Substitua pela resposta da sua API)
-    setForm((p) => ({
-      ...p,
+    // Dados simulados da API do DOL
+    // Repare que deixamos 'positions', 'benefits' e 'deductions' vazios para testar a edição
+    const fetchedData = {
       title: "Landscape Laborer",
+      visa_type: "H-2B (Non-Agricultural)",
       employer_name: "Roebuck Wholesale Nursery & Landscaping, LLC",
       location_city: "Roebuck",
       location_state: "SC",
       start_date: "2026-04-01",
       end_date: "2026-11-15",
-      positions: "27",
+      positions: "",
       wage_rate: "$16.50 / hour",
-    }));
+      benefits: "",
+      deductions: "",
+    };
 
+    setDolOriginalData(fetchedData);
+    setForm((p) => ({ ...p, ...fetchedData }));
     setDolDataFetched(true);
     setIsFetchingDol(false);
-    toast({ title: "DOL Data Retrieved", description: "Job information successfully imported." });
+    toast({ title: "DOL Data Retrieved", description: "Job information imported. Please fill any missing details." });
     scrollToSection("job-info");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employerProfile) return;
-    if (!dolDataFetched) {
-      toast({
-        title: "Missing DOL Data",
-        description: "Please look up a DOL Case Number first.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!dolDataFetched) return;
 
     setLoading(true);
 
@@ -119,7 +135,7 @@ export default function CreateJob() {
     const { error } = await supabase.from("sponsored_jobs").insert({
       employer_id: employerProfile.id,
       title: form.title.trim(),
-      description: form.benefits.trim() || null, // Você pode juntar tudo num campo description se preferir
+      description: form.benefits.trim() || null,
       location: `${form.location_city}, ${form.location_state}`,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
@@ -128,9 +144,6 @@ export default function CreateJob() {
       req_drivers_license: form.req_drivers_license,
       consular_only: form.consular_only,
       priority_level: employerProfile.tier,
-      // Se tiver criado as colunas extras no Supabase, adicione-as aqui:
-      // wage_rate: form.wage_rate,
-      // positions_count: parseInt(form.positions) || null
     });
 
     if (error) {
@@ -144,7 +157,7 @@ export default function CreateJob() {
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4 space-y-8">
-      {/* Cabeçalho Superior */}
+      {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <Button variant="ghost" size="sm" onClick={() => navigate("/employer/jobs")} className="-ml-3 text-slate-500">
@@ -170,7 +183,7 @@ export default function CreateJob() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
-        {/* 🧭 NAVEGAÇÃO LATERAL (Sticky Sidebar) */}
+        {/* NAVEGAÇÃO LATERAL */}
         <div className="hidden md:block col-span-1 sticky top-24 space-y-2">
           <h3 className="text-sm font-semibold text-slate-900 mb-4 px-2">Steps</h3>
           {FORM_SECTIONS.map((section) => {
@@ -193,7 +206,7 @@ export default function CreateJob() {
           })}
         </div>
 
-        {/* 📄 CONTEÚDO DO FORMULÁRIO */}
+        {/* CONTEÚDO DO FORMULÁRIO */}
         <div className="col-span-1 md:col-span-3 space-y-10 pb-24">
           {/* SECÃO 1: DOL Lookup */}
           <Card id="dol-lookup" className="border-slate-200 shadow-sm scroll-mt-24">
@@ -231,83 +244,64 @@ export default function CreateJob() {
             </CardContent>
           </Card>
 
-          {/* SECÃO 2: Job Info (Locked Data) */}
+          {/* SECÃO 2: Job Info */}
           <Card
             id="job-info"
             className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity duration-300 ${!dolDataFetched ? "opacity-50 pointer-events-none" : ""}`}
           >
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-xl">2. Job Info</CardTitle>
-              <CardDescription>Basic details imported from the Department of Labor.</CardDescription>
+              <CardDescription>Review imported details. Fill in any missing information.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-sm leading-relaxed">
-                  <strong>Regulatory Compliance:</strong> Fields below are locked and sourced directly from the official
-                  DOL job order.
+                  <strong>Regulatory Compliance:</strong> Fields marked with a lock (
+                  <Lock className="w-3 h-3 inline mx-1" />) are sourced directly from the official DOL job order and
+                  cannot be edited. You may manually fill in any missing data (
+                  <Pencil className="w-3 h-3 inline mx-1" />
+                  ).
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2 col-span-1 md:col-span-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    Job Title <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input
-                    disabled
-                    value={form.title}
-                    placeholder="Pending DOL Import..."
-                    className="bg-slate-50/80 cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    Visa Type <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input disabled value={form.visa_type} className="bg-slate-50/80 cursor-not-allowed" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    Employer Legal Name <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input
-                    disabled
-                    value={form.employer_name}
-                    placeholder="Pending DOL Import..."
-                    className="bg-slate-50/80 cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    City <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input disabled value={form.location_city} className="bg-slate-50/80 cursor-not-allowed" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    State <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input disabled value={form.location_state} className="bg-slate-50/80 cursor-not-allowed" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    Start Date <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input type="date" disabled value={form.start_date} className="bg-slate-50/80 cursor-not-allowed" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    End Date <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input type="date" disabled value={form.end_date} className="bg-slate-50/80 cursor-not-allowed" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
-                    Number of Positions <Lock className="w-3 h-3 text-slate-400" />
-                  </Label>
-                  <Input disabled value={form.positions} className="bg-slate-50/80 cursor-not-allowed" />
-                </div>
+                {[
+                  { key: "title" as const, label: "Job Title", type: "text", cols: 2 },
+                  { key: "visa_type" as const, label: "Visa Type", type: "text", cols: 1 },
+                  { key: "employer_name" as const, label: "Employer Legal Name", type: "text", cols: 1 },
+                  { key: "location_city" as const, label: "City", type: "text", cols: 1 },
+                  { key: "location_state" as const, label: "State", type: "text", cols: 1 },
+                  { key: "start_date" as const, label: "Start Date", type: "date", cols: 1 },
+                  { key: "end_date" as const, label: "End Date", type: "date", cols: 1 },
+                  { key: "positions" as const, label: "Number of Positions", type: "number", cols: 1 },
+                ].map((field) => {
+                  const locked = isFieldLocked(field.key);
+                  return (
+                    <div key={field.key} className={`space-y-2 ${field.cols === 2 ? "col-span-1 md:col-span-2" : ""}`}>
+                      <Label className="flex items-center gap-2 text-slate-700">
+                        {field.label}{" "}
+                        {locked ? (
+                          <Lock className="w-3 h-3 text-slate-400" />
+                        ) : (
+                          <Pencil className="w-3 h-3 text-blue-500" />
+                        )}
+                      </Label>
+                      <Input
+                        type={field.type}
+                        disabled={locked}
+                        value={form[field.key]}
+                        onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                        placeholder={locked ? "Pending DOL Import..." : "Enter manually..."}
+                        className={
+                          locked
+                            ? "bg-slate-50/80 cursor-not-allowed text-slate-500"
+                            : "bg-white border-blue-200 focus:border-blue-500"
+                        }
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -323,32 +317,74 @@ export default function CreateJob() {
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-2 md:w-1/2">
-                <Label className="text-slate-700">Wage Rate</Label>
+                <Label className="flex items-center gap-2 text-slate-700">
+                  Wage Rate{" "}
+                  {isFieldLocked("wage_rate") ? (
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  ) : (
+                    <Pencil className="w-3 h-3 text-blue-500" />
+                  )}
+                </Label>
                 <Input
+                  disabled={isFieldLocked("wage_rate")}
                   value={form.wage_rate}
                   onChange={(e) => setForm((p) => ({ ...p, wage_rate: e.target.value }))}
-                  placeholder="e.g. $16.50 / hour"
-                  className="bg-white border-slate-300"
+                  placeholder={isFieldLocked("wage_rate") ? "" : "e.g. $16.50 / hour"}
+                  className={
+                    isFieldLocked("wage_rate")
+                      ? "bg-slate-50/80 cursor-not-allowed text-slate-500"
+                      : "bg-white border-blue-200"
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700">Benefits & Housing</Label>
+                <Label className="flex items-center gap-2 text-slate-700">
+                  Benefits & Housing{" "}
+                  {isFieldLocked("benefits") ? (
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  ) : (
+                    <Pencil className="w-3 h-3 text-blue-500" />
+                  )}
+                </Label>
                 <Textarea
+                  disabled={isFieldLocked("benefits")}
                   value={form.benefits}
                   onChange={(e) => setForm((p) => ({ ...p, benefits: e.target.value }))}
-                  placeholder="Describe housing arrangements, transportation, and other benefits..."
+                  placeholder={
+                    isFieldLocked("benefits")
+                      ? ""
+                      : "Describe housing arrangements, transportation, and other benefits..."
+                  }
                   rows={3}
-                  className="bg-white border-slate-300 resize-y"
+                  className={
+                    isFieldLocked("benefits")
+                      ? "bg-slate-50/80 cursor-not-allowed text-slate-500 resize-none"
+                      : "bg-white border-blue-200 resize-y"
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700">Deductions</Label>
+                <Label className="flex items-center gap-2 text-slate-700">
+                  Deductions{" "}
+                  {isFieldLocked("deductions") ? (
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  ) : (
+                    <Pencil className="w-3 h-3 text-blue-500" />
+                  )}
+                </Label>
                 <Textarea
+                  disabled={isFieldLocked("deductions")}
                   value={form.deductions}
                   onChange={(e) => setForm((p) => ({ ...p, deductions: e.target.value }))}
-                  placeholder="Specify any payroll deductions (taxes, housing, etc.)..."
+                  placeholder={
+                    isFieldLocked("deductions") ? "" : "Specify any payroll deductions (taxes, housing, etc.)..."
+                  }
                   rows={2}
-                  className="bg-white border-slate-300 resize-y"
+                  className={
+                    isFieldLocked("deductions")
+                      ? "bg-slate-50/80 cursor-not-allowed text-slate-500 resize-none"
+                      : "bg-white border-blue-200 resize-y"
+                  }
                 />
               </div>
             </CardContent>
