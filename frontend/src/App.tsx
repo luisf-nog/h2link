@@ -26,6 +26,12 @@ import SharedJobView from "./pages/SharedJobView";
 import ResumeConverter from "./pages/ResumeConverter";
 import Radar from "./pages/Radar";
 import Landing from "./pages/Landing";
+import ApplyJob from "./pages/ApplyJob";
+import EmployerDashboard from "./pages/employer/EmployerDashboard";
+import EmployerPlans from "./pages/employer/EmployerPlans";
+import EmployerJobs from "./pages/employer/EmployerJobs";
+import CreateJob from "./pages/employer/CreateJob";
+import JobApplicants from "./pages/employer/JobApplicants";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +64,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     console.log("DEBUG: Onboarding pendente. Redirecionando...");
     return <Navigate to="/onboarding" replace />;
   }
+
+  return <AppLayout>{children}</AppLayout>;
+}
+
+// --- EMPLOYER ROUTE ---
+function EmployerRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/auth" replace />;
 
   return <AppLayout>{children}</AppLayout>;
 }
@@ -155,6 +179,7 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<Landing />} />
     <Route path="/job/:jobId" element={<SharedJobView />} />
+    <Route path="/apply/:jobId" element={<ApplyJob />} />
     <Route path="/v/:token" element={<PublicProfile />} />
 
     {/* ONBOARDING FLOW */}
@@ -274,6 +299,13 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+
+    {/* EMPLOYER ROUTES */}
+    <Route path="/employer/dashboard" element={<EmployerRoute><EmployerDashboard /></EmployerRoute>} />
+    <Route path="/employer/plans" element={<EmployerRoute><EmployerPlans /></EmployerRoute>} />
+    <Route path="/employer/jobs" element={<EmployerRoute><EmployerJobs /></EmployerRoute>} />
+    <Route path="/employer/jobs/new" element={<EmployerRoute><CreateJob /></EmployerRoute>} />
+    <Route path="/employer/jobs/:jobId/applicants" element={<EmployerRoute><JobApplicants /></EmployerRoute>} />
 
     <Route path="*" element={<NotFound />} />
   </Routes>
