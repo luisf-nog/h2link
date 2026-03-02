@@ -161,6 +161,47 @@ export type Database = {
         }
         Relationships: []
       }
+      application_audit_log: {
+        Row: {
+          application_id: string
+          changed_by_user_id: string
+          created_at: string
+          id: string
+          new_status: string
+          notes: string | null
+          previous_status: string
+          rejection_reason: string | null
+        }
+        Insert: {
+          application_id: string
+          changed_by_user_id: string
+          created_at?: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          previous_status: string
+          rejection_reason?: string | null
+        }
+        Update: {
+          application_id?: string
+          changed_by_user_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          previous_status?: string
+          rejection_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_audit_log_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -209,6 +250,44 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "sponsored_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_experience: {
+        Row: {
+          application_id: string
+          company_name: string
+          created_at: string
+          duration_months: number
+          id: string
+          job_title: string
+          tasks_description: string | null
+        }
+        Insert: {
+          application_id: string
+          company_name: string
+          created_at?: string
+          duration_months?: number
+          id?: string
+          job_title: string
+          tasks_description?: string | null
+        }
+        Update: {
+          application_id?: string
+          company_name?: string
+          created_at?: string
+          duration_months?: number
+          id?: string
+          job_title?: string
+          tasks_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_experience_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
             referencedColumns: ["id"]
           },
         ]
@@ -395,52 +474,79 @@ export type Database = {
       }
       job_applications: {
         Row: {
+          application_match_score: number | null
+          application_status: string
           citizenship_status: string
           created_at: string
+          drivers_license_type: string
           email: string
           employer_status: string
+          english_level: string
           full_name: string
+          h2b_visa_count: number
           has_english: boolean
           has_experience: boolean
           has_license: boolean
           id: string
           is_in_us: boolean
+          is_us_worker: boolean
           job_id: string
+          match_status: string | null
+          months_experience: number
           phone: string | null
           rejection_reason: string | null
           score_color: string | null
+          work_authorization_status: string
         }
         Insert: {
+          application_match_score?: number | null
+          application_status?: string
           citizenship_status?: string
           created_at?: string
+          drivers_license_type?: string
           email: string
           employer_status?: string
+          english_level?: string
           full_name: string
+          h2b_visa_count?: number
           has_english?: boolean
           has_experience?: boolean
           has_license?: boolean
           id?: string
           is_in_us?: boolean
+          is_us_worker?: boolean
           job_id: string
+          match_status?: string | null
+          months_experience?: number
           phone?: string | null
           rejection_reason?: string | null
           score_color?: string | null
+          work_authorization_status?: string
         }
         Update: {
+          application_match_score?: number | null
+          application_status?: string
           citizenship_status?: string
           created_at?: string
+          drivers_license_type?: string
           email?: string
           employer_status?: string
+          english_level?: string
           full_name?: string
+          h2b_visa_count?: number
           has_english?: boolean
           has_experience?: boolean
           has_license?: boolean
           id?: string
           is_in_us?: boolean
+          is_us_worker?: boolean
           job_id?: string
+          match_status?: string | null
+          months_experience?: number
           phone?: string | null
           rejection_reason?: string | null
           score_color?: string | null
+          work_authorization_status?: string
         }
         Relationships: [
           {
@@ -1785,6 +1891,21 @@ export type Database = {
           p_req_experience: boolean
         }
         Returns: string
+      }
+      compute_match_score: {
+        Args: {
+          p_consular_only: boolean
+          p_drivers_license_type: string
+          p_english_level: string
+          p_h2b_visa_count: number
+          p_is_us_worker: boolean
+          p_months_experience: number
+          p_req_drivers_license: boolean
+          p_req_english: boolean
+          p_req_experience: boolean
+          p_work_authorization_status: string
+        }
+        Returns: Json
       }
       deactivate_all_jobs: { Args: never; Returns: undefined }
       deactivate_employer_jobs: {
