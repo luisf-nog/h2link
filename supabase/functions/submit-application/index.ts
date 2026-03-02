@@ -20,14 +20,15 @@ serve(async (req) => {
     const body = await req.json();
     const {
       job_id, full_name, email, phone,
+      work_authorization_status, is_us_worker, months_experience,
+      english_level, drivers_license_type, h2b_visa_count,
       has_english, has_experience, has_license, is_in_us,
-      citizenship_status, honeypot,
+      citizenship_status, experiences, honeypot,
     } = body;
 
     // Anti-spam: honeypot check
     if (honeypot) {
       console.log("[submit-application] Honeypot triggered");
-      // Return success to not reveal detection
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -53,10 +54,9 @@ serve(async (req) => {
       });
     }
 
-    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Get job screening toggles for scoring
+    // Get job screening toggles
     const { data: job, error: jobError } = await supabase
       .from("sponsored_jobs")
       .select("req_english, req_experience, req_drivers_license, consular_only, is_active")
@@ -66,8 +66,25 @@ serve(async (req) => {
     if (jobError || !job) throw new Error("Job not found");
     if (!job.is_active) throw new Error("Job is no longer active");
 
-    // Compute score server-side
-    const { data: scoreResult } = await supabase.rpc("compute_application_score", {
+    // Compute match score using the new function
+    const { data: matchResult } = await supabase.rpc("compute_match_score", {
+      p_months_experience: months_experience ?? 0,
+      p_english_level: english_level ?? "none",
+      p_drivers_license_type: drivers_license_type ?? "none",
+      p_h2b_visa_count: h2b_visa_count ?? 0,
+      p_work_authorization_status: work_authorization_status ?? "outside_us",
+      p_is_us_worker: is_us_worker ?? false,
+      p_req_english: job.req_english,
+      p_req_experience: job.req_experience,
+      p_req_drivers_license: job.req_drivers_license,
+      p_consular_only: job.consular_only,
+    });
+
+    const matchScore = matchResult?.score ?? 0;
+    const matchStatus = matchResult?.status ?? "yellow";
+
+    // Legacy score_color compat
+    const { data: legacyScore } = await supabase.rpc("compute_application_score", {
       p_has_english: has_english ?? false,
       p_has_experience: has_experience ?? false,
       p_has_license: has_license ?? false,
@@ -78,10 +95,10 @@ serve(async (req) => {
       p_consular_only: job.consular_only,
     });
 
-    const score_color = scoreResult || "yellow";
+    const score_color = legacyScore || "yellow";
 
     // Insert application
-    const { error: insertError } = await supabase
+    const { data: insertedApp, error: insertError } = await supabase
       .from("job_applications")
       .insert({
         job_id,
@@ -94,7 +111,18 @@ serve(async (req) => {
         is_in_us: is_in_us ?? false,
         citizenship_status: citizenship_status || "other",
         score_color,
-      });
+        work_authorization_status: work_authorization_status ?? "outside_us",
+        is_us_worker: is_us_worker ?? false,
+        months_experience: months_experience ?? 0,
+        english_level: english_level ?? "none",
+        drivers_license_type: drivers_license_type ?? "none",
+        h2b_visa_count: h2b_visa_count ?? 0,
+        application_match_score: matchScore,
+        match_status: matchStatus,
+        application_status: "received",
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       if (insertError.code === "23505") {
@@ -106,7 +134,24 @@ serve(async (req) => {
       throw insertError;
     }
 
-    console.log(`[submit-application] Application submitted for job ${job_id} by ${normalizedEmail}, score: ${score_color}`);
+    // Insert work experiences
+    if (insertedApp && experiences && Array.isArray(experiences) && experiences.length > 0) {
+      const expRows = experiences
+        .filter((e: { company_name?: string }) => e.company_name?.trim())
+        .map((e: { company_name: string; job_title: string; duration_months?: number; tasks_description?: string }) => ({
+          application_id: insertedApp.id,
+          company_name: e.company_name.trim(),
+          job_title: e.job_title?.trim() || "N/A",
+          duration_months: e.duration_months ?? 0,
+          tasks_description: e.tasks_description?.trim() || null,
+        }));
+
+      if (expRows.length > 0) {
+        await supabase.from("candidate_experience").insert(expRows);
+      }
+    }
+
+    console.log(`[submit-application] Application submitted for job ${job_id} by ${normalizedEmail}, score: ${matchScore}%, status: ${matchStatus}`);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
