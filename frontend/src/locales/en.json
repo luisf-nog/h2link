@@ -30,6 +30,10 @@
       "signin": "Sign in",
       "signup": "Create account"
     },
+    "roles": {
+      "worker": "I'm looking for work",
+      "employer": "I'm hiring"
+    },
     "signin": {
       "title": "Welcome back",
       "description": "Sign in to continue"

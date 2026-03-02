@@ -246,45 +246,75 @@ export type Database = {
       employer_profiles: {
         Row: {
           company_name: string
+          company_size: string | null
           contact_email: string | null
           contact_phone: string | null
+          country: string | null
           created_at: string
+          ein_tax_id: string | null
+          estimated_monthly_volume: string | null
           id: string
+          industry: string | null
           is_verified: boolean
+          legal_entity_name: string | null
+          primary_hiring_location: string | null
+          state: string | null
           status: Database["public"]["Enums"]["employer_status"]
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           tier: Database["public"]["Enums"]["employer_tier"]
           updated_at: string
           user_id: string
+          website: string | null
+          worker_types: string[] | null
         }
         Insert: {
           company_name: string
+          company_size?: string | null
           contact_email?: string | null
           contact_phone?: string | null
+          country?: string | null
           created_at?: string
+          ein_tax_id?: string | null
+          estimated_monthly_volume?: string | null
           id?: string
+          industry?: string | null
           is_verified?: boolean
+          legal_entity_name?: string | null
+          primary_hiring_location?: string | null
+          state?: string | null
           status?: Database["public"]["Enums"]["employer_status"]
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           tier?: Database["public"]["Enums"]["employer_tier"]
           updated_at?: string
           user_id: string
+          website?: string | null
+          worker_types?: string[] | null
         }
         Update: {
           company_name?: string
+          company_size?: string | null
           contact_email?: string | null
           contact_phone?: string | null
+          country?: string | null
           created_at?: string
+          ein_tax_id?: string | null
+          estimated_monthly_volume?: string | null
           id?: string
+          industry?: string | null
           is_verified?: boolean
+          legal_entity_name?: string | null
+          primary_hiring_location?: string | null
+          state?: string | null
           status?: Database["public"]["Enums"]["employer_status"]
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           tier?: Database["public"]["Enums"]["employer_tier"]
           updated_at?: string
           user_id?: string
+          website?: string | null
+          worker_types?: string[] | null
         }
         Relationships: []
       }
