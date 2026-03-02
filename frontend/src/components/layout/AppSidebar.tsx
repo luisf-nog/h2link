@@ -16,10 +16,12 @@ import {
   Upload,
   FileText,
   Radar,
+  Briefcase,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsEmployer } from "@/hooks/useIsEmployer";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -47,6 +49,7 @@ export function AppSidebar() {
   const { state, setOpen, setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
   const { isAdmin } = useIsAdmin();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -57,26 +60,40 @@ export function AppSidebar() {
   // Lógica de tradução para o status "Em breve"
   const soonLabel = i18n.language.startsWith("pt") ? "Em breve" : "Soon";
 
-  const menuItems = [
+  type MenuItem = {
+    title: string;
+    url: string;
+    icon: typeof LayoutDashboard;
+    comingSoon?: boolean;
+    needsAttention?: boolean;
+  };
+
+  // --- EMPLOYER MENU ---
+  const employerMenuItems: MenuItem[] = [
+    { title: "Dashboard", url: "/employer/dashboard", icon: LayoutDashboard },
+    { title: t("nav.jobs"), url: "/employer/jobs", icon: Briefcase },
+    { title: t("nav.plans"), url: "/employer/plans", icon: Diamond },
+    { title: t("nav.settings"), url: "/settings", icon: Settings },
+  ];
+
+  // --- WORKER MENU ---
+  const workerMenuItems: MenuItem[] = [
     { title: t("nav.dashboard"), url: "/dashboard", icon: LayoutDashboard },
     { title: t("nav.jobs"), url: "/jobs", icon: Search },
     { title: t("nav.queue"), url: "/queue", icon: ListTodo },
     ...(isFreeUser ? [{ title: t("nav.referrals"), url: "/referrals", icon: Users }] : []),
-
-    // ITEM RADAR: Agora visível para todos, mas com trava e badge de "Em breve"
     {
       title: "Radar",
       url: "/radar",
       icon: Radar,
       comingSoon: true,
     },
-
     { title: t("nav.plans"), url: "/plans", icon: Diamond },
-
-    // ITEM: H2 Resume
     { title: "H2 Resume", url: "/resume-converter", icon: FileText },
     { title: t("nav.settings"), url: "/settings", icon: Settings, needsAttention: needsSmtpSetup },
   ];
+
+  const menuItems: MenuItem[] = isEmployer ? employerMenuItems : workerMenuItems;
 
   const adminMenuItems = [
     { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
@@ -260,8 +277,8 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* Setup Checklist */}
-      <SetupChecklist />
+      {/* Setup Checklist - only for workers */}
+      {!isEmployer && <SetupChecklist />}
 
       <SidebarFooter className="p-4 border-t border-sidebar-border/50">
         <div className="flex flex-col gap-3">
