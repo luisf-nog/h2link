@@ -59,14 +59,14 @@ export default function CreateJob() {
     english_proficiency: "none",
     min_experience_months: "0",
     drivers_license: "not_required",
-    equipment_experience: "", // Ex: Tratores, ferramentas pesadas
+    equipment_experience: "",
 
-    // Physical & Operational Toggles
-    req_lift_50lbs: false,
+    // Physical & Operational
+    req_lift_lbs: "", // 🔴 Agora é variável (ex: 50, 75, 100)
     req_extreme_weather: false,
-    req_full_contract_availability: false, // Must not leave early
-    req_travel_worksite: false, // Travel between sites / relocate
-    req_background_check: false, // Consentimento
+    req_full_contract_availability: false,
+    req_travel_worksite: false,
+    req_background_check: false,
   });
 
   const scrollToSection = (id: string) => {
@@ -145,12 +145,15 @@ export default function CreateJob() {
       end_date: form.end_date || null,
       priority_level: employerProfile.tier,
 
-      // Scoring Fields inseridos no banco
+      // Inserindo os Scoring Fields
       english_proficiency: form.english_proficiency,
       min_experience_months: parseInt(form.min_experience_months),
       drivers_license: form.drivers_license,
       equipment_experience: form.equipment_experience.trim() || null,
-      req_lift_50lbs: form.req_lift_50lbs,
+
+      // 🔴 Salvando o peso variável no banco
+      req_lift_lbs: form.req_lift_lbs ? parseInt(form.req_lift_lbs) : null,
+
       req_extreme_weather: form.req_extreme_weather,
       req_full_contract_availability: form.req_full_contract_availability,
       req_travel_worksite: form.req_travel_worksite,
@@ -474,12 +477,35 @@ export default function CreateJob() {
               <div className="pt-6 border-t border-slate-100 space-y-4">
                 <Label className="text-slate-800 text-base">Physical & Operational Requirements</Label>
                 <div className="grid grid-cols-1 gap-3">
+                  {/* 🔴 LIFTING REQUIREMENT (Variável e Inteligente) */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors gap-4">
+                    <div className="space-y-1 pr-4">
+                      <Label className="text-base font-medium text-slate-800" htmlFor="lift">
+                        Lifting Requirement (lbs)
+                      </Label>
+                      <p className="text-sm text-slate-500">
+                        Specify the maximum weight required to lift (leave blank if none).
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Input
+                        id="lift"
+                        type="number"
+                        placeholder="e.g. 50"
+                        value={form.req_lift_lbs}
+                        onChange={(e) => setForm((p) => ({ ...p, req_lift_lbs: e.target.value }))}
+                        className="w-24 bg-white"
+                      />
+                      <span className="text-sm text-slate-500 font-medium w-32">
+                        {form.req_lift_lbs
+                          ? `(approx. ${Math.round(parseInt(form.req_lift_lbs) * 0.453592)} kg)`
+                          : "lbs"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Restante dos Toggles */}
                   {[
-                    {
-                      key: "req_lift_50lbs" as const,
-                      title: "Lifting Requirement",
-                      desc: "Must be able to frequently lift and carry up to 50 lbs.",
-                    },
                     {
                       key: "req_extreme_weather" as const,
                       title: "Outdoor Work Tolerance",
