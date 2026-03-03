@@ -42,7 +42,6 @@ export default function CreateJob() {
   const [dolDataFetched, setDolDataFetched] = useState(false);
   const [dolOriginalData, setDolOriginalData] = useState<Record<string, any>>({});
 
-  // 🔴 ESTADO ATUALIZADO: Fim dos booleanos genéricos, entrada de valores estruturados
   const [form, setForm] = useState({
     title: "",
     visa_type: "H-2B (Non-Agricultural)",
@@ -55,11 +54,19 @@ export default function CreateJob() {
     wage_rate: "",
     benefits: "",
     deductions: "",
-    english_proficiency: "none", // none, basic, intermediate, advanced
-    min_experience_months: "0", // 0, 3, 6, 12
-    drivers_license: "not_required", // required, preferred, not_required
-    req_lift_50lbs: false, // Seguro e comum
-    req_extreme_weather: false, // Seguro e comum
+
+    // Scoring & Requirements
+    english_proficiency: "none",
+    min_experience_months: "0",
+    drivers_license: "not_required",
+    equipment_experience: "", // Ex: Tratores, ferramentas pesadas
+
+    // Physical & Operational Toggles
+    req_lift_50lbs: false,
+    req_extreme_weather: false,
+    req_full_contract_availability: false, // Must not leave early
+    req_travel_worksite: false, // Travel between sites / relocate
+    req_background_check: false, // Consentimento
   });
 
   const scrollToSection = (id: string) => {
@@ -137,12 +144,17 @@ export default function CreateJob() {
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       priority_level: employerProfile.tier,
-      // 🔴 NOVOS CAMPOS NO BANCO:
+
+      // Scoring Fields inseridos no banco
       english_proficiency: form.english_proficiency,
       min_experience_months: parseInt(form.min_experience_months),
       drivers_license: form.drivers_license,
+      equipment_experience: form.equipment_experience.trim() || null,
       req_lift_50lbs: form.req_lift_50lbs,
       req_extreme_weather: form.req_extreme_weather,
+      req_full_contract_availability: form.req_full_contract_availability,
+      req_travel_worksite: form.req_travel_worksite,
+      req_background_check: form.req_background_check,
     });
 
     if (error) {
@@ -156,7 +168,6 @@ export default function CreateJob() {
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4 space-y-8">
-      {/* CABEÇALHO MANTIDO */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <Button variant="ghost" size="sm" onClick={() => navigate("/employer/jobs")} className="-ml-3 text-slate-500">
@@ -182,7 +193,7 @@ export default function CreateJob() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
-        {/* NAVEGAÇÃO LATERAL MANTIDA */}
+        {/* NAVEGAÇÃO LATERAL */}
         <div className="hidden md:block col-span-1 sticky top-24 space-y-2">
           <h3 className="text-sm font-semibold text-slate-900 mb-4 px-2">Steps</h3>
           {FORM_SECTIONS.map((section) => {
@@ -207,7 +218,6 @@ export default function CreateJob() {
 
         {/* CONTEÚDO DO FORMULÁRIO */}
         <div className="col-span-1 md:col-span-3 space-y-10 pb-24">
-          {/* SECÃO 1, 2 e 3 MANTIDAS IGUAIS... */}
           {/* SECÃO 1: DOL Lookup */}
           <Card id="dol-lookup" className="border-slate-200 shadow-sm scroll-mt-24">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
@@ -297,14 +307,24 @@ export default function CreateJob() {
               <CardTitle className="text-xl">3. Pay & Benefits</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              {/* Inputs simplificados para focar na Secao 4 na leitura */}
               <div className="space-y-2 md:w-1/2">
-                <Label>Wage Rate</Label>
+                <Label>
+                  Wage Rate{" "}
+                  {isFieldLocked("wage_rate") ? (
+                    <Lock className="w-3 h-3 text-slate-400 inline" />
+                  ) : (
+                    <Pencil className="w-3 h-3 text-blue-500 inline" />
+                  )}
+                </Label>
                 <Input
                   disabled={isFieldLocked("wage_rate")}
                   value={form.wage_rate}
                   onChange={(e) => setForm((p) => ({ ...p, wage_rate: e.target.value }))}
-                  className="bg-slate-50/80"
+                  className={
+                    isFieldLocked("wage_rate")
+                      ? "bg-slate-50/80 text-slate-500 cursor-not-allowed"
+                      : "bg-white border-blue-200 focus:border-blue-500"
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -320,13 +340,39 @@ export default function CreateJob() {
                   disabled={isFieldLocked("benefits")}
                   value={form.benefits}
                   onChange={(e) => setForm((p) => ({ ...p, benefits: e.target.value }))}
-                  className="bg-white"
+                  className={
+                    isFieldLocked("benefits")
+                      ? "bg-slate-50/80 text-slate-500 cursor-not-allowed resize-none"
+                      : "bg-white border-blue-200 focus:border-blue-500 resize-y"
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  Deductions{" "}
+                  {isFieldLocked("deductions") ? (
+                    <Lock className="w-3 h-3 text-slate-400 inline" />
+                  ) : (
+                    <Pencil className="w-3 h-3 text-blue-500 inline" />
+                  )}
+                </Label>
+                <Textarea
+                  disabled={isFieldLocked("deductions")}
+                  value={form.deductions}
+                  onChange={(e) => setForm((p) => ({ ...p, deductions: e.target.value }))}
+                  className={
+                    isFieldLocked("deductions")
+                      ? "bg-slate-50/80 text-slate-500 cursor-not-allowed resize-none"
+                      : "bg-white border-blue-200 focus:border-blue-500 resize-y"
+                  }
+                  rows={2}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* 🔴 SECÃO 4 TOTALMENTE REFEITA: Minimum Job Requirements */}
+          {/* SECÃO 4: Minimum Job Requirements */}
           <Card
             id="requirements"
             className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity duration-300 ${!dolDataFetched ? "opacity-50 pointer-events-none" : ""}`}
@@ -334,18 +380,26 @@ export default function CreateJob() {
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-xl">4. Minimum Job Requirements</CardTitle>
               <CardDescription>
-                Configure the baseline requirements for this role. These will be used to generate candidate "Match
-                Scores" in your dashboard, helping you prioritize the best fit without automatically excluding anyone.
+                Configure the baseline requirements for this role. These will generate candidate "Match Scores".
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
-              {/* Dropdowns Estruturados */}
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">Compliance Notice</p>
+                  <p className="text-sm leading-relaxed opacity-90">
+                    Screening criteria must align with your DOL-approved job order. These fields do not block candidates
+                    but tag them according to your needs.
+                  </p>
+                </div>
+              </div>
+
+              {/* CORE SKILLS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Experiência Mínima */}
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-slate-800 text-base">Prior Experience</Label>
-                    <p className="text-sm text-slate-500">Minimum months of experience required.</p>
                   </div>
                   <Select
                     value={form.min_experience_months}
@@ -356,18 +410,16 @@ export default function CreateJob() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">None (Entry Level)</SelectItem>
-                      <SelectItem value="3">3 Months</SelectItem>
-                      <SelectItem value="6">6 Months</SelectItem>
-                      <SelectItem value="12">12 Months</SelectItem>
+                      <SelectItem value="3">3 Months Minimum</SelectItem>
+                      <SelectItem value="6">6 Months Minimum</SelectItem>
+                      <SelectItem value="12">12+ Months</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Nível de Inglês */}
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-slate-800 text-base">English Proficiency</Label>
-                    <p className="text-sm text-slate-500">Required level of English for safety/operations.</p>
                   </div>
                   <Select
                     value={form.english_proficiency}
@@ -378,18 +430,16 @@ export default function CreateJob() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Not Required</SelectItem>
-                      <SelectItem value="basic">Basic (Can understand simple instructions)</SelectItem>
+                      <SelectItem value="basic">Basic (Simple instructions)</SelectItem>
                       <SelectItem value="intermediate">Intermediate (Conversational)</SelectItem>
-                      <SelectItem value="advanced">Advanced (Fluent / Crew Leader)</SelectItem>
+                      <SelectItem value="advanced">Advanced (Fluent)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Carteira de Motorista */}
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-slate-800 text-base">Driver's License</Label>
-                    <p className="text-sm text-slate-500">Is a valid driver's license required?</p>
                   </div>
                   <Select
                     value={form.drivers_license}
@@ -405,41 +455,70 @@ export default function CreateJob() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-slate-800 text-base">Equipment Experience</Label>
+                    <p className="text-xs text-slate-500">Tractors, Power tools, Commercial kitchen, etc.</p>
+                  </div>
+                  <Input
+                    placeholder="e.g. John Deere tractors, Chainsaws..."
+                    value={form.equipment_experience}
+                    onChange={(e) => setForm((p) => ({ ...p, equipment_experience: e.target.value }))}
+                    className="bg-white"
+                  />
+                </div>
               </div>
 
-              {/* Checkboxes Seguros (Physical & Environmental) */}
+              {/* OPERATIONAL & PHYSICAL TOGGLES */}
               <div className="pt-6 border-t border-slate-100 space-y-4">
-                <Label className="text-slate-800 text-base">Physical & Environmental Requirements</Label>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors">
-                    <div className="space-y-0.5 pr-4">
-                      <Label className="text-base font-medium text-slate-800 cursor-pointer" htmlFor="lift">
-                        Lifting Requirement
-                      </Label>
-                      <p className="text-sm text-slate-500">Must be able to frequently lift and carry up to 50 lbs.</p>
+                <Label className="text-slate-800 text-base">Physical & Operational Requirements</Label>
+                <div className="grid grid-cols-1 gap-3">
+                  {[
+                    {
+                      key: "req_lift_50lbs" as const,
+                      title: "Lifting Requirement",
+                      desc: "Must be able to frequently lift and carry up to 50 lbs.",
+                    },
+                    {
+                      key: "req_extreme_weather" as const,
+                      title: "Outdoor Work Tolerance",
+                      desc: "Must be able to work outdoors in extreme heat or cold.",
+                    },
+                    {
+                      key: "req_full_contract_availability" as const,
+                      title: "Availability Window",
+                      desc: "Must be available for the entire contract duration without leaving early.",
+                    },
+                    {
+                      key: "req_travel_worksite" as const,
+                      title: "Travel Readiness",
+                      desc: "Willing to relocate or travel between different worksites.",
+                    },
+                    {
+                      key: "req_background_check" as const,
+                      title: "Background Check Consent",
+                      desc: "Must consent to a criminal background check (common in H-2B hospitality).",
+                    },
+                  ].map(({ key, title, desc }) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="space-y-0.5 pr-4">
+                        <Label className="text-base font-medium text-slate-800 cursor-pointer" htmlFor={key}>
+                          {title}
+                        </Label>
+                        <p className="text-sm text-slate-500">{desc}</p>
+                      </div>
+                      <Switch
+                        id={key}
+                        checked={form[key]}
+                        onCheckedChange={(v) => setForm((p) => ({ ...p, [key]: v }))}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
                     </div>
-                    <Switch
-                      id="lift"
-                      checked={form.req_lift_50lbs}
-                      onCheckedChange={(v) => setForm((p) => ({ ...p, req_lift_50lbs: v }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors">
-                    <div className="space-y-0.5 pr-4">
-                      <Label className="text-base font-medium text-slate-800 cursor-pointer" htmlFor="weather">
-                        Extreme Weather Tolerance
-                      </Label>
-                      <p className="text-sm text-slate-500">
-                        Must be able to work outdoors in extreme heat, cold, or rain.
-                      </p>
-                    </div>
-                    <Switch
-                      id="weather"
-                      checked={form.req_extreme_weather}
-                      onCheckedChange={(v) => setForm((p) => ({ ...p, req_extreme_weather: v }))}
-                    />
-                  </div>
+                  ))}
                 </div>
               </div>
             </CardContent>
