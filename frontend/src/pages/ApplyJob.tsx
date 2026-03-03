@@ -16,10 +16,9 @@ interface JobInfo {
   title: string;
   description: string | null;
   location: string | null;
-  req_english: boolean;
-  req_experience: boolean;
-  req_drivers_license: boolean;
-  consular_only: boolean;
+  english_proficiency: string | null;
+  prior_experience_required: boolean | null;
+  drivers_license: string | null;
 }
 
 interface WorkExperience {
@@ -67,7 +66,7 @@ export default function ApplyJob() {
     if (!jobId) return;
     supabase
       .from("sponsored_jobs")
-      .select("id, title, description, location, req_english, req_experience, req_drivers_license, consular_only")
+      .select("id, title, description, location, english_proficiency, prior_experience_required, drivers_license")
       .eq("id", jobId)
       .eq("is_active", true)
       .maybeSingle()
