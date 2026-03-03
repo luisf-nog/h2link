@@ -89,10 +89,10 @@ export default function CreateJob() {
     }
 
     setIsFetchingDol(true);
+    // Simula delay de rede da API
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Dados simulados da API do DOL
-    // Repare que deixamos 'positions', 'benefits' e 'deductions' vazios para testar a edição
     const fetchedData = {
       title: "Landscape Laborer",
       visa_type: "H-2B (Non-Agricultural)",
@@ -101,9 +101,9 @@ export default function CreateJob() {
       location_state: "SC",
       start_date: "2026-04-01",
       end_date: "2026-11-15",
-      positions: "",
+      positions: "27", // CORRIGIDO: Agora vem preenchido e vai aparecer com cadeado!
       wage_rate: "$16.50 / hour",
-      benefits: "",
+      benefits: "", // Estes continuam vazios para testar a edição (lápis)
       deductions: "",
     };
 
@@ -333,7 +333,7 @@ export default function CreateJob() {
                   className={
                     isFieldLocked("wage_rate")
                       ? "bg-slate-50/80 cursor-not-allowed text-slate-500"
-                      : "bg-white border-blue-200"
+                      : "bg-white border-blue-200 focus:border-blue-500"
                   }
                 />
               </div>
@@ -359,7 +359,7 @@ export default function CreateJob() {
                   className={
                     isFieldLocked("benefits")
                       ? "bg-slate-50/80 cursor-not-allowed text-slate-500 resize-none"
-                      : "bg-white border-blue-200 resize-y"
+                      : "bg-white border-blue-200 focus:border-blue-500 resize-y"
                   }
                 />
               </div>
@@ -383,7 +383,7 @@ export default function CreateJob() {
                   className={
                     isFieldLocked("deductions")
                       ? "bg-slate-50/80 cursor-not-allowed text-slate-500 resize-none"
-                      : "bg-white border-blue-200 resize-y"
+                      : "bg-white border-blue-200 focus:border-blue-500 resize-y"
                   }
                 />
               </div>
