@@ -489,6 +489,7 @@ export type Database = {
           has_license: boolean
           id: string
           is_in_us: boolean
+          is_us_authorized: boolean | null
           is_us_worker: boolean
           job_id: string
           match_status: string | null
@@ -514,6 +515,7 @@ export type Database = {
           has_license?: boolean
           id?: string
           is_in_us?: boolean
+          is_us_authorized?: boolean | null
           is_us_worker?: boolean
           job_id: string
           match_status?: string | null
@@ -539,6 +541,7 @@ export type Database = {
           has_license?: boolean
           id?: string
           is_in_us?: boolean
+          is_us_authorized?: boolean | null
           is_us_worker?: boolean
           job_id?: string
           match_status?: string | null
@@ -1621,21 +1624,25 @@ export type Database = {
         Row: {
           additional_compensation: string | null
           additional_notes: string | null
+          benefits: string | null
           bonuses: string | null
           city: string | null
           click_count: number
           compliance_acknowledged: boolean | null
-          consular_only: boolean
           created_at: string
           daily_meal_cost: number | null
+          deductions: string | null
           deductions_additional: string | null
           deductions_standard: boolean | null
           description: string | null
           dol_case_number: string | null
+          drivers_license: string | null
           employer_id: string
           employer_legal_name: string | null
           end_date: string | null
           english_level: string | null
+          english_proficiency: string | null
+          equipment_experience: string | null
           equipment_used: string | null
           flsa_compliant: boolean | null
           hourly_wage: number | null
@@ -1647,15 +1654,19 @@ export type Database = {
           lifting_weight_lbs: number | null
           location: string | null
           meals_provided: boolean | null
+          min_experience_months: number | null
           num_positions: number | null
           overtime_rate: number | null
           pay_frequency: string | null
+          positions_count: number | null
           primary_duties: string | null
           prior_experience_required: boolean | null
           priority_level: string
-          req_drivers_license: boolean
-          req_english: boolean
-          req_experience: boolean
+          req_background_check: boolean | null
+          req_extreme_weather: boolean | null
+          req_full_contract_availability: boolean | null
+          req_lift_lbs: number | null
+          req_travel_worksite: boolean | null
           skill_level: string | null
           source_type: string | null
           start_date: string | null
@@ -1666,26 +1677,31 @@ export type Database = {
           view_count: number
           visa_fee_reimbursement: boolean | null
           visa_type: string | null
+          wage_rate: string | null
           work_environment: string | null
         }
         Insert: {
           additional_compensation?: string | null
           additional_notes?: string | null
+          benefits?: string | null
           bonuses?: string | null
           city?: string | null
           click_count?: number
           compliance_acknowledged?: boolean | null
-          consular_only?: boolean
           created_at?: string
           daily_meal_cost?: number | null
+          deductions?: string | null
           deductions_additional?: string | null
           deductions_standard?: boolean | null
           description?: string | null
           dol_case_number?: string | null
+          drivers_license?: string | null
           employer_id: string
           employer_legal_name?: string | null
           end_date?: string | null
           english_level?: string | null
+          english_proficiency?: string | null
+          equipment_experience?: string | null
           equipment_used?: string | null
           flsa_compliant?: boolean | null
           hourly_wage?: number | null
@@ -1697,15 +1713,19 @@ export type Database = {
           lifting_weight_lbs?: number | null
           location?: string | null
           meals_provided?: boolean | null
+          min_experience_months?: number | null
           num_positions?: number | null
           overtime_rate?: number | null
           pay_frequency?: string | null
+          positions_count?: number | null
           primary_duties?: string | null
           prior_experience_required?: boolean | null
           priority_level?: string
-          req_drivers_license?: boolean
-          req_english?: boolean
-          req_experience?: boolean
+          req_background_check?: boolean | null
+          req_extreme_weather?: boolean | null
+          req_full_contract_availability?: boolean | null
+          req_lift_lbs?: number | null
+          req_travel_worksite?: boolean | null
           skill_level?: string | null
           source_type?: string | null
           start_date?: string | null
@@ -1716,26 +1736,31 @@ export type Database = {
           view_count?: number
           visa_fee_reimbursement?: boolean | null
           visa_type?: string | null
+          wage_rate?: string | null
           work_environment?: string | null
         }
         Update: {
           additional_compensation?: string | null
           additional_notes?: string | null
+          benefits?: string | null
           bonuses?: string | null
           city?: string | null
           click_count?: number
           compliance_acknowledged?: boolean | null
-          consular_only?: boolean
           created_at?: string
           daily_meal_cost?: number | null
+          deductions?: string | null
           deductions_additional?: string | null
           deductions_standard?: boolean | null
           description?: string | null
           dol_case_number?: string | null
+          drivers_license?: string | null
           employer_id?: string
           employer_legal_name?: string | null
           end_date?: string | null
           english_level?: string | null
+          english_proficiency?: string | null
+          equipment_experience?: string | null
           equipment_used?: string | null
           flsa_compliant?: boolean | null
           hourly_wage?: number | null
@@ -1747,15 +1772,19 @@ export type Database = {
           lifting_weight_lbs?: number | null
           location?: string | null
           meals_provided?: boolean | null
+          min_experience_months?: number | null
           num_positions?: number | null
           overtime_rate?: number | null
           pay_frequency?: string | null
+          positions_count?: number | null
           primary_duties?: string | null
           prior_experience_required?: boolean | null
           priority_level?: string
-          req_drivers_license?: boolean
-          req_english?: boolean
-          req_experience?: boolean
+          req_background_check?: boolean | null
+          req_extreme_weather?: boolean | null
+          req_full_contract_availability?: boolean | null
+          req_lift_lbs?: number | null
+          req_travel_worksite?: boolean | null
           skill_level?: string | null
           source_type?: string | null
           start_date?: string | null
@@ -1766,6 +1795,7 @@ export type Database = {
           view_count?: number
           visa_fee_reimbursement?: boolean | null
           visa_type?: string | null
+          wage_rate?: string | null
           work_environment?: string | null
         }
         Relationships: [
