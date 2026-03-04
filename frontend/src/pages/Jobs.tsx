@@ -41,6 +41,10 @@ import {
   Calendar,
   Check,
   Send,
+  Star,
+  DollarSign,
+  Users,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -71,6 +75,25 @@ const JOB_CATEGORIES_LIST = [
 
 type Job = Tables<"public_jobs">;
 
+interface SponsoredJob {
+  id: string;
+  title: string;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+  hourly_wage: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  num_positions: number | null;
+  visa_type: string | null;
+  employer_legal_name: string | null;
+  priority_level: string;
+  is_sponsored: boolean;
+  dol_case_number: string | null;
+  primary_duties: string | null;
+  employer_id: string;
+}
+
 export default function Jobs() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -81,12 +104,14 @@ export default function Jobs() {
 
   const [searchParams] = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [sponsoredJobs, setSponsoredJobs] = useState<SponsoredJob[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedSponsoredJob, setSelectedSponsoredJob] = useState<SponsoredJob | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
@@ -139,7 +164,19 @@ export default function Jobs() {
     if (data) setQueuedJobIds(new Set(data.map((r) => r.job_id)));
   };
 
+  // Fetch sponsored jobs
+  const fetchSponsoredJobs = async () => {
+    const { data } = await supabase
+      .from("sponsored_jobs")
+      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id")
+      .eq("is_active", true)
+      .eq("is_sponsored", true)
+      .order("priority_level", { ascending: false });
+    if (data) setSponsoredJobs(data as SponsoredJob[]);
+  };
+
   useEffect(() => {
+    fetchSponsoredJobs();
     if (profile?.id) {
       syncQueue();
       const hasSeenWelcome = localStorage.getItem("h2linker_hub_welcome_seen");
@@ -260,6 +297,126 @@ export default function Jobs() {
     return { label: t("jobs.group_label", { group: g }), className: "bg-slate-50 text-slate-700 border-slate-300" };
   };
 
+  // ===== SPONSORED JOB CARD COMPONENT =====
+  const SponsoredJobCard = ({ sj }: { sj: SponsoredJob }) => (
+    <Card
+      onClick={() => setSelectedSponsoredJob(sj)}
+      className="cursor-pointer border-2 border-amber-400 bg-gradient-to-br from-amber-50/80 via-white to-amber-50/40 shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
+    >
+      {/* Gold ribbon */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400" />
+      <CardContent className="p-4 sm:p-5 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Crown className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+                Sponsored
+              </span>
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm sm:text-base truncate uppercase" translate="no">
+              {sj.title}
+            </h3>
+            <p className="text-xs font-medium text-slate-500 truncate" translate="no">
+              {sj.employer_legal_name || "—"}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 h-9 shadow-md shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/apply/${sj.id}`);
+            }}
+          >
+            <Star className="h-3.5 w-3.5 mr-1.5 fill-white" />
+            Apply
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-3 text-xs text-slate-600 font-medium bg-amber-50/60 p-2.5 rounded-lg border border-amber-100">
+          {sj.city && sj.state && (
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <span className="truncate" translate="no">{sj.city}, {sj.state}</span>
+            </div>
+          )}
+          {sj.hourly_wage && (
+            <div className="flex items-center gap-1.5 shrink-0 text-green-700 font-bold">
+              <DollarSign className="h-3.5 w-3.5 shrink-0" />
+              <span translate="no">${sj.hourly_wage.toFixed(2)}/h</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500 font-semibold uppercase tracking-tight">
+          {sj.num_positions && (
+            <div className="flex items-center gap-1">
+              <Users className="h-3 w-3 text-amber-500" />
+              <span translate="no">{sj.num_positions} {t("jobs.table.headers.openings")}</span>
+            </div>
+          )}
+          {sj.start_date && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-amber-500" />
+              <span translate="no">{formatDate(sj.start_date)}</span>
+            </div>
+          )}
+          {sj.visa_type && (
+            <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[9px] font-bold px-1.5 py-0">
+              {sj.visa_type}
+            </Badge>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // ===== SPONSORED ROW FOR DESKTOP TABLE =====
+  const SponsoredTableRow = ({ sj }: { sj: SponsoredJob }) => (
+    <TableRow
+      onClick={() => setSelectedSponsoredJob(sj)}
+      className="cursor-pointer bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60 border-l-4 border-l-amber-400 hover:bg-amber-50/80 transition-colors"
+    >
+      <TableCell className="font-semibold text-sm">
+        <div className="flex items-center gap-2">
+          <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
+          <span translate="no">{sj.title}</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
+      <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
+      <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
+      <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${sj.hourly_wage.toFixed(2)}` : "-"}</TableCell>
+      <TableCell>
+        <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-black">
+          {sj.visa_type || "—"}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] font-bold">
+          ⭐ Sponsored
+        </Badge>
+      </TableCell>
+      <TableCell className="text-sm text-slate-600 whitespace-nowrap">—</TableCell>
+      <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.start_date)}</TableCell>
+      <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.end_date)}</TableCell>
+      <TableCell className="text-sm text-slate-600">—</TableCell>
+      <TableCell className="text-right">
+        <Button
+          size="sm"
+          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] h-8 px-3 rounded-full shadow"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/apply/${sj.id}`);
+          }}
+        >
+          Apply
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+
   return (
     <TooltipProvider>
       <div className="space-y-6 text-left px-4 sm:px-0">
@@ -282,6 +439,26 @@ export default function Jobs() {
             </div>
           )}
         </div>
+
+        {/* ===== SPONSORED JOBS SECTION ===== */}
+        {sponsoredJobs.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-500 fill-amber-500" />
+              <h2 className="text-lg font-bold text-slate-800">
+                {t("jobs.sponsored_section_title", { defaultValue: "Featured Opportunities" })}
+              </h2>
+            </div>
+            <div className={cn(
+              "grid gap-4",
+              sponsoredJobs.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            )}>
+              {sponsoredJobs.map((sj) => (
+                <SponsoredJobCard key={sj.id} sj={sj} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
@@ -441,6 +618,10 @@ export default function Jobs() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* SPONSORED JOBS AT TOP */}
+                {page === 1 && sponsoredJobs.map((sj) => (
+                  <SponsoredTableRow key={`sponsored-${sj.id}`} sj={sj} />
+                ))}
                 {jobs.map((j) => (
                   <TableRow
                     key={j.id}
@@ -542,6 +723,7 @@ export default function Jobs() {
           </div>
         </div>
 
+        {/* Regular Job Details Dialog */}
         <JobDetailsDialog
           open={!!selectedJob}
           onOpenChange={(o: boolean) => !o && setSelectedJob(null)}
@@ -551,6 +733,41 @@ export default function Jobs() {
           onAddToQueue={addToQueue}
           isInQueue={selectedJob ? queuedJobIds.has(selectedJob.id) : false}
           onShare={(j: any) => navigate(`/job/${j.id}`)}
+        />
+
+        {/* Sponsored Job Details Dialog */}
+        <JobDetailsDialog
+          open={!!selectedSponsoredJob}
+          onOpenChange={(o: boolean) => !o && setSelectedSponsoredJob(null)}
+          job={selectedSponsoredJob ? {
+            id: selectedSponsoredJob.id,
+            job_title: selectedSponsoredJob.title,
+            company: selectedSponsoredJob.employer_legal_name || "—",
+            city: selectedSponsoredJob.city || "",
+            state: selectedSponsoredJob.state || "",
+            salary: selectedSponsoredJob.hourly_wage,
+            wage_from: selectedSponsoredJob.hourly_wage,
+            wage_to: null,
+            wage_unit: "hr",
+            start_date: selectedSponsoredJob.start_date,
+            end_date: selectedSponsoredJob.end_date,
+            openings: selectedSponsoredJob.num_positions,
+            visa_type: selectedSponsoredJob.visa_type || "H-2B",
+            job_duties: selectedSponsoredJob.primary_duties || selectedSponsoredJob.description,
+            job_id: selectedSponsoredJob.dol_case_number || "",
+            posted_date: null,
+            category: null,
+            was_early_access: false,
+            email: null,
+            phone: null,
+          } : null}
+          planSettings={profile}
+          formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
+          onAddToQueue={() => {}}
+          isInQueue={false}
+          onShare={() => {}}
+          isSponsored
+          sponsoredJobId={selectedSponsoredJob?.id}
         />
 
         {/* Dialog Explicativo Reativado */}
