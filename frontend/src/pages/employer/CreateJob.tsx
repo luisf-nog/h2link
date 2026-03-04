@@ -146,7 +146,7 @@ export default function CreateJob() {
       const { data, error } = await supabase
         .from("public_jobs")
         .select("job_id, job_title, company, city, state, salary, start_date, end_date, openings, visa_type, category, description, requirements, education_required, experience_months, housing_info, transport_provided, job_duties, job_min_special_req, wage_additional, rec_pay_deductions, weekly_hours, phone, email")
-        .or(`job_id.eq.${searchTerm},job_id.ilike.%${searchTerm}%`)
+        .eq("job_id", searchTerm)
         .limit(1)
         .maybeSingle();
 
@@ -292,6 +292,14 @@ export default function CreateJob() {
           {foundJob && (
             <div className="space-y-4 py-2">
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <Search className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Case Number</p>
+                    <p className="font-semibold font-mono text-sm">{foundJob.job_id}</p>
+                  </div>
+                </div>
+
                 <div className="flex items-start gap-2">
                   <Building2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div>
