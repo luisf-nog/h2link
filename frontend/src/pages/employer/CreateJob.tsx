@@ -21,6 +21,7 @@ import {
   Save,
   AlertTriangle,
   Pencil,
+  AlertCircle,
 } from "lucide-react";
 
 const FORM_SECTIONS = [
@@ -39,7 +40,8 @@ export default function CreateJob() {
   const [isFetchingDol, setIsFetchingDol] = useState(false);
   const [activeSection, setActiveSection] = useState("dol-lookup");
   const [dolCaseNumber, setDolCaseNumber] = useState("");
-  const [dolDataFetched, setDolDataFetched] = useState(false);
+
+  const [searchStatus, setSearchStatus] = useState<"idle" | "success" | "not_found">("idle");
   const [dolOriginalData, setDolOriginalData] = useState<Record<string, any>>({});
 
   const [form, setForm] = useState({
@@ -55,14 +57,12 @@ export default function CreateJob() {
     benefits: "",
     deductions: "",
 
-    // Scoring & Requirements
     english_proficiency: "none",
     min_experience_months: "0",
     drivers_license: "not_required",
     equipment_experience: "",
 
-    // Physical & Operational
-    req_lift_lbs: "", // 🔴 Agora é variável (ex: 50, 75, 100)
+    req_lift_lbs: "",
     req_extreme_weather: false,
     req_full_contract_availability: false,
     req_travel_worksite: false,
@@ -79,7 +79,9 @@ export default function CreateJob() {
   };
 
   const isFieldLocked = (fieldName: keyof typeof form) => {
-    if (!dolDataFetched) return true;
+    if (searchStatus === "idle") return true;
+    if (searchStatus === "not_found") return false;
+
     const originalValue = dolOriginalData[fieldName];
     return originalValue !== undefined && originalValue !== null && originalValue !== "";
   };
@@ -95,34 +97,65 @@ export default function CreateJob() {
     }
 
     setIsFetchingDol(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const fetchedData = {
-      title: "Landscape Laborer",
-      visa_type: "H-2B (Non-Agricultural)",
-      employer_name: "Roebuck Wholesale Nursery & Landscaping, LLC",
-      location_city: "Roebuck",
-      location_state: "SC",
-      start_date: "2026-04-01",
-      end_date: "2026-11-15",
-      positions: "27",
-      wage_rate: "$16.50 / hour",
-      benefits: "",
-      deductions: "",
-    };
+    try {
+      // 🚀 Integração Real com API (Estrutura pronta para produção)
+      // const response = await fetch(`https://api.governo.gov/v1/case/${dolCaseNumber}`);
+      // if (!response.ok) throw new Error("Not_Found");
+      // const fetchedData = await response.json();
 
-    setDolOriginalData(fetchedData);
-    setForm((p) => ({ ...p, ...fetchedData }));
-    setDolDataFetched(true);
-    setIsFetchingDol(false);
-    toast({ title: "DOL Data Retrieved", description: "Job information imported. Please configure the requirements." });
-    scrollToSection("job-info");
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const fetchedData = {
+        title: "Landscape Laborer",
+        visa_type: "H-2B (Non-Agricultural)",
+        employer_name: "Roebuck Wholesale Nursery & Landscaping, LLC",
+        location_city: "Roebuck",
+        location_state: "SC",
+        start_date: "2026-04-01",
+        end_date: "2026-11-15",
+        positions: "27",
+        wage_rate: "$16.50 / hour",
+        benefits: "",
+        deductions: "",
+      };
+
+      setDolOriginalData(fetchedData);
+      setForm((p) => ({ ...p, ...fetchedData }));
+      setSearchStatus("success");
+      toast({ title: "DOL Data Retrieved", description: "Job information imported successfully." });
+    } catch (error) {
+      // ⚠️ Fallback: Modo Manual ativado se a API falhar ou retornar erro
+      setDolOriginalData({});
+      setForm((p) => ({
+        ...p,
+        title: "",
+        employer_name: "",
+        location_city: "",
+        location_state: "",
+        start_date: "",
+        end_date: "",
+        positions: "",
+        wage_rate: "",
+        benefits: "",
+        deductions: "",
+      }));
+      setSearchStatus("not_found");
+      toast({
+        title: "Job Not Found",
+        description: "We couldn't find this Case Number. Manual entry mode enabled.",
+        variant: "default",
+      });
+    } finally {
+      setIsFetchingDol(false);
+      scrollToSection("job-info");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employerProfile) return;
-    if (!dolDataFetched) return;
+    if (searchStatus === "idle") return;
 
     setLoading(true);
 
@@ -145,15 +178,11 @@ export default function CreateJob() {
       end_date: form.end_date || null,
       priority_level: employerProfile.tier,
 
-      // Inserindo os Scoring Fields
       english_proficiency: form.english_proficiency,
       min_experience_months: parseInt(form.min_experience_months),
       drivers_license: form.drivers_license,
       equipment_experience: form.equipment_experience.trim() || null,
-
-      // 🔴 Salvando o peso variável no banco
       req_lift_lbs: form.req_lift_lbs ? parseInt(form.req_lift_lbs) : null,
-
       req_extreme_weather: form.req_extreme_weather,
       req_full_contract_availability: form.req_full_contract_availability,
       req_travel_worksite: form.req_travel_worksite,
@@ -178,7 +207,7 @@ export default function CreateJob() {
             Back to Jobs
           </Button>
           <h1 className="text-3xl font-bold font-brand text-slate-900">Post Sponsored Job</h1>
-          <p className="text-sm text-slate-500">Import DOL data and configure minimum job requirements.</p>
+          <p className="text-sm text-slate-500">Import DOL data or enter details manually.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => navigate("/employer/jobs")} disabled={loading}>
@@ -186,7 +215,7 @@ export default function CreateJob() {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !dolDataFetched}
+            disabled={loading || searchStatus === "idle"}
             className="bg-slate-900 hover:bg-slate-800"
           >
             {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
@@ -196,7 +225,6 @@ export default function CreateJob() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
-        {/* NAVEGAÇÃO LATERAL */}
         <div className="hidden md:block col-span-1 sticky top-24 space-y-2">
           <h3 className="text-sm font-semibold text-slate-900 mb-4 px-2">Steps</h3>
           {FORM_SECTIONS.map((section) => {
@@ -219,13 +247,13 @@ export default function CreateJob() {
           })}
         </div>
 
-        {/* CONTEÚDO DO FORMULÁRIO */}
         <div className="col-span-1 md:col-span-3 space-y-10 pb-24">
-          {/* SECÃO 1: DOL Lookup */}
           <Card id="dol-lookup" className="border-slate-200 shadow-sm scroll-mt-24">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-xl">1. DOL Lookup</CardTitle>
-              <CardDescription>Enter the ETA Case Number to import verified job data.</CardDescription>
+              <CardDescription>
+                Enter the ETA Case Number to fetch data, or search to enable manual entry.
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-4 items-end">
@@ -237,6 +265,7 @@ export default function CreateJob() {
                     id="case_number"
                     value={dolCaseNumber}
                     onChange={(e) => setDolCaseNumber(e.target.value)}
+                    placeholder="e.g. H-400-24123-123456"
                     className="bg-white"
                   />
                 </div>
@@ -250,21 +279,39 @@ export default function CreateJob() {
                   ) : (
                     <Search className="h-4 w-4 mr-2" />
                   )}
-                  Fetch Data
+                  Search Case
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* SECÃO 2: Job Info */}
           <Card
             id="job-info"
-            className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity ${!dolDataFetched ? "opacity-50 pointer-events-none" : ""}`}
+            className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity ${searchStatus === "idle" ? "opacity-50 pointer-events-none" : ""}`}
           >
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-xl">2. Job Info</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
+              {searchStatus === "success" ? (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm leading-relaxed">
+                    <strong>Regulatory Compliance:</strong> Fields marked with a lock are sourced directly from the
+                    official DOL job order and cannot be edited.
+                  </p>
+                </div>
+              ) : searchStatus === "not_found" ? (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="text-sm leading-relaxed">
+                    <strong>Job Not Found:</strong> We couldn't find this Case Number in the DOL database.{" "}
+                    <strong>Manual entry mode is enabled.</strong> Please ensure all information matches your official
+                    filings.
+                  </p>
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
                   { key: "title" as const, label: "Job Title", type: "text", cols: 2 },
@@ -292,7 +339,11 @@ export default function CreateJob() {
                         disabled={locked}
                         value={form[field.key]}
                         onChange={(e) => setForm((p) => ({ ...p, [field.key]: e.target.value }))}
-                        className={locked ? "bg-slate-50/80 text-slate-500 cursor-not-allowed" : "bg-white"}
+                        className={
+                          locked
+                            ? "bg-slate-50/80 text-slate-500 cursor-not-allowed"
+                            : "bg-white border-blue-200 focus:border-blue-500"
+                        }
                       />
                     </div>
                   );
@@ -301,10 +352,9 @@ export default function CreateJob() {
             </CardContent>
           </Card>
 
-          {/* SECÃO 3: Pay & Benefits */}
           <Card
             id="financials"
-            className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity ${!dolDataFetched ? "opacity-50 pointer-events-none" : ""}`}
+            className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity ${searchStatus === "idle" ? "opacity-50 pointer-events-none" : ""}`}
           >
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-xl">3. Pay & Benefits</CardTitle>
@@ -375,10 +425,9 @@ export default function CreateJob() {
             </CardContent>
           </Card>
 
-          {/* SECÃO 4: Minimum Job Requirements */}
           <Card
             id="requirements"
-            className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity duration-300 ${!dolDataFetched ? "opacity-50 pointer-events-none" : ""}`}
+            className={`border-slate-200 shadow-sm scroll-mt-24 transition-opacity duration-300 ${searchStatus === "idle" ? "opacity-50 pointer-events-none" : ""}`}
           >
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="text-xl">4. Minimum Job Requirements</CardTitle>
@@ -387,18 +436,6 @@ export default function CreateJob() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold">Compliance Notice</p>
-                  <p className="text-sm leading-relaxed opacity-90">
-                    Screening criteria must align with your DOL-approved job order. These fields do not block candidates
-                    but tag them according to your needs.
-                  </p>
-                </div>
-              </div>
-
-              {/* CORE SKILLS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
                   <div className="space-y-1">
@@ -473,11 +510,9 @@ export default function CreateJob() {
                 </div>
               </div>
 
-              {/* OPERATIONAL & PHYSICAL TOGGLES */}
               <div className="pt-6 border-t border-slate-100 space-y-4">
                 <Label className="text-slate-800 text-base">Physical & Operational Requirements</Label>
                 <div className="grid grid-cols-1 gap-3">
-                  {/* 🔴 LIFTING REQUIREMENT (Variável e Inteligente) */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors gap-4">
                     <div className="space-y-1 pr-4">
                       <Label className="text-base font-medium text-slate-800" htmlFor="lift">
@@ -504,7 +539,6 @@ export default function CreateJob() {
                     </div>
                   </div>
 
-                  {/* Restante dos Toggles */}
                   {[
                     {
                       key: "req_extreme_weather" as const,
