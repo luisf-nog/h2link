@@ -548,11 +548,6 @@ export default function Radar() {
 
   // -------------------------------------------------------------------------
   // fetchMatches
-  // Removed dead state: totalRawMatches, autoQueuedCount
-  // FIX: filters dismissed=false at query level so dismissed jobs don't
-  // reappear in the feed between scans.
-  // ⚠ Requires migration:
-  //   ALTER TABLE radar_matched_jobs ADD COLUMN dismissed boolean NOT NULL DEFAULT false;
   // -------------------------------------------------------------------------
   const fetchMatches = useCallback(async () => {
     if (!profile?.id) return;
@@ -560,8 +555,7 @@ export default function Radar() {
     const { data, error } = await supabase
       .from("radar_matched_jobs" as any)
       .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
-      .eq("user_id", profile.id)
-      .eq("dismissed", false); // only non-dismissed
+      .eq("user_id", profile.id);
 
     if (error) {
       console.error("[Radar] fetchMatches error:", error);
@@ -718,22 +712,11 @@ export default function Radar() {
   };
 
   // -------------------------------------------------------------------------
-  // removeMatch (dismiss)
-  // FIX: soft-delete via dismissed=true instead of hard DELETE.
-  // Hard DELETE caused the job to re-appear in the next edge function scan
-  // because the job was no longer in matchedSet and would be re-inserted.
-  // With dismissed=true, the edge function skips it and fetchMatches
-  // filters it out via .eq("dismissed", false).
-  // ⚠ Requires migration:
-  //   ALTER TABLE radar_matched_jobs ADD COLUMN dismissed boolean NOT NULL DEFAULT false;
+  // removeMatch (dismiss) — client-side only until DB migration is available
   // -------------------------------------------------------------------------
   const removeMatch = async (matchId: string) => {
     try {
-      const { error } = await supabase
-        .from("radar_matched_jobs" as any)
-        .update({ dismissed: true })
-        .eq("id", matchId);
-      if (error) throw error;
+      // RLS doesn't allow DELETE on radar_matched_jobs yet, so dismiss client-side
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
     } catch {
