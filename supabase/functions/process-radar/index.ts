@@ -103,21 +103,30 @@ serve(async (req) => {
         // Filter out already matched jobs
         const jobIds = matchingJobs.map((j: any) => j.id);
 
-        const [{ data: alreadyMatched }, { data: queuedJobs }] = await Promise.all([
-          supabase
-            .from("radar_matched_jobs")
-            .select("job_id")
-            .eq("user_id", radar.user_id)
-            .in("job_id", jobIds),
-          supabase
-            .from("my_queue")
-            .select("job_id")
-            .eq("user_id", radar.user_id)
-            .in("job_id", jobIds),
-        ]);
+        // Batch .in() queries in chunks of 200 to avoid PostgREST URL length limits
+        const CHUNK_SIZE = 200;
+        const matchedSet = new Set<string>();
+        const queuedSet = new Set<string>();
 
-        const matchedSet = new Set((alreadyMatched || []).map((m: any) => m.job_id));
-        const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
+        for (let i = 0; i < jobIds.length; i += CHUNK_SIZE) {
+          const chunk = jobIds.slice(i, i + CHUNK_SIZE);
+          const [{ data: matchedChunk }, { data: queuedChunk }] = await Promise.all([
+            supabase
+              .from("radar_matched_jobs")
+              .select("job_id")
+              .eq("user_id", radar.user_id)
+              .in("job_id", chunk),
+            supabase
+              .from("my_queue")
+              .select("job_id")
+              .eq("user_id", radar.user_id)
+              .in("job_id", chunk),
+          ]);
+          (matchedChunk || []).forEach((m: any) => matchedSet.add(m.job_id));
+          (queuedChunk || []).forEach((q: any) => queuedSet.add(q.job_id));
+        }
+
+        console.log(`[process-radar] ${radar.user_id}: checked ${jobIds.length} jobs in ${Math.ceil(jobIds.length / CHUNK_SIZE)} chunks, found ${matchedSet.size} matched, ${queuedSet.size} queued`);
 
         // NEW matches (for metrics/history)
         const newMatchJobs = jobIds.filter((id: string) => !matchedSet.has(id));
@@ -126,15 +135,18 @@ serve(async (req) => {
         const queueCandidates = jobIds.filter((id: string) => !queuedSet.has(id));
 
         if (newMatchJobs.length > 0) {
-          const allMatchRecords = newMatchJobs.map((jobId: string) => ({
-            user_id: radar.user_id,
-            job_id: jobId,
-            auto_queued: canQueue && radar.auto_send,
-          }));
-
-          await supabase.from("radar_matched_jobs").upsert(allMatchRecords, {
-            onConflict: "user_id,job_id",
-          });
+          // Batch upsert match records in chunks
+          for (let i = 0; i < newMatchJobs.length; i += CHUNK_SIZE) {
+            const chunk = newMatchJobs.slice(i, i + CHUNK_SIZE);
+            const matchRecords = chunk.map((jobId: string) => ({
+              user_id: radar.user_id,
+              job_id: jobId,
+              auto_queued: canQueue && radar.auto_send,
+            }));
+            await supabase.from("radar_matched_jobs").upsert(matchRecords, {
+              onConflict: "user_id,job_id",
+            });
+          }
 
           totalMatches += newMatchJobs.length;
           console.log(`[process-radar] ${radar.user_id}: recorded ${newMatchJobs.length} new matches`);
@@ -146,30 +158,43 @@ serve(async (req) => {
           console.log(`[process-radar] ${radar.user_id}: all matching jobs already in queue`);
         } else if (canQueue && radar.auto_send) {
           const jobsToQueue = queueCandidates.slice(0, creditsRemaining);
-          const queueRecords = jobsToQueue.map((jobId: string) => ({
-            user_id: radar.user_id,
-            job_id: jobId,
-            status: "pending",
-          }));
+          
+          // Batch upsert queue records in chunks
+          let actualQueued = 0;
+          let queueError = null;
+          for (let i = 0; i < jobsToQueue.length; i += CHUNK_SIZE) {
+            const chunk = jobsToQueue.slice(i, i + CHUNK_SIZE);
+            const queueRecords = chunk.map((jobId: string) => ({
+              user_id: radar.user_id,
+              job_id: jobId,
+              status: "pending",
+            }));
 
-          const { data: queueResult, error: queueError } = await supabase
-            .from("my_queue")
-            .upsert(queueRecords, {
-              onConflict: "user_id,job_id",
-              ignoreDuplicates: true,
-            })
-            .select("id");
+            const { data: queueResult, error: chunkError } = await supabase
+              .from("my_queue")
+              .upsert(queueRecords, {
+                onConflict: "user_id,job_id",
+                ignoreDuplicates: true,
+              })
+              .select("id");
 
-          if (!queueError) {
-            const actualQueued = queueResult?.length || 0;
-            totalQueued += actualQueued;
-            console.log(`[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${queueRecords.length}, candidates ${queueCandidates.length})`);
-          } else {
-            console.error(`[process-radar] Queue insert error for ${radar.user_id}:`, queueError);
+            if (chunkError) {
+              queueError = chunkError;
+              console.error(`[process-radar] Queue chunk error for ${radar.user_id}:`, chunkError);
+            } else {
+              actualQueued += queueResult?.length || 0;
+            }
+          }
+
+          totalQueued += actualQueued;
+          console.log(`[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${jobsToQueue.length}, candidates ${queueCandidates.length})`);
+
+          if (queueError) {
+            console.error(`[process-radar] Queue had errors for ${radar.user_id}:`, queueError);
           }
 
           // Trigger the process-queue function to send emails
-          if (!queueError) {
+          if (actualQueued > 0) {
             try {
               await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
                 method: "POST",
