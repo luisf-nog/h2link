@@ -43,6 +43,7 @@ export function JobDetailsDialog({
   onShare,
   isSponsored = false,
   sponsoredJobId,
+  sponsoredDetails,
 }: any) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -315,7 +316,7 @@ export function JobDetailsDialog({
                       {renderMainWage()}
                     </p>
                   </div>
-                  {!isSponsored && job?.wage_additional && (
+                  {job?.wage_additional && (
                     <div className="mt-4 pt-4 border-t border-dashed border-green-200">
                       <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-green-600 mb-2">
                         <Plus className="h-3 w-3" /> {t("jobs.details.wage_extra_label")}
@@ -325,7 +326,7 @@ export function JobDetailsDialog({
                       </p>
                     </div>
                   )}
-                  {!isSponsored && job?.rec_pay_deductions && (
+                  {job?.rec_pay_deductions && (
                     <div className="mt-4 pt-4 border-t border-dashed border-red-200">
                       <h5 className="flex items-center gap-2 text-xs font-bold uppercase text-red-600 mb-2">
                         <Minus className="h-3 w-3" /> {t("jobs.details.deductions_label")}
@@ -421,16 +422,15 @@ export function JobDetailsDialog({
 
                 {/* Apply CTA for sponsored (sidebar) */}
                 {isSponsored && (
-                  <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-xl border-2 border-amber-200 shadow-sm text-center space-y-3">
-                    <Crown className="h-8 w-8 text-amber-500 fill-amber-500 mx-auto" />
-                    <p className="text-sm font-bold text-amber-900">
+                  <div className="bg-muted/50 p-6 rounded-xl border shadow-sm text-center space-y-3">
+                    <Star className="h-8 w-8 text-primary mx-auto" />
+                    <p className="text-sm font-bold text-foreground">
                       {t("jobs.details.sponsored_apply_hint", { defaultValue: "Interested in this opportunity?" })}
                     </p>
                     <Button
                       onClick={handleApply}
-                      className="bg-amber-500 hover:bg-amber-600 text-white w-full font-bold h-12 text-base shadow-lg"
+                      className="w-full font-bold h-12 text-base shadow-lg"
                     >
-                      <Star className="h-5 w-5 mr-2 fill-white" />
                       {t("jobs.details.apply_now", { defaultValue: "Apply Now" })}
                     </Button>
                   </div>
@@ -439,7 +439,7 @@ export function JobDetailsDialog({
 
               {/* Description & Requirements */}
               <div className="lg:col-span-8 space-y-6">
-                {!isSponsored && job?.job_min_special_req && (
+                {job?.job_min_special_req && (
                   <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
                     <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
                       <AlertTriangle className="h-6 w-6 text-amber-500" /> {t("jobs.details.special_reqs")}
@@ -449,6 +449,127 @@ export function JobDetailsDialog({
                         <span>{job.job_min_special_req}</span>
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* Employer Requirements for Featured Jobs */}
+                {isSponsored && sponsoredDetails && (
+                  <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
+                    <h4 className="flex items-center gap-2 font-bold text-xl text-slate-800 mb-6 border-b pb-4">
+                      <CheckCircle2 className="h-6 w-6 text-blue-600" /> {t("jobs.details.employer_requirements", { defaultValue: "Employer Requirements" })}
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {sponsoredDetails.english_level && sponsoredDetails.english_level !== "not_required" && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                          <GraduationCap className="h-4 w-4 text-blue-600 shrink-0" />
+                          <span className="text-sm font-medium text-blue-900">
+                            {t("jobs.details.req_english", { defaultValue: "English Required" })}: {sponsoredDetails.english_level}
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.prior_experience_required && (
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                          <Briefcase className="h-4 w-4 text-amber-600 shrink-0" />
+                          <span className="text-sm font-medium text-amber-900">
+                            {t("jobs.details.req_experience", { defaultValue: "Prior Experience Required" })}
+                            {sponsoredDetails.min_experience_months ? ` (${sponsoredDetails.min_experience_months}+ mo)` : ""}
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.drivers_license && sponsoredDetails.drivers_license !== "not_required" && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <Info className="h-4 w-4 text-slate-600 shrink-0" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {t("jobs.details.req_drivers_license", { defaultValue: "Driver's License Required" })}
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.req_background_check && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <AlertTriangle className="h-4 w-4 text-slate-600 shrink-0" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {t("jobs.details.req_background", { defaultValue: "Background Check Required" })}
+                          </span>
+                        </div>
+                      )}
+                      {(sponsoredDetails.req_lift_lbs || sponsoredDetails.lifting_weight_lbs) && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <Zap className="h-4 w-4 text-slate-600 shrink-0" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {t("jobs.details.req_lifting", { defaultValue: "Lifting Required" })}: {sponsoredDetails.req_lift_lbs || sponsoredDetails.lifting_weight_lbs} lbs
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.req_extreme_weather && (
+                        <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-100">
+                          <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0" />
+                          <span className="text-sm font-medium text-orange-900">
+                            {t("jobs.details.req_extreme_weather", { defaultValue: "Extreme Weather Conditions" })}
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.req_full_contract_availability && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <Clock className="h-4 w-4 text-slate-600 shrink-0" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {t("jobs.details.req_full_contract", { defaultValue: "Full Contract Availability Required" })}
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.req_travel_worksite && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <MapPin className="h-4 w-4 text-slate-600 shrink-0" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {t("jobs.details.req_travel", { defaultValue: "Travel to Worksite Required" })}
+                          </span>
+                        </div>
+                      )}
+                      {sponsoredDetails.equipment_used && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 sm:col-span-2">
+                          <Info className="h-4 w-4 text-slate-600 shrink-0" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {t("jobs.details.equipment", { defaultValue: "Equipment" })}: {sponsoredDetails.equipment_used}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Benefits */}
+                    {(sponsoredDetails.housing_provided || sponsoredDetails.transportation_provided || sponsoredDetails.meals_provided || sponsoredDetails.training_provided || sponsoredDetails.visa_fee_reimbursement) && (
+                      <div className="mt-6 pt-4 border-t">
+                        <h5 className="text-xs font-bold uppercase text-green-600 mb-3 flex items-center gap-2">
+                          <CheckCircle2 className="h-3 w-3" /> {t("jobs.details.benefits_provided", { defaultValue: "Benefits Provided" })}
+                        </h5>
+                        <div className="flex flex-wrap gap-2">
+                          {sponsoredDetails.housing_provided && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              🏠 {t("jobs.details.housing", { defaultValue: "Housing" })}
+                            </Badge>
+                          )}
+                          {sponsoredDetails.transportation_provided && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              🚌 {t("jobs.details.transportation", { defaultValue: "Transportation" })}
+                            </Badge>
+                          )}
+                          {sponsoredDetails.meals_provided && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              🍽️ {t("jobs.details.meals", { defaultValue: "Meals" })}
+                              {sponsoredDetails.daily_meal_cost ? ` ($${sponsoredDetails.daily_meal_cost}/day)` : ""}
+                            </Badge>
+                          )}
+                          {sponsoredDetails.training_provided && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              📚 {t("jobs.details.training", { defaultValue: "Training" })}
+                            </Badge>
+                          )}
+                          {sponsoredDetails.visa_fee_reimbursement && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              ✈️ {t("jobs.details.visa_reimbursement", { defaultValue: "Visa Fee Reimbursement" })}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
@@ -469,9 +590,8 @@ export function JobDetailsDialog({
           {isSponsored ? (
             <Button
               onClick={handleApply}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold h-12 text-base shadow-lg"
+              className="w-full font-bold h-12 text-base shadow-lg"
             >
-              <Star className="h-5 w-5 mr-2 fill-white" />
               {t("jobs.details.apply_now", { defaultValue: "Apply Now" })}
             </Button>
           ) : (
