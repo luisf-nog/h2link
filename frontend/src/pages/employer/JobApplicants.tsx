@@ -54,17 +54,35 @@ export default function JobApplicants() {
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [jobTitle, setJobTitle] = useState("");
   const [dolCaseNumber, setDolCaseNumber] = useState<string | null>(null);
+  const [jobDetails, setJobDetails] = useState<{
+    employer_legal_name: string | null;
+    city: string | null;
+    state: string | null;
+    hourly_wage: number | null;
+    start_date: string | null;
+    end_date: string | null;
+    wage_rate: string | null;
+  }>({} as any);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     if (!jobId) return;
     const [jobRes, appsRes, auditRes] = await Promise.all([
-      supabase.from("sponsored_jobs").select("title, dol_case_number").eq("id", jobId).maybeSingle(),
+      supabase.from("sponsored_jobs").select("title, dol_case_number, employer_legal_name, city, state, hourly_wage, start_date, end_date, wage_rate").eq("id", jobId).maybeSingle(),
       supabase.from("job_applications").select("*").eq("job_id", jobId).order("created_at", { ascending: false }),
       supabase.from("application_audit_log").select("*").order("created_at", { ascending: false }),
     ]);
     setJobTitle(jobRes.data?.title ?? "");
     setDolCaseNumber(jobRes.data?.dol_case_number ?? null);
+    setJobDetails({
+      employer_legal_name: jobRes.data?.employer_legal_name ?? null,
+      city: jobRes.data?.city ?? null,
+      state: jobRes.data?.state ?? null,
+      hourly_wage: jobRes.data?.hourly_wage ? Number(jobRes.data.hourly_wage) : null,
+      start_date: jobRes.data?.start_date ?? null,
+      end_date: jobRes.data?.end_date ?? null,
+      wage_rate: jobRes.data?.wage_rate ?? null,
+    });
     setApps((appsRes.data as Application[]) ?? []);
     // Filter audit logs to only this job's applications
     const appIds = new Set((appsRes.data ?? []).map((a: { id: string }) => a.id));
@@ -137,6 +155,7 @@ export default function JobApplicants() {
             jobTitle={jobTitle}
             dolCaseNumber={dolCaseNumber}
             jobId={jobId!}
+            jobDetails={jobDetails}
           />
         </TabsContent>
       </Tabs>
