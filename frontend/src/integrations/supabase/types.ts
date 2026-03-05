@@ -2020,6 +2020,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      increment_sponsored_job_view: {
+        Args: { p_job_id: string }
+        Returns: undefined
+      }
       insert_audit_log: {
         Args: {
           p_action: string
