@@ -3,8 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -17,40 +16,50 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. Get all active radar profiles (only premium users)
+    // FIX: Join radar_profiles with profiles in a single query to avoid N+1
+    // and ensure only truly active premium users are scanned.
+    // The .not("profiles.plan_tier", "is", null) alone is not enough —
+    // we use a RPC or a manual filter below after the join.
     const { data: radarProfiles, error: rpError } = await supabase
       .from("radar_profiles")
-      .select("*")
-      .eq("is_active", true);
+      .select(
+        `
+        *,
+        profiles!inner (
+          plan_tier,
+          credits_used_today
+        )
+      `,
+      )
+      .eq("is_active", true)
+      .in("profiles.plan_tier", ["diamond", "black"]);
 
     if (rpError) throw rpError;
     if (!radarProfiles || radarProfiles.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No active radar profiles" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ message: "No active radar profiles" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`[process-radar] Found ${radarProfiles.length} active profiles`);
+    console.log(`[process-radar] Found ${radarProfiles.length} active premium profiles`);
 
     let totalMatches = 0;
     let totalQueued = 0;
 
     for (const radar of radarProfiles) {
       try {
-        // Verify user is still premium
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("plan_tier, credits_used_today")
-          .eq("id", radar.user_id)
-          .single();
+        // FIX: Profile data comes from the join — no extra per-user query needed
+        const profile = (radar as any).profiles;
 
         if (!profile || !["diamond", "black"].includes(profile.plan_tier)) {
-          console.log(`[process-radar] Skipping ${radar.user_id}: plan=${profile?.plan_tier}`);
+          // Defensive: should not reach here due to .in() filter above,
+          // but deactivate the radar_profile to keep data consistent
+          console.warn(`[process-radar] Deactivating non-premium radar for ${radar.user_id}`);
+          await supabase.from("radar_profiles").update({ is_active: false }).eq("user_id", radar.user_id);
           continue;
         }
 
-        // Get effective daily limit — used ONLY for queuing, NOT for match detection
+        // Get effective daily limit
         const { data: limitData } = await supabase.rpc("get_effective_daily_limit", {
           p_user_id: radar.user_id,
         });
@@ -58,9 +67,7 @@ serve(async (req) => {
         const creditsRemaining = dailyLimit - (profile.credits_used_today || 0);
         const canQueue = creditsRemaining > 0;
 
-        // FIX: Do NOT skip user when credits are 0 — always detect matches
-
-        // Build job query based on radar criteria — NO hard limit (uses 2000 safety cap)
+        // Build job query based on radar criteria
         let jobQuery = supabase
           .from("public_jobs")
           .select("id")
@@ -78,6 +85,8 @@ serve(async (req) => {
         if (radar.min_wage) {
           jobQuery = jobQuery.gte("salary", radar.min_wage);
         }
+        // FIX: guard against empty array — skip the .in() filter if no categories
+        // are selected, otherwise Supabase returns 0 results instead of all results
         if (radar.categories && radar.categories.length > 0) {
           jobQuery = jobQuery.in("category", radar.categories);
         }
@@ -95,34 +104,43 @@ serve(async (req) => {
         }
         if (!matchingJobs || matchingJobs.length === 0) {
           console.log(`[process-radar] No matching jobs for ${radar.user_id}`);
+          // Still update last_scan_at so we know the scan ran
+          await supabase
+            .from("radar_profiles")
+            .update({ last_scan_at: new Date().toISOString() })
+            .eq("user_id", radar.user_id);
           continue;
         }
 
         console.log(`[process-radar] ${radar.user_id}: ${matchingJobs.length} matching jobs found`);
 
-        // Filter out already matched jobs
         const jobIds = matchingJobs.map((j: any) => j.id);
 
-        const [{ data: alreadyMatched }, { data: queuedJobs }] = await Promise.all([
-          supabase
-            .from("radar_matched_jobs")
-            .select("job_id")
-            .eq("user_id", radar.user_id)
-            .in("job_id", jobIds),
-          supabase
-            .from("my_queue")
-            .select("job_id")
-            .eq("user_id", radar.user_id)
-            .in("job_id", jobIds),
+        // FIX: handle errors from both parallel queries explicitly
+        const [alreadyMatchedRes, queuedJobsRes] = await Promise.all([
+          supabase.from("radar_matched_jobs").select("job_id").eq("user_id", radar.user_id).in("job_id", jobIds),
+          supabase.from("my_queue").select("job_id").eq("user_id", radar.user_id).in("job_id", jobIds),
         ]);
 
-        const matchedSet = new Set((alreadyMatched || []).map((m: any) => m.job_id));
-        const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
+        if (alreadyMatchedRes.error) {
+          console.error(
+            `[process-radar] Failed to fetch existing matches for ${radar.user_id}:`,
+            alreadyMatchedRes.error,
+          );
+          continue;
+        }
+        if (queuedJobsRes.error) {
+          console.error(`[process-radar] Failed to fetch queued jobs for ${radar.user_id}:`, queuedJobsRes.error);
+          continue;
+        }
 
-        // NEW matches (for metrics/history)
+        const matchedSet = new Set((alreadyMatchedRes.data || []).map((m: any) => m.job_id));
+        const queuedSet = new Set((queuedJobsRes.data || []).map((q: any) => q.job_id));
+
+        // New matches: jobs not yet in radar_matched_jobs
         const newMatchJobs = jobIds.filter((id: string) => !matchedSet.has(id));
 
-        // Queue candidates: ALL matching jobs not yet queued (including previously matched)
+        // Queue candidates: matching jobs not already in my_queue
         const queueCandidates = jobIds.filter((id: string) => !queuedSet.has(id));
 
         if (newMatchJobs.length > 0) {
@@ -132,12 +150,17 @@ serve(async (req) => {
             auto_queued: canQueue && radar.auto_send,
           }));
 
-          await supabase.from("radar_matched_jobs").upsert(allMatchRecords, {
+          const { error: matchUpsertError } = await supabase.from("radar_matched_jobs").upsert(allMatchRecords, {
             onConflict: "user_id,job_id",
           });
 
-          totalMatches += newMatchJobs.length;
-          console.log(`[process-radar] ${radar.user_id}: recorded ${newMatchJobs.length} new matches`);
+          if (matchUpsertError) {
+            console.error(`[process-radar] Match upsert error for ${radar.user_id}:`, matchUpsertError);
+            // Non-fatal: continue to queuing step
+          } else {
+            totalMatches += newMatchJobs.length;
+            console.log(`[process-radar] ${radar.user_id}: recorded ${newMatchJobs.length} new matches`);
+          }
         } else {
           console.log(`[process-radar] ${radar.user_id}: no new matches (already tracked)`);
         }
@@ -160,42 +183,70 @@ serve(async (req) => {
             })
             .select("id");
 
-          if (!queueError) {
+          if (queueError) {
+            console.error(`[process-radar] Queue insert error for ${radar.user_id}:`, queueError);
+          } else {
             const actualQueued = queueResult?.length || 0;
             totalQueued += actualQueued;
-            console.log(`[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${queueRecords.length}, candidates ${queueCandidates.length})`);
-          } else {
-            console.error(`[process-radar] Queue insert error for ${radar.user_id}:`, queueError);
-          }
+            console.log(
+              `[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${queueRecords.length}, candidates ${queueCandidates.length})`,
+            );
 
-          // Trigger the process-queue function to send emails
-          if (!queueError) {
-            try {
-              await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${serviceRoleKey}`,
-                },
-                body: JSON.stringify({ user_id: radar.user_id }),
+            // FIX: only trigger process-queue if we actually queued something
+            if (actualQueued > 0) {
+              try {
+                const processQueueRes = await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${serviceRoleKey}`,
+                  },
+                  body: JSON.stringify({ user_id: radar.user_id }),
+                });
+
+                if (!processQueueRes.ok) {
+                  const errText = await processQueueRes.text();
+                  console.error(
+                    `[process-radar] process-queue returned ${processQueueRes.status} for ${radar.user_id}: ${errText}`,
+                  );
+                }
+              } catch (e) {
+                console.error(`[process-radar] Failed to trigger process-queue for ${radar.user_id}:`, e);
+              }
+            }
+
+            // FIX: increment credits_used_today atomically to prevent over-queuing
+            // if the radar function runs again before the queue processor updates it
+            if (actualQueued > 0) {
+              const { error: creditError } = await supabase.rpc("increment_credits_used_today", {
+                p_user_id: radar.user_id,
+                p_amount: actualQueued,
               });
-            } catch (e) {
-              console.error("Failed to trigger process-queue for", radar.user_id, e);
+              if (creditError) {
+                // Non-fatal but important to log — credits may drift
+                console.error(`[process-radar] Failed to increment credits for ${radar.user_id}:`, creditError);
+              }
             }
           }
         } else if (!canQueue) {
-          console.log(`[process-radar] ${radar.user_id}: no credits (${creditsRemaining}), ${queueCandidates.length} matching jobs waiting to be queued`);
+          console.log(
+            `[process-radar] ${radar.user_id}: no credits remaining (used ${profile.credits_used_today}/${dailyLimit}), ` +
+              `${queueCandidates.length} candidates waiting`,
+          );
         } else {
-          console.log(`[process-radar] ${radar.user_id}: auto_send OFF, ${queueCandidates.length} matching jobs not queued`);
+          // canQueue is true but auto_send is OFF
+          console.log(
+            `[process-radar] ${radar.user_id}: auto_send OFF — ${queueCandidates.length} jobs detected but not queued`,
+          );
         }
 
-        // Update last_scan_at
+        // Update last_scan_at regardless of outcome
         await supabase
           .from("radar_profiles")
           .update({ last_scan_at: new Date().toISOString() })
           .eq("user_id", radar.user_id);
       } catch (userError) {
-        console.error(`[process-radar] Error processing user ${radar.user_id}:`, userError);
+        console.error(`[process-radar] Unhandled error processing user ${radar.user_id}:`, userError);
         continue;
       }
     }
@@ -212,10 +263,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Radar error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
+    console.error("[process-radar] Fatal error:", error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });
