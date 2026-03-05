@@ -328,7 +328,7 @@ export default function Jobs() {
   const FeaturedJobCard = ({ sj }: { sj: FeaturedJob }) => {
     const handleFeaturedMobileClick = async () => {
       setSelectedFeaturedJob(sj);
-      await supabase.from("sponsored_jobs").update({ view_count: (sj.view_count || 0) + 1 }).eq("id", sj.id);
+      await supabase.rpc("increment_sponsored_job_view", { p_job_id: sj.id });
     };
     return (
       <Card
@@ -395,7 +395,7 @@ export default function Jobs() {
     const handleFeaturedClick = async () => {
       setSelectedFeaturedJob(sj);
       // Track view
-      await supabase.from("sponsored_jobs").update({ view_count: (sj.view_count || 0) + 1 }).eq("id", sj.id);
+      await supabase.rpc("increment_sponsored_job_view", { p_job_id: sj.id });
     };
     return (
       <TableRow
