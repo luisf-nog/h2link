@@ -59,7 +59,7 @@ serve(async (req) => {
     // Get job screening toggles
     const { data: job, error: jobError } = await supabase
       .from("sponsored_jobs")
-      .select("req_english, req_experience, req_drivers_license, consular_only, is_active")
+      .select("english_proficiency, prior_experience_required, drivers_license, is_active")
       .eq("id", job_id)
       .single();
 
@@ -74,10 +74,10 @@ serve(async (req) => {
       p_h2b_visa_count: h2b_visa_count ?? 0,
       p_work_authorization_status: work_authorization_status ?? "outside_us",
       p_is_us_worker: is_us_worker ?? false,
-      p_req_english: job.req_english,
-      p_req_experience: job.req_experience,
-      p_req_drivers_license: job.req_drivers_license,
-      p_consular_only: job.consular_only,
+      p_req_english: job.english_proficiency !== "none" && job.english_proficiency !== null,
+      p_req_experience: job.prior_experience_required ?? false,
+      p_req_drivers_license: job.drivers_license !== "not_required" && job.drivers_license !== null,
+      p_consular_only: false,
     });
 
     const matchScore = matchResult?.score ?? 0;
@@ -89,10 +89,10 @@ serve(async (req) => {
       p_has_experience: has_experience ?? false,
       p_has_license: has_license ?? false,
       p_is_in_us: is_in_us ?? false,
-      p_req_english: job.req_english,
-      p_req_experience: job.req_experience,
-      p_req_drivers_license: job.req_drivers_license,
-      p_consular_only: job.consular_only,
+      p_req_english: job.english_proficiency !== "none" && job.english_proficiency !== null,
+      p_req_experience: job.prior_experience_required ?? false,
+      p_req_drivers_license: job.drivers_license !== "not_required" && job.drivers_license !== null,
+      p_consular_only: false,
     });
 
     const score_color = legacyScore || "yellow";
