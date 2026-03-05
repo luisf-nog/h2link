@@ -6,6 +6,48 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ---------------------------------------------------------------------------
+// Helper: chunk a large array into smaller arrays of size `n`.
+// Used to avoid Supabase URL length limits when using .in() with many IDs.
+// ---------------------------------------------------------------------------
+function chunkArray<T>(arr: T[], n: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) chunks.push(arr.slice(i, i + n));
+  return chunks;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: fetch all job_ids from a table for a user across multiple chunks.
+// Needed when jobIds > 500 (Supabase .in() limit).
+// ---------------------------------------------------------------------------
+async function fetchJobIdsInChunks(
+  supabase: any,
+  table: string,
+  column: string,
+  userId: string,
+  jobIds: string[],
+  extraFilter?: { col: string; val: any },
+): Promise<Set<string>> {
+  const result = new Set<string>();
+  const chunks = chunkArray(jobIds, 400); // stay well under URL limit
+
+  for (const chunk of chunks) {
+    let q = supabase.from(table).select(column).eq("user_id", userId).in(column, chunk);
+
+    if (extraFilter) q = q.eq(extraFilter.col, extraFilter.val);
+
+    const { data, error } = await q;
+    if (error) throw new Error(`[${table}] chunk query error: ${error.message}`);
+    for (const row of data || []) result.add(row[column]);
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Main handler
+// ---------------------------------------------------------------------------
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,10 +58,10 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // FIX: Join radar_profiles with profiles in a single query to avoid N+1
-    // and ensure only truly active premium users are scanned.
-    // The .not("profiles.plan_tier", "is", null) alone is not enough —
-    // we use a RPC or a manual filter below after the join.
+    // -----------------------------------------------------------------------
+    // FIX: single join query instead of N+1 per-user profile fetches.
+    // Only returns radar profiles for active premium users.
+    // -----------------------------------------------------------------------
     const { data: radarProfiles, error: rpError } = await supabase
       .from("radar_profiles")
       .select(
@@ -35,6 +77,7 @@ serve(async (req) => {
       .in("profiles.plan_tier", ["diamond", "black"]);
 
     if (rpError) throw rpError;
+
     if (!radarProfiles || radarProfiles.length === 0) {
       return new Response(JSON.stringify({ message: "No active radar profiles" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -48,18 +91,19 @@ serve(async (req) => {
 
     for (const radar of radarProfiles) {
       try {
-        // FIX: Profile data comes from the join — no extra per-user query needed
         const profile = (radar as any).profiles;
 
+        // Defensive check: should not pass the .in() filter above, but
+        // deactivate if it somehow does to keep data consistent.
         if (!profile || !["diamond", "black"].includes(profile.plan_tier)) {
-          // Defensive: should not reach here due to .in() filter above,
-          // but deactivate the radar_profile to keep data consistent
-          console.warn(`[process-radar] Deactivating non-premium radar for ${radar.user_id}`);
+          console.warn(`[process-radar] Non-premium radar found for ${radar.user_id} — deactivating`);
           await supabase.from("radar_profiles").update({ is_active: false }).eq("user_id", radar.user_id);
           continue;
         }
 
-        // Get effective daily limit
+        // -----------------------------------------------------------------------
+        // Credit check
+        // -----------------------------------------------------------------------
         const { data: limitData } = await supabase.rpc("get_effective_daily_limit", {
           p_user_id: radar.user_id,
         });
@@ -67,7 +111,9 @@ serve(async (req) => {
         const creditsRemaining = dailyLimit - (profile.credits_used_today || 0);
         const canQueue = creditsRemaining > 0;
 
-        // Build job query based on radar criteria
+        // -----------------------------------------------------------------------
+        // Build job query
+        // -----------------------------------------------------------------------
         let jobQuery = supabase
           .from("public_jobs")
           .select("id")
@@ -85,8 +131,8 @@ serve(async (req) => {
         if (radar.min_wage) {
           jobQuery = jobQuery.gte("salary", radar.min_wage);
         }
-        // FIX: guard against empty array — skip the .in() filter if no categories
-        // are selected, otherwise Supabase returns 0 results instead of all results
+        // FIX: skip .in() when categories is empty — an empty array would
+        // return 0 results instead of returning all jobs.
         if (radar.categories && radar.categories.length > 0) {
           jobQuery = jobQuery.in("category", radar.categories);
         }
@@ -98,13 +144,13 @@ serve(async (req) => {
         }
 
         const { data: matchingJobs, error: jobsError } = await jobQuery;
+
         if (jobsError) {
           console.error(`[process-radar] Job query error for ${radar.user_id}:`, jobsError);
           continue;
         }
         if (!matchingJobs || matchingJobs.length === 0) {
           console.log(`[process-radar] No matching jobs for ${radar.user_id}`);
-          // Still update last_scan_at so we know the scan ran
           await supabase
             .from("radar_profiles")
             .update({ last_scan_at: new Date().toISOString() })
@@ -112,63 +158,98 @@ serve(async (req) => {
           continue;
         }
 
-        console.log(`[process-radar] ${radar.user_id}: ${matchingJobs.length} matching jobs found`);
-
         const jobIds = matchingJobs.map((j: any) => j.id);
+        console.log(`[process-radar] ${radar.user_id}: ${jobIds.length} matching jobs`);
 
-        // FIX: handle errors from both parallel queries explicitly
-        const [alreadyMatchedRes, queuedJobsRes] = await Promise.all([
-          supabase.from("radar_matched_jobs").select("job_id").eq("user_id", radar.user_id).in("job_id", jobIds),
-          supabase.from("my_queue").select("job_id").eq("user_id", radar.user_id).in("job_id", jobIds),
-        ]);
+        // -----------------------------------------------------------------------
+        // FIX: chunk .in() queries to avoid URL length limits (2000 IDs is safe
+        // for inserts but risky for SELECT .in() — chunk at 400).
+        // Also fetch dismissed matches separately so they are excluded from
+        // newMatchJobs (no point re-recording a dismissed job).
+        // -----------------------------------------------------------------------
+        let matchedSet: Set<string>;
+        let dismissedSet: Set<string>;
+        let queuedSet: Set<string>;
 
-        if (alreadyMatchedRes.error) {
-          console.error(
-            `[process-radar] Failed to fetch existing matches for ${radar.user_id}:`,
-            alreadyMatchedRes.error,
-          );
+        try {
+          // All previously matched jobs (regardless of dismissed status)
+          matchedSet = await fetchJobIdsInChunks(supabase, "radar_matched_jobs", "job_id", radar.user_id, jobIds);
+
+          // FIX: dismissed jobs — must not re-appear as new matches.
+          // Requires column: radar_matched_jobs.dismissed boolean DEFAULT false
+          dismissedSet = await fetchJobIdsInChunks(supabase, "radar_matched_jobs", "job_id", radar.user_id, jobIds, {
+            col: "dismissed",
+            val: true,
+          });
+
+          // Already queued jobs
+          queuedSet = await fetchJobIdsInChunks(supabase, "my_queue", "job_id", radar.user_id, jobIds);
+        } catch (chunkErr) {
+          console.error(`[process-radar] Chunk query error for ${radar.user_id}:`, chunkErr);
           continue;
         }
-        if (queuedJobsRes.error) {
-          console.error(`[process-radar] Failed to fetch queued jobs for ${radar.user_id}:`, queuedJobsRes.error);
-          continue;
-        }
 
-        const matchedSet = new Set((alreadyMatchedRes.data || []).map((m: any) => m.job_id));
-        const queuedSet = new Set((queuedJobsRes.data || []).map((q: any) => q.job_id));
+        // -----------------------------------------------------------------------
+        // New matches: not yet matched AND not dismissed
+        // FIX: previously, dismissed jobs were hard-deleted from radar_matched_jobs
+        // so they were not in matchedSet and would be re-inserted every scan.
+        // Now dismissed jobs remain in the table with dismissed=true, so they
+        // appear in matchedSet → excluded from newMatchJobs → never re-surface.
+        // -----------------------------------------------------------------------
+        const newMatchJobs = jobIds.filter((id: string) => !matchedSet.has(id) && !dismissedSet.has(id));
 
-        // New matches: jobs not yet in radar_matched_jobs
-        const newMatchJobs = jobIds.filter((id: string) => !matchedSet.has(id));
+        // Queue candidates: matching, not dismissed, not already queued
+        const queueCandidates = jobIds.filter((id: string) => !queuedSet.has(id) && !dismissedSet.has(id));
 
-        // Queue candidates: matching jobs not already in my_queue
-        const queueCandidates = jobIds.filter((id: string) => !queuedSet.has(id));
-
+        // -----------------------------------------------------------------------
+        // Insert new match records
+        // -----------------------------------------------------------------------
         if (newMatchJobs.length > 0) {
-          const allMatchRecords = newMatchJobs.map((jobId: string) => ({
+          const matchRecords = newMatchJobs.map((jobId: string) => ({
             user_id: radar.user_id,
             job_id: jobId,
             auto_queued: canQueue && radar.auto_send,
+            dismissed: false,
           }));
 
-          const { error: matchUpsertError } = await supabase.from("radar_matched_jobs").upsert(allMatchRecords, {
-            onConflict: "user_id,job_id",
-          });
+          const { error: matchUpsertError } = await supabase
+            .from("radar_matched_jobs")
+            .upsert(matchRecords, { onConflict: "user_id,job_id" });
 
           if (matchUpsertError) {
             console.error(`[process-radar] Match upsert error for ${radar.user_id}:`, matchUpsertError);
-            // Non-fatal: continue to queuing step
+            // Non-fatal: continue to queuing
           } else {
             totalMatches += newMatchJobs.length;
-            console.log(`[process-radar] ${radar.user_id}: recorded ${newMatchJobs.length} new matches`);
+            console.log(`[process-radar] ${radar.user_id}: ${newMatchJobs.length} new matches recorded`);
           }
         } else {
-          console.log(`[process-radar] ${radar.user_id}: no new matches (already tracked)`);
+          console.log(`[process-radar] ${radar.user_id}: no new matches`);
         }
 
-        if (queueCandidates.length === 0) {
-          console.log(`[process-radar] ${radar.user_id}: all matching jobs already in queue`);
-        } else if (canQueue && radar.auto_send) {
+        // -----------------------------------------------------------------------
+        // FIX: update auto_queued=true for jobs that were previously matched
+        // without being queued (e.g. auto_send was OFF) and are now being queued.
+        // Without this, their auto_queued stays false even after queuing.
+        // -----------------------------------------------------------------------
+        if (canQueue && radar.auto_send && queueCandidates.length > 0) {
           const jobsToQueue = queueCandidates.slice(0, creditsRemaining);
+
+          // Bulk update auto_queued for previously-matched jobs that are now
+          // being queued (they already exist in radar_matched_jobs)
+          const alreadyMatchedToUpdate = jobsToQueue.filter((id: string) => matchedSet.has(id));
+          if (alreadyMatchedToUpdate.length > 0) {
+            const updateChunks = chunkArray(alreadyMatchedToUpdate, 400);
+            for (const chunk of updateChunks) {
+              await supabase
+                .from("radar_matched_jobs")
+                .update({ auto_queued: true })
+                .eq("user_id", radar.user_id)
+                .in("job_id", chunk);
+            }
+          }
+
+          // Insert into my_queue
           const queueRecords = jobsToQueue.map((jobId: string) => ({
             user_id: radar.user_id,
             job_id: jobId,
@@ -189,13 +270,14 @@ serve(async (req) => {
             const actualQueued = queueResult?.length || 0;
             totalQueued += actualQueued;
             console.log(
-              `[process-radar] ${radar.user_id}: queued ${actualQueued} jobs (attempted ${queueRecords.length}, candidates ${queueCandidates.length})`,
+              `[process-radar] ${radar.user_id}: queued ${actualQueued} jobs ` +
+                `(attempted ${queueRecords.length}, candidates ${queueCandidates.length})`,
             );
 
-            // FIX: only trigger process-queue if we actually queued something
+            // FIX: only trigger process-queue if something was actually queued
             if (actualQueued > 0) {
               try {
-                const processQueueRes = await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
+                const res = await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
@@ -203,50 +285,54 @@ serve(async (req) => {
                   },
                   body: JSON.stringify({ user_id: radar.user_id }),
                 });
-
-                if (!processQueueRes.ok) {
-                  const errText = await processQueueRes.text();
-                  console.error(
-                    `[process-radar] process-queue returned ${processQueueRes.status} for ${radar.user_id}: ${errText}`,
-                  );
+                if (!res.ok) {
+                  const body = await res.text();
+                  console.error(`[process-radar] process-queue ${res.status} for ${radar.user_id}: ${body}`);
                 }
               } catch (e) {
                 console.error(`[process-radar] Failed to trigger process-queue for ${radar.user_id}:`, e);
               }
-            }
 
-            // FIX: increment credits_used_today atomically to prevent over-queuing
-            // if the radar function runs again before the queue processor updates it
-            if (actualQueued > 0) {
+              // FIX: increment credits atomically after queuing to prevent
+              // over-queuing if this function runs again before process-queue
+              // updates credits_used_today on its own.
+              // ⚠ Requires RPC: increment_credits_used_today(p_user_id, p_amount)
+              //   CREATE OR REPLACE FUNCTION increment_credits_used_today(p_user_id uuid, p_amount int)
+              //   RETURNS void LANGUAGE sql AS $$
+              //     UPDATE profiles
+              //     SET credits_used_today = credits_used_today + p_amount
+              //     WHERE id = p_user_id;
+              //   $$;
               const { error: creditError } = await supabase.rpc("increment_credits_used_today", {
                 p_user_id: radar.user_id,
                 p_amount: actualQueued,
               });
               if (creditError) {
-                // Non-fatal but important to log — credits may drift
-                console.error(`[process-radar] Failed to increment credits for ${radar.user_id}:`, creditError);
+                // Non-fatal but log clearly — credits may drift over time
+                console.error(`[process-radar] Credit increment failed for ${radar.user_id}:`, creditError);
               }
             }
           }
         } else if (!canQueue) {
           console.log(
-            `[process-radar] ${radar.user_id}: no credits remaining (used ${profile.credits_used_today}/${dailyLimit}), ` +
+            `[process-radar] ${radar.user_id}: no credits ` +
+              `(used ${profile.credits_used_today}/${dailyLimit}), ` +
               `${queueCandidates.length} candidates waiting`,
           );
         } else {
-          // canQueue is true but auto_send is OFF
+          // canQueue=true but auto_send=false
           console.log(
-            `[process-radar] ${radar.user_id}: auto_send OFF — ${queueCandidates.length} jobs detected but not queued`,
+            `[process-radar] ${radar.user_id}: auto_send OFF — ` + `${queueCandidates.length} matches waiting in feed`,
           );
         }
 
-        // Update last_scan_at regardless of outcome
+        // Always update last_scan_at
         await supabase
           .from("radar_profiles")
           .update({ last_scan_at: new Date().toISOString() })
           .eq("user_id", radar.user_id);
       } catch (userError) {
-        console.error(`[process-radar] Unhandled error processing user ${radar.user_id}:`, userError);
+        console.error(`[process-radar] Unhandled error for ${radar.user_id}:`, userError);
         continue;
       }
     }
