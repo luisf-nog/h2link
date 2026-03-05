@@ -172,6 +172,13 @@ export default function ApplyJob() {
             <p className="text-muted-foreground text-sm">
               Thank you for applying. The employer will review your application and may contact you directly.
             </p>
+            <Separator />
+            <p className="text-sm text-muted-foreground">
+              Looking for more opportunities? Browse all available jobs on our platform.
+            </p>
+            <Button className="w-full font-bold h-11" onClick={() => window.location.href = "/jobs"}>
+              <Briefcase className="h-4 w-4 mr-2" /> View More Jobs
+            </Button>
           </CardContent>
         </Card>
       </div>

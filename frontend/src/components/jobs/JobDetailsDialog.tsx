@@ -89,12 +89,18 @@ export function JobDetailsDialog({
 
   const renderMainWage = () => {
     if (!job) return "-";
-    if (job.wage_from && job.wage_to && job.wage_from !== job.wage_to)
+    // For sponsored/featured jobs, also check sponsoredDetails.hourly_wage
+    const wageFrom = job.wage_from ?? (isSponsored && sponsoredDetails?.hourly_wage ? Number(sponsoredDetails.hourly_wage) : null);
+    const wageTo = job.wage_to;
+    const wageUnit = job.wage_unit || "hr";
+    if (wageFrom && wageTo && wageFrom !== wageTo)
       return (
-        <span translate="no">{`$${job.wage_from.toFixed(2)} - $${job.wage_to.toFixed(2)} / ${job.wage_unit || "hr"}`}</span>
+        <span translate="no">{`$${wageFrom.toFixed(2)} - $${wageTo.toFixed(2)} / ${wageUnit}`}</span>
       );
-    if (job.wage_from) return <span translate="no">{`$${job.wage_from.toFixed(2)} / ${job.wage_unit || "hr"}`}</span>;
+    if (wageFrom) return <span translate="no">{`$${wageFrom.toFixed(2)} / ${wageUnit}`}</span>;
     if (job.salary) return <span translate="no">{formatSalary(job.salary)}</span>;
+    // For sponsored jobs with overtime_rate, show that
+    if (isSponsored && sponsoredDetails?.wage_rate) return <span translate="no">{sponsoredDetails.wage_rate}</span>;
     return t("jobs.details.view_details");
   };
 
