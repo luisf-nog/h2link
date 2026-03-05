@@ -91,6 +91,34 @@ interface FeaturedJob {
   employer_id: string;
   created_at: string;
   min_experience_months: number | null;
+  overtime_rate: number | null;
+  additional_compensation: string | null;
+  bonuses: string | null;
+  deductions: string | null;
+  deductions_additional: string | null;
+  benefits: string | null;
+  housing_provided: boolean | null;
+  transportation_provided: boolean | null;
+  meals_provided: boolean | null;
+  daily_meal_cost: number | null;
+  training_provided: boolean | null;
+  visa_fee_reimbursement: boolean | null;
+  english_level: string | null;
+  english_proficiency: string | null;
+  drivers_license: string | null;
+  prior_experience_required: boolean | null;
+  req_background_check: boolean | null;
+  req_extreme_weather: boolean | null;
+  req_full_contract_availability: boolean | null;
+  req_travel_worksite: boolean | null;
+  req_lift_lbs: number | null;
+  lifting_weight_lbs: number | null;
+  equipment_used: string | null;
+  equipment_experience: string | null;
+  work_environment: string | null;
+  skill_level: string | null;
+  view_count: number;
+  click_count: number;
 }
 
 export default function Jobs() {
@@ -167,7 +195,7 @@ export default function Jobs() {
   const fetchFeaturedJobs = async () => {
     const { data } = await supabase
       .from("sponsored_jobs")
-      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months")
+      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months, overtime_rate, additional_compensation, bonuses, deductions, deductions_additional, benefits, housing_provided, transportation_provided, meals_provided, daily_meal_cost, training_provided, visa_fee_reimbursement, english_level, english_proficiency, drivers_license, prior_experience_required, req_background_check, req_extreme_weather, req_full_contract_availability, req_travel_worksite, req_lift_lbs, lifting_weight_lbs, equipment_used, equipment_experience, work_environment, skill_level, view_count, click_count")
       .eq("is_active", true)
       .eq("is_sponsored", true)
       .order("priority_level", { ascending: false });
@@ -297,48 +325,115 @@ export default function Jobs() {
   };
 
   // ===== FEATURED JOB CARD (MOBILE) — same layout as regular, subtle badge =====
-  const FeaturedJobCard = ({ sj }: { sj: FeaturedJob }) => (
-    <Card
-      onClick={() => setSelectedFeaturedJob(sj)}
-      className="cursor-pointer active:scale-[0.98] transition-transform border-slate-200 shadow-sm overflow-hidden"
-    >
-      <CardContent className="p-4 space-y-3">
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/30 bg-primary/5 px-1.5 py-0">
-                ⭐ Featured
-              </Badge>
+  const FeaturedJobCard = ({ sj }: { sj: FeaturedJob }) => {
+    const handleFeaturedMobileClick = async () => {
+      setSelectedFeaturedJob(sj);
+      await supabase.from("sponsored_jobs").update({ view_count: (sj.view_count || 0) + 1 }).eq("id", sj.id);
+    };
+    return (
+      <Card
+        onClick={handleFeaturedMobileClick}
+        className="cursor-pointer active:scale-[0.98] transition-transform border-slate-200 shadow-sm overflow-hidden"
+      >
+        <CardContent className="p-4 space-y-3">
+          <div className="flex justify-between items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/30 bg-primary/5 px-1.5 py-0">
+                  ⭐ Featured
+                </Badge>
+              </div>
+              <h3 className="font-bold text-slate-900 leading-tight truncate uppercase text-sm" translate="no">
+                {sj.title}
+              </h3>
             </div>
-            <h3 className="font-bold text-slate-900 leading-tight truncate uppercase text-sm" translate="no">
-              {sj.title}
-            </h3>
+            <span className="font-bold text-green-700 shrink-0">
+              {sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}/h` : "-"}
+            </span>
           </div>
-          <span className="font-bold text-green-700 shrink-0">
-            {sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}/h` : "-"}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-slate-600">
-          <span className="flex items-center gap-1">
-            <Briefcase className="h-3.5 w-3.5" /> {sj.employer_legal_name || "—"}
-          </span>
-          <span className="flex items-center gap-1 uppercase">
-            <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-slate-600">
+            <span className="flex items-center gap-1">
+              <Briefcase className="h-3.5 w-3.5" /> {sj.employer_legal_name || "—"}
+            </span>
+            <span className="flex items-center gap-1 uppercase">
+              <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <Badge
+                className={cn(
+                  "text-[10px] font-black",
+                  sj.visa_type === "H-2A" && "bg-green-600 text-white",
+                  sj.visa_type === "H-2B" && "bg-blue-600 text-white",
+                )}
+              >
+                {sj.visa_type || "—"}
+              </Badge>
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Calendar className="h-3 w-3" /> {formatDate(sj.created_at)}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] h-7 px-3 rounded-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/apply/${sj.id}`);
+              }}
+            >
+              Apply
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // ===== FEATURED ROW FOR DESKTOP TABLE — same structure, subtle differentiation =====
+  const FeaturedTableRow = ({ sj }: { sj: FeaturedJob }) => {
+    const handleFeaturedClick = async () => {
+      setSelectedFeaturedJob(sj);
+      // Track view
+      await supabase.from("sponsored_jobs").update({ view_count: (sj.view_count || 0) + 1 }).eq("id", sj.id);
+    };
+    return (
+      <TableRow
+        onClick={handleFeaturedClick}
+        className="cursor-pointer hover:bg-slate-50 transition-colors border-l-2 border-l-primary/40"
+      >
+        <TableCell className="font-semibold text-sm">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/30 bg-primary/5 px-1.5 py-0 shrink-0">
+              ⭐ Featured
+            </Badge>
+            <span translate="no">{sj.title}</span>
+          </div>
+        </TableCell>
+        <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
+        <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
+        <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
+        <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : "-"}</TableCell>
+        <TableCell>
           <Badge
             className={cn(
-              "text-[10px] font-black",
-              sj.visa_type === "H-2A" && "bg-green-600 text-white",
-              sj.visa_type === "H-2B" && "bg-blue-600 text-white",
+              "text-[10px] font-black border-2",
+              sj.visa_type === "H-2A" && "bg-green-600 text-white border-green-600",
+              sj.visa_type === "H-2B" && "bg-blue-600 text-white border-blue-600",
             )}
           >
             {sj.visa_type || "—"}
           </Badge>
+        </TableCell>
+        <TableCell>{/* No randomization group for featured */}</TableCell>
+        <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.created_at)}</TableCell>
+        <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.start_date)}</TableCell>
+        <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.end_date)}</TableCell>
+        <TableCell className="text-sm text-slate-600">{formatExperience(sj.min_experience_months)}</TableCell>
+        <TableCell className="text-right">
           <Button
             size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] h-7 px-3 rounded-full"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] h-8 px-3 rounded-full"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/apply/${sj.id}`);
@@ -346,58 +441,10 @@ export default function Jobs() {
           >
             Apply
           </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  // ===== FEATURED ROW FOR DESKTOP TABLE — same structure, subtle differentiation =====
-  const FeaturedTableRow = ({ sj }: { sj: FeaturedJob }) => (
-    <TableRow
-      onClick={() => setSelectedFeaturedJob(sj)}
-      className="cursor-pointer hover:bg-slate-50 transition-colors border-l-2 border-l-primary/40"
-    >
-      <TableCell className="font-semibold text-sm">
-        <span translate="no">{sj.title}</span>
-      </TableCell>
-      <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
-      <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
-      <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
-      <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : "-"}</TableCell>
-      <TableCell>
-        <Badge
-          className={cn(
-            "text-[10px] font-black border-2",
-            sj.visa_type === "H-2A" && "bg-green-600 text-white border-green-600",
-            sj.visa_type === "H-2B" && "bg-blue-600 text-white border-blue-600",
-          )}
-        >
-          {sj.visa_type || "—"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/30 bg-primary/5">
-          ⭐ Featured
-        </Badge>
-      </TableCell>
-      <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.created_at)}</TableCell>
-      <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.start_date)}</TableCell>
-      <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.end_date)}</TableCell>
-      <TableCell className="text-sm text-slate-600">{formatExperience(sj.min_experience_months)}</TableCell>
-      <TableCell className="text-right">
-        <Button
-          size="sm"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] h-8 px-3 rounded-full"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/apply/${sj.id}`);
-          }}
-        >
-          Apply
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <TooltipProvider>
@@ -716,17 +763,21 @@ export default function Jobs() {
             wage_from: selectedFeaturedJob.hourly_wage,
             wage_to: null,
             wage_unit: "hr",
+            wage_additional: selectedFeaturedJob.additional_compensation || selectedFeaturedJob.bonuses || null,
+            rec_pay_deductions: selectedFeaturedJob.deductions || selectedFeaturedJob.deductions_additional || null,
             start_date: selectedFeaturedJob.start_date,
             end_date: selectedFeaturedJob.end_date,
             openings: selectedFeaturedJob.num_positions,
             visa_type: selectedFeaturedJob.visa_type || "H-2B",
             job_duties: selectedFeaturedJob.primary_duties || selectedFeaturedJob.description,
+            job_min_special_req: null,
             job_id: selectedFeaturedJob.dol_case_number || "",
             posted_date: selectedFeaturedJob.created_at,
             category: null,
             was_early_access: false,
             email: null,
             phone: null,
+            experience_months: selectedFeaturedJob.min_experience_months,
           } : null}
           planSettings={profile}
           formatSalary={(s: any) => `$${Number(s).toFixed(2)}/h`}
@@ -735,6 +786,7 @@ export default function Jobs() {
           onShare={() => {}}
           isSponsored
           sponsoredJobId={selectedFeaturedJob?.id}
+          sponsoredDetails={selectedFeaturedJob}
         />
 
         {/* Dialog Explicativo Reativado */}
