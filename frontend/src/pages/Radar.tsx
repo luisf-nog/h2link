@@ -35,10 +35,23 @@ import {
   Rocket,
   Radar as RadarIcon,
   Users,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- Minimalist Premium Components ---
+// ---------------------------------------------------------------------------
+// Helper: resolve sector key from raw category string
+// ---------------------------------------------------------------------------
+function resolveSectorKey(raw: string, keywords: Record<string, string[]>): string {
+  for (const [key, kws] of Object.entries(keywords)) {
+    if (kws.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) return key;
+  }
+  return "other";
+}
+
+// ---------------------------------------------------------------------------
+// Primitive components
+// ---------------------------------------------------------------------------
 
 const HeroPanel = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div
@@ -98,19 +111,19 @@ const SectorCard = ({
 }) => {
   const totalInSector = data.items.length;
   const selectedInSector = data.items.filter((i: any) => isTracked.includes(i.raw_category)).length;
-
   const allSelected = totalInSector > 0 && selectedInSector === totalInSector;
   const partialSelected = selectedInSector > 0 && !allSelected;
+  // FIX: detect sector with no current listings (all items have count=0)
+  const hasNoListings = data.items.every((i: any) => (i.count || 0) === 0);
 
   return (
     <div
       className={cn(
-        "group relative rounded-2xl border transition-all duration-300 overflow-hidden",
-        "p-4 cursor-pointer",
+        "group relative rounded-2xl border transition-all duration-300 overflow-hidden p-4 cursor-pointer",
         allSelected
           ? "border-primary/30 bg-primary/[0.05] shadow-[0_2px_12px_-4px_hsl(var(--primary)/0.15)]"
           : partialSelected
-            ? "border-primary/20 bg-primary/[0.025] hover:border-primary/25 hover:bg-primary/[0.035]"
+            ? "border-primary/20 bg-primary/[0.025] hover:border-primary/25"
             : "border-border bg-card hover:border-primary/20 hover:bg-card/90 hover:shadow-sm",
       )}
       onClick={onExpand}
@@ -120,7 +133,6 @@ const SectorCard = ({
         if (e.key === "Enter" || e.key === " ") onExpand();
       }}
     >
-      {/* Left indicator bar */}
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
@@ -143,16 +155,22 @@ const SectorCard = ({
                 className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=indeterminate]:bg-primary/60 data-[state=indeterminate]:border-primary/60"
               />
             </div>
-
             <div className="min-w-0">
               <h3 className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors truncate">
                 {segment}
               </h3>
-              <div className="flex items-center gap-2 text-[10px] mt-0.5">
-                <span className="text-muted-foreground/70">
-                  {formatNumber(data.totalJobs)} {t("radar.ui.opportunities")}
-                </span>
-
+              <div className="flex items-center gap-2 text-[10px] mt-0.5 flex-wrap">
+                {/* FIX: show warning instead of hiding sector with no listings */}
+                {hasNoListings && selectedInSector > 0 ? (
+                  <span className="flex items-center gap-1 text-amber-500/80 font-semibold">
+                    <AlertCircle className="h-2.5 w-2.5" />
+                    {t("radar.ui.no_current_listings")}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/70">
+                    {formatNumber(data.totalJobs)} {t("radar.ui.opportunities")}
+                  </span>
+                )}
                 {allSelected && (
                   <Badge
                     variant="outline"
@@ -161,7 +179,6 @@ const SectorCard = ({
                     {t("radar.ui.all_selected")}
                   </Badge>
                 )}
-
                 {partialSelected && (
                   <Badge
                     variant="outline"
@@ -174,7 +191,6 @@ const SectorCard = ({
             </div>
           </div>
         </div>
-
         {data.items.length > 0 && (
           <ChevronRight
             className={cn(
@@ -185,7 +201,6 @@ const SectorCard = ({
         )}
       </div>
 
-      {/* Expanded subcategories with individual checkboxes */}
       {isExpanded && data.items.length > 0 && (
         <div className="mt-4 pt-3 border-t border-border/30 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-300">
           <p className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] pl-8 pb-1.5">
@@ -193,6 +208,7 @@ const SectorCard = ({
           </p>
           {data.items.map((item: any) => {
             const checked = isTracked.includes(item.raw_category);
+            const zeroCount = (item.count || 0) === 0;
             return (
               <div
                 key={item.raw_category}
@@ -222,9 +238,20 @@ const SectorCard = ({
                   >
                     {item.raw_category}
                   </span>
+                  {/* FIX: badge for zero-listing subcategories that are selected */}
+                  {zeroCount && checked && (
+                    <span className="text-[8px] font-bold text-amber-500/70 shrink-0">
+                      {t("radar.ui.no_listings_short")}
+                    </span>
+                  )}
                 </div>
-                <span className="text-[9px] font-bold text-muted-foreground/45 tabular-nums">
-                  {formatNumber(item.count)}
+                <span
+                  className={cn(
+                    "text-[9px] font-bold tabular-nums",
+                    zeroCount ? "text-amber-500/50" : "text-muted-foreground/45",
+                  )}
+                >
+                  {zeroCount ? "—" : formatNumber(item.count)}
                 </span>
               </div>
             );
@@ -237,7 +264,6 @@ const SectorCard = ({
 
 const JobCard = ({ job, match, onApply, onView, onDismiss, t }: any) => (
   <div className="group relative rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all duration-300 p-5 space-y-4">
-    {/* Top metadata */}
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="text-[9px] font-bold border-border bg-muted/40">
@@ -249,13 +275,9 @@ const JobCard = ({ job, match, onApply, onView, onDismiss, t }: any) => (
       </div>
       <span className="text-[9px] text-muted-foreground/45">{t("radar.ui.detected_recently")}</span>
     </div>
-
-    {/* Job title */}
     <h3 className="text-base font-bold text-foreground leading-tight group-hover:text-primary transition-colors">
       {job.category}
     </h3>
-
-    {/* Key metrics */}
     <div className="grid grid-cols-2 gap-3">
       <div className="flex flex-col gap-1 p-3 rounded-lg bg-muted/30 border border-border">
         <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
@@ -270,12 +292,10 @@ const JobCard = ({ job, match, onApply, onView, onDismiss, t }: any) => (
         <span className="text-sm font-bold text-foreground">{job.experience_months || 0}m</span>
       </div>
     </div>
-
-    {/* Action buttons */}
     <div className="flex items-center gap-2 pt-2">
       <Button
         onClick={() => onApply(match.id, job.id)}
-        className="flex-1 h-10 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 font-bold text-sm transition-all"
+        className="flex-1 h-10 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 font-bold text-sm"
       >
         <Send className="h-4 w-4 mr-2" /> {t("radar.send")}
       </Button>
@@ -299,7 +319,6 @@ const JobCard = ({ job, match, onApply, onView, onDismiss, t }: any) => (
   </div>
 );
 
-// --- Sonar Radar Icon ---
 const SonarRadarIcon = ({ isActive }: { isActive: boolean }) => (
   <div className="relative p-3 rounded-xl bg-primary/6 border border-primary/15">
     {isActive && (
@@ -315,7 +334,9 @@ const SonarRadarIcon = ({ isActive }: { isActive: boolean }) => (
   </div>
 );
 
-// --- Main Component ---
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const SECTOR_KEYWORDS: Record<string, string[]> = {
   agriculture: ["Farmworkers", "Crop", "Nursery", "Harvest", "Agricultural", "Forest", "Farm"],
@@ -395,6 +416,10 @@ const US_STATES = [
 
 const RANDOMIZATION_GROUPS = ["all", "A", "B", "C", "D"];
 
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
 export default function Radar() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -402,18 +427,15 @@ export default function Radar() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  // FIX: separate saving state for toggle vs full save to prevent button flicker
   const [saving, setSaving] = useState(false);
   const [toggleSaving, setToggleSaving] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
   const [queuedFromRadar, setQueuedFromRadar] = useState(0);
-  const [totalRawMatches, setTotalRawMatches] = useState(0);
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
   const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
   const [radarProfile, setRadarProfile] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
-
   const [isActive, setIsActive] = useState(false);
   const [radarMode, setRadarMode] = useState<"manual" | "autopilot">("manual");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -421,21 +443,49 @@ export default function Radar() {
   const [maxExperience, setMaxExperience] = useState("");
   const [visaType, setVisaType] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
-  // FIX: groupFilter is now exposed in the filters dialog
   const [groupFilter, setGroupFilter] = useState("all");
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
-  const sectorEntries = useMemo(() => Object.entries(groupedCategories).sort(), [groupedCategories]);
+  // -------------------------------------------------------------------------
+  // FIX: displayedCategories merges groupedCategories (from stats RPC) with
+  // any selectedCategory that has no current listings. This ensures selected
+  // categories are ALWAYS visible so the user can deselect them, even when
+  // get_radar_stats returns no rows for those categories (zero listings).
+  // Items injected this way get count=0 and a visual "no listings" indicator.
+  // -------------------------------------------------------------------------
+  const displayedCategories = useMemo<Record<string, { items: any[]; totalJobs: number }>>(() => {
+    // Deep-copy to avoid mutating cached state
+    const merged: Record<string, { items: any[]; totalJobs: number }> = {};
+    for (const [seg, data] of Object.entries(groupedCategories)) {
+      merged[seg] = { totalJobs: data.totalJobs, items: [...data.items] };
+    }
+
+    // Flat set of all raw categories already present
+    const presentRaws = new Set<string>(Object.values(merged).flatMap((s) => s.items.map((i) => i.raw_category)));
+
+    // Inject orphaned selected categories with count=0
+    for (const cat of selectedCategories) {
+      if (presentRaws.has(cat)) continue;
+      const sectorKey = resolveSectorKey(cat, SECTOR_KEYWORDS);
+      const sectorName = t(`radar.sectors.${sectorKey}`, sectorKey);
+      if (!merged[sectorName]) merged[sectorName] = { items: [], totalJobs: 0 };
+      merged[sectorName].items.push({ raw_category: cat, count: 0 });
+    }
+
+    return merged;
+  }, [groupedCategories, selectedCategories, t]);
+
+  const sectorEntries = useMemo(() => Object.entries(displayedCategories).sort(), [displayedCategories]);
 
   const totalSinaisGeral = useMemo(
     () => Object.values(groupedCategories).reduce((acc, curr) => acc + (curr.totalJobs || 0), 0),
     [groupedCategories],
   );
 
-  // FIX: hasChangesComputed no longer tracks isActive to avoid flicker during toggle
-  // Toggle is saved immediately via handleToggleActive; other changes use Save button
+  // hasChangesComputed intentionally excludes isActive — toggle is saved
+  // immediately via handleToggleActive to avoid Save button flickering.
   const hasChangesComputed = useMemo(() => {
     if (!radarProfile) return selectedCategories.length > 0;
     return (
@@ -449,90 +499,114 @@ export default function Radar() {
     );
   }, [radarMode, selectedCategories, minWage, maxExperience, visaType, stateFilter, groupFilter, radarProfile]);
 
-  const updateStats = useCallback(async () => {
-    if (!profile?.id) return;
-    try {
-      const { data } = await supabase.rpc("get_radar_stats" as any, {
-        p_user_id: profile.id,
-        p_visa_type: visaType,
-        p_state: stateFilter,
-        p_min_wage: minWage !== "" ? Number(minWage) : 0,
-        p_max_exp: maxExperience !== "" ? Number(maxExperience) : 999,
-        p_group: groupFilter,
-      });
+  // -------------------------------------------------------------------------
+  // updateStats — accepts optional override to avoid stale-closure on init
+  // -------------------------------------------------------------------------
+  const updateStats = useCallback(
+    async (override?: {
+      visaType?: string;
+      stateFilter?: string;
+      minWage?: string;
+      maxExperience?: string;
+      groupFilter?: string;
+    }) => {
+      if (!profile?.id) return;
+      try {
+        const vt = override?.visaType ?? visaType;
+        const st = override?.stateFilter ?? stateFilter;
+        const mw = override?.minWage ?? minWage;
+        const me = override?.maxExperience ?? maxExperience;
+        const gf = override?.groupFilter ?? groupFilter;
 
-      if (data) {
-        const grouped = (data as any[]).reduce((acc: any, curr: any) => {
-          const raw = curr.raw_category || "";
-          let segment = "other";
+        const { data } = await supabase.rpc("get_radar_stats" as any, {
+          p_user_id: profile.id,
+          p_visa_type: vt,
+          p_state: st,
+          p_min_wage: mw !== "" ? Number(mw) : 0,
+          p_max_exp: me !== "" ? Number(me) : 999,
+          p_group: gf,
+        });
 
-          for (const [sectorKey, keywords] of Object.entries(SECTOR_KEYWORDS)) {
-            if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
-              segment = sectorKey;
-              break;
-            }
-          }
-
-          const sectorName = t(`radar.sectors.${segment}`, segment);
-          if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
-          acc[sectorName].items.push(curr);
-          acc[sectorName].totalJobs += curr.count || 0;
-          return acc;
-        }, {});
-
-        setGroupedCategories(grouped);
+        if (data) {
+          const grouped = (data as any[]).reduce((acc: any, curr: any) => {
+            const raw = curr.raw_category || "";
+            const sectorKey = resolveSectorKey(raw, SECTOR_KEYWORDS);
+            const sectorName = t(`radar.sectors.${sectorKey}`, sectorKey);
+            if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
+            acc[sectorName].items.push(curr);
+            acc[sectorName].totalJobs += curr.count || 0;
+            return acc;
+          }, {});
+          setGroupedCategories(grouped);
+        }
+      } catch (e) {
+        console.error("[Radar] updateStats error:", e);
       }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, t]);
+    },
+    [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, t],
+  );
 
+  // -------------------------------------------------------------------------
+  // fetchMatches
+  // Removed dead state: totalRawMatches, autoQueuedCount
+  // FIX: filters dismissed=false at query level so dismissed jobs don't
+  // reappear in the feed between scans.
+  // ⚠ Requires migration:
+  //   ALTER TABLE radar_matched_jobs ADD COLUMN dismissed boolean NOT NULL DEFAULT false;
+  // -------------------------------------------------------------------------
   const fetchMatches = useCallback(async () => {
     if (!profile?.id) return;
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from("radar_matched_jobs" as any)
       .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
-      .eq("user_id", profile.id);
+      .eq("user_id", profile.id)
+      .eq("dismissed", false); // only non-dismissed
 
-    if (data) {
-      const allData = data as any[];
-      setTotalRawMatches(allData.length);
-
-      const validMatches = allData.filter((m: any) => {
-        const job = m.public_jobs;
-        if (!job) return false;
-        if (job.is_active === false) return false;
-        if (job.is_banned === true) return false;
-        return true;
-      });
-
-      const autoQueuedCount = allData.filter((m: any) => m.auto_queued).length;
-
-      const jobIds = validMatches.map((m: any) => m.job_id);
-      if (jobIds.length > 0) {
-        const { data: queuedJobs } = await supabase
-          .from("my_queue")
-          .select("job_id")
-          .eq("user_id", profile.id)
-          .in("job_id", jobIds);
-
-        const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
-        const queuedCount = validMatches.filter((m: any) => queuedSet.has(m.job_id)).length;
-        const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
-
-        setQueuedFromRadar(queuedCount);
-        setMatchedJobs(finalMatches);
-        setMatchCount(finalMatches.length);
-      } else {
-        setQueuedFromRadar(0);
-        setMatchedJobs(validMatches);
-        setMatchCount(validMatches.length);
-      }
+    if (error) {
+      console.error("[Radar] fetchMatches error:", error);
+      return;
     }
+    if (!data) return;
+
+    // Filter out inactive / banned from joined data
+    const validMatches = (data as any[]).filter((m: any) => {
+      const job = m.public_jobs;
+      return job && job.is_active !== false && job.is_banned !== true;
+    });
+
+    const jobIds = validMatches.map((m: any) => m.job_id);
+
+    if (jobIds.length === 0) {
+      setMatchedJobs([]);
+      setMatchCount(0);
+      setQueuedFromRadar(0);
+      return;
+    }
+
+    const { data: queuedJobs, error: queueError } = await supabase
+      .from("my_queue")
+      .select("job_id")
+      .eq("user_id", profile.id)
+      .in("job_id", jobIds);
+
+    if (queueError) {
+      console.error("[Radar] fetchMatches queue check error:", queueError);
+      return;
+    }
+
+    const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
+    const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
+    const queuedCount = validMatches.filter((m: any) => queuedSet.has(m.job_id)).length;
+
+    setMatchedJobs(finalMatches);
+    setMatchCount(finalMatches.length);
+    setQueuedFromRadar(queuedCount);
   }, [profile?.id]);
 
-  // FIX: performSave no longer calls fetchMatches/updateStats internally —
-  // callers are responsible to avoid duplicate calls. Returns success boolean for rollback.
+  // -------------------------------------------------------------------------
+  // performSave — pure save, no side effects; returns success boolean
+  // -------------------------------------------------------------------------
   const performSave = useCallback(
     async (overrides: Record<string, any> = {}): Promise<boolean> => {
       if (!profile?.id) return false;
@@ -557,13 +631,12 @@ export default function Radar() {
             .eq("user_id", profile.id)
         : await supabase.from("radar_profiles" as any).insert(payload);
 
-      if (!error) {
-        setRadarProfile((prev: any) => ({ ...prev, ...payload }));
-        return true;
-      } else {
-        console.error("[Radar] Save error:", error);
+      if (error) {
+        console.error("[Radar] performSave error:", error);
         return false;
       }
+      setRadarProfile((prev: any) => ({ ...prev, ...payload }));
+      return true;
     },
     [
       profile?.id,
@@ -579,40 +652,39 @@ export default function Radar() {
     ],
   );
 
-  // FIX: dedicated toggle handler with optimistic UI + rollback on failure
+  // -------------------------------------------------------------------------
+  // handleToggleActive — optimistic with rollback
+  // -------------------------------------------------------------------------
   const handleToggleActive = useCallback(async () => {
     if (toggleSaving) return;
     const next = !isActive;
     setIsActive(next); // optimistic
     setToggleSaving(true);
-
     try {
-      const success = await performSave({ is_active: next });
-      if (!success) {
+      const ok = await performSave({ is_active: next });
+      if (!ok) {
         setIsActive(!next); // rollback
         toast({ title: t("radar.toast_error"), variant: "destructive" });
         return;
       }
-
       if (next) {
-        // Trigger immediate scan then refresh data
         await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile?.id });
         await Promise.all([fetchMatches(), updateStats()]);
       }
-
       toast({ title: t("radar.toast_recalibrated") });
     } finally {
       setToggleSaving(false);
     }
   }, [isActive, toggleSaving, performSave, fetchMatches, updateStats, toast, t, profile?.id]);
 
-  // FIX: full save (filters/settings button) — separate from toggle
+  // -------------------------------------------------------------------------
+  // handleFullSave — for settings / filter changes
+  // -------------------------------------------------------------------------
   const handleFullSave = useCallback(async () => {
     setSaving(true);
     try {
-      const success = await performSave();
-      if (success) {
-        // Always refresh stats after any save — not just when active
+      const ok = await performSave();
+      if (ok) {
         await updateStats();
         if (isActive) await fetchMatches();
         toast({ title: t("radar.toast_recalibrated") });
@@ -624,45 +696,61 @@ export default function Radar() {
     }
   }, [performSave, updateStats, fetchMatches, isActive, toast, t]);
 
+  // -------------------------------------------------------------------------
+  // handleSendApplication
+  // -------------------------------------------------------------------------
   const handleSendApplication = async (matchId: string, jobId: string) => {
     if (!profile?.id) return;
     try {
       await supabase.from("my_queue" as any).insert([{ user_id: profile.id, job_id: jobId, status: "pending" }]);
+      // Hard delete is correct here: job has been actioned, not dismissed
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
         .eq("id", matchId);
-
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-
+      setQueuedFromRadar((prev) => prev + 1);
       toast({ title: t("radar.toast_captured") });
-    } catch (err) {
+    } catch {
       toast({ title: t("radar.toast_send_error"), variant: "destructive" });
     }
   };
 
+  // -------------------------------------------------------------------------
+  // removeMatch (dismiss)
+  // FIX: soft-delete via dismissed=true instead of hard DELETE.
+  // Hard DELETE caused the job to re-appear in the next edge function scan
+  // because the job was no longer in matchedSet and would be re-inserted.
+  // With dismissed=true, the edge function skips it and fetchMatches
+  // filters it out via .eq("dismissed", false).
+  // ⚠ Requires migration:
+  //   ALTER TABLE radar_matched_jobs ADD COLUMN dismissed boolean NOT NULL DEFAULT false;
+  // -------------------------------------------------------------------------
   const removeMatch = async (matchId: string) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from("radar_matched_jobs" as any)
-        .delete()
+        .update({ dismissed: true })
         .eq("id", matchId);
+      if (error) throw error;
       setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
       setMatchCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
+    } catch {
       toast({ title: t("radar.toast_error"), variant: "destructive" });
     }
   };
 
-  // FIX: single init effect — no double updateStats on load
+  // -------------------------------------------------------------------------
+  // Init — single fetch, passes loaded values directly to updateStats
+  // to avoid stale-closure (state setters are async).
+  // -------------------------------------------------------------------------
   useEffect(() => {
     const init = async () => {
       if (!profile?.id) {
         setLoading(false);
         return;
       }
-
       try {
         const { data } = await supabase
           .from("radar_profiles" as any)
@@ -682,49 +770,21 @@ export default function Radar() {
           setStateFilter(d.state || "all");
           setGroupFilter(d.randomization_group || "all");
 
-          // Fetch data after state is set — using the loaded values directly
-          // to avoid stale closure in updateStats/fetchMatches
-          const [statsRes] = await Promise.all([
-            supabase.rpc("get_radar_stats" as any, {
-              p_user_id: profile.id,
-              p_visa_type: d.visa_type || "all",
-              p_state: d.state || "all",
-              p_min_wage: d.min_wage || 0,
-              p_max_exp: d.max_experience || 999,
-              p_group: d.randomization_group || "all",
-            }),
-            d.is_active
-              ? supabase
-                  .from("radar_matched_jobs" as any)
-                  .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
-                  .eq("user_id", profile.id)
-              : Promise.resolve({ data: null }),
-          ]);
+          // Pass loaded values directly — state hasn't flushed yet
+          await updateStats({
+            visaType: d.visa_type || "all",
+            stateFilter: d.state || "all",
+            minWage: d.min_wage?.toString() || "",
+            maxExperience: d.max_experience?.toString() || "",
+            groupFilter: d.randomization_group || "all",
+          });
 
-          if (statsRes.data) {
-            const grouped = (statsRes.data as any[]).reduce((acc: any, curr: any) => {
-              const raw = curr.raw_category || "";
-              let segment = "other";
-              for (const [sectorKey, keywords] of Object.entries(SECTOR_KEYWORDS)) {
-                if (keywords.some((kw) => raw.toLowerCase().includes(kw.toLowerCase()))) {
-                  segment = sectorKey;
-                  break;
-                }
-              }
-              const sectorName = `radar.sectors.${segment}`;
-              if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
-              acc[sectorName].items.push(curr);
-              acc[sectorName].totalJobs += curr.count || 0;
-              return acc;
-            }, {});
-            setGroupedCategories(grouped);
-          }
+          if (d.is_active) await fetchMatches();
         }
       } catch (e) {
-        console.error(e);
+        console.error("[Radar] init error:", e);
       } finally {
         setLoading(false);
-
         const seenKey = "radar_how_it_works_seen";
         if (!localStorage.getItem(seenKey)) {
           localStorage.setItem(seenKey, "1");
@@ -732,25 +792,26 @@ export default function Radar() {
         }
       }
     };
-
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
-  // FIX: single unified effect for filter changes — does NOT run on initial load
-  // because loading starts as true and filters are set synchronously during init
+  // Re-run stats when filter state changes (skip on initial load)
   useEffect(() => {
     if (loading) return;
     updateStats();
-  }, [visaType, stateFilter, minWage, maxExperience, groupFilter, loading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaType, stateFilter, minWage, maxExperience, groupFilter]);
 
-  // FIX: useCallback for renderSectorCard to prevent all SectorCards re-rendering
-  // when unrelated state changes
+  // -------------------------------------------------------------------------
+  // renderSectorCard — useCallback prevents all sectors re-rendering on
+  // unrelated state changes
+  // -------------------------------------------------------------------------
   const renderSectorCard = useCallback(
     ([segment, data]: [string, { items: any[]; totalJobs: number }]) => {
       const selectedInSector = data.items.filter((i: any) => selectedCategories.includes(i.raw_category)).length;
       const allSelected = data.items.length > 0 && selectedInSector === data.items.length;
       const isExpanded = expandedSectors.has(segment);
-
       return (
         <SectorCard
           key={segment}
@@ -765,24 +826,27 @@ export default function Radar() {
               allSelected ? prev.filter((c) => !sectorCats.includes(c)) : [...new Set([...prev, ...sectorCats])],
             );
           }}
-          onToggleSubcategory={(rawCat) => {
+          onToggleSubcategory={(rawCat) =>
             setSelectedCategories((prev) =>
               prev.includes(rawCat) ? prev.filter((c) => c !== rawCat) : [...prev, rawCat],
-            );
-          }}
-          onExpand={() => {
+            )
+          }
+          onExpand={() =>
             setExpandedSectors((prev) => {
               const next = new Set(prev);
               isExpanded ? next.delete(segment) : next.add(segment);
               return next;
-            });
-          }}
+            })
+          }
         />
       );
     },
     [selectedCategories, expandedSectors, t],
   );
 
+  // -------------------------------------------------------------------------
+  // Loading / premium gate
+  // -------------------------------------------------------------------------
   if (loading)
     return (
       <div className="flex items-center justify-center h-[80vh]">
@@ -790,8 +854,7 @@ export default function Radar() {
       </div>
     );
 
-  // FIX: block non-premium users from using the feature
-  if (!isPremium) {
+  if (!isPremium)
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] gap-6 text-center p-8">
         <div className="p-5 rounded-2xl bg-primary/5 border border-primary/15">
@@ -806,39 +869,32 @@ export default function Radar() {
         </Button>
       </div>
     );
-  }
 
-  // Split sectors into 2 columns
   const halfIdx = Math.ceil(sectorEntries.length / 2);
   const col1Sectors = sectorEntries.slice(0, halfIdx);
   const col2Sectors = sectorEntries.slice(halfIdx);
 
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
   return (
     <div className="max-w-[1600px] mx-auto space-y-12 p-6 md:p-12 animate-in fade-in duration-700">
-      {/* ═══════════════════════════════════════════════════════════════
-          LEVEL 1: HERO CONTROL PANEL
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* LEVEL 1: HERO */}
       <HeroPanel className="p-8">
         <div className="space-y-8">
-          {/* Header */}
           <div className="flex items-center justify-between">
-            <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <SonarRadarIcon isActive={isActive} />
               <div className="flex items-center gap-3">
-                <SonarRadarIcon isActive={isActive} />
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
-                    {/* FIX: badge is only shown to actual premium users (isPremium is always true here due to gate above) */}
-                    <div className="relative group">
-                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-yellow-400/50 via-plan-gold/60 to-yellow-400/50 blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-500" />
-                      <div className="absolute inset-0 rounded-full overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]" />
-                      </div>
-                      <Badge className="relative border border-yellow-400/40 bg-gradient-to-r from-yellow-500 via-plan-gold to-yellow-600 text-white font-extrabold text-[10px] uppercase tracking-[0.15em] px-4 py-1 shadow-[0_0_20px_-4px_hsl(45_100%_50%/0.6),0_0_8px_-2px_hsl(45_100%_50%/0.4)]">
-                        {t("radar.ui.premium_access")}
-                      </Badge>
-                    </div>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
+                <div className="relative group">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-yellow-400/50 via-plan-gold/60 to-yellow-400/50 blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-500" />
+                  <div className="absolute inset-0 rounded-full overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]" />
                   </div>
+                  <Badge className="relative border border-yellow-400/40 bg-gradient-to-r from-yellow-500 via-plan-gold to-yellow-600 text-white font-extrabold text-[10px] uppercase tracking-[0.15em] px-4 py-1 shadow-[0_0_20px_-4px_hsl(45_100%_50%/0.6)]">
+                    {t("radar.ui.premium_access")}
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -850,15 +906,12 @@ export default function Radar() {
                 onClick={() => setShowHowItWorks(true)}
                 className="text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/5 gap-1.5 h-8 rounded-lg"
               >
-                <HelpCircle className="h-3.5 w-3.5" />
-                {t("radar.ui.how_it_works")}
+                <HelpCircle className="h-3.5 w-3.5" /> {t("radar.ui.how_it_works")}
               </Button>
               <div
                 className={cn(
                   "flex items-center gap-2.5 px-5 py-2.5 rounded-xl border shadow-sm transition-all duration-300",
-                  isActive
-                    ? "bg-emerald-500/10 border-emerald-500/25 shadow-emerald-500/10"
-                    : "bg-destructive/10 border-destructive/25 shadow-destructive/10",
+                  isActive ? "bg-emerald-500/10 border-emerald-500/25" : "bg-destructive/10 border-destructive/25",
                 )}
               >
                 <div className="relative flex items-center justify-center">
@@ -877,102 +930,83 @@ export default function Radar() {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="h-px bg-border" />
 
-          {/* Active criteria chips */}
           <div>
             <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] mb-3">
               {t("radar.ui.active_criteria")}
             </p>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowFilters(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors shadow-sm"
-              >
-                <CircleDollarSign className="h-3.5 w-3.5 text-primary/60" />
-                {minWage ? `$${formatNumber(Number(minWage))}+/hr` : t("radar.ui.any_salary")}
-              </button>
-              <button
-                onClick={() => setShowFilters(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors shadow-sm"
-              >
-                <MapPin className="h-3.5 w-3.5 text-primary/60" />
-                {stateFilter !== "all" ? stateFilter : t("radar.ui.all_states")}
-              </button>
-              <button
-                onClick={() => setShowFilters(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors shadow-sm"
-              >
-                <Briefcase className="h-3.5 w-3.5 text-primary/60" />
-                {maxExperience ? t("radar.ui.up_to_exp", { months: maxExperience }) : t("radar.ui.any_experience")}
-              </button>
-              <button
-                onClick={() => setShowFilters(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors shadow-sm"
-              >
-                <Globe className="h-3.5 w-3.5 text-primary/60" />
-                {visaType !== "all" ? visaType : t("radar.ui.all_visas")}
-              </button>
+              {[
+                {
+                  icon: CircleDollarSign,
+                  label: minWage ? `$${formatNumber(Number(minWage))}+/hr` : t("radar.ui.any_salary"),
+                },
+                { icon: MapPin, label: stateFilter !== "all" ? stateFilter : t("radar.ui.all_states") },
+                {
+                  icon: Briefcase,
+                  label: maxExperience
+                    ? t("radar.ui.up_to_exp", { months: maxExperience })
+                    : t("radar.ui.any_experience"),
+                },
+                { icon: Globe, label: visaType !== "all" ? visaType : t("radar.ui.all_visas") },
+              ].map(({ icon: Icon, label }) => (
+                <button
+                  key={label}
+                  onClick={() => setShowFilters(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-semibold text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors shadow-sm"
+                >
+                  <Icon className="h-3.5 w-3.5 text-primary/60" /> {label}
+                </button>
+              ))}
               {groupFilter !== "all" && (
                 <button
                   onClick={() => setShowFilters(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-xs font-semibold text-primary hover:border-primary/30 transition-colors shadow-sm"
                 >
-                  <Users className="h-3.5 w-3.5 text-primary/60" />
-                  {t("radar.ui.group_label")} {groupFilter}
+                  <Users className="h-3.5 w-3.5 text-primary/60" /> {t("radar.ui.group_label")} {groupFilter}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Divider */}
           <div className="h-px bg-border" />
 
-          {/* Control Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left: Radar Mode */}
             <div className="space-y-4">
               <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
                 {t("radar.ui.radar_mode")}
               </label>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setRadarMode("manual")}
-                  className={cn(
-                    "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
-                    radarMode === "manual"
-                      ? "bg-primary/10 border-primary/30 text-primary shadow-[0_0_18px_-10px_hsl(var(--primary)/0.18)]"
-                      : "bg-muted/25 border-border text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
-                  )}
-                >
-                  Manual
-                </button>
-                <button
-                  onClick={() => setRadarMode("autopilot")}
-                  className={cn(
-                    "flex-1 py-3.5 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
-                    radarMode === "autopilot"
-                      ? "bg-emerald-600 border-emerald-500 text-white shadow-[0_0_20px_-6px_hsl(142_76%_36%/0.4)]"
-                      : "bg-muted/25 border-border text-foreground/70 hover:border-primary/20 hover:bg-muted/30",
-                  )}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    Autopilot
-                    {radarMode === "autopilot" && (
-                      <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded">ON</span>
+                {(["manual", "autopilot"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setRadarMode(mode)}
+                    className={cn(
+                      "flex-1 py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 border",
+                      radarMode === mode
+                        ? mode === "autopilot"
+                          ? "bg-emerald-600 border-emerald-500 text-white shadow-[0_0_20px_-6px_hsl(142_76%_36%/0.4)]"
+                          : "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-muted/25 border-border text-foreground/70 hover:border-primary/20",
                     )}
-                  </span>
-                </button>
+                  >
+                    {mode === "autopilot" && radarMode === "autopilot" ? (
+                      <span className="flex items-center justify-center gap-2">
+                        Autopilot <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded">ON</span>
+                      </span>
+                    ) : (
+                      mode.charAt(0).toUpperCase() + mode.slice(1)
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Right: Radar Control */}
             <div className="space-y-4">
               <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
                 {t("radar.ui.scan_control")}
               </label>
-              {/* FIX: uses handleToggleActive with rollback — toggleSaving prevents double-click */}
               <Button
                 onClick={handleToggleActive}
                 disabled={toggleSaving}
@@ -996,9 +1030,7 @@ export default function Radar() {
         </div>
       </HeroPanel>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          LEVEL 2: METRICS & INTELLIGENCE
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* LEVEL 2: METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <HeroPanel className="p-0 overflow-hidden">
           <MetricCard
@@ -1034,17 +1066,13 @@ export default function Radar() {
         </HeroPanel>
       </div>
 
-      {/* Intelligence Indicator */}
       <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-muted/30 border border-border">
         <Sparkles className="h-4 w-4 text-primary/60" />
         <p className="text-sm text-muted-foreground/80">{t("radar.ui.matching_desc")}</p>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          LEVEL 3: CONFIGURATION & LIVE FEED
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* LEVEL 3: CONFIGURATION + FEED */}
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
-        {/* Left: Targeting Configuration */}
         <div className="lg:col-span-4 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -1060,7 +1088,6 @@ export default function Radar() {
             </Button>
           </div>
 
-          {/* 2-column category grid */}
           <div className="rounded-3xl bg-muted/20 border border-border p-1.5">
             <HeroPanel className="p-0 overflow-hidden border-0 shadow-none">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-6">
@@ -1070,7 +1097,6 @@ export default function Radar() {
             </HeroPanel>
           </div>
 
-          {/* FIX: save button only appears for non-toggle changes, no flicker */}
           {hasChangesComputed && (
             <Button
               onClick={handleFullSave}
@@ -1083,7 +1109,6 @@ export default function Radar() {
           )}
         </div>
 
-        {/* Right: Live Detection Feed */}
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -1097,14 +1122,13 @@ export default function Radar() {
             </div>
           </div>
 
-          <HeroPanel className="p-0 overflow-hidden flex flex-col min-h-[500px]">
-            <div className="flex-1 overflow-y-auto max-h-[600px]">
+          <HeroPanel className="p-0 overflow-hidden">
+            <div className="overflow-y-auto max-h-[600px]">
               <div className="p-6 space-y-4">
                 {matchedJobs.length > 0 ? (
                   matchedJobs.map((match) => {
                     const job = match.public_jobs;
                     if (!job) return null;
-
                     return (
                       <JobCard
                         key={match.id}
@@ -1118,7 +1142,7 @@ export default function Radar() {
                     );
                   })
                 ) : (
-                  <div className="h-[450px] flex flex-col items-center justify-center text-center space-y-6">
+                  <div className="h-[340px] flex flex-col items-center justify-center text-center space-y-6">
                     <div className="relative">
                       <div className="absolute inset-0 animate-pulse rounded-full bg-primary/10 blur-xl" />
                       <div className="relative p-6 rounded-full bg-primary/5 border border-primary/10">
@@ -1137,9 +1161,7 @@ export default function Radar() {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          FILTERS DIALOG
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* FILTERS DIALOG */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
         <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-xl border-border rounded-3xl p-8">
           <DialogHeader className="space-y-3">
@@ -1189,7 +1211,6 @@ export default function Radar() {
                 </div>
               </div>
 
-              {/* FIX: groupFilter now exposed in filters dialog */}
               <div className="space-y-3">
                 <Label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
                   {t("radar.ui.randomization_group")}
@@ -1263,12 +1284,9 @@ export default function Radar() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          HOW IT WORKS DIALOG
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* HOW IT WORKS DIALOG */}
       <Dialog open={showHowItWorks} onOpenChange={setShowHowItWorks}>
         <DialogContent className="max-w-xl bg-card/95 backdrop-blur-xl border-border rounded-3xl p-0 overflow-hidden">
-          {/* Hero header */}
           <div className="relative px-8 pt-8 pb-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
@@ -1282,9 +1300,7 @@ export default function Radar() {
               </div>
             </div>
           </div>
-
           <div className="px-8 py-6 space-y-6">
-            {/* Main pitch */}
             <div className="space-y-3">
               <p className="text-sm text-foreground leading-relaxed">{t("radar.ui.hiw_pitch")}</p>
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/5 border border-primary/15">
@@ -1292,13 +1308,10 @@ export default function Radar() {
                 <p className="text-sm font-semibold text-primary">{t("radar.ui.hiw_cta_line")}</p>
               </div>
             </div>
-
-            {/* Steps */}
             <div className="space-y-4">
               <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
                 {t("radar.ui.hiw_steps_label")}
               </p>
-
               {[
                 { step: "1", title: t("radar.ui.hiw_step1_title"), desc: t("radar.ui.hiw_step1_desc") },
                 { step: "2", title: t("radar.ui.hiw_step2_title"), desc: t("radar.ui.hiw_step2_desc") },
@@ -1315,8 +1328,6 @@ export default function Radar() {
                 </div>
               ))}
             </div>
-
-            {/* Benefits */}
             <div className="space-y-3 pt-2">
               <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
                 {t("radar.ui.hiw_benefits_label")}
@@ -1336,8 +1347,6 @@ export default function Radar() {
               </div>
             </div>
           </div>
-
-          {/* CTA */}
           <div className="px-8 pb-8">
             <Button
               onClick={() => setShowHowItWorks(false)}
@@ -1349,10 +1358,9 @@ export default function Radar() {
         </DialogContent>
       </Dialog>
 
-      {/* Footer */}
       <div className="pt-8 border-t border-border flex items-center justify-between text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
         <span>H2 Link Radar • {t("radar.ui.premium_edition")}</span>
-        <span>v4.2.0</span>
+        <span>v4.3.0</span>
       </div>
     </div>
   );
