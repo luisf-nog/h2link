@@ -6,15 +6,26 @@ import { FileDown, Shield } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 
+interface JobDetails {
+  employer_legal_name: string | null;
+  city: string | null;
+  state: string | null;
+  hourly_wage: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  wage_rate: string | null;
+}
+
 interface Props {
   apps: Application[];
   auditLogs: AuditEntry[];
   jobTitle: string;
   dolCaseNumber: string | null;
   jobId: string;
+  jobDetails: JobDetails;
 }
 
-export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, jobId }: Props) {
+export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, jobId, jobDetails }: Props) {
   const stats = useMemo(() => {
     const totalApps = apps.length;
     const usWorkers = apps.filter((a) => a.is_us_worker).length;
@@ -35,78 +46,303 @@ export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, 
     return { totalApps, usWorkers, contacted, interviewed, hired, rejected, rejectionBreakdown, earliest, latest };
   }, [apps, auditLogs]);
 
+  const generateReportId = () => {
+    const now = new Date();
+    return `DR-${format(now, "yyyy-MM-dd")}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, "0")}`;
+  };
+
+  const drawLine = (doc: jsPDF, y: number, width: number) => {
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.line(14, y, width - 14, y);
+  };
+
   const generatePdf = () => {
     const doc = new jsPDF();
-    let y = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const reportId = generateReportId();
+    const generatedAt = format(new Date(), "MMMM d, yyyy – hh:mm a");
+    let y = 0;
 
-    doc.setFontSize(16);
-    doc.text("Domestic Recruitment Compliance Log", 14, y);
+    // ====== PAGE 1: COVER ======
+    y = 30;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(30, 30, 30);
+    doc.text("H2 Linker", 14, y);
+
+    y += 10;
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    doc.text("Domestic Recruitment Compliance Report", 14, y);
+
+    y += 6;
+    drawLine(doc, y, pageWidth);
+
+    y += 14;
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+
+    const coverFields = [
+      ["Report ID", reportId],
+      ["Generated on", generatedAt],
+      ["Case Reference", dolCaseNumber || "N/A"],
+      ["", ""],
+      ["Employer Legal Name", jobDetails.employer_legal_name || "N/A"],
+      ["Work Location", [jobDetails.city, jobDetails.state].filter(Boolean).join(", ") || "N/A"],
+      ["Job Title", jobTitle],
+    ];
+
+    coverFields.forEach(([label, value]) => {
+      if (!label && !value) { y += 6; return; }
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${label}:`, 14, y);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(40, 40, 40);
+      doc.text(String(value), 70, y);
+      y += 6;
+    });
+
+    // Footer on cover
+    y = 270;
+    drawLine(doc, y, pageWidth);
+    y += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Generated via H2 Linker Recruitment Management System", 14, y);
+    doc.text("www.h2linker.com", pageWidth - 14, y, { align: "right" });
+
+    // ====== PAGE 2: EXECUTIVE SUMMARY ======
+    doc.addPage();
+    y = 20;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Executive Recruitment Summary", 14, y);
+    y += 4;
+    drawLine(doc, y, pageWidth);
     y += 10;
 
-    doc.setFontSize(10);
-    doc.text(`Generated: ${format(new Date(), "PPP 'at' HH:mm")}`, 14, y);
-    y += 8;
+    doc.setFontSize(9);
+    const summaryRows = [
+      ["Total Applications", String(stats.totalApps)],
+      ["U.S. Worker Applicants", String(stats.usWorkers)],
+      ["Applicants Contacted", String(stats.contacted)],
+      ["Interviews Conducted", String(stats.interviewed)],
+      ["Hires", String(stats.hired)],
+      ["Lawful Rejections", String(stats.rejected)],
+    ];
 
-    doc.setFontSize(12);
-    doc.text(`Job Title: ${jobTitle}`, 14, y);
+    summaryRows.forEach(([label, value], i) => {
+      if (i % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(14, y - 4, pageWidth - 28, 7, "F");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      doc.text(label, 16, y);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, pageWidth - 30, y, { align: "right" });
+      y += 7;
+    });
+
     y += 6;
-    if (dolCaseNumber) {
-      doc.text(`DOL Case Number: ${dolCaseNumber}`, 14, y);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    const disclaimerLines = doc.splitTextToSize(
+      "All recruitment activity occurred within the stated recruitment period and was electronically recorded within the H2 Linker system.",
+      pageWidth - 28
+    );
+    doc.text(disclaimerLines, 14, y);
+    y += disclaimerLines.length * 5 + 8;
+
+    // Rejection breakdown
+    if (Object.keys(stats.rejectionBreakdown).length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(30, 30, 30);
+      doc.text("Rejection Reasons Breakdown", 14, y);
+      y += 4;
+      drawLine(doc, y, pageWidth);
+      y += 8;
+      doc.setFontSize(9);
+      Object.entries(stats.rejectionBreakdown).forEach(([reason, count]) => {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60, 60, 60);
+        doc.text(`• ${reason.replace(/_/g, " ")}`, 16, y);
+        doc.setFont("helvetica", "bold");
+        doc.text(String(count), pageWidth - 30, y, { align: "right" });
+        y += 6;
+      });
       y += 6;
     }
 
-    if (stats.earliest) {
-      doc.text(`Recruitment Period: ${format(new Date(stats.earliest), "PP")} – ${stats.latest ? format(new Date(stats.latest), "PP") : "Ongoing"}`, 14, y);
+    // ====== EMPLOYER & JOB INFORMATION ======
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Employer and Position Details", 14, y);
+    y += 4;
+    drawLine(doc, y, pageWidth);
+    y += 10;
+
+    const wageDisplay = jobDetails.hourly_wage
+      ? `$${jobDetails.hourly_wage.toFixed(2)}/hr`
+      : jobDetails.wage_rate || "N/A";
+
+    const employerFields = [
+      ["Employer Legal Name", jobDetails.employer_legal_name || "N/A"],
+      ["Worksite Address", [jobDetails.city, jobDetails.state].filter(Boolean).join(", ") || "N/A"],
+      ["Job Title", jobTitle],
+      ["Employment Period", jobDetails.start_date && jobDetails.end_date
+        ? `${format(new Date(jobDetails.start_date), "PP")} – ${format(new Date(jobDetails.end_date), "PP")}`
+        : "N/A"],
+      ["Recruitment Period", stats.earliest
+        ? `${format(new Date(stats.earliest), "PP")} – ${stats.latest ? format(new Date(stats.latest), "PP") : "Ongoing"}`
+        : "N/A"],
+      ["Wage Offered", wageDisplay],
+    ];
+
+    doc.setFontSize(9);
+    employerFields.forEach(([label, value]) => {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${label}:`, 16, y);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(40, 40, 40);
+      doc.text(String(value), 70, y);
+      y += 7;
+    });
+
+    // ====== DETAILED APPLICANT ACTIVITY LOG ======
+    doc.addPage();
+    y = 20;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Detailed Applicant Activity Log", 14, y);
+    y += 4;
+    drawLine(doc, y, pageWidth);
+    y += 10;
+
+    apps.forEach((app, idx) => {
+      // Check if we need a new page
+      if (y > 240) { doc.addPage(); y = 20; }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(30, 30, 30);
+      doc.text(`Applicant #${idx + 1}`, 14, y);
+      y += 7;
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Name: ${app.full_name}`, 16, y); y += 5;
+      doc.text(`Email: ${app.email}`, 16, y); y += 5;
+      doc.text(`Application Date: ${format(new Date(app.created_at), "MMMM d, yyyy – hh:mm a")}`, 16, y); y += 7;
+
+      // Activity timeline for this applicant
+      const appLogs = auditLogs
+        .filter((l) => l.application_id === app.id)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text("Activity Timeline:", 16, y);
+      y += 5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+
+      // First entry: application submitted
+      doc.text(`• ${format(new Date(app.created_at), "hh:mm a")} – Application Submitted`, 20, y);
+      y += 4;
+
+      appLogs.forEach((log) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        const time = format(new Date(log.created_at), "hh:mm a");
+        const statusLabel = log.new_status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        let line = `• ${time} – Status Updated: ${statusLabel}`;
+        if (log.rejection_reason) line += ` (${log.rejection_reason.replace(/_/g, " ")})`;
+        doc.text(line, 20, y);
+        y += 4;
+      });
+
+      y += 3;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(40, 40, 40);
+      const finalStatus = app.application_status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      doc.text(`Final Status: ${finalStatus}`, 16, y);
+
+      y += 8;
+      drawLine(doc, y, pageWidth);
+      y += 8;
+    });
+
+    if (apps.length === 0) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text("No applications received during the recruitment period.", 14, y);
       y += 10;
     }
 
-    doc.setFontSize(11);
-    doc.text("Summary", 14, y);
-    y += 6;
-    doc.setFontSize(10);
-    const summaryLines = [
-      `Total Applications Received: ${stats.totalApps}`,
-      `Total U.S. Workers: ${stats.usWorkers}`,
-      `Total Contacted: ${stats.contacted}`,
-      `Total Interviewed: ${stats.interviewed}`,
-      `Total Hired: ${stats.hired}`,
-      `Total Rejected: ${stats.rejected}`,
+    // ====== SYSTEM INTEGRITY STATEMENT ======
+    if (y > 230) { doc.addPage(); y = 20; }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(30, 30, 30);
+    doc.text("System Audit & Data Integrity Statement", 14, y);
+    y += 4;
+    drawLine(doc, y, pageWidth);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(70, 70, 70);
+
+    const integrityTexts = [
+      "All applicant activity, status changes, and timestamps are automatically recorded at the time of action within the H2 Linker Recruitment Management System.",
+      "",
+      "Records are stored electronically and maintained in accordance with federal recruitment documentation requirements.",
+      "",
+      `Report ID: ${reportId}`,
+      `Digital verification reference generated on: ${generatedAt}`,
     ];
-    summaryLines.forEach((line) => {
-      doc.text(line, 14, y);
-      y += 5;
+
+    integrityTexts.forEach((text) => {
+      if (!text) { y += 3; return; }
+      const lines = doc.splitTextToSize(text, pageWidth - 28);
+      doc.text(lines, 14, y);
+      y += lines.length * 5;
     });
 
-    y += 5;
-    if (Object.keys(stats.rejectionBreakdown).length > 0) {
-      doc.setFontSize(11);
-      doc.text("Rejection Reasons Breakdown", 14, y);
-      y += 6;
-      doc.setFontSize(10);
-      Object.entries(stats.rejectionBreakdown).forEach(([reason, count]) => {
-        doc.text(`• ${reason.replace(/_/g, " ")}: ${count}`, 14, y);
-        y += 5;
-      });
-      y += 5;
+    // Footer on every page
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(170, 170, 170);
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth - 14, 290, { align: "right" });
+      if (i > 1) {
+        doc.text(`Report ID: ${reportId}`, 14, 290);
+      }
     }
 
-    // Audit timeline
-    if (auditLogs.length > 0) {
-      doc.setFontSize(11);
-      doc.text("Status Change Timeline", 14, y);
-      y += 6;
-      doc.setFontSize(9);
-
-      auditLogs.forEach((log) => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        const appName = apps.find((a) => a.id === log.application_id)?.full_name ?? "Unknown";
-        const line = `${format(new Date(log.created_at), "PP HH:mm")} | ${appName} | ${log.previous_status} → ${log.new_status}${log.rejection_reason ? ` (${log.rejection_reason})` : ""}`;
-        doc.text(line, 14, y);
-        y += 4;
-      });
-    }
-
-    doc.save(`domestic_recruitment_log_${jobId}.pdf`);
+    doc.save(`compliance_report_${dolCaseNumber || jobId}.pdf`);
   };
 
   return (
@@ -122,6 +358,7 @@ export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className="text-muted-foreground">Job Title:</span> <span className="font-medium">{jobTitle}</span></div>
             {dolCaseNumber && <div><span className="text-muted-foreground">DOL Case:</span> <span className="font-medium">{dolCaseNumber}</span></div>}
+            {jobDetails.employer_legal_name && <div><span className="text-muted-foreground">Employer:</span> <span className="font-medium">{jobDetails.employer_legal_name}</span></div>}
             {stats.earliest && (
               <div className="col-span-2">
                 <span className="text-muted-foreground">Period:</span>{" "}
