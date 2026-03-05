@@ -133,30 +133,20 @@ export function JobDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(
-        "sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left",
-        isSponsored && "sm:border-2 sm:border-amber-400"
-      )}>
-        {/* Gold ribbon for sponsored */}
-        {isSponsored && (
-          <div className="h-1.5 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 shrink-0" />
-        )}
+      <DialogContent className="sm:max-w-7xl h-screen sm:h-auto max-h-[100dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-lg border-0 sm:border text-left">
+        {/* no special ribbon for featured — subtle approach */}
 
         {/* HEADER */}
         <div className={cn(
           "p-4 sm:p-6 bg-white border-b sticky top-0 z-40 shadow-sm shrink-0",
-          isSponsored && "bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60"
         )}>
           <div className="flex justify-between items-start gap-4">
             <div className="flex flex-col gap-1 w-full min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 {isSponsored && (
-                  <div className="flex items-center gap-1.5">
-                    <Crown className="h-4 w-4 text-amber-500 fill-amber-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
-                      Sponsored
-                    </span>
-                  </div>
+                  <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/30 bg-primary/5 px-1.5 py-0">
+                    ⭐ Featured
+                  </Badge>
                 )}
                 {job?.visa_type && (
                   <div className="flex items-center gap-2">
@@ -221,9 +211,8 @@ export function JobDetailsDialog({
               {isSponsored && (
                 <Button
                   onClick={handleApply}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-8 font-bold shadow-lg text-base h-11"
+                  className="px-8 font-bold shadow-sm text-base h-11"
                 >
-                  <Star className="h-5 w-5 mr-2 fill-white" />
                   {t("jobs.details.apply_now", { defaultValue: "Apply Now" })}
                 </Button>
               )}
@@ -284,18 +273,11 @@ export function JobDetailsDialog({
 
             {/* Sponsored Banner */}
             {isSponsored && (
-              <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-2 border-amber-200 rounded-2xl p-5 flex items-center gap-4">
-                <div className="bg-amber-500 p-3 rounded-xl text-white shadow-lg shrink-0">
-                  <Crown className="h-7 w-7 fill-white" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-900 text-base">
-                    {t("jobs.details.sponsored_title", { defaultValue: "Sponsored Opportunity" })}
-                  </h4>
-                  <p className="text-amber-800 text-sm font-medium">
-                    {t("jobs.details.sponsored_desc", { defaultValue: "This is a verified employer posting. Apply directly through our platform." })}
-                  </p>
-                </div>
+              <div className="bg-muted/50 border rounded-xl p-4 flex items-center gap-3">
+                <Star className="h-5 w-5 text-primary shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  {t("jobs.details.featured_desc", { defaultValue: "This is a verified employer posting. Apply directly through our platform." })}
+                </p>
               </div>
             )}
 

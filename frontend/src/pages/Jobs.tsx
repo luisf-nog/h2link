@@ -42,9 +42,6 @@ import {
   Check,
   Send,
   Star,
-  DollarSign,
-  Users,
-  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -75,7 +72,7 @@ const JOB_CATEGORIES_LIST = [
 
 type Job = Tables<"public_jobs">;
 
-interface SponsoredJob {
+interface FeaturedJob {
   id: string;
   title: string;
   description: string | null;
@@ -92,6 +89,8 @@ interface SponsoredJob {
   dol_case_number: string | null;
   primary_duties: string | null;
   employer_id: string;
+  created_at: string;
+  min_experience_months: number | null;
 }
 
 export default function Jobs() {
@@ -104,14 +103,14 @@ export default function Jobs() {
 
   const [searchParams] = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [sponsoredJobs, setSponsoredJobs] = useState<SponsoredJob[]>([]);
+  const [featuredJobs, setFeaturedJobs] = useState<FeaturedJob[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [selectedSponsoredJob, setSelectedSponsoredJob] = useState<SponsoredJob | null>(null);
+  const [selectedFeaturedJob, setSelectedFeaturedJob] = useState<FeaturedJob | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
   const [visaType, setVisaType] = useState<VisaTypeFilter>(() => (searchParams.get("visa") as VisaTypeFilter) || "all");
@@ -164,19 +163,19 @@ export default function Jobs() {
     if (data) setQueuedJobIds(new Set(data.map((r) => r.job_id)));
   };
 
-  // Fetch sponsored jobs
-  const fetchSponsoredJobs = async () => {
+  // Fetch featured jobs
+  const fetchFeaturedJobs = async () => {
     const { data } = await supabase
       .from("sponsored_jobs")
-      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id")
+      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months")
       .eq("is_active", true)
       .eq("is_sponsored", true)
       .order("priority_level", { ascending: false });
-    if (data) setSponsoredJobs(data as SponsoredJob[]);
+    if (data) setFeaturedJobs(data as FeaturedJob[]);
   };
 
   useEffect(() => {
-    fetchSponsoredJobs();
+    fetchFeaturedJobs();
     if (profile?.id) {
       syncQueue();
       const hasSeenWelcome = localStorage.getItem("h2linker_hub_welcome_seen");
@@ -297,115 +296,98 @@ export default function Jobs() {
     return { label: t("jobs.group_label", { group: g }), className: "bg-slate-50 text-slate-700 border-slate-300" };
   };
 
-  // ===== SPONSORED JOB CARD COMPONENT =====
-  const SponsoredJobCard = ({ sj }: { sj: SponsoredJob }) => (
+  // ===== FEATURED JOB CARD (MOBILE) — same layout as regular, subtle badge =====
+  const FeaturedJobCard = ({ sj }: { sj: FeaturedJob }) => (
     <Card
-      onClick={() => setSelectedSponsoredJob(sj)}
-      className="cursor-pointer border-2 border-amber-400 bg-gradient-to-br from-amber-50/80 via-white to-amber-50/40 shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
+      onClick={() => setSelectedFeaturedJob(sj)}
+      className="cursor-pointer active:scale-[0.98] transition-transform border-slate-200 shadow-sm overflow-hidden"
     >
-      {/* Gold ribbon */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400" />
-      <CardContent className="p-4 sm:p-5 space-y-3">
-        <div className="flex items-start justify-between gap-3">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Crown className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
-                Sponsored
-              </span>
+            <div className="flex items-center gap-2 mb-0.5">
+              <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/30 bg-primary/5 px-1.5 py-0">
+                ⭐ Featured
+              </Badge>
             </div>
-            <h3 className="font-bold text-slate-900 text-sm sm:text-base truncate uppercase" translate="no">
+            <h3 className="font-bold text-slate-900 leading-tight truncate uppercase text-sm" translate="no">
               {sj.title}
             </h3>
-            <p className="text-xs font-medium text-slate-500 truncate" translate="no">
-              {sj.employer_legal_name || "—"}
-            </p>
           </div>
+          <span className="font-bold text-green-700 shrink-0">
+            {sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}/h` : "-"}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-slate-600">
+          <span className="flex items-center gap-1">
+            <Briefcase className="h-3.5 w-3.5" /> {sj.employer_legal_name || "—"}
+          </span>
+          <span className="flex items-center gap-1 uppercase">
+            <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <Badge
+            className={cn(
+              "text-[10px] font-black",
+              sj.visa_type === "H-2A" && "bg-green-600 text-white",
+              sj.visa_type === "H-2B" && "bg-blue-600 text-white",
+            )}
+          >
+            {sj.visa_type || "—"}
+          </Badge>
           <Button
             size="sm"
-            className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 h-9 shadow-md shrink-0"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] h-7 px-3 rounded-full"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/apply/${sj.id}`);
             }}
           >
-            <Star className="h-3.5 w-3.5 mr-1.5 fill-white" />
             Apply
           </Button>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-slate-600 font-medium bg-amber-50/60 p-2.5 rounded-lg border border-amber-100">
-          {sj.city && sj.state && (
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              <span className="truncate" translate="no">{sj.city}, {sj.state}</span>
-            </div>
-          )}
-          {sj.hourly_wage && (
-            <div className="flex items-center gap-1.5 shrink-0 text-green-700 font-bold">
-              <DollarSign className="h-3.5 w-3.5 shrink-0" />
-              <span translate="no">${sj.hourly_wage.toFixed(2)}/h</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500 font-semibold uppercase tracking-tight">
-          {sj.num_positions && (
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3 text-amber-500" />
-              <span translate="no">{sj.num_positions} {t("jobs.table.headers.openings")}</span>
-            </div>
-          )}
-          {sj.start_date && (
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3 text-amber-500" />
-              <span translate="no">{formatDate(sj.start_date)}</span>
-            </div>
-          )}
-          {sj.visa_type && (
-            <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[9px] font-bold px-1.5 py-0">
-              {sj.visa_type}
-            </Badge>
-          )}
         </div>
       </CardContent>
     </Card>
   );
 
-  // ===== SPONSORED ROW FOR DESKTOP TABLE =====
-  const SponsoredTableRow = ({ sj }: { sj: SponsoredJob }) => (
+  // ===== FEATURED ROW FOR DESKTOP TABLE — same structure, subtle differentiation =====
+  const FeaturedTableRow = ({ sj }: { sj: FeaturedJob }) => (
     <TableRow
-      onClick={() => setSelectedSponsoredJob(sj)}
-      className="cursor-pointer bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60 border-l-4 border-l-amber-400 hover:bg-amber-50/80 transition-colors"
+      onClick={() => setSelectedFeaturedJob(sj)}
+      className="cursor-pointer hover:bg-slate-50 transition-colors border-l-2 border-l-primary/40"
     >
       <TableCell className="font-semibold text-sm">
-        <div className="flex items-center gap-2">
-          <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
-          <span translate="no">{sj.title}</span>
-        </div>
+        <span translate="no">{sj.title}</span>
       </TableCell>
       <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
       <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
       <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
-      <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${sj.hourly_wage.toFixed(2)}` : "-"}</TableCell>
+      <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : "-"}</TableCell>
       <TableCell>
-        <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-black">
+        <Badge
+          className={cn(
+            "text-[10px] font-black border-2",
+            sj.visa_type === "H-2A" && "bg-green-600 text-white border-green-600",
+            sj.visa_type === "H-2B" && "bg-blue-600 text-white border-blue-600",
+          )}
+        >
           {sj.visa_type || "—"}
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] font-bold">
-          ⭐ Sponsored
+        <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/30 bg-primary/5">
+          ⭐ Featured
         </Badge>
       </TableCell>
-      <TableCell className="text-sm text-slate-600 whitespace-nowrap">—</TableCell>
+      <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.created_at)}</TableCell>
       <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.start_date)}</TableCell>
       <TableCell className="text-sm text-slate-600 whitespace-nowrap">{formatDate(sj.end_date)}</TableCell>
-      <TableCell className="text-sm text-slate-600">—</TableCell>
+      <TableCell className="text-sm text-slate-600">{formatExperience(sj.min_experience_months)}</TableCell>
       <TableCell className="text-right">
         <Button
           size="sm"
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] h-8 px-3 rounded-full shadow"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] h-8 px-3 rounded-full"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/apply/${sj.id}`);
@@ -440,8 +422,7 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* Sponsored jobs are shown inline in the table/mobile list below */}
-
+        {/* Filters */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -523,9 +504,9 @@ export default function Jobs() {
           </div>
         ) : isMobile ? (
           <div className="space-y-4">
-            {/* Sponsored jobs on mobile */}
-            {sponsoredJobs.map((sj) => (
-              <SponsoredJobCard key={`sponsored-mobile-${sj.id}`} sj={sj} />
+            {/* Featured jobs on mobile */}
+            {featuredJobs.map((sj) => (
+              <FeaturedJobCard key={`featured-mobile-${sj.id}`} sj={sj} />
             ))}
             {jobs.map((j) => (
               <Card
@@ -604,9 +585,9 @@ export default function Jobs() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* SPONSORED JOBS AT TOP */}
-                {page === 1 && sponsoredJobs.map((sj) => (
-                  <SponsoredTableRow key={`sponsored-${sj.id}`} sj={sj} />
+                {/* FEATURED JOBS AT TOP */}
+                {page === 1 && featuredJobs.map((sj) => (
+                  <FeaturedTableRow key={`featured-${sj.id}`} sj={sj} />
                 ))}
                 {jobs.map((j) => (
                   <TableRow
@@ -721,27 +702,27 @@ export default function Jobs() {
           onShare={(j: any) => navigate(`/job/${j.id}`)}
         />
 
-        {/* Sponsored Job Details Dialog */}
+        {/* Featured Job Details Dialog */}
         <JobDetailsDialog
-          open={!!selectedSponsoredJob}
-          onOpenChange={(o: boolean) => !o && setSelectedSponsoredJob(null)}
-          job={selectedSponsoredJob ? {
-            id: selectedSponsoredJob.id,
-            job_title: selectedSponsoredJob.title,
-            company: selectedSponsoredJob.employer_legal_name || "—",
-            city: selectedSponsoredJob.city || "",
-            state: selectedSponsoredJob.state || "",
-            salary: selectedSponsoredJob.hourly_wage,
-            wage_from: selectedSponsoredJob.hourly_wage,
+          open={!!selectedFeaturedJob}
+          onOpenChange={(o: boolean) => !o && setSelectedFeaturedJob(null)}
+          job={selectedFeaturedJob ? {
+            id: selectedFeaturedJob.id,
+            job_title: selectedFeaturedJob.title,
+            company: selectedFeaturedJob.employer_legal_name || "—",
+            city: selectedFeaturedJob.city || "",
+            state: selectedFeaturedJob.state || "",
+            salary: selectedFeaturedJob.hourly_wage,
+            wage_from: selectedFeaturedJob.hourly_wage,
             wage_to: null,
             wage_unit: "hr",
-            start_date: selectedSponsoredJob.start_date,
-            end_date: selectedSponsoredJob.end_date,
-            openings: selectedSponsoredJob.num_positions,
-            visa_type: selectedSponsoredJob.visa_type || "H-2B",
-            job_duties: selectedSponsoredJob.primary_duties || selectedSponsoredJob.description,
-            job_id: selectedSponsoredJob.dol_case_number || "",
-            posted_date: null,
+            start_date: selectedFeaturedJob.start_date,
+            end_date: selectedFeaturedJob.end_date,
+            openings: selectedFeaturedJob.num_positions,
+            visa_type: selectedFeaturedJob.visa_type || "H-2B",
+            job_duties: selectedFeaturedJob.primary_duties || selectedFeaturedJob.description,
+            job_id: selectedFeaturedJob.dol_case_number || "",
+            posted_date: selectedFeaturedJob.created_at,
             category: null,
             was_early_access: false,
             email: null,
@@ -753,7 +734,7 @@ export default function Jobs() {
           isInQueue={false}
           onShare={() => {}}
           isSponsored
-          sponsoredJobId={selectedSponsoredJob?.id}
+          sponsoredJobId={selectedFeaturedJob?.id}
         />
 
         {/* Dialog Explicativo Reativado */}
