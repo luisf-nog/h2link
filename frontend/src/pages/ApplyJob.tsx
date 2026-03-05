@@ -87,7 +87,13 @@ export default function ApplyJob() {
 
   const isStep1Valid = form.full_name.trim() && form.email.trim();
   const isStep2Valid = true; // All have defaults
-  const isStep3Valid = experiences.every((e) => e.company_name.trim() && e.job_title.trim());
+  // Work history is optional — many applicants have 0 experience
+  const isStep3Valid = experiences.every((e) => {
+    // If user started filling one, require both company & title
+    const hasAnyField = e.company_name.trim() || e.job_title.trim();
+    if (!hasAnyField) return true; // empty entry is OK
+    return e.company_name.trim() && e.job_title.trim();
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -351,11 +357,12 @@ export default function ApplyJob() {
             </Card>
           )}
 
-          {/* STEP 3: Work History */}
+          {/* STEP 3: Work History (Optional) */}
           {step === 3 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Step 3 — Work History</CardTitle>
+                <p className="text-sm text-muted-foreground">Optional — skip if you have no prior experience.</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {experiences.map((exp, i) => (
@@ -369,12 +376,12 @@ export default function ApplyJob() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label>Company Name *</Label>
-                      <Input value={exp.company_name} onChange={(e) => updateExperience(i, "company_name", e.target.value)} />
+                      <Label>Company Name</Label>
+                      <Input placeholder="Leave blank if none" value={exp.company_name} onChange={(e) => updateExperience(i, "company_name", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Job Title *</Label>
-                      <Input value={exp.job_title} onChange={(e) => updateExperience(i, "job_title", e.target.value)} />
+                      <Label>Job Title</Label>
+                      <Input placeholder="Leave blank if none" value={exp.job_title} onChange={(e) => updateExperience(i, "job_title", e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>Duration (months)</Label>

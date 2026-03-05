@@ -440,25 +440,7 @@ export default function Jobs() {
           )}
         </div>
 
-        {/* ===== SPONSORED JOBS SECTION ===== */}
-        {sponsoredJobs.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500 fill-amber-500" />
-              <h2 className="text-lg font-bold text-slate-800">
-                {t("jobs.sponsored_section_title", { defaultValue: "Featured Opportunities" })}
-              </h2>
-            </div>
-            <div className={cn(
-              "grid gap-4",
-              sponsoredJobs.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            )}>
-              {sponsoredJobs.map((sj) => (
-                <SponsoredJobCard key={sj.id} sj={sj} />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Sponsored jobs are shown inline in the table/mobile list below */}
 
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="p-4 space-y-4">
@@ -541,6 +523,10 @@ export default function Jobs() {
           </div>
         ) : isMobile ? (
           <div className="space-y-4">
+            {/* Sponsored jobs on mobile */}
+            {sponsoredJobs.map((sj) => (
+              <SponsoredJobCard key={`sponsored-mobile-${sj.id}`} sj={sj} />
+            ))}
             {jobs.map((j) => (
               <Card
                 key={j.id}
