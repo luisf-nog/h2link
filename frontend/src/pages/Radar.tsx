@@ -36,11 +36,13 @@ import {
   Radar as RadarIcon,
   Users,
   AlertCircle,
+  RefreshCw,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Helper: resolve sector key from raw category string
+// Helper
 // ---------------------------------------------------------------------------
 function resolveSectorKey(raw: string, keywords: Record<string, string[]>): string {
   for (const [key, kws] of Object.entries(keywords)) {
@@ -113,7 +115,6 @@ const SectorCard = ({
   const selectedInSector = data.items.filter((i: any) => isTracked.includes(i.raw_category)).length;
   const allSelected = totalInSector > 0 && selectedInSector === totalInSector;
   const partialSelected = selectedInSector > 0 && !allSelected;
-  // FIX: detect sector with no current listings (all items have count=0)
   const hasNoListings = data.items.every((i: any) => (i.count || 0) === 0);
 
   return (
@@ -160,7 +161,6 @@ const SectorCard = ({
                 {segment}
               </h3>
               <div className="flex items-center gap-2 text-[10px] mt-0.5 flex-wrap">
-                {/* FIX: show warning instead of hiding sector with no listings */}
                 {hasNoListings && selectedInSector > 0 ? (
                   <span className="flex items-center gap-1 text-amber-500/80 font-semibold">
                     <AlertCircle className="h-2.5 w-2.5" />
@@ -238,7 +238,6 @@ const SectorCard = ({
                   >
                     {item.raw_category}
                   </span>
-                  {/* FIX: badge for zero-listing subcategories that are selected */}
                   {zeroCount && checked && (
                     <span className="text-[8px] font-bold text-amber-500/70 shrink-0">
                       {t("radar.ui.no_listings_short")}
@@ -429,6 +428,8 @@ export default function Radar() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toggleSaving, setToggleSaving] = useState(false);
+  // rescanning: true while we clear stale matches + trigger edge function
+  const [rescanning, setRescanning] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
   const [queuedFromRadar, setQueuedFromRadar] = useState(0);
   const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
@@ -449,23 +450,14 @@ export default function Radar() {
   const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
   // -------------------------------------------------------------------------
-  // FIX: displayedCategories merges groupedCategories (from stats RPC) with
-  // any selectedCategory that has no current listings. This ensures selected
-  // categories are ALWAYS visible so the user can deselect them, even when
-  // get_radar_stats returns no rows for those categories (zero listings).
-  // Items injected this way get count=0 and a visual "no listings" indicator.
+  // displayedCategories: keeps selected categories visible even with 0 listings
   // -------------------------------------------------------------------------
   const displayedCategories = useMemo<Record<string, { items: any[]; totalJobs: number }>>(() => {
-    // Deep-copy to avoid mutating cached state
     const merged: Record<string, { items: any[]; totalJobs: number }> = {};
     for (const [seg, data] of Object.entries(groupedCategories)) {
       merged[seg] = { totalJobs: data.totalJobs, items: [...data.items] };
     }
-
-    // Flat set of all raw categories already present
     const presentRaws = new Set<string>(Object.values(merged).flatMap((s) => s.items.map((i) => i.raw_category)));
-
-    // Inject orphaned selected categories with count=0
     for (const cat of selectedCategories) {
       if (presentRaws.has(cat)) continue;
       const sectorKey = resolveSectorKey(cat, SECTOR_KEYWORDS);
@@ -473,7 +465,6 @@ export default function Radar() {
       if (!merged[sectorName]) merged[sectorName] = { items: [], totalJobs: 0 };
       merged[sectorName].items.push({ raw_category: cat, count: 0 });
     }
-
     return merged;
   }, [groupedCategories, selectedCategories, t]);
 
@@ -484,8 +475,6 @@ export default function Radar() {
     [groupedCategories],
   );
 
-  // hasChangesComputed intentionally excludes isActive — toggle is saved
-  // immediately via handleToggleActive to avoid Save button flickering.
   const hasChangesComputed = useMemo(() => {
     if (!radarProfile) return selectedCategories.length > 0;
     return (
@@ -500,7 +489,7 @@ export default function Radar() {
   }, [radarMode, selectedCategories, minWage, maxExperience, visaType, stateFilter, groupFilter, radarProfile]);
 
   // -------------------------------------------------------------------------
-  // updateStats — accepts optional override to avoid stale-closure on init
+  // updateStats
   // -------------------------------------------------------------------------
   const updateStats = useCallback(
     async (override?: {
@@ -563,7 +552,6 @@ export default function Radar() {
     }
     if (!data) return;
 
-    // Filter out inactive / banned from joined data
     const validMatches = (data as any[]).filter((m: any) => {
       const job = m.public_jobs;
       return job && job.is_active !== false && job.is_banned !== true;
@@ -599,7 +587,48 @@ export default function Radar() {
   }, [profile?.id]);
 
   // -------------------------------------------------------------------------
-  // performSave — pure save, no side effects; returns success boolean
+  // triggerRescan
+  //
+  // Called after any filter/category/mode change is saved while radar is ON.
+  //
+  // Why clear stale matches first:
+  // radar_matched_jobs stores results from the PREVIOUS scan with OLD filters.
+  // If the user tightens criteria (e.g. adds a state filter), old matches that
+  // no longer satisfy the new criteria would linger in the feed until they
+  // age out naturally. Deleting them first ensures the feed only ever shows
+  // jobs that match the current saved profile.
+  //
+  // The edge function then runs against the new profile and re-populates the
+  // table with fresh matches — which fetchMatches picks up immediately after.
+  // -------------------------------------------------------------------------
+  const triggerRescan = useCallback(async () => {
+    if (!profile?.id) return;
+    setRescanning(true);
+    try {
+      // 1. Clear stale matches so the feed doesn't show results from old filters
+      await supabase
+        .from("radar_matched_jobs" as any)
+        .delete()
+        .eq("user_id", profile.id);
+
+      // 2. Trigger an immediate edge function scan with the newly saved profile
+      await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile.id });
+
+      // 3. Short wait so the edge function has time to insert new matches
+      //    before we fetch. The function is fast (~1–2s for most users).
+      await new Promise((r) => setTimeout(r, 2500));
+
+      // 4. Refresh stats + feed
+      await Promise.all([fetchMatches(), updateStats()]);
+    } catch (e) {
+      console.error("[Radar] triggerRescan error:", e);
+    } finally {
+      setRescanning(false);
+    }
+  }, [profile?.id, fetchMatches, updateStats]);
+
+  // -------------------------------------------------------------------------
+  // performSave — pure save, returns success boolean
   // -------------------------------------------------------------------------
   const performSave = useCallback(
     async (overrides: Record<string, any> = {}): Promise<boolean> => {
@@ -650,45 +679,54 @@ export default function Radar() {
   // handleToggleActive — optimistic with rollback
   // -------------------------------------------------------------------------
   const handleToggleActive = useCallback(async () => {
-    if (toggleSaving) return;
+    if (toggleSaving || rescanning) return;
     const next = !isActive;
-    setIsActive(next); // optimistic
+    setIsActive(next);
     setToggleSaving(true);
     try {
       const ok = await performSave({ is_active: next });
       if (!ok) {
-        setIsActive(!next); // rollback
+        setIsActive(!next);
         toast({ title: t("radar.toast_error"), variant: "destructive" });
         return;
       }
       if (next) {
-        await supabase.rpc("trigger_immediate_radar" as any, { target_user_id: profile?.id });
-        await Promise.all([fetchMatches(), updateStats()]);
+        // Radar just turned ON → scan with current saved criteria
+        await triggerRescan();
       }
       toast({ title: t("radar.toast_recalibrated") });
     } finally {
       setToggleSaving(false);
     }
-  }, [isActive, toggleSaving, performSave, fetchMatches, updateStats, toast, t, profile?.id]);
+  }, [isActive, toggleSaving, rescanning, performSave, triggerRescan, toast, t]);
 
   // -------------------------------------------------------------------------
-  // handleFullSave — for settings / filter changes
+  // handleFullSave
+  //
+  // Saves filters/categories/mode, then:
+  // - if radar is ON  → clear stale matches + trigger rescan with new criteria
+  // - if radar is OFF → just refresh stats so the sector grid shows updated counts
   // -------------------------------------------------------------------------
   const handleFullSave = useCallback(async () => {
     setSaving(true);
     try {
       const ok = await performSave();
-      if (ok) {
-        await updateStats();
-        if (isActive) await fetchMatches();
-        toast({ title: t("radar.toast_recalibrated") });
-      } else {
+      if (!ok) {
         toast({ title: t("radar.toast_error"), variant: "destructive" });
+        return;
       }
+
+      if (isActive) {
+        await triggerRescan();
+      } else {
+        await updateStats();
+      }
+
+      toast({ title: t("radar.toast_recalibrated") });
     } finally {
       setSaving(false);
     }
-  }, [performSave, updateStats, fetchMatches, isActive, toast, t]);
+  }, [performSave, triggerRescan, updateStats, isActive, toast, t]);
 
   // -------------------------------------------------------------------------
   // handleSendApplication
@@ -697,7 +735,6 @@ export default function Radar() {
     if (!profile?.id) return;
     try {
       await supabase.from("my_queue" as any).insert([{ user_id: profile.id, job_id: jobId, status: "pending" }]);
-      // Hard delete is correct here: job has been actioned, not dismissed
       await supabase
         .from("radar_matched_jobs" as any)
         .delete()
@@ -712,21 +749,15 @@ export default function Radar() {
   };
 
   // -------------------------------------------------------------------------
-  // removeMatch (dismiss) — client-side only until DB migration is available
+  // removeMatch — client-side dismiss
   // -------------------------------------------------------------------------
   const removeMatch = async (matchId: string) => {
-    try {
-      // RLS doesn't allow DELETE on radar_matched_jobs yet, so dismiss client-side
-      setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
-      setMatchCount((prev) => Math.max(0, prev - 1));
-    } catch {
-      toast({ title: t("radar.toast_error"), variant: "destructive" });
-    }
+    setMatchedJobs((prev) => prev.filter((m) => m.id !== matchId));
+    setMatchCount((prev) => Math.max(0, prev - 1));
   };
 
   // -------------------------------------------------------------------------
-  // Init — single fetch, passes loaded values directly to updateStats
-  // to avoid stale-closure (state setters are async).
+  // Init
   // -------------------------------------------------------------------------
   useEffect(() => {
     const init = async () => {
@@ -753,7 +784,6 @@ export default function Radar() {
           setStateFilter(d.state || "all");
           setGroupFilter(d.randomization_group || "all");
 
-          // Pass loaded values directly — state hasn't flushed yet
           await updateStats({
             visaType: d.visa_type || "all",
             stateFilter: d.state || "all",
@@ -779,7 +809,6 @@ export default function Radar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
-  // Re-run stats when filter state changes (skip on initial load)
   useEffect(() => {
     if (loading) return;
     updateStats();
@@ -787,8 +816,7 @@ export default function Radar() {
   }, [visaType, stateFilter, minWage, maxExperience, groupFilter]);
 
   // -------------------------------------------------------------------------
-  // renderSectorCard — useCallback prevents all sectors re-rendering on
-  // unrelated state changes
+  // renderSectorCard
   // -------------------------------------------------------------------------
   const renderSectorCard = useCallback(
     ([segment, data]: [string, { items: any[]; totalJobs: number }]) => {
@@ -857,6 +885,8 @@ export default function Radar() {
   const col1Sectors = sectorEntries.slice(0, halfIdx);
   const col2Sectors = sectorEntries.slice(halfIdx);
 
+  const isBusy = saving || toggleSaving || rescanning;
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
@@ -872,9 +902,6 @@ export default function Radar() {
                 <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("radar.title")}</h1>
                 <div className="relative group">
                   <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-yellow-400/50 via-plan-gold/60 to-yellow-400/50 blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-500" />
-                  <div className="absolute inset-0 rounded-full overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]" />
-                  </div>
                   <Badge className="relative border border-yellow-400/40 bg-gradient-to-r from-yellow-500 via-plan-gold to-yellow-600 text-white font-extrabold text-[10px] uppercase tracking-[0.15em] px-4 py-1 shadow-[0_0_20px_-4px_hsl(45_100%_50%/0.6)]">
                     {t("radar.ui.premium_access")}
                   </Badge>
@@ -915,6 +942,7 @@ export default function Radar() {
 
           <div className="h-px bg-border" />
 
+          {/* Active criteria chips */}
           <div>
             <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] mb-3">
               {t("radar.ui.active_criteria")}
@@ -955,8 +983,9 @@ export default function Radar() {
 
           <div className="h-px bg-border" />
 
+          {/* Mode + toggle */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
                 {t("radar.ui.radar_mode")}
               </label>
@@ -976,7 +1005,8 @@ export default function Radar() {
                   >
                     {mode === "autopilot" && radarMode === "autopilot" ? (
                       <span className="flex items-center justify-center gap-2">
-                        Autopilot <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded">ON</span>
+                        <Zap className="h-3.5 w-3.5" /> Autopilot{" "}
+                        <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded">ON</span>
                       </span>
                     ) : (
                       mode.charAt(0).toUpperCase() + mode.slice(1)
@@ -984,15 +1014,30 @@ export default function Radar() {
                   </button>
                 ))}
               </div>
+              {/* Autopilot description — key UX context for the user */}
+              <div
+                className={cn(
+                  "px-3 py-2.5 rounded-lg border text-[11px] leading-relaxed transition-all duration-300",
+                  radarMode === "autopilot"
+                    ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                    : "bg-muted/30 border-border text-muted-foreground/70",
+                )}
+              >
+                {
+                  radarMode === "autopilot"
+                    ? t("radar.ui.autopilot_desc") // "Whenever new jobs are imported, the radar automatically detects matches and sends them to your queue — no action required."
+                    : t("radar.ui.manual_desc") // "Matches appear in the feed below. You decide which ones to send."
+                }
+              </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <label className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
                 {t("radar.ui.scan_control")}
               </label>
               <Button
                 onClick={handleToggleActive}
-                disabled={toggleSaving}
+                disabled={isBusy}
                 className={cn(
                   "w-full h-12 rounded-lg font-bold uppercase tracking-wider transition-all duration-300",
                   isActive
@@ -1000,7 +1045,7 @@ export default function Radar() {
                     : "bg-primary text-primary-foreground border border-primary hover:bg-primary/90",
                 )}
               >
-                {toggleSaving ? (
+                {toggleSaving || rescanning ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : isActive ? (
                   t("radar.pause_radar")
@@ -1056,6 +1101,7 @@ export default function Radar() {
 
       {/* LEVEL 3: CONFIGURATION + FEED */}
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
+        {/* Left: Sector targeting */}
         <div className="lg:col-span-4 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -1083,32 +1129,70 @@ export default function Radar() {
           {hasChangesComputed && (
             <Button
               onClick={handleFullSave}
-              disabled={saving}
+              disabled={isBusy}
               className="w-full h-12 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-wider"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              {t("radar.save_changes")}
+              {isBusy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {rescanning ? t("radar.ui.rescanning") : t("radar.ui.saving")}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {t("radar.save_changes")}
+                </>
+              )}
             </Button>
           )}
         </div>
 
+        {/* Right: Live feed */}
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary/60" /> {t("radar.ui.live_feed")}
             </h2>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
-                {t("radar.ui.real_time")}
-              </span>
-              <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              {rescanning ? (
+                <span className="flex items-center gap-1.5 text-[9px] font-bold text-primary/70 uppercase tracking-[0.18em]">
+                  <RefreshCw className="h-3 w-3 animate-spin" /> {t("radar.ui.rescanning")}
+                </span>
+              ) : (
+                <>
+                  <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.18em]">
+                    {t("radar.ui.real_time")}
+                  </span>
+                  <div
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      isActive ? "bg-success animate-pulse" : "bg-muted-foreground/30",
+                    )}
+                  />
+                </>
+              )}
             </div>
           </div>
 
           <HeroPanel className="p-0 overflow-hidden">
             <div className="overflow-y-auto max-h-[600px]">
               <div className="p-6 space-y-4">
-                {matchedJobs.length > 0 ? (
+                {rescanning ? (
+                  <div className="h-[340px] flex flex-col items-center justify-center text-center space-y-6">
+                    <div className="relative">
+                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/10 blur-xl" />
+                      <div className="relative p-6 rounded-full bg-primary/5 border border-primary/10">
+                        <RefreshCw className="h-8 w-8 text-primary/40 animate-spin" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-foreground">{t("radar.ui.recalibrating")}</p>
+                      <p className="text-xs text-muted-foreground/70 max-w-[240px]">
+                        {t("radar.ui.recalibrating_desc")}
+                      </p>
+                    </div>
+                  </div>
+                ) : matchedJobs.length > 0 ? (
                   matchedJobs.map((match) => {
                     const job = match.public_jobs;
                     if (!job) return null;
@@ -1260,8 +1344,10 @@ export default function Radar() {
               setShowFilters(false);
               handleFullSave();
             }}
+            disabled={isBusy}
             className="w-full h-11 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-bold uppercase tracking-wider"
           >
+            {isBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {t("radar.apply_filters")}
           </Button>
         </DialogContent>
@@ -1343,7 +1429,7 @@ export default function Radar() {
 
       <div className="pt-8 border-t border-border flex items-center justify-between text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
         <span>H2 Link Radar • {t("radar.ui.premium_edition")}</span>
-        <span>v4.3.0</span>
+        <span>v4.4.0</span>
       </div>
     </div>
   );
