@@ -119,6 +119,7 @@ interface FeaturedJob {
   skill_level: string | null;
   view_count: number;
   click_count: number;
+  wage_rate: string | null;
 }
 
 export default function Jobs() {
@@ -188,14 +189,14 @@ export default function Jobs() {
   const syncQueue = async () => {
     if (!profile?.id) return;
     const { data } = await supabase.from("my_queue").select("job_id").eq("user_id", profile.id);
-    if (data) setQueuedJobIds(new Set(data.map((r) => r.job_id)));
+    if (data) setQueuedJobIds(new Set(data.map((r) => r.job_id).filter((id): id is string => id !== null)));
   };
 
   // Fetch featured jobs
   const fetchFeaturedJobs = async () => {
     const { data } = await supabase
       .from("sponsored_jobs")
-      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months, overtime_rate, additional_compensation, bonuses, deductions, deductions_additional, benefits, housing_provided, transportation_provided, meals_provided, daily_meal_cost, training_provided, visa_fee_reimbursement, english_level, english_proficiency, drivers_license, prior_experience_required, req_background_check, req_extreme_weather, req_full_contract_availability, req_travel_worksite, req_lift_lbs, lifting_weight_lbs, equipment_used, equipment_experience, work_environment, skill_level, view_count, click_count")
+      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months, overtime_rate, additional_compensation, bonuses, deductions, deductions_additional, benefits, housing_provided, transportation_provided, meals_provided, daily_meal_cost, training_provided, visa_fee_reimbursement, english_level, english_proficiency, drivers_license, prior_experience_required, req_background_check, req_extreme_weather, req_full_contract_availability, req_travel_worksite, req_lift_lbs, lifting_weight_lbs, equipment_used, equipment_experience, work_environment, skill_level, view_count, click_count, wage_rate")
       .eq("is_active", true)
       .eq("is_sponsored", true)
       .order("priority_level", { ascending: false });
@@ -348,7 +349,7 @@ export default function Jobs() {
               </h3>
             </div>
             <span className="font-bold text-green-700 shrink-0">
-              {sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}/h` : "-"}
+              {sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}/h` : sj.wage_rate || "-"}
             </span>
           </div>
           <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-slate-600">
@@ -413,7 +414,7 @@ export default function Jobs() {
         <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
         <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
         <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
-        <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : "-"}</TableCell>
+        <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : sj.wage_rate ? sj.wage_rate : "-"}</TableCell>
         <TableCell>
           <Badge
             className={cn(
@@ -770,7 +771,12 @@ export default function Jobs() {
             openings: selectedFeaturedJob.num_positions,
             visa_type: selectedFeaturedJob.visa_type || "H-2B",
             job_duties: selectedFeaturedJob.primary_duties || selectedFeaturedJob.description,
-            job_min_special_req: null,
+            job_min_special_req: [
+              selectedFeaturedJob.work_environment,
+              selectedFeaturedJob.equipment_used,
+              selectedFeaturedJob.equipment_experience,
+              selectedFeaturedJob.skill_level,
+            ].filter(Boolean).join("\n") || null,
             job_id: selectedFeaturedJob.dol_case_number || "",
             posted_date: selectedFeaturedJob.created_at,
             category: null,
