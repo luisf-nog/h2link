@@ -188,8 +188,27 @@ export default function Jobs() {
 
   const syncQueue = async () => {
     if (!profile?.id) return;
-    const { data } = await supabase.from("my_queue").select("job_id").eq("user_id", profile.id);
-    if (data) setQueuedJobIds(new Set(data.map((r) => r.job_id).filter((id): id is string => id !== null)));
+    // Fetch ALL job_ids from queue (paginate to avoid 1000-row default limit)
+    const allJobIds: string[] = [];
+    let from = 0;
+    const batchSize = 1000;
+    let hasMore = true;
+    while (hasMore) {
+      const { data } = await supabase
+        .from("my_queue")
+        .select("job_id")
+        .eq("user_id", profile.id)
+        .not("job_id", "is", null)
+        .range(from, from + batchSize - 1);
+      if (data && data.length > 0) {
+        allJobIds.push(...data.map((r) => r.job_id).filter((id): id is string => id !== null));
+        from += batchSize;
+        hasMore = data.length === batchSize;
+      } else {
+        hasMore = false;
+      }
+    }
+    setQueuedJobIds(new Set(allJobIds));
   };
 
   // Fetch featured jobs
