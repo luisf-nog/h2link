@@ -14,16 +14,22 @@ import {
   MapPin,
   Search,
   Zap,
-  Info,
+  Eye,
+  FileText,
+  BarChart3,
+  Target,
   Tractor,
   Building2,
   DollarSign,
+  Send,
+  MousePointerClick,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNumber } from "@/lib/number";
 import { Button } from "@/components/ui/button";
 import { WarmupStatusWidget } from "@/components/dashboard/WarmupStatusWidget";
+import { useWarmupStatus } from "@/hooks/useWarmupStatus";
 
 import { getCurrencyForLanguage } from "@/lib/pricing";
 import { Badge } from "@/components/ui/badge";
@@ -31,56 +37,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 // Mapeamento de Estados (Sigla -> Nome Completo)
 const US_STATES: Record<string, string> = {
-  AL: "Alabama",
-  AK: "Alaska",
-  AZ: "Arizona",
-  AR: "Arkansas",
-  CA: "California",
-  CO: "Colorado",
-  CT: "Connecticut",
-  DE: "Delaware",
-  FL: "Florida",
-  GA: "Georgia",
-  HI: "Hawaii",
-  ID: "Idaho",
-  IL: "Illinois",
-  IN: "Indiana",
-  IA: "Iowa",
-  KS: "Kansas",
-  KY: "Kentucky",
-  LA: "Louisiana",
-  ME: "Maine",
-  MD: "Maryland",
-  MA: "Massachusetts",
-  MI: "Michigan",
-  MN: "Minnesota",
-  MS: "Mississippi",
-  MO: "Missouri",
-  MT: "Montana",
-  NE: "Nebraska",
-  NV: "Nevada",
-  NH: "New Hampshire",
-  NJ: "New Jersey",
-  NM: "New Mexico",
-  NY: "New York",
-  NC: "North Carolina",
-  ND: "North Dakota",
-  OH: "Ohio",
-  OK: "Oklahoma",
-  OR: "Oregon",
-  PA: "Pennsylvania",
-  RI: "Rhode Island",
-  SC: "South Carolina",
-  SD: "South Dakota",
-  TN: "Tennessee",
-  TX: "Texas",
-  UT: "Utah",
-  VT: "Vermont",
-  VA: "Virginia",
-  WA: "Washington",
-  WV: "West Virginia",
-  WI: "Wisconsin",
-  WY: "Wyoming",
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+  MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+  OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+  VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
 };
 
 export default function Dashboard() {
@@ -90,19 +56,24 @@ export default function Dashboard() {
   const isFreeUser = planTier === "free";
   const currency = getCurrencyForLanguage(i18n.resolvedLanguage || i18n.language);
 
-  // --- Dados do Perfil ---
-  const creditsUsed = profile?.credits_used_today || 0;
+  // Use warmup status as single source of truth for paid users
+  const warmup = useWarmupStatus();
+
+  // For free users, use profile data; for paid, use warmup data
   const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
-  const dailyLimit = getPlanLimit(planTier, "daily_emails") + referralBonus;
+  const dailyLimit = isFreeUser
+    ? getPlanLimit(planTier, "daily_emails") + referralBonus
+    : warmup.effectiveLimit;
+  const creditsUsed = isFreeUser
+    ? (profile?.credits_used_today || 0)
+    : warmup.emailsSentToday;
   const creditsRemaining = Math.max(0, dailyLimit - creditsUsed);
   const usagePercent = dailyLimit > 0 ? (creditsUsed / dailyLimit) * 100 : 0;
 
   // --- Estados de Dados ---
   const [jobMarketLoading, setJobMarketLoading] = useState(true);
   const [visaCounts, setVisaCounts] = useState<{ h2a: number; h2b: number; early: number }>({
-    h2a: 0,
-    h2b: 0,
-    early: 0,
+    h2a: 0, h2b: 0, early: 0,
   });
   const [hotCount, setHotCount] = useState(0);
 
@@ -114,6 +85,12 @@ export default function Dashboard() {
   const [queueCount, setQueueCount] = useState(0);
   const [sentThisMonth, setSentThisMonth] = useState(0);
 
+  // --- Engagement Metrics ---
+  const [engagementLoading, setEngagementLoading] = useState(true);
+  const [totalEmailsSent, setTotalEmailsSent] = useState(0);
+  const [totalOpened, setTotalOpened] = useState(0);
+  const [totalCvViewed, setTotalCvViewed] = useState(0);
+  const [totalSentItems, setTotalSentItems] = useState(0);
 
   // 1. Estatísticas Pessoais
   useEffect(() => {
@@ -141,6 +118,56 @@ export default function Dashboard() {
 
     fetchPersonalStats();
   }, [profile?.id, creditsUsed]);
+
+  // Engagement metrics
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const fetchEngagement = async () => {
+      setEngagementLoading(true);
+      try {
+        // Total emails sent (all time) from profile
+        setTotalEmailsSent((profile as any).emails_sent_total || 0);
+
+        // Get sent queue items with open/view stats (paginated)
+        let sentCount = 0;
+        let openedCount = 0;
+        let cvViewedCount = 0;
+        let from = 0;
+        const batchSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data } = await supabase
+            .from("my_queue")
+            .select("id, opened_at, profile_viewed_at")
+            .eq("user_id", profile.id)
+            .eq("status", "sent")
+            .range(from, from + batchSize - 1);
+
+          if (data && data.length > 0) {
+            sentCount += data.length;
+            openedCount += data.filter(r => r.opened_at != null).length;
+            cvViewedCount += data.filter(r => r.profile_viewed_at != null).length;
+            from += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        setTotalSentItems(sentCount);
+        setTotalOpened(openedCount);
+        setTotalCvViewed(cvViewedCount);
+      } catch (e) {
+        console.error("Engagement fetch error:", e);
+      } finally {
+        setEngagementLoading(false);
+      }
+    };
+
+    fetchEngagement();
+  }, [profile?.id, (profile as any)?.emails_sent_total]);
 
 
   // 2. Dados de Mercado (Paginação Robusta)
@@ -185,7 +212,6 @@ export default function Dashboard() {
         const salaries = new Map<string, { sum: number; count: number }>();
         let hot = 0;
 
-        // Configuração de datas para Hot Jobs (Comparação por String YYYY-MM-DD para evitar fusos)
         const today = new Date();
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -216,9 +242,7 @@ export default function Dashboard() {
             salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
           }
 
-          // Lógica HOT JOBS Corrigida: Checa se a string da data é hoje ou ontem
           if (job.posted_date) {
-            // job.posted_date vem como YYYY-MM-DD do banco
             if (job.posted_date === todayStr || job.posted_date === yesterdayStr) {
               hot++;
             }
@@ -234,8 +258,7 @@ export default function Dashboard() {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 6)
             .map(([name, count]) => ({
-              name,
-              count,
+              name, count,
               percent: totalCats > 0 ? (count / totalCats) * 100 : 0,
             })),
         );
@@ -246,15 +269,14 @@ export default function Dashboard() {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 6)
             .map(([name, count]) => ({
-              name,
-              count,
+              name, count,
               percent: totalStates > 0 ? (count / totalStates) * 100 : 0,
             })),
         );
 
         const topSalaries = Array.from(salaries.entries())
           .map(([name, val]) => ({ name, avgSalary: val.sum / val.count, count: val.count }))
-          .filter((x) => x.count >= 5) // Mínimo de 5 vagas para relevância
+          .filter((x) => x.count >= 5)
           .sort((a, b) => b.avgSalary - a.avgSalary)
           .slice(0, 5);
 
@@ -277,6 +299,10 @@ export default function Dashboard() {
   };
 
   const planLabel = t(`plans.tiers.${planTier}.label`, { defaultValue: planTier });
+
+  // Engagement rates
+  const openRate = totalSentItems > 0 ? (totalOpened / totalSentItems) * 100 : 0;
+  const cvViewRate = totalSentItems > 0 ? (totalCvViewed / totalSentItems) * 100 : 0;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -348,7 +374,7 @@ export default function Dashboard() {
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-slate-300 font-medium">
-                  <span>{t("dashboard.credits.used_today", "Used Today")}</span>
+                  <span>{t("dashboard.credits.used_today", "Used Today")}: {creditsUsed}</span>
                   <span>{Math.round(usagePercent)}%</span>
                 </div>
                 <Progress value={usagePercent} className="h-2.5 bg-slate-700" />
@@ -394,6 +420,168 @@ export default function Dashboard() {
                 >
                   <a href="/plans">{t("dashboard.free_warning.cta")}</a>
                 </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* --- YOUR PERFORMANCE --- */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+              <BarChart3 className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">
+                {t("dashboard.performance.title", "Your Performance")}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {t("dashboard.performance.subtitle", "Track your outreach effectiveness")}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Emails Sent */}
+            <Card className="relative overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mt-8 -mr-8"></div>
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-1">
+                      {t("dashboard.performance.total_sent", "Total Emails Sent")}
+                    </p>
+                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
+                      {engagementLoading ? (
+                        <span className="animate-pulse opacity-50">--</span>
+                      ) : (
+                        formatNumber(totalEmailsSent)
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">
+                      {t("dashboard.performance.all_time", "All time")}
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-blue-100 text-blue-600">
+                    <Send className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Open Rate */}
+            <Card className="relative overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full -mt-8 -mr-8"></div>
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-1">
+                      {t("dashboard.performance.open_rate", "Email Open Rate")}
+                    </p>
+                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
+                      {engagementLoading ? (
+                        <span className="animate-pulse opacity-50">--</span>
+                      ) : (
+                        <>{openRate.toFixed(1)}%</>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">
+                      {engagementLoading ? "..." : `${formatNumber(totalOpened)} / ${formatNumber(totalSentItems)}`}
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-100 text-amber-600">
+                    <MousePointerClick className="h-5 w-5" />
+                  </div>
+                </div>
+                {!engagementLoading && totalSentItems > 0 && (
+                  <Progress value={openRate} className="h-1.5 mt-3 bg-slate-100" />
+                )}
+              </CardContent>
+            </Card>
+
+            {/* CV View Rate */}
+            <Card className="relative overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mt-8 -mr-8"></div>
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-1">
+                      {t("dashboard.performance.cv_view_rate", "CV View Rate")}
+                    </p>
+                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
+                      {engagementLoading ? (
+                        <span className="animate-pulse opacity-50">--</span>
+                      ) : (
+                        <>{cvViewRate.toFixed(1)}%</>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">
+                      {engagementLoading ? "..." : `${formatNumber(totalCvViewed)} / ${formatNumber(totalSentItems)}`}
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-600">
+                    <Eye className="h-5 w-5" />
+                  </div>
+                </div>
+                {!engagementLoading && totalSentItems > 0 && (
+                  <Progress value={cvViewRate} className="h-1.5 mt-3 bg-slate-100" />
+                )}
+              </CardContent>
+            </Card>
+
+            {/* This Month */}
+            <Card className="relative overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full -mt-8 -mr-8"></div>
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-1">
+                      {t("dashboard.performance.this_month", "Sent This Month")}
+                    </p>
+                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
+                      {formatNumber(sentThisMonth)}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">
+                      {new Date().toLocaleString(i18n.resolvedLanguage || "en", { month: "long" })}
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-purple-100 text-purple-600">
+                    <Target className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Engagement Insight Banner */}
+          {!engagementLoading && totalSentItems >= 10 && (
+            <Card className="border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50/50 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0 mt-0.5">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 text-sm mb-1">
+                      {t("dashboard.performance.insight_title", "Performance Insight")}
+                    </h4>
+                    <p className="text-sm text-slate-600">
+                      {cvViewRate >= 5
+                        ? t("dashboard.performance.insight_good_cv", {
+                            rate: cvViewRate.toFixed(1),
+                            defaultValue: `Great work! ${cvViewRate.toFixed(1)}% of recruiters viewed your CV — your profile is attracting attention.`,
+                          })
+                        : openRate >= 20
+                          ? t("dashboard.performance.insight_good_open", {
+                              rate: openRate.toFixed(1),
+                              defaultValue: `Your emails have a ${openRate.toFixed(1)}% open rate. Make sure your CV link is prominent to increase profile views.`,
+                            })
+                          : t("dashboard.performance.insight_improve", {
+                              defaultValue: "Tip: Customize your email templates and resume to improve engagement rates.",
+                            })}
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -451,7 +639,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* 1. Categorias (Sem Scroll) */}
+            {/* 1. Categorias */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -465,7 +653,7 @@ export default function Dashboard() {
                     ? Array(5)
                         .fill(0)
                         .map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)
-                    : topCategories.map((cat, i) => (
+                    : topCategories.map((cat) => (
                         <div key={cat.name} className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="font-medium text-slate-700 truncate max-w-[200px]" title={cat.name}>
@@ -480,7 +668,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* 2. Volume por Estado (Sem Scroll) */}
+            {/* 2. Volume por Estado */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -519,7 +707,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* 3. Estados com Melhores Salários (LISTA TOP 5 - Sem Scroll e Média Explícita) */}
+            {/* 3. Estados com Melhores Salários */}
             <Card className="lg:col-span-1 border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -596,4 +784,3 @@ function StatCard({ loading, title, value, icon: Icon, color, desc }: any) {
     </Card>
   );
 }
-
