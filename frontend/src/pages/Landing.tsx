@@ -94,34 +94,29 @@ export default function Landing() {
 
   const employerFeatures = [
     {
-      icon: Database,
-      title: "Banco de candidatos qualificados",
-      desc: "Acesse perfis verificados com experiência H-2A/H-2B, currículo estruturado, setor de atuação e histórico de vistos.",
+      icon: Mail,
+      title: "Candidaturas direto no seu inbox",
+      desc: "Trabalhadores aplicam direto no seu e-mail. Sem caixa de mensagens da plataforma, sem intermediário. Você recebe, você decide.",
     },
     {
-      icon: Filter,
-      title: "Filtros inteligentes de candidatos",
-      desc: "Filtre por setor, experiência, idioma, localização preferida e tipo de visto. Encontre o perfil certo em segundos.",
+      icon: FileText,
+      title: "Currículo em cada candidatura",
+      desc: "Cada candidato envia o currículo estruturado gerado pelo H2 Linker — em inglês, formatado e pronto para leitura.",
     },
     {
-      icon: TrendingUp,
-      title: "Candidatos que chegam primeiro",
-      desc: "Trabalhadores Premium do H2 Linker aplicam antes dos demais. Seu formulário recebe candidaturas no momento em que a vaga é aprovada no DOL.",
-    },
-    {
-      icon: CheckCircle2,
-      title: "Perfis completos prontos para análise",
-      desc: "Cada candidato chega com currículo em inglês formatado, telefone verificado e e-mail de contato — sem trabalho extra para você.",
+      icon: Users,
+      title: "Candidatos que buscam ativamente H-2",
+      desc: "A plataforma é usada exclusivamente por trabalhadores buscando vagas H-2A/H-2B. Cada candidatura que você recebe vem de alguém já motivado e preparado para o processo.",
     },
     {
       icon: Lock,
       title: "Portal dedicado ao empregador",
-      desc: "Dashboard exclusivo para gerenciar vagas, visualizar candidaturas recebidas e controlar o processo de contratação.",
+      desc: "Dashboard exclusivo para gerenciar vagas publicadas, acompanhar candidaturas recebidas e controlar seu processo de contratação.",
     },
     {
-      icon: Star,
-      title: "Candidatos com histórico H-2",
-      desc: "Priorize candidatos com vistos H-2A/H-2B anteriores e experiência comprovada no setor da sua vaga.",
+      icon: Database,
+      title: "Vagas indexadas do DOL",
+      desc: "Suas vagas são combinadas com os filtros dos radares dos trabalhadores automaticamente, por setor, estado e tipo de visto.",
     },
   ];
 
@@ -139,37 +134,31 @@ export default function Landing() {
       n: "01",
       icon: UserCheck,
       title: "Crie sua conta de empregador",
-      desc: "Cadastro rápido com CNPJ ou EIN. Acesso ao portal dedicado em menos de 2 minutos.",
+      desc: "Cadastro rápido. Acesso ao portal dedicado em menos de 2 minutos.",
     },
     {
       n: "02",
       icon: Briefcase,
       title: "Publique suas vagas H-2",
-      desc: "Insira as vagas aprovadas pelo DOL. Nosso sistema indexa e distribui automaticamente para candidatos qualificados.",
+      desc: "Insira as vagas aprovadas pelo DOL. O sistema as torna visíveis para trabalhadores cadastrados na plataforma.",
     },
     {
       n: "03",
-      icon: Filter,
-      title: "Configure seus filtros",
-      desc: "Defina o perfil ideal: setor, experiência, idioma, localização preferida. O sistema prioriza os candidatos certos para você.",
+      icon: Users,
+      title: "Receba candidaturas diretas",
+      desc: "Trabalhadores aplicam direto no seu e-mail. Cada mensagem inclui o currículo e os dados de contato do candidato.",
     },
     {
       n: "04",
-      icon: Users,
-      title: "Receba candidaturas qualificadas",
-      desc: "Candidatos com perfil compatível aplicam diretamente no seu e-mail. Cada e-mail vem com currículo estruturado e dados verificados.",
+      icon: Mail,
+      title: "Responda quem você quiser",
+      desc: "Você tem controle total. Sem intermediário, sem caixa de mensagens da plataforma — comunicação direta por e-mail.",
     },
     {
       n: "05",
       icon: TrendingUp,
       title: "Gerencie no seu painel",
-      desc: "Visualize todas as candidaturas, filtre por status, marque favoritos e exporte listas para seu processo de seleção.",
-    },
-    {
-      n: "06",
-      icon: CheckCircle2,
-      title: "Contrate com confiança",
-      desc: "Histórico completo de cada candidato disponível antes da entrevista. Menos surpresas, mais eficiência.",
+      desc: "Visualize candidaturas recebidas organizadas no dashboard. Filtre, acompanhe e controle seu processo seletivo.",
     },
   ];
 
@@ -184,23 +173,23 @@ export default function Landing() {
   const employerFaqs = [
     {
       q: "Como os candidatos chegam até minha vaga?",
-      a: "Trabalhadores cadastrados no H2 Linker usam o Radar para encontrar vagas compatíveis com seu perfil. Quando a sua vaga aparece, eles aplicam diretamente no seu e-mail corporativo com currículo estruturado e dados de contato verificados.",
+      a: "Trabalhadores cadastrados no H2 Linker configuram um radar com setor, estado e tipo de visto preferido. Quando sua vaga corresponde a esses critérios, eles são notificados e podem aplicar direto no seu e-mail.",
     },
     {
       q: "Preciso ter a vaga já aprovada no DOL?",
-      a: "Sim. O H2 Linker trabalha exclusivamente com vagas do programa H-2A e H-2B aprovadas pelo Department of Labor. Isso garante que tanto os candidatos quanto você estejam operando dentro dos parâmetros legais do programa.",
+      a: "Sim. O H2 Linker trabalha exclusivamente com vagas H-2A e H-2B do banco de dados do Department of Labor. Vagas fora desse programa não são suportadas.",
     },
     {
-      q: "Como garantem a qualidade dos candidatos?",
-      a: "Cada perfil passa por etapas de verificação: e-mail confirmado, currículo com dados extraídos automaticamente (não copiados manualmente), e histórico de atividade na plataforma. Candidatos com experiência prévia H-2 têm marcação especial no perfil.",
+      q: "Posso escolher quais candidatos contatar?",
+      a: "Você recebe as candidaturas direto no seu e-mail e decide quem responder. O portal ajuda a organizar e acompanhar o que você recebe, mas a seleção é inteiramente sua.",
     },
     {
       q: "O que acontece se eu não receber candidatos?",
-      a: "A quantidade de candidaturas depende do volume de trabalhadores cadastrados na plataforma compatíveis com o perfil da sua vaga. Vagas em setores de alta demanda (agricultura, paisagismo, hotelaria) tendem a receber mais candidaturas.",
+      a: "A quantidade de candidaturas depende do volume de trabalhadores cadastrados na plataforma compatíveis com o perfil da sua vaga. Vagas em setores de alta demanda como agricultura, paisagismo e hotelaria tendem a receber mais candidaturas.",
     },
     {
       q: "Qual é o custo para empregadores?",
-      a: "Acesse nossos planos na página de preços. Oferecemos modelo por vaga publicada e planos mensais com vagas ilimitadas dependendo do seu volume de contratação.",
+      a: "Acesse nossos planos na página de preços. Oferecemos opções por vaga publicada e planos mensais para maior volume de contratação.",
     },
   ];
 
@@ -1282,8 +1271,8 @@ export default function Landing() {
                       </h2>
                       <p style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, marginBottom: 32, maxWidth: 440 }}>
                         {isLangPt
-                          ? "Publique suas vagas H-2A/H-2B e receba candidaturas de trabalhadores verificados, com currículo estruturado, experiência comprovada e prontos para o processo de visto."
-                          : "Post your H-2A/H-2B jobs and receive applications from verified workers with structured resumes, proven experience, and visa-ready profiles."}
+                          ? "Publique suas vagas H-2A/H-2B aprovadas pelo DOL e receba candidaturas de trabalhadores que buscam ativamente o que você oferece — entregues direto no seu e-mail, com currículo."
+                          : "Post your DOL-approved H-2A/H-2B jobs and receive applications from workers actively looking for exactly what you offer — sent directly to your email, with resume attached."}
                       </p>
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
@@ -1320,23 +1309,25 @@ export default function Landing() {
                     >
                       {[
                         {
-                          value: "10.000+",
-                          label: isLangPt ? "Trabalhadores cadastrados" : "Registered workers",
-                          sub: isLangPt ? "Prontos para aplicar nas suas vagas" : "Ready to apply to your jobs",
-                        },
-                        {
-                          value: isLangPt ? "H-2A e H-2B" : "H-2A & H-2B",
+                          value: "H-2A e H-2B",
                           label: isLangPt ? "Tipos de visto cobertos" : "Visa types covered",
                           sub: isLangPt
-                            ? "Perfis separados por tipo de programa"
-                            : "Profiles separated by program type",
+                            ? "Trabalhadores configuram perfil por tipo de programa"
+                            : "Workers set up profiles by program type",
                         },
                         {
-                          value: "100%",
-                          label: isLangPt ? "Dados verificados" : "Verified data",
+                          value: isLangPt ? "Direto" : "Direct",
+                          label: isLangPt ? "Entrega de candidaturas" : "Application delivery",
                           sub: isLangPt
-                            ? "E-mail e telefone confirmados no cadastro"
-                            : "Email and phone confirmed at signup",
+                            ? "Sem intermediário — vai direto ao seu e-mail"
+                            : "No intermediary — straight to your email",
+                        },
+                        {
+                          value: "DOL",
+                          label: isLangPt ? "Origem das vagas" : "Job source",
+                          sub: isLangPt
+                            ? "Todas as vagas são do banco oficial do DOL"
+                            : "All jobs come from official DOL data",
                         },
                       ].map((s, i, arr) => (
                         <div
