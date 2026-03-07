@@ -389,6 +389,24 @@ Deno.serve(async (req) => {
               })
               .eq("id", jobId);
             console.log(`[DONE] ${source.key} finalizado com sucesso!`);
+
+            // Trigger radar scan for all active profiles after successful import
+            try {
+              const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+              const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+              console.log(`[RADAR] Disparando process-radar após importação ${source.key}...`);
+              const radarResp = await fetch(`${supabaseUrl}/functions/v1/process-radar`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${serviceRoleKey}`,
+                },
+                body: JSON.stringify({ triggered_by: `auto-import-${source.key}` }),
+              });
+              console.log(`[RADAR] process-radar respondeu: ${radarResp.status}`);
+            } catch (radarErr: any) {
+              console.error(`[RADAR] Falha ao disparar process-radar:`, radarErr.message);
+            }
           }
         } catch (err: any) {
           console.error(`[FATAL] ${source.key}:`, err.message);
