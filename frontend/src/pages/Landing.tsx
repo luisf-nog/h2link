@@ -165,34 +165,36 @@ export default function Landing() {
     {
       icon: TrendingUp,
       wide: true,
-      title: isLangPt ? "Reduza a dependência de intermediários" : "Reduce reliance on intermediaries",
+      title: isLangPt ? "Acesso direto a trabalhadores H-2" : "Direct access to H-2 workers",
       desc: isLangPt ? (
         <span>
-          O H2 Linker cria um <strong style={{ color: "#020617" }}>canal direto com trabalhadores</strong>, dando mais
-          controle sobre o recrutamento e menos dependência de recrutadores terceirizados.
+          Conecte-se diretamente com trabalhadores buscando vagas H-2 —{" "}
+          <strong style={{ color: "#020617" }}>sem depender de recrutadores terceirizados</strong>. Mais controle sobre
+          o processo, menos intermediários, mais agilidade na contratação.
         </span>
       ) : (
         <span>
-          H2 Linker provides a <strong style={{ color: "#020617" }}>direct channel to workers</strong>, giving you more
-          control over recruitment and reducing dependency on third-party recruiters.
+          Connect directly with workers actively looking for H-2 jobs —{" "}
+          <strong style={{ color: "#020617" }}>reducing reliance on third-party recruiters</strong> and giving you more
+          control over hiring.
         </span>
       ),
     },
     {
       icon: FileText,
       wide: false,
-      title: isLangPt ? "Simplifique o reporte ao DOL" : "Simplify DOL reporting",
+      title: isLangPt ? "Relatórios DOL automáticos" : "Automatic DOL Recruitment Reports",
       desc: isLangPt ? (
         <span>
-          Mantenha registro de candidaturas e{" "}
-          <strong style={{ color: "#020617" }}>gere relatórios estruturados para o DOL</strong> — automaticamente
-          organizados, sem coleta manual de dados.
+          Cada candidatura, contato e atividade de recrutamento é{" "}
+          <strong style={{ color: "#020617" }}>registrada e organizada automaticamente</strong>. Gere relatórios
+          estruturados para o DOL sem planilhas manuais — prontos para auditorias ou solicitações de documentação.
         </span>
       ) : (
         <span>
-          Keep records of applications and{" "}
-          <strong style={{ color: "#020617" }}>generate structured reports for DOL requirements</strong> — automatically
-          organized, without manual collection.
+          Every application, candidate contact and recruitment activity is{" "}
+          <strong style={{ color: "#020617" }}>automatically recorded and organized</strong>. Generate structured
+          recruitment reports for Department of Labor requirements — without manual spreadsheets or paperwork.
         </span>
       ),
     },
