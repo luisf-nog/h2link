@@ -702,7 +702,7 @@ export default function Landing() {
                           marginBottom: 24,
                         }}
                       >
-                        <Users size={11} /> {isLangPt ? "Área do Trabalhador" : "Worker Area"}
+                        <Users size={11} /> {t("landing.worker_area_badge")}
                       </div>
                       <h2
                         style={{
