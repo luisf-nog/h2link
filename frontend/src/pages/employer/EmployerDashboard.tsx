@@ -53,7 +53,7 @@ export default function EmployerDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-brand">Employer Dashboard</h1>
+          <h1 className="text-2xl font-bold font-brand">{t("employer.dashboard.title")}</h1>
           <p className="text-muted-foreground text-sm">
             {employerProfile?.company_name ?? ""}
             {employerProfile && (
@@ -68,7 +68,7 @@ export default function EmployerDashboard() {
           disabled={isInactive || activeJobs >= jobLimit}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Post Job
+          {t("employer.dashboard.post_job")}
         </Button>
       </div>
 
@@ -77,13 +77,13 @@ export default function EmployerDashboard() {
           <CardContent className="p-4 flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             <div className="flex-1">
-              <p className="font-semibold text-destructive">Subscription Inactive</p>
+              <p className="font-semibold text-destructive">{t("employer.dashboard.subscription_inactive")}</p>
               <p className="text-sm text-muted-foreground">
-                Your jobs are no longer visible. Reactivate to restore access.
+                {t("employer.dashboard.subscription_inactive_desc")}
               </p>
             </div>
             <Button variant="destructive" onClick={() => navigate("/employer/plans")}>
-              Reactivate
+              {t("employer.dashboard.reactivate")}
             </Button>
           </CardContent>
         </Card>
@@ -92,7 +92,7 @@ export default function EmployerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/employer/jobs")}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Jobs</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("employer.dashboard.active_jobs")}</CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -105,7 +105,7 @@ export default function EmployerDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Applicants</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("employer.dashboard.total_applicants")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>

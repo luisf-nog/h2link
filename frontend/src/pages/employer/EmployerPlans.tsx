@@ -10,11 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function EmployerPlans() {
   const { session } = useAuth();
   const { employerProfile } = useIsEmployer();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [annual, setAnnual] = useState(false);
   const [loadingTier, setLoadingTier] = useState<EmployerTier | null>(null);
 
@@ -35,9 +37,9 @@ export default function EmployerPlans() {
       );
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else toast({ title: "Error", description: data.error || "Could not start checkout" });
+      else toast({ title: t("employer.plans.error"), description: data.error || t("employer.plans.checkout_error") });
     } catch {
-      toast({ title: "Error", description: "Network error" });
+      toast({ title: t("employer.plans.error"), description: t("employer.plans.network_error") });
     } finally {
       setLoadingTier(null);
     }
@@ -66,15 +68,15 @@ export default function EmployerPlans() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold font-brand">Employer Plans</h1>
-        <p className="text-muted-foreground">Post jobs and connect with qualified H-2 workers</p>
+        <h1 className="text-3xl font-bold font-brand">{t("employer.plans.title")}</h1>
+        <p className="text-muted-foreground">{t("employer.plans.subtitle")}</p>
       </div>
 
       <div className="flex items-center justify-center gap-3">
-        <Label className="text-sm">Monthly</Label>
+        <Label className="text-sm">{t("employer.plans.monthly")}</Label>
         <Switch checked={annual} onCheckedChange={setAnnual} />
         <Label className="text-sm">
-          Annual <Badge variant="secondary" className="ml-1 text-xs">~20% off</Badge>
+          {t("employer.plans.annual")} <Badge variant="secondary" className="ml-1 text-xs">{t("employer.plans.annual_discount")}</Badge>
         </Label>
       </div>
 
@@ -93,7 +95,7 @@ export default function EmployerPlans() {
             >
               {plan.id === "professional" && (
                 <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-bl-lg">
-                  Popular
+                  {t("employer.plans.popular")}
                 </div>
               )}
               <CardHeader>
@@ -114,7 +116,7 @@ export default function EmployerPlans() {
                 </ul>
                 {isCurrent ? (
                   <Button variant="outline" className="w-full" onClick={handlePortal}>
-                    Manage Subscription
+                    {t("employer.plans.manage")}
                   </Button>
                 ) : (
                   <Button
@@ -126,7 +128,7 @@ export default function EmployerPlans() {
                     {loadingTier === plan.id ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
-                    Subscribe
+                    {t("employer.plans.subscribe")}
                   </Button>
                 )}
               </CardContent>

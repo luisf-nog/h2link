@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { ApplicantsTab } from "@/components/employer/ApplicantsTab";
 import { RecruitmentLogTab } from "@/components/employer/RecruitmentLogTab";
 import { ComplianceReportTab } from "@/components/employer/ComplianceReportTab";
+import { useTranslation } from "react-i18next";
 
 export interface Application {
   id: string;
@@ -23,7 +24,6 @@ export interface Application {
   employer_status: string;
   rejection_reason: string | null;
   created_at: string;
-  // New structured fields
   work_authorization_status: string;
   is_us_worker: boolean;
   months_experience: number;
@@ -50,6 +50,7 @@ export default function JobApplicants() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const [apps, setApps] = useState<Application[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [jobTitle, setJobTitle] = useState("");
@@ -84,7 +85,6 @@ export default function JobApplicants() {
       wage_rate: jobRes.data?.wage_rate ?? null,
     });
     setApps((appsRes.data as Application[]) ?? []);
-    // Filter audit logs to only this job's applications
     const appIds = new Set((appsRes.data ?? []).map((a: { id: string }) => a.id));
     setAuditLogs((auditRes.data as AuditEntry[] ?? []).filter((l) => appIds.has(l.application_id)));
     setLoading(false);
@@ -95,7 +95,6 @@ export default function JobApplicants() {
   const handleStatusChange = async (app: Application, newStatus: string, rejectionReason?: string) => {
     if (!session?.user?.id) return;
 
-    // Insert audit log first
     await supabase.from("application_audit_log").insert({
       application_id: app.id,
       changed_by_user_id: session.user.id,
@@ -104,7 +103,6 @@ export default function JobApplicants() {
       rejection_reason: rejectionReason || null,
     });
 
-    // Update application
     const updateData: Record<string, string | null> = {
       application_status: newStatus,
       employer_status: newStatus === "rejected" ? "rejected" : newStatus === "hired" ? "contacted" : app.employer_status,
@@ -112,27 +110,25 @@ export default function JobApplicants() {
     if (rejectionReason) updateData.rejection_reason = rejectionReason;
 
     await supabase.from("job_applications").update(updateData).eq("id", app.id);
-
-    // Reload
     await loadData();
   };
 
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" onClick={() => navigate("/employer/jobs")}>
-        <ArrowLeft className="h-4 w-4 mr-1" /> Back to Jobs
+        <ArrowLeft className="h-4 w-4 mr-1" /> {t("employer.applicants.back_to_jobs")}
       </Button>
 
       <div>
         <h1 className="text-xl font-bold">{jobTitle}</h1>
-        {dolCaseNumber && <p className="text-sm text-muted-foreground">DOL Case: {dolCaseNumber}</p>}
+        {dolCaseNumber && <p className="text-sm text-muted-foreground">{t("employer.applicants.dol_case", { number: dolCaseNumber })}</p>}
       </div>
 
       <Tabs defaultValue="applicants">
         <TabsList>
-          <TabsTrigger value="applicants">Applicants ({apps.length})</TabsTrigger>
-          <TabsTrigger value="recruitment-log">Recruitment Log</TabsTrigger>
-          <TabsTrigger value="compliance-report">Compliance Report</TabsTrigger>
+          <TabsTrigger value="applicants">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
+          <TabsTrigger value="recruitment-log">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
+          <TabsTrigger value="compliance-report">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="applicants">
