@@ -319,7 +319,7 @@ export default function PublicProfile() {
           {/* Desktop action buttons in header */}
           <div className="hidden md:flex items-center gap-1.5">
             <Button variant="ghost" size="sm" onClick={handleShare} className="gap-1.5 text-xs h-8">
-              <Share2 className="h-3.5 w-3.5" /> Share
+              <Share2 className="h-3.5 w-3.5" /> {t("profile.share")}
             </Button>
             <Button
               variant="ghost" size="sm"
