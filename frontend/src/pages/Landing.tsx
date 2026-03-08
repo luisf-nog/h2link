@@ -55,7 +55,8 @@ const tickerJobs = [
 ];
 
 export default function Landing() {
-  const navigate = useNavigate();
+  const inRouter = useInRouterContext();
+  const navigate = inRouter ? useNavigate() : (path: string) => { window.location.href = path; };
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [role, setRole] = useState<Role>(null);
