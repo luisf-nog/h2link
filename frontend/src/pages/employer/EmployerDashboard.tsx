@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 export default function EmployerDashboard() {
   const navigate = useNavigate();
   const { employerProfile } = useIsEmployer();
+  const { t } = useTranslation();
   const [activeJobs, setActiveJobs] = useState(0);
   const [totalApplicants, setTotalApplicants] = useState(0);
   const [loading, setLoading] = useState(true);
