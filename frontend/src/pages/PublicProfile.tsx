@@ -352,7 +352,7 @@ export default function PublicProfile() {
                 {aiLoading && (
                   <div className="flex items-center gap-3 py-6 justify-center">
                     <Loader2 className="animate-spin h-5 w-5 text-primary" />
-                    <p className="text-sm text-muted-foreground">Analyzing...</p>
+                    <p className="text-sm text-muted-foreground">{t("profile.analyzing")}</p>
                   </div>
                 )}
 
