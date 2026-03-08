@@ -422,7 +422,7 @@ export default function PublicProfile() {
             {/* Contact Card - Desktop */}
             <div className="hidden md:block bg-card rounded-xl border shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b">
-                <span className="text-sm font-semibold text-foreground">Contact</span>
+                <span className="text-sm font-semibold text-foreground">{t("profile.contact")}</span>
               </div>
               <div className="p-3 grid grid-cols-2 gap-2">
                 <Button
