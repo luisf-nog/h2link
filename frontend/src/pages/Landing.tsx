@@ -156,26 +156,11 @@ export default function Landing() {
   ];
 
   const employerFaqs = [
-    {
-      q: "Como os trabalhadores encontram minha vaga?",
-      a: "Trabalhadores no H2 Linker configuram um radar com setor, estado e tipo de visto preferido. Quando sua vaga corresponde a esses critérios, eles são notificados e podem aplicar pela plataforma.",
-    },
-    {
-      q: "Preciso ter a vaga já aprovada no DOL?",
-      a: "Sim. O H2 Linker trabalha exclusivamente com vagas H-2A e H-2B. Vagas fora desse programa não são suportadas.",
-    },
-    {
-      q: "Como o H2 Linker ajuda com o reporte ao DOL?",
-      a: "A plataforma mantém registro de todas as candidaturas recebidas, rastreia sua atividade de recrutamento e organiza informações dos trabalhadores — para que você possa gerar relatórios estruturados para os requisitos do DOL sem coletar dados manualmente.",
-    },
-    {
-      q: "Posso gerenciar múltiplas vagas ao mesmo tempo?",
-      a: "Sim. O portal do empregador permite organizar candidatos por vaga, comparar perfis lado a lado e acompanhar o status de cada posição separadamente.",
-    },
-    {
-      q: "Qual é o custo para empregadores?",
-      a: "Acesse nossos planos na página de preços. Oferecemos opções por vaga publicada e planos mensais para maior volume de contratação.",
-    },
+    { q: t("landing.employer_faq1_q"), a: t("landing.employer_faq1_a") },
+    { q: t("landing.employer_faq2_q"), a: t("landing.employer_faq2_a") },
+    { q: t("landing.employer_faq3_q"), a: t("landing.employer_faq3_a") },
+    { q: t("landing.employer_faq4_q"), a: t("landing.employer_faq4_a") },
+    { q: t("landing.employer_faq5_q"), a: t("landing.employer_faq5_a") },
   ];
 
   return (
