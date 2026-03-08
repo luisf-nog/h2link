@@ -547,10 +547,10 @@ export default function Landing() {
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
-                    isLangPt ? "Encontrar candidatos" : "Find candidates",
-                    isLangPt ? "Candidaturas organizadas" : "Organized applications",
-                    isLangPt ? "Menos intermediários" : "Less intermediaries",
-                    isLangPt ? "Reporte DOL" : "DOL reporting",
+                    t("landing.role_employer_tag1"),
+                    t("landing.role_employer_tag2"),
+                    t("landing.role_employer_tag3"),
+                    t("landing.role_employer_tag4"),
                   ].map((tag) => (
                     <span
                       key={tag}
