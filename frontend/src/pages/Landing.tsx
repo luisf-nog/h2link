@@ -482,7 +482,7 @@ export default function Landing() {
                     transition: "color 0.2s",
                   }}
                 >
-                  {isLangPt ? "Ver funcionalidades" : isLangEs ? "Ver funcionalidades" : "See features"}{" "}
+                  {t("landing.role_see_features")}{" "}
                   <ChevronRight size={15} />
                 </div>
               </div>
