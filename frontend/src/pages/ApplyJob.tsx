@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const emptyExperience = (): WorkExperience => ({
 
 export default function ApplyJob() {
   const { jobId } = useParams<{ jobId: string }>();
+  const { t } = useTranslation();
   const [job, setJob] = useState<JobInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -48,7 +50,6 @@ export default function ApplyJob() {
     full_name: "",
     email: "",
     phone: "",
-    // Structured fields
     work_authorization_status: "outside_us",
     is_us_worker: false,
     months_experience: 0,
@@ -56,7 +57,6 @@ export default function ApplyJob() {
     drivers_license_type: "none",
     h2b_visa_count: 0,
     citizenship_status: "other",
-    // Honeypot
     company_website: "",
   });
 
@@ -86,12 +86,10 @@ export default function ApplyJob() {
   };
 
   const isStep1Valid = form.full_name.trim() && form.email.trim();
-  const isStep2Valid = true; // All have defaults
-  // Work history is optional — many applicants have 0 experience
+  const isStep2Valid = true;
   const isStep3Valid = experiences.every((e) => {
-    // If user started filling one, require both company & title
     const hasAnyField = e.company_name.trim() || e.job_title.trim();
-    if (!hasAnyField) return true; // empty entry is OK
+    if (!hasAnyField) return true;
     return e.company_name.trim() && e.job_title.trim();
   });
 
@@ -119,7 +117,6 @@ export default function ApplyJob() {
             drivers_license_type: form.drivers_license_type,
             h2b_visa_count: form.h2b_visa_count,
             citizenship_status: form.citizenship_status,
-            // Legacy compat
             has_english: form.english_level !== "none",
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
@@ -131,12 +128,12 @@ export default function ApplyJob() {
       );
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        setError(data.error || t("apply.errors.generic"));
       } else {
         setSuccess(true);
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("apply.errors.network"));
     }
     setSubmitting(false);
   };
@@ -154,8 +151,8 @@ export default function ApplyJob() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="p-8 text-center">
-            <p className="text-lg font-semibold">Job Not Found</p>
-            <p className="text-muted-foreground text-sm mt-1">This posting may have been removed or is no longer active.</p>
+            <p className="text-lg font-semibold">{t("apply.not_found_title")}</p>
+            <p className="text-muted-foreground text-sm mt-1">{t("apply.not_found_desc")}</p>
           </CardContent>
         </Card>
       </div>
@@ -168,16 +165,12 @@ export default function ApplyJob() {
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
-            <h2 className="text-xl font-bold">Application Submitted!</h2>
-            <p className="text-muted-foreground text-sm">
-              Thank you for applying. The employer will review your application and may contact you directly.
-            </p>
+            <h2 className="text-xl font-bold">{t("apply.success_title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("apply.success_desc")}</p>
             <Separator />
-            <p className="text-sm text-muted-foreground">
-              Looking for more opportunities? Browse all available jobs on our platform.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("apply.success_browse")}</p>
             <Button className="w-full font-bold h-11" onClick={() => window.location.href = "/jobs"}>
-              <Briefcase className="h-4 w-4 mr-2" /> View More Jobs
+              <Briefcase className="h-4 w-4 mr-2" /> {t("apply.view_more_jobs")}
             </Button>
           </CardContent>
         </Card>
@@ -235,66 +228,66 @@ export default function ApplyJob() {
           {step === 1 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Step 1 — Personal Information</CardTitle>
+                <CardTitle className="text-lg">{t("apply.step1_title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Full Name *</Label>
+                  <Label>{t("apply.full_name")} *</Label>
                   <Input required value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Email *</Label>
+                  <Label>{t("apply.email")} *</Label>
                   <Input type="email" required value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Phone</Label>
+                  <Label>{t("apply.phone")}</Label>
                   <PhoneE164Input id="apply-phone" name="apply-phone" defaultCountry="BR" defaultValue={form.phone} onChange={(v) => setForm((p) => ({ ...p, phone: v }))} />
                 </div>
 
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label>Work Authorization Status *</Label>
+                  <Label>{t("apply.work_auth_status")} *</Label>
                   <Select value={form.work_authorization_status} onValueChange={(v) => setForm((p) => ({ ...p, work_authorization_status: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="us_authorized">U.S. Work Authorized</SelectItem>
-                      <SelectItem value="requires_sponsorship">Requires Sponsorship</SelectItem>
-                      <SelectItem value="outside_us">Outside the U.S.</SelectItem>
+                      <SelectItem value="us_authorized">{t("apply.work_auth_us")}</SelectItem>
+                      <SelectItem value="requires_sponsorship">{t("apply.work_auth_sponsorship")}</SelectItem>
+                      <SelectItem value="outside_us">{t("apply.work_auth_outside")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground flex items-start gap-1">
                     <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-                    Eligibility to obtain an H-2 visa does not qualify as current U.S. work authorization.
+                    {t("apply.work_auth_warning")}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Are you a U.S. Worker? *</Label>
+                  <Label>{t("apply.is_us_worker")} *</Label>
                   <Select value={form.is_us_worker ? "yes" : "no"} onValueChange={(v) => setForm((p) => ({ ...p, is_us_worker: v === "yes" }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="yes">{t("common.yes")}</SelectItem>
+                      <SelectItem value="no">{t("common.no")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Citizenship Status *</Label>
+                  <Label>{t("apply.citizenship_status")} *</Label>
                   <Select value={form.citizenship_status} onValueChange={(v) => setForm((p) => ({ ...p, citizenship_status: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="us_citizen">U.S. Citizen</SelectItem>
-                      <SelectItem value="permanent_resident">Permanent Resident</SelectItem>
-                      <SelectItem value="h2_visa">H-2 Visa Holder</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="us_citizen">{t("apply.citizen_us")}</SelectItem>
+                      <SelectItem value="permanent_resident">{t("apply.citizen_permanent")}</SelectItem>
+                      <SelectItem value="h2_visa">{t("apply.citizen_h2")}</SelectItem>
+                      <SelectItem value="other">{t("apply.citizen_other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <Button type="button" className="w-full" disabled={!isStep1Valid} onClick={() => setStep(2)}>
-                  Continue
+                  {t("apply.continue")}
                 </Button>
               </CardContent>
             </Card>
@@ -304,11 +297,11 @@ export default function ApplyJob() {
           {step === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Step 2 — Qualifications</CardTitle>
+                <CardTitle className="text-lg">{t("apply.step2_title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Months of Experience in This Occupation *</Label>
+                  <Label>{t("apply.months_experience")} *</Label>
                   <Input
                     type="number"
                     min={0}
@@ -319,34 +312,34 @@ export default function ApplyJob() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>English Level *</Label>
+                  <Label>{t("apply.english_level")} *</Label>
                   <Select value={form.english_level} onValueChange={(v) => setForm((p) => ({ ...p, english_level: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                      <SelectItem value="fluent">Fluent</SelectItem>
+                      <SelectItem value="none">{t("apply.english_none")}</SelectItem>
+                      <SelectItem value="basic">{t("apply.english_basic")}</SelectItem>
+                      <SelectItem value="intermediate">{t("apply.english_intermediate")}</SelectItem>
+                      <SelectItem value="advanced">{t("apply.english_advanced")}</SelectItem>
+                      <SelectItem value="fluent">{t("apply.english_fluent")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Driver's License *</Label>
+                  <Label>{t("apply.drivers_license")} *</Label>
                   <Select value={form.drivers_license_type} onValueChange={(v) => setForm((p) => ({ ...p, drivers_license_type: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="us">U.S. License</SelectItem>
-                      <SelectItem value="foreign">Foreign License</SelectItem>
-                      <SelectItem value="both">Both (U.S. + Foreign)</SelectItem>
+                      <SelectItem value="none">{t("apply.license_none")}</SelectItem>
+                      <SelectItem value="us">{t("apply.license_us")}</SelectItem>
+                      <SelectItem value="foreign">{t("apply.license_foreign")}</SelectItem>
+                      <SelectItem value="both">{t("apply.license_both")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Total H-2B Visas Obtained</Label>
+                  <Label>{t("apply.h2b_visa_count")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -357,8 +350,8 @@ export default function ApplyJob() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(1)}>Back</Button>
-                  <Button type="button" className="flex-1" disabled={!isStep2Valid} onClick={() => setStep(3)}>Continue</Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(1)}>{t("apply.back")}</Button>
+                  <Button type="button" className="flex-1" disabled={!isStep2Valid} onClick={() => setStep(3)}>{t("apply.continue")}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -368,14 +361,14 @@ export default function ApplyJob() {
           {step === 3 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Step 3 — Work History</CardTitle>
-                <p className="text-sm text-muted-foreground">Optional — skip if you have no prior experience.</p>
+                <CardTitle className="text-lg">{t("apply.step3_title")}</CardTitle>
+                <p className="text-sm text-muted-foreground">{t("apply.step3_desc")}</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {experiences.map((exp, i) => (
                   <div key={i} className="space-y-3 p-3 border rounded-lg relative">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">Experience #{i + 1}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{t("apply.experience_number", { num: i + 1 })}</span>
                       {experiences.length > 1 && (
                         <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeExperience(i)}>
                           <Trash2 className="h-3.5 w-3.5" />
@@ -383,35 +376,35 @@ export default function ApplyJob() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label>Company Name</Label>
-                      <Input placeholder="Leave blank if none" value={exp.company_name} onChange={(e) => updateExperience(i, "company_name", e.target.value)} />
+                      <Label>{t("apply.company_name")}</Label>
+                      <Input placeholder={t("apply.leave_blank")} value={exp.company_name} onChange={(e) => updateExperience(i, "company_name", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Job Title</Label>
-                      <Input placeholder="Leave blank if none" value={exp.job_title} onChange={(e) => updateExperience(i, "job_title", e.target.value)} />
+                      <Label>{t("apply.job_title")}</Label>
+                      <Input placeholder={t("apply.leave_blank")} value={exp.job_title} onChange={(e) => updateExperience(i, "job_title", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Duration (months)</Label>
+                      <Label>{t("apply.duration_months")}</Label>
                       <Input type="number" min={0} value={exp.duration_months} onChange={(e) => updateExperience(i, "duration_months", parseInt(e.target.value) || 0)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Tasks / Responsibilities</Label>
+                      <Label>{t("apply.tasks")}</Label>
                       <Textarea rows={2} value={exp.tasks_description} onChange={(e) => updateExperience(i, "tasks_description", e.target.value)} />
                     </div>
                   </div>
                 ))}
 
                 <Button type="button" variant="outline" size="sm" className="w-full" onClick={addExperience}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Another Experience
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {t("apply.add_experience")}
                 </Button>
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(2)}>Back</Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(2)}>{t("apply.back")}</Button>
                   <Button type="submit" className="flex-1" disabled={submitting || !isStep3Valid}>
                     {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Submit Application
+                    {t("apply.submit")}
                   </Button>
                 </div>
               </CardContent>
@@ -420,7 +413,7 @@ export default function ApplyJob() {
         </form>
 
         <p className="text-[10px] text-muted-foreground text-center">
-          Powered by H2 Linker • Your data is shared only with the employer
+          {t("apply.powered_by")}
         </p>
       </div>
     </div>

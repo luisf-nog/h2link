@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ interface JobInfo {
 
 export default function PublicProfile() {
   const { token } = useParams<{ token: string }>();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const queueId = searchParams.get("q");
   const sentAt = searchParams.get("s");
@@ -245,12 +247,12 @@ export default function PublicProfile() {
 
   const handleShare = async () => {
     const url = window.location.href;
-    const title = `${profile?.full_name || "Candidate"} — Smart Profile`;
+    const title = `${profile?.full_name || t("profile.candidate")} — Smart Profile`;
     if (navigator.share) {
       try { await navigator.share({ title, url }); } catch {}
     } else {
       await navigator.clipboard.writeText(url);
-      toast.success("Link copied to clipboard!");
+      toast.success(t("profile.link_copied"));
     }
   };
 
@@ -270,7 +272,7 @@ export default function PublicProfile() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("Failed to download resume");
+      toast.error(t("profile.download_error"));
     } finally {
       setDownloading(false);
     }
@@ -317,7 +319,7 @@ export default function PublicProfile() {
           {/* Desktop action buttons in header */}
           <div className="hidden md:flex items-center gap-1.5">
             <Button variant="ghost" size="sm" onClick={handleShare} className="gap-1.5 text-xs h-8">
-              <Share2 className="h-3.5 w-3.5" /> Share
+              <Share2 className="h-3.5 w-3.5" /> {t("profile.share")}
             </Button>
             <Button
               variant="ghost" size="sm"
@@ -326,7 +328,7 @@ export default function PublicProfile() {
               className="gap-1.5 text-xs h-8"
             >
               {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download
+              {t("profile.download")}
             </Button>
           </div>
         </div>
@@ -343,14 +345,14 @@ export default function PublicProfile() {
             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b bg-primary/5 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">AI Summary</span>
+                <span className="text-sm font-semibold text-foreground">{t("profile.ai_summary")}</span>
               </div>
 
               <div className="p-4">
                 {aiLoading && (
                   <div className="flex items-center gap-3 py-6 justify-center">
                     <Loader2 className="animate-spin h-5 w-5 text-primary" />
-                    <p className="text-sm text-muted-foreground">Analyzing...</p>
+                    <p className="text-sm text-muted-foreground">{t("profile.analyzing")}</p>
                   </div>
                 )}
 
@@ -358,11 +360,11 @@ export default function PublicProfile() {
                   <div className="flex flex-col items-center py-6 gap-2 text-center">
                     <AlertCircle className="h-8 w-8 text-muted-foreground/40" />
                     <p className="text-xs text-muted-foreground">
-                      {profile.resume_data ? "Could not generate summary." : "No resume data available."}
+                      {profile.resume_data ? t("profile.summary_error") : t("profile.no_resume_data")}
                     </p>
                     {profile.resume_data && (
                       <Button variant="outline" size="sm" onClick={() => { setAiError(false); loadAiSummary(); }}>
-                        Retry
+                        {t("profile.retry")}
                       </Button>
                     )}
                   </div>
@@ -389,7 +391,7 @@ export default function PublicProfile() {
 
                     {/* Key strengths as bullet points */}
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Key Strengths</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">{t("profile.key_strengths")}</p>
                       <ul className="space-y-1">
                         {aiSummary.strengths.map((s, i) => (
                           <li key={i} className="flex items-start gap-2 text-xs text-foreground">
@@ -402,7 +404,7 @@ export default function PublicProfile() {
 
                     {/* Availability */}
                     <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 text-xs">
-                      <span className="font-medium text-green-800 dark:text-green-300">Availability:</span>{" "}
+                      <span className="font-medium text-green-800 dark:text-green-300">{t("profile.availability")}:</span>{" "}
                       <span className="text-green-700 dark:text-green-400">{aiSummary.availability}</span>
                     </div>
                   </div>
@@ -411,7 +413,7 @@ export default function PublicProfile() {
                 {!aiSummary && !aiLoading && !aiError && !profile.resume_data && (
                   <div className="flex flex-col items-center py-6 gap-2 text-center">
                     <User className="h-8 w-8 text-muted-foreground/40" />
-                    <p className="text-xs text-muted-foreground">No resume data uploaded yet.</p>
+                    <p className="text-xs text-muted-foreground">{t("profile.no_resume_uploaded")}</p>
                   </div>
                 )}
               </div>
@@ -420,7 +422,7 @@ export default function PublicProfile() {
             {/* Contact Card - Desktop */}
             <div className="hidden md:block bg-card rounded-xl border shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b">
-                <span className="text-sm font-semibold text-foreground">Contact</span>
+                <span className="text-sm font-semibold text-foreground">{t("profile.contact")}</span>
               </div>
               <div className="p-3 grid grid-cols-2 gap-2">
                 <Button
@@ -452,7 +454,7 @@ export default function PublicProfile() {
                   disabled={!profile.contact_email}
                   className="h-10 text-xs font-medium gap-2"
                 >
-                  <Mail className="h-4 w-4" /> Email
+                  <Mail className="h-4 w-4" /> {t("profile.email")}
                 </Button>
               </div>
             </div>
@@ -472,13 +474,13 @@ export default function PublicProfile() {
                     src={`${effectiveResumeUrl}#toolbar=1`}
                     className="w-full"
                     style={{ minHeight: "calc(100vh - 160px)" }}
-                    title="Resume"
+                    title={t("profile.resume")}
                   />
                 </object>
               ) : (
                 <div className="flex flex-col items-center justify-center p-20 text-center text-muted-foreground">
                   <AlertCircle className="h-12 w-12 mb-2 opacity-40" />
-                  <p>Resume not available</p>
+                  <p>{t("profile.resume_not_available")}</p>
                 </div>
               )}
             </div>
@@ -503,7 +505,7 @@ export default function PublicProfile() {
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground disabled:opacity-30"
           >
             <Phone className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Call</span>
+            <span className="text-[10px] font-medium">{t("profile.call")}</span>
           </button>
           <button
             onClick={handleSmsClick}
@@ -519,14 +521,14 @@ export default function PublicProfile() {
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground disabled:opacity-30"
           >
             {downloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-            <span className="text-[10px] font-medium">Download</span>
+            <span className="text-[10px] font-medium">{t("profile.download")}</span>
           </button>
           <button
             onClick={handleShare}
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground"
           >
             <Share2 className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Share</span>
+            <span className="text-[10px] font-medium">{t("profile.share")}</span>
           </button>
         </div>
       </div>
