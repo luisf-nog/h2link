@@ -1251,25 +1251,19 @@ export default function Landing() {
                     >
                       {[
                         {
-                          value: isLangPt ? "H-2A e H-2B" : "H-2A & H-2B",
-                          label: isLangPt ? "Tipos de visto" : "Both visa types",
-                          sub: isLangPt
-                            ? "Trabalhadores configuram perfil por tipo de programa"
-                            : "Workers set up profiles by program type",
+                          value: t("landing.employer_stats_visa_value"),
+                          label: t("landing.employer_stats_visa_label"),
+                          sub: t("landing.employer_stats_visa_sub"),
                         },
                         {
-                          value: isLangPt ? "1 lugar" : "1 place",
-                          label: isLangPt ? "Para todas as candidaturas" : "For all applications",
-                          sub: isLangPt
-                            ? "Sem ficar espalhado entre e-mails e apps"
-                            : "No more scattered emails and messaging apps",
+                          value: t("landing.employer_stats_place_value"),
+                          label: t("landing.employer_stats_place_label"),
+                          sub: t("landing.employer_stats_place_sub"),
                         },
                         {
-                          value: "DOL-ready",
-                          label: isLangPt ? "Registros de recrutamento" : "Recruitment records",
-                          sub: isLangPt
-                            ? "Relatórios organizados sem coleta manual"
-                            : "Organized reporting without manual collection",
+                          value: t("landing.employer_stats_dol_value"),
+                          label: t("landing.employer_stats_dol_label"),
+                          sub: t("landing.employer_stats_dol_sub"),
                         },
                       ].map((s, i, arr) => (
                         <div
