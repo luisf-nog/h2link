@@ -364,7 +364,7 @@ export default function PublicProfile() {
                     </p>
                     {profile.resume_data && (
                       <Button variant="outline" size="sm" onClick={() => { setAiError(false); loadAiSummary(); }}>
-                        Retry
+                        {t("profile.retry")}
                       </Button>
                     )}
                   </div>
