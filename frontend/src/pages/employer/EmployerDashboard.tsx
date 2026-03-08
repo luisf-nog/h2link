@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, Users, Plus, AlertTriangle } from "lucide-react";
 import { getTierJobLimit } from "@/config/employer-plans.config";
+import { useTranslation } from "react-i18next";
 
 export default function EmployerDashboard() {
   const navigate = useNavigate();
