@@ -451,10 +451,10 @@ export default function Landing() {
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
-                    isLangPt ? "10.000+ vagas DOL" : "10,000+ DOL jobs",
-                    isLangPt ? "Envio automatizado" : "Automated sending",
-                    isLangPt ? "IA por vaga" : "AI per job",
-                    isLangPt ? "Radar de vagas" : "Job radar",
+                    t("landing.role_worker_tag1"),
+                    t("landing.role_worker_tag2"),
+                    t("landing.role_worker_tag3"),
+                    t("landing.role_worker_tag4"),
                   ].map((tag) => (
                     <span
                       key={tag}
