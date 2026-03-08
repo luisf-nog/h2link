@@ -140,36 +140,11 @@ export default function Landing() {
   ];
 
   const employerSteps = [
-    {
-      n: "01",
-      icon: UserCheck,
-      title: "Crie sua conta de empregador",
-      desc: "Cadastro rápido. Acesso ao portal dedicado em menos de 2 minutos.",
-    },
-    {
-      n: "02",
-      icon: Briefcase,
-      title: "Publique suas vagas H-2",
-      desc: "Anuncie suas vagas aprovadas pelo DOL na plataforma. Trabalhadores buscando esse tipo de oportunidade encontram e aplicam diretamente.",
-    },
-    {
-      n: "03",
-      icon: Layers,
-      title: "Receba candidaturas centralizadas",
-      desc: "Todas as candidaturas chegam organizadas no seu painel de empregador — sem ficar espalhadas entre e-mails, apps e recrutadores.",
-    },
-    {
-      n: "04",
-      icon: Search,
-      title: "Avalie perfis estruturados",
-      desc: "Cada candidato tem um perfil com histórico e experiência. Compare candidatos rapidamente e identifique o mais adequado para sua vaga.",
-    },
-    {
-      n: "05",
-      icon: FileText,
-      title: "Gerencie a documentação do DOL",
-      desc: "Mantenha registro de candidaturas, rastreie a atividade de recrutamento e gere relatórios organizados para os requisitos do Department of Labor — tudo no mesmo lugar.",
-    },
+    { n: "01", icon: UserCheck, title: t("landing.employer_step1_title"), desc: t("landing.employer_step1_desc") },
+    { n: "02", icon: Briefcase, title: t("landing.employer_step2_title"), desc: t("landing.employer_step2_desc") },
+    { n: "03", icon: Layers, title: t("landing.employer_step3_title"), desc: t("landing.employer_step3_desc") },
+    { n: "04", icon: Search, title: t("landing.employer_step4_title"), desc: t("landing.employer_step4_desc") },
+    { n: "05", icon: FileText, title: t("landing.employer_step5_title"), desc: t("landing.employer_step5_desc") },
   ];
 
   const workerFaqs = [
