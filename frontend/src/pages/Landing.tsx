@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+// react-router-dom Link available if needed
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { BrandWordmark } from "@/components/brand/BrandWordmark";
@@ -55,7 +55,7 @@ const tickerJobs = [
 ];
 
 export default function Landing() {
-  const navigate = useNavigate();
+  const navigate = (path: string) => { window.location.href = path; };
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [role, setRole] = useState<Role>(null);
