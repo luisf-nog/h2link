@@ -1434,21 +1434,19 @@ export default function Landing() {
                         marginBottom: 32,
                       }}
                     >
-                      {isLangPt
-                        ? "Conectando os principais setores do programa H-2"
-                        : "Connecting the leading sectors of the H-2 program"}
+                      {t("landing.employer_sectors_tag")}
                     </p>
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
                       {[
-                        { icon: "🌾", labelPt: "Agricultura", labelEn: "Agriculture" },
-                        { icon: "🏗️", labelPt: "Construção", labelEn: "Construction" },
-                        { icon: "🌿", labelPt: "Paisagismo", labelEn: "Landscaping" },
-                        { icon: "🏨", labelPt: "Hospitalidade", labelEn: "Hospitality" },
-                        { icon: "🐟", labelPt: "Pesca", labelEn: "Seafood" },
-                        { icon: "🎿", labelPt: "Ski Resorts", labelEn: "Ski Resorts" },
-                        { icon: "🌲", labelPt: "Silvicultura", labelEn: "Forestry" },
+                        { icon: "🌾", key: "sector_agriculture" },
+                        { icon: "🏗️", key: "sector_construction" },
+                        { icon: "🌿", key: "sector_landscaping" },
+                        { icon: "🏨", key: "sector_hospitality" },
+                        { icon: "🐟", key: "sector_seafood" },
+                        { icon: "🎿", key: "sector_ski" },
+                        { icon: "🌲", key: "sector_forestry" },
                       ].map((sector, i, arr) => (
-                        <div key={sector.labelEn} style={{ display: "flex", alignItems: "center" }}>
+                        <div key={sector.key} style={{ display: "flex", alignItems: "center" }}>
                           <div
                             style={{
                               display: "flex",
@@ -1460,7 +1458,7 @@ export default function Landing() {
                           >
                             <span style={{ fontSize: 28 }}>{sector.icon}</span>
                             <span style={{ fontSize: 12, fontWeight: 600, color: "#64748B", letterSpacing: "0.02em" }}>
-                              {isLangPt ? sector.labelPt : sector.labelEn}
+                              {t(`landing.${sector.key}`)}
                             </span>
                           </div>
                           {i < arr.length - 1 && (
