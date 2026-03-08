@@ -505,7 +505,7 @@ export default function PublicProfile() {
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground disabled:opacity-30"
           >
             <Phone className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Call</span>
+            <span className="text-[10px] font-medium">{t("profile.call")}</span>
           </button>
           <button
             onClick={handleSmsClick}
