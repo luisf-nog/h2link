@@ -345,7 +345,7 @@ export default function PublicProfile() {
             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b bg-primary/5 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">AI Summary</span>
+                <span className="text-sm font-semibold text-foreground">{t("profile.ai_summary")}</span>
               </div>
 
               <div className="p-4">
