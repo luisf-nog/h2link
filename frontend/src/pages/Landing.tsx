@@ -80,8 +80,7 @@ export default function Landing() {
     }, 80);
   };
 
-  const isLangPt = (i18n.language ?? "").toLowerCase().startsWith("pt");
-  const isLangEs = (i18n.language ?? "").toLowerCase().startsWith("es");
+  // Remove isLangPt/isLangEs — use t() instead
 
   const workerFeatures = [
     { icon: Database, title: t("landing.feat_radar_title"), desc: t("landing.feat_radar_desc") },
