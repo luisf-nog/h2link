@@ -1235,7 +1235,7 @@ export default function Landing() {
                             transition: "all 0.2s",
                           }}
                         >
-                          {isLangPt ? "Centralizar meu recrutamento" : "Centralize my recruitment"}{" "}
+                          {t("landing.employer_hero_cta")}{" "}
                           <ArrowRight size={15} />
                         </button>
                       </div>
