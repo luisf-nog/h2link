@@ -404,7 +404,7 @@ export default function PublicProfile() {
 
                     {/* Availability */}
                     <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 text-xs">
-                      <span className="font-medium text-green-800 dark:text-green-300">Availability:</span>{" "}
+                      <span className="font-medium text-green-800 dark:text-green-300">{t("profile.availability")}:</span>{" "}
                       <span className="text-green-700 dark:text-green-400">{aiSummary.availability}</span>
                     </div>
                   </div>
