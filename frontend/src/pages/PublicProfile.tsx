@@ -528,7 +528,7 @@ export default function PublicProfile() {
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground"
           >
             <Share2 className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Share</span>
+            <span className="text-[10px] font-medium">{t("profile.share")}</span>
           </button>
         </div>
       </div>
