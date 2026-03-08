@@ -48,6 +48,7 @@ interface JobInfo {
 
 export default function PublicProfile() {
   const { token } = useParams<{ token: string }>();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const queueId = searchParams.get("q");
   const sentAt = searchParams.get("s");
