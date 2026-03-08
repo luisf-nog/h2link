@@ -95,107 +95,38 @@ export default function Landing() {
     {
       icon: Users,
       wide: true,
-      title: isLangPt ? "Encontre trabalhadores com mais eficiência" : "Find workers more efficiently",
-      desc: isLangPt ? (
-        <span>
-          Conecte-se com trabalhadores que{" "}
-          <strong style={{ color: "#020617" }}>buscam ativamente oportunidades H-2</strong> — sem depender apenas de
-          recrutadores ou redes informais. Monte um pipeline de candidatos interessados mais rápido.
-        </span>
-      ) : (
-        <span>
-          Connect with workers <strong style={{ color: "#020617" }}>actively looking for H-2 opportunities</strong> —
-          instead of relying only on recruiters or informal networks. Build a pipeline of interested candidates faster.
-        </span>
-      ),
+      title: t("landing.employer_feat1_title"),
+      desc: t("landing.employer_feat1_desc"),
     },
     {
       icon: Layers,
       wide: false,
-      title: isLangPt ? "Receba candidaturas organizadas" : "Receive organized applications",
-      desc: isLangPt ? (
-        <span>
-          Candidaturas de e-mail, apps e recrutadores reunidas{" "}
-          <strong style={{ color: "#020617" }}>em um só lugar</strong>. Revise, organize por vaga e compare perfis sem
-          alternar entre ferramentas.
-        </span>
-      ) : (
-        <span>
-          Applications from email, messaging apps and recruiters all{" "}
-          <strong style={{ color: "#020617" }}>in one place</strong>. Review, organize by job, and compare profiles
-          without switching between tools.
-        </span>
-      ),
+      title: t("landing.employer_feat2_title"),
+      desc: t("landing.employer_feat2_desc"),
     },
     {
       icon: Search,
       wide: false,
-      title: isLangPt ? "Avalie candidatos rapidamente" : "Review candidates quickly",
-      desc: isLangPt ? (
-        <span>
-          Perfis estruturados permitem entender o histórico de cada candidato{" "}
-          <strong style={{ color: "#020617" }}>de forma clara</strong> — reduzindo o tempo de análise e facilitando a
-          comparação.
-        </span>
-      ) : (
-        <span>
-          Structured worker profiles let you understand each candidate's background{" "}
-          <strong style={{ color: "#020617" }}>at a glance</strong> — reducing time spent reviewing and making
-          comparison straightforward.
-        </span>
-      ),
+      title: t("landing.employer_feat3_title"),
+      desc: t("landing.employer_feat3_desc"),
     },
     {
       icon: Briefcase,
       wide: false,
-      title: isLangPt ? "Publique suas vagas H-2" : "Publish job opportunities",
-      desc: isLangPt ? (
-        <span>
-          Anuncie vagas na plataforma e receba candidaturas de trabalhadores{" "}
-          <strong style={{ color: "#020617" }}>já interessados nesse tipo de oportunidade</strong>.
-        </span>
-      ) : (
-        <span>
-          Post H-2 jobs and receive applications from workers{" "}
-          <strong style={{ color: "#020617" }}>already looking for exactly that type of opportunity</strong>.
-        </span>
-      ),
+      title: t("landing.employer_feat4_title"),
+      desc: t("landing.employer_feat4_desc"),
     },
     {
       icon: TrendingUp,
       wide: true,
-      title: isLangPt ? "Acesso direto a trabalhadores H-2" : "Direct access to H-2 workers",
-      desc: isLangPt ? (
-        <span>
-          Conecte-se diretamente com trabalhadores buscando vagas H-2 —{" "}
-          <strong style={{ color: "#020617" }}>sem depender de recrutadores terceirizados</strong>. Mais controle sobre
-          o processo, menos intermediários, mais agilidade na contratação.
-        </span>
-      ) : (
-        <span>
-          Connect directly with workers actively looking for H-2 jobs —{" "}
-          <strong style={{ color: "#020617" }}>reducing reliance on third-party recruiters</strong> and giving you more
-          control over hiring.
-        </span>
-      ),
+      title: t("landing.employer_feat5_title"),
+      desc: t("landing.employer_feat5_desc"),
     },
     {
       icon: FileText,
       wide: false,
-      title: isLangPt ? "Relatórios DOL automáticos" : "Automatic DOL Recruitment Reports",
-      desc: isLangPt ? (
-        <span>
-          Cada candidatura, contato e atividade de recrutamento é{" "}
-          <strong style={{ color: "#020617" }}>registrada e organizada automaticamente</strong>. Gere relatórios
-          estruturados para o DOL sem planilhas manuais — prontos para auditorias ou solicitações de documentação.
-        </span>
-      ) : (
-        <span>
-          Every application, candidate contact and recruitment activity is{" "}
-          <strong style={{ color: "#020617" }}>automatically recorded and organized</strong>. Generate structured
-          recruitment reports for Department of Labor requirements — without manual spreadsheets or paperwork.
-        </span>
-      ),
+      title: t("landing.employer_feat6_title"),
+      desc: t("landing.employer_feat6_desc"),
     },
   ];
 
