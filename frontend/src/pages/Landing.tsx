@@ -446,11 +446,8 @@ export default function Landing() {
                   {t("landing.role_worker_title")}
                 </h2>
                 <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65, marginBottom: 24 }}>
-                  {isLangPt
-                    ? "Quero encontrar vagas H-2A/H-2B, enviar candidaturas em massa e aumentar minhas chances de conseguir emprego nos EUA."
-                    : isLangEs
-                      ? "Quiero encontrar trabajos H-2A/H-2B, enviar solicitudes en masa y aumentar mis posibilidades de conseguir empleo en EE.UU."
-                      : "I want to find H-2A/H-2B jobs, send mass applications and increase my chances of getting employment in the US."}
+                  {t("landing.role_worker_desc")}
+                </p>
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
