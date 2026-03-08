@@ -1678,10 +1678,7 @@ export default function Landing() {
             </div>
             <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 14 }}>
               <p style={{ fontSize: 11, color: "#CBD5E1", lineHeight: 1.6, maxWidth: 760 }}>
-                H2 Linker is a recruitment technology platform and is not a law firm or a government agency. H2 Linker
-                does not provide legal advice and is not affiliated with the U.S. Department of Labor (DOL) or U.S.
-                Citizenship and Immigration Services (USCIS). All visa and compliance requirements are the sole
-                responsibility of the employer and worker.
+                {t("landing.footer_disclaimer")}
               </p>
             </div>
           </div>
