@@ -247,12 +247,12 @@ export default function PublicProfile() {
 
   const handleShare = async () => {
     const url = window.location.href;
-    const title = `${profile?.full_name || "Candidate"} — Smart Profile`;
+    const title = `${profile?.full_name || t("profile.candidate")} — Smart Profile`;
     if (navigator.share) {
       try { await navigator.share({ title, url }); } catch {}
     } else {
       await navigator.clipboard.writeText(url);
-      toast.success("Link copied to clipboard!");
+      toast.success(t("profile.link_copied"));
     }
   };
 
