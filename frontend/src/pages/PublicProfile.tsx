@@ -413,7 +413,7 @@ export default function PublicProfile() {
                 {!aiSummary && !aiLoading && !aiError && !profile.resume_data && (
                   <div className="flex flex-col items-center py-6 gap-2 text-center">
                     <User className="h-8 w-8 text-muted-foreground/40" />
-                    <p className="text-xs text-muted-foreground">No resume data uploaded yet.</p>
+                    <p className="text-xs text-muted-foreground">{t("profile.no_resume_uploaded")}</p>
                   </div>
                 )}
               </div>
