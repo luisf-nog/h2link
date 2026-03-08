@@ -474,7 +474,7 @@ export default function PublicProfile() {
                     src={`${effectiveResumeUrl}#toolbar=1`}
                     className="w-full"
                     style={{ minHeight: "calc(100vh - 160px)" }}
-                    title="Resume"
+                    title={t("profile.resume")}
                   />
                 </object>
               ) : (
