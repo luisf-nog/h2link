@@ -371,16 +371,11 @@ export default function Landing() {
                   marginBottom: 16,
                 }}
               >
-                {isLangPt ? "Como você usa" : isLangEs ? "¿Cómo usas" : "How do you use"}{" "}
+                {t("landing.role_hero_title")}{" "}
                 <span style={{ color: "#D4500A" }}>H2 Linker?</span>
-                {isLangEs ? "?" : ""}
               </h1>
               <p style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, maxWidth: 520, margin: "0 auto" }}>
-                {isLangPt
-                  ? "Selecione seu perfil para ver as ferramentas e funcionalidades feitas para você."
-                  : isLangEs
-                    ? "Selecciona tu perfil para ver las herramientas hechas para ti."
-                    : "Select your profile to see the tools and features made for you."}
+                {t("landing.role_hero_subtitle")}
               </p>
             </div>
 
