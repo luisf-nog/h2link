@@ -454,7 +454,7 @@ export default function PublicProfile() {
                   disabled={!profile.contact_email}
                   className="h-10 text-xs font-medium gap-2"
                 >
-                  <Mail className="h-4 w-4" /> Email
+                  <Mail className="h-4 w-4" /> {t("profile.email")}
                 </Button>
               </div>
             </div>
