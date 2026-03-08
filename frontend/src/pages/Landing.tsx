@@ -1582,7 +1582,7 @@ export default function Landing() {
                             marginBottom: 14,
                           }}
                         >
-                          {isLangPt ? "Comece agora" : "Start now"}
+                          {t("landing.employer_cta_tag")}
                         </p>
                         <h2
                           style={{
@@ -1594,23 +1594,12 @@ export default function Landing() {
                             marginBottom: 12,
                           }}
                         >
-                          {isLangPt ? (
-                            <>
-                              Pronto para simplificar
-                              <br />o recrutamento H-2?
-                            </>
-                          ) : (
-                            <>
-                              Ready to simplify
-                              <br />
-                              H-2 recruitment?
-                            </>
-                          )}
+                          {t("landing.employer_cta_title_1")}
+                          <br />
+                          {t("landing.employer_cta_title_2")}
                         </h2>
                         <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 400 }}>
-                          {isLangPt
-                            ? "Crie sua conta e comece a encontrar trabalhadores, organizar candidaturas e gerenciar documentação DOL em um só lugar."
-                            : "Create your employer account and start finding workers, organizing applications, and managing DOL documentation in one place."}
+                          {t("landing.employer_cta_desc")}
                         </p>
                       </div>
                       <div
@@ -1643,7 +1632,7 @@ export default function Landing() {
                             transition: "all 0.2s",
                           }}
                         >
-                          {isLangPt ? "Começar a receber candidatos" : "Start receiving candidates"}{" "}
+                          {t("landing.employer_cta_button")}{" "}
                           <ArrowRight size={16} />
                         </button>
                         <button
@@ -1664,7 +1653,7 @@ export default function Landing() {
                             gap: 6,
                           }}
                         >
-                          <Globe size={14} /> {isLangPt ? "Ver vagas disponíveis" : "View available jobs"}
+                          <Globe size={14} /> {t("landing.employer_cta_jobs")}
                         </button>
                       </div>
                     </div>
