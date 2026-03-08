@@ -587,11 +587,7 @@ export default function Landing() {
             {/* No role selected hint */}
             {!role && (
               <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "#CBD5E1" }}>
-                {isLangPt
-                  ? "Clique em um perfil para continuar ↓"
-                  : isLangEs
-                    ? "Haz clic en un perfil para continuar ↓"
-                    : "Click a profile to continue ↓"}
+                {t("landing.role_hint")}
               </p>
             )}
           </div>
