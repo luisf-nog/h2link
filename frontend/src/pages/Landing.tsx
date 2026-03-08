@@ -80,8 +80,7 @@ export default function Landing() {
     }, 80);
   };
 
-  const isLangPt = (i18n.language ?? "").toLowerCase().startsWith("pt");
-  const isLangEs = (i18n.language ?? "").toLowerCase().startsWith("es");
+  // Remove isLangPt/isLangEs — use t() instead
 
   const workerFeatures = [
     { icon: Database, title: t("landing.feat_radar_title"), desc: t("landing.feat_radar_desc") },
@@ -96,107 +95,38 @@ export default function Landing() {
     {
       icon: Users,
       wide: true,
-      title: isLangPt ? "Encontre trabalhadores com mais eficiência" : "Find workers more efficiently",
-      desc: isLangPt ? (
-        <span>
-          Conecte-se com trabalhadores que{" "}
-          <strong style={{ color: "#020617" }}>buscam ativamente oportunidades H-2</strong> — sem depender apenas de
-          recrutadores ou redes informais. Monte um pipeline de candidatos interessados mais rápido.
-        </span>
-      ) : (
-        <span>
-          Connect with workers <strong style={{ color: "#020617" }}>actively looking for H-2 opportunities</strong> —
-          instead of relying only on recruiters or informal networks. Build a pipeline of interested candidates faster.
-        </span>
-      ),
+      title: t("landing.employer_feat1_title"),
+      desc: t("landing.employer_feat1_desc"),
     },
     {
       icon: Layers,
       wide: false,
-      title: isLangPt ? "Receba candidaturas organizadas" : "Receive organized applications",
-      desc: isLangPt ? (
-        <span>
-          Candidaturas de e-mail, apps e recrutadores reunidas{" "}
-          <strong style={{ color: "#020617" }}>em um só lugar</strong>. Revise, organize por vaga e compare perfis sem
-          alternar entre ferramentas.
-        </span>
-      ) : (
-        <span>
-          Applications from email, messaging apps and recruiters all{" "}
-          <strong style={{ color: "#020617" }}>in one place</strong>. Review, organize by job, and compare profiles
-          without switching between tools.
-        </span>
-      ),
+      title: t("landing.employer_feat2_title"),
+      desc: t("landing.employer_feat2_desc"),
     },
     {
       icon: Search,
       wide: false,
-      title: isLangPt ? "Avalie candidatos rapidamente" : "Review candidates quickly",
-      desc: isLangPt ? (
-        <span>
-          Perfis estruturados permitem entender o histórico de cada candidato{" "}
-          <strong style={{ color: "#020617" }}>de forma clara</strong> — reduzindo o tempo de análise e facilitando a
-          comparação.
-        </span>
-      ) : (
-        <span>
-          Structured worker profiles let you understand each candidate's background{" "}
-          <strong style={{ color: "#020617" }}>at a glance</strong> — reducing time spent reviewing and making
-          comparison straightforward.
-        </span>
-      ),
+      title: t("landing.employer_feat3_title"),
+      desc: t("landing.employer_feat3_desc"),
     },
     {
       icon: Briefcase,
       wide: false,
-      title: isLangPt ? "Publique suas vagas H-2" : "Publish job opportunities",
-      desc: isLangPt ? (
-        <span>
-          Anuncie vagas na plataforma e receba candidaturas de trabalhadores{" "}
-          <strong style={{ color: "#020617" }}>já interessados nesse tipo de oportunidade</strong>.
-        </span>
-      ) : (
-        <span>
-          Post H-2 jobs and receive applications from workers{" "}
-          <strong style={{ color: "#020617" }}>already looking for exactly that type of opportunity</strong>.
-        </span>
-      ),
+      title: t("landing.employer_feat4_title"),
+      desc: t("landing.employer_feat4_desc"),
     },
     {
       icon: TrendingUp,
       wide: true,
-      title: isLangPt ? "Acesso direto a trabalhadores H-2" : "Direct access to H-2 workers",
-      desc: isLangPt ? (
-        <span>
-          Conecte-se diretamente com trabalhadores buscando vagas H-2 —{" "}
-          <strong style={{ color: "#020617" }}>sem depender de recrutadores terceirizados</strong>. Mais controle sobre
-          o processo, menos intermediários, mais agilidade na contratação.
-        </span>
-      ) : (
-        <span>
-          Connect directly with workers actively looking for H-2 jobs —{" "}
-          <strong style={{ color: "#020617" }}>reducing reliance on third-party recruiters</strong> and giving you more
-          control over hiring.
-        </span>
-      ),
+      title: t("landing.employer_feat5_title"),
+      desc: t("landing.employer_feat5_desc"),
     },
     {
       icon: FileText,
       wide: false,
-      title: isLangPt ? "Relatórios DOL automáticos" : "Automatic DOL Recruitment Reports",
-      desc: isLangPt ? (
-        <span>
-          Cada candidatura, contato e atividade de recrutamento é{" "}
-          <strong style={{ color: "#020617" }}>registrada e organizada automaticamente</strong>. Gere relatórios
-          estruturados para o DOL sem planilhas manuais — prontos para auditorias ou solicitações de documentação.
-        </span>
-      ) : (
-        <span>
-          Every application, candidate contact and recruitment activity is{" "}
-          <strong style={{ color: "#020617" }}>automatically recorded and organized</strong>. Generate structured
-          recruitment reports for Department of Labor requirements — without manual spreadsheets or paperwork.
-        </span>
-      ),
+      title: t("landing.employer_feat6_title"),
+      desc: t("landing.employer_feat6_desc"),
     },
   ];
 
@@ -210,36 +140,11 @@ export default function Landing() {
   ];
 
   const employerSteps = [
-    {
-      n: "01",
-      icon: UserCheck,
-      title: "Crie sua conta de empregador",
-      desc: "Cadastro rápido. Acesso ao portal dedicado em menos de 2 minutos.",
-    },
-    {
-      n: "02",
-      icon: Briefcase,
-      title: "Publique suas vagas H-2",
-      desc: "Anuncie suas vagas aprovadas pelo DOL na plataforma. Trabalhadores buscando esse tipo de oportunidade encontram e aplicam diretamente.",
-    },
-    {
-      n: "03",
-      icon: Layers,
-      title: "Receba candidaturas centralizadas",
-      desc: "Todas as candidaturas chegam organizadas no seu painel de empregador — sem ficar espalhadas entre e-mails, apps e recrutadores.",
-    },
-    {
-      n: "04",
-      icon: Search,
-      title: "Avalie perfis estruturados",
-      desc: "Cada candidato tem um perfil com histórico e experiência. Compare candidatos rapidamente e identifique o mais adequado para sua vaga.",
-    },
-    {
-      n: "05",
-      icon: FileText,
-      title: "Gerencie a documentação do DOL",
-      desc: "Mantenha registro de candidaturas, rastreie a atividade de recrutamento e gere relatórios organizados para os requisitos do Department of Labor — tudo no mesmo lugar.",
-    },
+    { n: "01", icon: UserCheck, title: t("landing.employer_step1_title"), desc: t("landing.employer_step1_desc") },
+    { n: "02", icon: Briefcase, title: t("landing.employer_step2_title"), desc: t("landing.employer_step2_desc") },
+    { n: "03", icon: Layers, title: t("landing.employer_step3_title"), desc: t("landing.employer_step3_desc") },
+    { n: "04", icon: Search, title: t("landing.employer_step4_title"), desc: t("landing.employer_step4_desc") },
+    { n: "05", icon: FileText, title: t("landing.employer_step5_title"), desc: t("landing.employer_step5_desc") },
   ];
 
   const workerFaqs = [
@@ -251,26 +156,11 @@ export default function Landing() {
   ];
 
   const employerFaqs = [
-    {
-      q: "Como os trabalhadores encontram minha vaga?",
-      a: "Trabalhadores no H2 Linker configuram um radar com setor, estado e tipo de visto preferido. Quando sua vaga corresponde a esses critérios, eles são notificados e podem aplicar pela plataforma.",
-    },
-    {
-      q: "Preciso ter a vaga já aprovada no DOL?",
-      a: "Sim. O H2 Linker trabalha exclusivamente com vagas H-2A e H-2B. Vagas fora desse programa não são suportadas.",
-    },
-    {
-      q: "Como o H2 Linker ajuda com o reporte ao DOL?",
-      a: "A plataforma mantém registro de todas as candidaturas recebidas, rastreia sua atividade de recrutamento e organiza informações dos trabalhadores — para que você possa gerar relatórios estruturados para os requisitos do DOL sem coletar dados manualmente.",
-    },
-    {
-      q: "Posso gerenciar múltiplas vagas ao mesmo tempo?",
-      a: "Sim. O portal do empregador permite organizar candidatos por vaga, comparar perfis lado a lado e acompanhar o status de cada posição separadamente.",
-    },
-    {
-      q: "Qual é o custo para empregadores?",
-      a: "Acesse nossos planos na página de preços. Oferecemos opções por vaga publicada e planos mensais para maior volume de contratação.",
-    },
+    { q: t("landing.employer_faq1_q"), a: t("landing.employer_faq1_a") },
+    { q: t("landing.employer_faq2_q"), a: t("landing.employer_faq2_a") },
+    { q: t("landing.employer_faq3_q"), a: t("landing.employer_faq3_a") },
+    { q: t("landing.employer_faq4_q"), a: t("landing.employer_faq4_a") },
+    { q: t("landing.employer_faq5_q"), a: t("landing.employer_faq5_a") },
   ];
 
   return (
@@ -399,13 +289,13 @@ export default function Landing() {
                     className={`tab-pill ${role === "worker" ? "active-worker" : "inactive"}`}
                     onClick={() => setRole("worker")}
                   >
-                    {isLangPt ? "Trabalhador" : isLangEs ? "Trabajador" : "Worker"}
+                    {t("landing.role_worker_tab")}
                   </button>
                   <button
                     className={`tab-pill ${role === "employer" ? "active-employer" : "inactive"}`}
                     onClick={() => setRole("employer")}
                   >
-                    {isLangPt ? "Empregador" : isLangEs ? "Empleador" : "Employer"}
+                    {t("landing.role_employer_tab")}
                   </button>
                 </div>
               )}
@@ -481,16 +371,11 @@ export default function Landing() {
                   marginBottom: 16,
                 }}
               >
-                {isLangPt ? "Como você usa" : isLangEs ? "¿Cómo usas" : "How do you use"}{" "}
+                {t("landing.role_hero_title")}{" "}
                 <span style={{ color: "#D4500A" }}>H2 Linker?</span>
-                {isLangEs ? "?" : ""}
               </h1>
               <p style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, maxWidth: 520, margin: "0 auto" }}>
-                {isLangPt
-                  ? "Selecione seu perfil para ver as ferramentas e funcionalidades feitas para você."
-                  : isLangEs
-                    ? "Selecciona tu perfil para ver las herramientas hechas para ti."
-                    : "Select your profile to see the tools and features made for you."}
+                {t("landing.role_hero_subtitle")}
               </p>
             </div>
 
@@ -558,21 +443,17 @@ export default function Landing() {
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  {isLangPt ? "Sou Trabalhador" : isLangEs ? "Soy Trabajador" : "I'm a Worker"}
+                  {t("landing.role_worker_title")}
                 </h2>
                 <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65, marginBottom: 24 }}>
-                  {isLangPt
-                    ? "Quero encontrar vagas H-2A/H-2B, enviar candidaturas em massa e aumentar minhas chances de conseguir emprego nos EUA."
-                    : isLangEs
-                      ? "Quiero encontrar trabajos H-2A/H-2B, enviar solicitudes en masa y aumentar mis posibilidades de conseguir empleo en EE.UU."
-                      : "I want to find H-2A/H-2B jobs, send mass applications and increase my chances of getting employment in the US."}
+                  {t("landing.role_worker_desc")}
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
-                    isLangPt ? "10.000+ vagas DOL" : "10,000+ DOL jobs",
-                    isLangPt ? "Envio automatizado" : "Automated sending",
-                    isLangPt ? "IA por vaga" : "AI per job",
-                    isLangPt ? "Radar de vagas" : "Job radar",
+                    t("landing.role_worker_tag1"),
+                    t("landing.role_worker_tag2"),
+                    t("landing.role_worker_tag3"),
+                    t("landing.role_worker_tag4"),
                   ].map((tag) => (
                     <span
                       key={tag}
@@ -600,7 +481,7 @@ export default function Landing() {
                     transition: "color 0.2s",
                   }}
                 >
-                  {isLangPt ? "Ver funcionalidades" : isLangEs ? "Ver funcionalidades" : "See features"}{" "}
+                  {t("landing.role_see_features")}{" "}
                   <ChevronRight size={15} />
                 </div>
               </div>
@@ -659,21 +540,17 @@ export default function Landing() {
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  {isLangPt ? "Sou Empregador" : isLangEs ? "Soy Empleador" : "I'm an Employer"}
+                  {t("landing.role_employer_title")}
                 </h2>
                 <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65, marginBottom: 24 }}>
-                  {isLangPt
-                    ? "Quero encontrar trabalhadores H-2, centralizar candidaturas em um só lugar e simplificar minha documentação de recrutamento para o DOL."
-                    : isLangEs
-                      ? "Quiero encontrar trabajadores H-2, centralizar solicitudes en un solo lugar y simplificar mi documentación de reclutamiento para el DOL."
-                      : "I want to find H-2 workers, organize applications in one place, and simplify my DOL recruitment documentation."}
+                  {t("landing.role_employer_desc")}
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
-                    isLangPt ? "Encontrar candidatos" : "Find candidates",
-                    isLangPt ? "Candidaturas organizadas" : "Organized applications",
-                    isLangPt ? "Menos intermediários" : "Less intermediaries",
-                    isLangPt ? "Reporte DOL" : "DOL reporting",
+                    t("landing.role_employer_tag1"),
+                    t("landing.role_employer_tag2"),
+                    t("landing.role_employer_tag3"),
+                    t("landing.role_employer_tag4"),
                   ].map((tag) => (
                     <span
                       key={tag}
@@ -701,7 +578,7 @@ export default function Landing() {
                     transition: "color 0.2s",
                   }}
                 >
-                  {isLangPt ? "Ver funcionalidades" : isLangEs ? "Ver funcionalidades" : "See features"}{" "}
+                  {t("landing.role_see_features")}{" "}
                   <ChevronRight size={15} />
                 </div>
               </div>
@@ -710,11 +587,7 @@ export default function Landing() {
             {/* No role selected hint */}
             {!role && (
               <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "#CBD5E1" }}>
-                {isLangPt
-                  ? "Clique em um perfil para continuar ↓"
-                  : isLangEs
-                    ? "Haz clic en un perfil para continuar ↓"
-                    : "Click a profile to continue ↓"}
+                {t("landing.role_hint")}
               </p>
             )}
           </div>
@@ -829,7 +702,7 @@ export default function Landing() {
                           marginBottom: 24,
                         }}
                       >
-                        <Users size={11} /> {isLangPt ? "Área do Trabalhador" : "Worker Area"}
+                        <Users size={11} /> {t("landing.worker_area_badge")}
                       </div>
                       <h2
                         style={{
@@ -1323,7 +1196,7 @@ export default function Landing() {
                           marginBottom: 24,
                         }}
                       >
-                        <Building2 size={11} /> {isLangPt ? "Área do Empregador" : "Employer Area"}
+                        <Building2 size={11} /> {t("landing.employer_area_badge")}
                       </div>
                       <h2
                         style={{
@@ -1335,24 +1208,12 @@ export default function Landing() {
                           marginBottom: 16,
                         }}
                       >
-                        {isLangPt ? (
-                          <>
-                            Recrute trabalhadores H-2
-                            <br />
-                            <span style={{ color: "#0ea5e9" }}>sem a confusão</span>
-                          </>
-                        ) : (
-                          <>
-                            Recruit H-2 workers
-                            <br />
-                            <span style={{ color: "#0ea5e9" }}>without the chaos</span>
-                          </>
-                        )}
+                        {t("landing.employer_hero_title_1")}
+                        <br />
+                        <span style={{ color: "#0ea5e9" }}>{t("landing.employer_hero_title_2")}</span>
                       </h2>
                       <p style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, marginBottom: 32, maxWidth: 440 }}>
-                        {isLangPt
-                          ? "O H2 Linker simplifica o recrutamento H-2 dando ao empregador as ferramentas para encontrar candidatos, organizar candidaturas e cuidar da documentação do DOL — tudo em um só lugar."
-                          : "H2 Linker simplifies H-2 recruitment by giving employers the tools to find candidates, organize applications, and handle DOL documentation — all in one place."}
+                        {t("landing.employer_hero_desc")}
                       </p>
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
@@ -1374,7 +1235,7 @@ export default function Landing() {
                             transition: "all 0.2s",
                           }}
                         >
-                          {isLangPt ? "Centralizar meu recrutamento" : "Centralize my recruitment"}{" "}
+                          {t("landing.employer_hero_cta")}{" "}
                           <ArrowRight size={15} />
                         </button>
                       </div>
@@ -1390,25 +1251,19 @@ export default function Landing() {
                     >
                       {[
                         {
-                          value: isLangPt ? "H-2A e H-2B" : "H-2A & H-2B",
-                          label: isLangPt ? "Tipos de visto" : "Both visa types",
-                          sub: isLangPt
-                            ? "Trabalhadores configuram perfil por tipo de programa"
-                            : "Workers set up profiles by program type",
+                          value: t("landing.employer_stats_visa_value"),
+                          label: t("landing.employer_stats_visa_label"),
+                          sub: t("landing.employer_stats_visa_sub"),
                         },
                         {
-                          value: isLangPt ? "1 lugar" : "1 place",
-                          label: isLangPt ? "Para todas as candidaturas" : "For all applications",
-                          sub: isLangPt
-                            ? "Sem ficar espalhado entre e-mails e apps"
-                            : "No more scattered emails and messaging apps",
+                          value: t("landing.employer_stats_place_value"),
+                          label: t("landing.employer_stats_place_label"),
+                          sub: t("landing.employer_stats_place_sub"),
                         },
                         {
-                          value: "DOL-ready",
-                          label: isLangPt ? "Registros de recrutamento" : "Recruitment records",
-                          sub: isLangPt
-                            ? "Relatórios organizados sem coleta manual"
-                            : "Organized reporting without manual collection",
+                          value: t("landing.employer_stats_dol_value"),
+                          label: t("landing.employer_stats_dol_label"),
+                          sub: t("landing.employer_stats_dol_sub"),
                         },
                       ].map((s, i, arr) => (
                         <div
@@ -1461,19 +1316,9 @@ export default function Landing() {
                           lineHeight: 1.15,
                         }}
                       >
-                        {isLangPt ? (
-                          <>
-                            Do cadastro à contratação
-                            <br />
-                            em 5 passos simples
-                          </>
-                        ) : (
-                          <>
-                            From signup to hiring
-                            <br />
-                            in 5 simple steps
-                          </>
-                        )}
+                        {t("landing.employer_hiw_title_1")}
+                        <br />
+                        {t("landing.employer_hiw_title_2")}
                       </h2>
                     </div>
                     <div className="steps-grid" style={{ display: "grid", gap: 1, background: "#E2E8F0" }}>
@@ -1538,18 +1383,9 @@ export default function Landing() {
                           lineHeight: 1.15,
                         }}
                       >
-                        {isLangPt ? (
-                          <>
-                            Ferramentas que tornam
-                            <br />a contratação eficiente
-                          </>
-                        ) : (
-                          <>
-                            Tools that make
-                            <br />
-                            hiring efficient
-                          </>
-                        )}
+                        {t("landing.employer_feat_title_1")}
+                        <br />
+                        {t("landing.employer_feat_title_2")}
                       </h2>
                     </div>
                     <div
@@ -1598,21 +1434,19 @@ export default function Landing() {
                         marginBottom: 32,
                       }}
                     >
-                      {isLangPt
-                        ? "Conectando os principais setores do programa H-2"
-                        : "Connecting the leading sectors of the H-2 program"}
+                      {t("landing.employer_sectors_tag")}
                     </p>
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
                       {[
-                        { icon: "🌾", labelPt: "Agricultura", labelEn: "Agriculture" },
-                        { icon: "🏗️", labelPt: "Construção", labelEn: "Construction" },
-                        { icon: "🌿", labelPt: "Paisagismo", labelEn: "Landscaping" },
-                        { icon: "🏨", labelPt: "Hospitalidade", labelEn: "Hospitality" },
-                        { icon: "🐟", labelPt: "Pesca", labelEn: "Seafood" },
-                        { icon: "🎿", labelPt: "Ski Resorts", labelEn: "Ski Resorts" },
-                        { icon: "🌲", labelPt: "Silvicultura", labelEn: "Forestry" },
+                        { icon: "🌾", key: "sector_agriculture" },
+                        { icon: "🏗️", key: "sector_construction" },
+                        { icon: "🌿", key: "sector_landscaping" },
+                        { icon: "🏨", key: "sector_hospitality" },
+                        { icon: "🐟", key: "sector_seafood" },
+                        { icon: "🎿", key: "sector_ski" },
+                        { icon: "🌲", key: "sector_forestry" },
                       ].map((sector, i, arr) => (
-                        <div key={sector.labelEn} style={{ display: "flex", alignItems: "center" }}>
+                        <div key={sector.key} style={{ display: "flex", alignItems: "center" }}>
                           <div
                             style={{
                               display: "flex",
@@ -1624,7 +1458,7 @@ export default function Landing() {
                           >
                             <span style={{ fontSize: 28 }}>{sector.icon}</span>
                             <span style={{ fontSize: 12, fontWeight: 600, color: "#64748B", letterSpacing: "0.02em" }}>
-                              {isLangPt ? sector.labelPt : sector.labelEn}
+                              {t(`landing.${sector.key}`)}
                             </span>
                           </div>
                           {i < arr.length - 1 && (
@@ -1748,7 +1582,7 @@ export default function Landing() {
                             marginBottom: 14,
                           }}
                         >
-                          {isLangPt ? "Comece agora" : "Start now"}
+                          {t("landing.employer_cta_tag")}
                         </p>
                         <h2
                           style={{
@@ -1760,23 +1594,12 @@ export default function Landing() {
                             marginBottom: 12,
                           }}
                         >
-                          {isLangPt ? (
-                            <>
-                              Pronto para simplificar
-                              <br />o recrutamento H-2?
-                            </>
-                          ) : (
-                            <>
-                              Ready to simplify
-                              <br />
-                              H-2 recruitment?
-                            </>
-                          )}
+                          {t("landing.employer_cta_title_1")}
+                          <br />
+                          {t("landing.employer_cta_title_2")}
                         </h2>
                         <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 400 }}>
-                          {isLangPt
-                            ? "Crie sua conta e comece a encontrar trabalhadores, organizar candidaturas e gerenciar documentação DOL em um só lugar."
-                            : "Create your employer account and start finding workers, organizing applications, and managing DOL documentation in one place."}
+                          {t("landing.employer_cta_desc")}
                         </p>
                       </div>
                       <div
@@ -1809,7 +1632,7 @@ export default function Landing() {
                             transition: "all 0.2s",
                           }}
                         >
-                          {isLangPt ? "Começar a receber candidatos" : "Start receiving candidates"}{" "}
+                          {t("landing.employer_cta_button")}{" "}
                           <ArrowRight size={16} />
                         </button>
                         <button
@@ -1830,7 +1653,7 @@ export default function Landing() {
                             gap: 6,
                           }}
                         >
-                          <Globe size={14} /> {isLangPt ? "Ver vagas disponíveis" : "View available jobs"}
+                          <Globe size={14} /> {t("landing.employer_cta_jobs")}
                         </button>
                       </div>
                     </div>
@@ -1855,10 +1678,7 @@ export default function Landing() {
             </div>
             <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 14 }}>
               <p style={{ fontSize: 11, color: "#CBD5E1", lineHeight: 1.6, maxWidth: 760 }}>
-                H2 Linker is a recruitment technology platform and is not a law firm or a government agency. H2 Linker
-                does not provide legal advice and is not affiliated with the U.S. Department of Labor (DOL) or U.S.
-                Citizenship and Immigration Services (USCIS). All visa and compliance requirements are the sole
-                responsibility of the employer and worker.
+                {t("landing.footer_disclaimer")}
               </p>
             </div>
           </div>
