@@ -540,7 +540,7 @@ export default function Landing() {
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  {isLangPt ? "Sou Empregador" : isLangEs ? "Soy Empleador" : "I'm an Employer"}
+                  {t("landing.role_employer_title")}
                 </h2>
                 <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65, marginBottom: 24 }}>
                   {isLangPt
