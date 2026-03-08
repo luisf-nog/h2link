@@ -1383,18 +1383,9 @@ export default function Landing() {
                           lineHeight: 1.15,
                         }}
                       >
-                        {isLangPt ? (
-                          <>
-                            Ferramentas que tornam
-                            <br />a contratação eficiente
-                          </>
-                        ) : (
-                          <>
-                            Tools that make
-                            <br />
-                            hiring efficient
-                          </>
-                        )}
+                        {t("landing.employer_feat_title_1")}
+                        <br />
+                        {t("landing.employer_feat_title_2")}
                       </h2>
                     </div>
                     <div
