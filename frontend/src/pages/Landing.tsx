@@ -1208,19 +1208,9 @@ export default function Landing() {
                           marginBottom: 16,
                         }}
                       >
-                        {isLangPt ? (
-                          <>
-                            Recrute trabalhadores H-2
-                            <br />
-                            <span style={{ color: "#0ea5e9" }}>sem a confusão</span>
-                          </>
-                        ) : (
-                          <>
-                            Recruit H-2 workers
-                            <br />
-                            <span style={{ color: "#0ea5e9" }}>without the chaos</span>
-                          </>
-                        )}
+                        {t("landing.employer_hero_title_1")}
+                        <br />
+                        <span style={{ color: "#0ea5e9" }}>{t("landing.employer_hero_title_2")}</span>
                       </h2>
                       <p style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, marginBottom: 32, maxWidth: 440 }}>
                         {isLangPt
