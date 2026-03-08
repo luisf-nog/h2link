@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -17,10 +17,7 @@ import {
   Clock,
   Star,
   X,
-  ChevronDown,
-  ChevronUp,
   Copy,
-  Globe,
   Briefcase,
   Car,
   Languages,
@@ -28,9 +25,97 @@ import {
   AlertCircle,
   UserCheck,
   Info,
+  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Application } from "@/pages/employer/JobApplicants";
+
+// ─── Mock Data Generator ──────────────────────────────────────────────────────
+
+const FIRST_NAMES = [
+  "Carlos", "Miguel", "José", "Juan", "Pedro", "Luis", "Antonio", "Francisco", "Manuel", "Rafael",
+  "Diego", "Alejandro", "Fernando", "Ricardo", "Eduardo", "Javier", "Sergio", "Roberto", "Daniel", "Mario",
+  "María", "Ana", "Carmen", "Rosa", "Laura", "Patricia", "Sandra", "Claudia", "Elena", "Teresa",
+  "Andrés", "Gustavo", "Héctor", "Óscar", "Ramón", "Arturo", "Enrique", "Alberto", "Jorge", "César",
+  "Felipe", "Guillermo", "Ignacio", "Martín", "Nicolás", "Pablo", "Raúl", "Salvador", "Tomás", "Vicente",
+  "Adriana", "Beatriz", "Cristina", "Diana", "Gabriela", "Isabel", "Julia", "Lucía", "Mónica", "Sofía",
+];
+
+const LAST_NAMES = [
+  "García", "Rodríguez", "Martínez", "López", "González", "Hernández", "Pérez", "Sánchez", "Ramírez", "Torres",
+  "Flores", "Rivera", "Gómez", "Díaz", "Reyes", "Cruz", "Morales", "Ortiz", "Gutiérrez", "Chávez",
+  "Ramos", "Vargas", "Castillo", "Jiménez", "Moreno", "Romero", "Herrera", "Medina", "Aguilar", "Vega",
+  "Castro", "Mendoza", "Ruiz", "Fernández", "Álvarez", "Delgado", "Suárez", "Vásquez", "Rojas", "Guerrero",
+  "Silva", "Sandoval", "Molina", "Contreras", "Cervantes", "Soto", "Estrada", "Núñez", "Campos", "Paredes",
+];
+
+const WORK_AUTH_STATUSES = ["us_citizen", "permanent_resident", "h2_visa_holder", "needs_sponsorship", "outside_us"];
+const ENGLISH_LEVELS = ["none", "basic", "intermediate", "advanced"];
+const LICENSE_TYPES = ["none", "foreign", "B", "C", "CDL"];
+const APP_STATUSES = ["new", "reviewed", "shortlisted", "contacted", "hired", "rejected", "declined_by_worker"];
+
+function generateMockApplicants(count: number): Application[] {
+  const apps: Application[] = [];
+  const now = new Date();
+  
+  for (let i = 0; i < count; i++) {
+    const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+    const lastName1 = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    const lastName2 = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    const fullName = `${firstName} ${lastName1} ${lastName2}`;
+    
+    const workAuth = WORK_AUTH_STATUSES[Math.floor(Math.random() * WORK_AUTH_STATUSES.length)];
+    const englishLevel = ENGLISH_LEVELS[Math.floor(Math.random() * ENGLISH_LEVELS.length)];
+    const licenseType = LICENSE_TYPES[Math.floor(Math.random() * LICENSE_TYPES.length)];
+    const monthsExp = Math.floor(Math.random() * 72); // 0-6 years
+    const h2Seasons = Math.floor(Math.random() * 6); // 0-5 seasons
+    const matchScore = Math.floor(Math.random() * 100);
+    
+    // Weight statuses: more "new" and "reviewed"
+    const statusWeights = [0.35, 0.25, 0.15, 0.1, 0.05, 0.05, 0.05];
+    const rand = Math.random();
+    let cumulative = 0;
+    let status = "new";
+    for (let j = 0; j < APP_STATUSES.length; j++) {
+      cumulative += statusWeights[j];
+      if (rand < cumulative) {
+        status = APP_STATUSES[j];
+        break;
+      }
+    }
+    
+    const daysAgo = Math.floor(Math.random() * 30);
+    const createdAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    
+    apps.push({
+      id: `mock-${i}-${Date.now()}`,
+      full_name: fullName,
+      email: `${firstName.toLowerCase()}.${lastName1.toLowerCase()}${Math.floor(Math.random() * 100)}@gmail.com`,
+      phone: Math.random() > 0.3 ? `+52 ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 9000 + 1000)}` : null,
+      citizenship_status: workAuth === "us_citizen" ? "US Citizen" : workAuth === "permanent_resident" ? "Permanent Resident" : "Foreign National",
+      has_english: englishLevel !== "none",
+      has_experience: monthsExp > 0,
+      has_license: licenseType !== "none",
+      is_in_us: ["us_citizen", "permanent_resident", "h2_visa_holder"].includes(workAuth),
+      score_color: matchScore >= 80 ? "green" : matchScore >= 50 ? "yellow" : "red",
+      employer_status: status === "contacted" || status === "hired" ? "contacted" : "pending",
+      rejection_reason: status === "rejected" ? ["Insufficient experience", "Not available for contract dates", "Communication issues", "Failed background check"][Math.floor(Math.random() * 4)] : null,
+      created_at: createdAt.toISOString(),
+      work_authorization_status: workAuth,
+      is_us_worker: ["us_citizen", "permanent_resident"].includes(workAuth),
+      months_experience: monthsExp,
+      english_level: englishLevel,
+      drivers_license_type: licenseType,
+      h2b_visa_count: h2Seasons,
+      application_match_score: matchScore,
+      match_status: matchScore >= 80 ? "strong" : matchScore >= 50 ? "partial" : "low",
+      application_status: status,
+    });
+  }
+  
+  // Sort by created_at descending
+  return apps.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,50 +139,48 @@ function avatarColor(name: string) {
 
 function fmtExperience(months: number) {
   if (!months) return "No experience";
-  if (months < 12) return `${months}mo experience`;
+  if (months < 12) return `${months}mo`;
   const y = Math.floor(months / 12);
   const m = months % 12;
-  return m ? `${y}yr ${m}mo experience` : `${y}yr experience`;
+  return m ? `${y}yr ${m}mo` : `${y}yr`;
 }
 
 function fmtEnglish(level: string) {
-  return { none: "No English", basic: "Basic English", intermediate: "Intermediate English", advanced: "Advanced English" }[level] ?? level;
+  return { none: "None", basic: "Basic", intermediate: "Intermediate", advanced: "Advanced" }[level] ?? level;
 }
 
 function fmtLicense(type: string) {
-  if (!type || type === "none") return null;
-  if (type === "foreign") return "Foreign license";
-  return `License: ${type}`;
+  if (!type || type === "none") return "None";
+  if (type === "foreign") return "Foreign";
+  return type;
 }
 
-function fmtWorkAuth(status: string) {
-  const map: Record<string, { label: string; ok: boolean }> = {
-    inside_us:    { label: "Currently in US",   ok: true  },
-    outside_us:   { label: "Outside US",         ok: false },
-    authorized:   { label: "Work authorized",    ok: true  },
-    unauthorized: { label: "Not authorized",     ok: false },
+// Work Authorization with hierarchy colors
+function getWorkAuthDisplay(status: string): { label: string; color: "green" | "yellow" | "red"; detail: string } {
+  const map: Record<string, { label: string; color: "green" | "yellow" | "red"; detail: string }> = {
+    us_citizen:          { label: "US Citizen",          color: "green",  detail: "No sponsorship needed" },
+    permanent_resident:  { label: "Permanent Resident",  color: "green",  detail: "No sponsorship needed" },
+    authorized:          { label: "Work Authorized",     color: "green",  detail: "No sponsorship needed" },
+    h2_visa_holder:      { label: "H-2 Visa Holder",     color: "yellow", detail: "Has prior H-2 visa" },
+    inside_us:           { label: "In US",               color: "yellow", detail: "May need sponsorship" },
+    needs_sponsorship:   { label: "Needs Sponsorship",   color: "red",    detail: "Requires H-2 visa" },
+    outside_us:          { label: "Outside US",          color: "red",    detail: "Requires H-2 visa" },
+    unauthorized:        { label: "Not Authorized",      color: "red",    detail: "Requires sponsorship" },
   };
-  return map[status] ?? { label: status, ok: false };
+  return map[status] ?? { label: status, color: "red", detail: "Unknown status" };
 }
 
 function statusMeta(status: string) {
   const map: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-    new:                { label: "New",              color: "bg-sky-50 text-sky-700 border-sky-200",       icon: Clock       },
-    reviewed:           { label: "Reviewed",         color: "bg-slate-50 text-slate-600 border-slate-200", icon: UserCheck   },
-    shortlisted:        { label: "Shortlisted",      color: "bg-amber-50 text-amber-700 border-amber-200", icon: Star        },
-    contacted:          { label: "Contacted",        color: "bg-violet-50 text-violet-700 border-violet-200", icon: Mail     },
-    hired:              { label: "Hired",            color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-    rejected:           { label: "Rejected",         color: "bg-red-50 text-red-600 border-red-200",       icon: XCircle     },
-    declined_by_worker: { label: "Withdrew",         color: "bg-slate-50 text-slate-500 border-slate-200", icon: X           },
+    new:                { label: "New",          color: "bg-sky-100 text-sky-700",       icon: Clock       },
+    reviewed:           { label: "Reviewed",     color: "bg-slate-100 text-slate-600",   icon: UserCheck   },
+    shortlisted:        { label: "Shortlisted",  color: "bg-amber-100 text-amber-700",   icon: Star        },
+    contacted:          { label: "Contacted",    color: "bg-violet-100 text-violet-700", icon: Mail        },
+    hired:              { label: "Hired",        color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+    rejected:           { label: "Rejected",     color: "bg-red-100 text-red-600",       icon: XCircle     },
+    declined_by_worker: { label: "Withdrew",     color: "bg-slate-100 text-slate-500",   icon: X           },
   };
-  return map[status] ?? { label: status, color: "bg-slate-50 text-slate-500 border-slate-200", icon: Info };
-}
-
-function matchLabel(score: number | null) {
-  if (score === null) return null;
-  if (score >= 80) return { label: "Strong match",  color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
-  if (score >= 50) return { label: "Partial match", color: "text-amber-600 bg-amber-50 border-amber-200"       };
-  return                  { label: "Low match",     color: "text-red-500 bg-red-50 border-red-200"             };
+  return map[status] ?? { label: status, color: "bg-slate-100 text-slate-500", icon: Info };
 }
 
 // ─── Reject Dialog ─────────────────────────────────────────────────────────────
@@ -129,6 +212,7 @@ function RejectDialog({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
+            placeholder="e.g., Insufficient experience for the role"
           />
         </div>
         <DialogFooter>
@@ -142,7 +226,7 @@ function RejectDialog({
   );
 }
 
-// ─── Candidate Card ────────────────────────────────────────────────────────────
+// ─── Candidate Card (New Hierarchy) ────────────────────────────────────────────
 
 function CandidateCard({
   app,
@@ -151,22 +235,25 @@ function CandidateCard({
   app: Application;
   onStatusChange: (app: Application, status: string, reason?: string) => void;
 }) {
-  const [expanded, setExpanded]       = useState(false);
-  const [rejectOpen, setRejectOpen]   = useState(false);
-  const [copied, setCopied]           = useState<"email" | "phone" | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [copied, setCopied] = useState<"email" | "phone" | null>(null);
 
   const { label: statusLabel, color: statusColor, icon: StatusIcon } = statusMeta(app.application_status);
-  const auth  = fmtWorkAuth(app.work_authorization_status);
-  const match = matchLabel(app.application_match_score);
-  const licenseStr = fmtLicense(app.drivers_license_type);
+  const workAuth = getWorkAuthDisplay(app.work_authorization_status);
   const isWithdrawn = app.application_status === "declined_by_worker";
-  const isTerminal  = ["hired", "rejected", "declined_by_worker"].includes(app.application_status);
+  const isTerminal = ["hired", "rejected", "declined_by_worker"].includes(app.application_status);
 
   function copy(text: string, field: "email" | "phone") {
     navigator.clipboard.writeText(text);
     setCopied(field);
     setTimeout(() => setCopied(null), 1800);
   }
+
+  const authColorClasses = {
+    green: "bg-emerald-500 border-emerald-600",
+    yellow: "bg-amber-400 border-amber-500",
+    red: "bg-red-500 border-red-600",
+  };
 
   return (
     <>
@@ -177,213 +264,203 @@ function CandidateCard({
         onConfirm={(reason) => { onStatusChange(app, "rejected", reason); setRejectOpen(false); }}
       />
 
-      <div className={`bg-card border rounded-xl overflow-hidden transition-shadow hover:shadow-md ${isWithdrawn ? "opacity-60" : ""}`}>
+      <div className={`bg-card border rounded-lg overflow-hidden transition-shadow hover:shadow-md ${isWithdrawn ? "opacity-60" : ""}`}>
+        <div className="flex">
+          
+          {/* ═══ 1. WORK AUTHORIZATION STRIPE ═══ */}
+          <div 
+            className={`w-2 shrink-0 ${authColorClasses[workAuth.color]}`}
+            title={`${workAuth.label}: ${workAuth.detail}`}
+          />
 
-        {/* ── Card header ── */}
-        <div className="p-5">
-          <div className="flex items-start gap-4">
+          <div className="flex-1 p-4">
+            {/* Top row: Avatar, Name, Status, Match Score */}
+            <div className="flex items-start gap-3">
+              {/* Avatar */}
+              <div className={`${avatarColor(app.full_name)} w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+                {initials(app.full_name)}
+              </div>
 
-            {/* Avatar */}
-            <div className={`${avatarColor(app.full_name)} w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-              {initials(app.full_name)}
-            </div>
-
-            {/* Name + badges */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-foreground text-base">{app.full_name}</span>
-
-                {/* Status badge */}
-                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${statusColor}`}>
-                  <StatusIcon size={11} />
-                  {statusLabel}
-                </span>
-
-                {/* Match score */}
-                {match && app.application_match_score !== null && (
-                  <span
-                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${match.color}`}
-                    title={`Match score: ${app.application_match_score}% — based on experience, visa type, English level and location`}
-                  >
-                    <Star size={10} />
-                    {app.application_match_score}% · {match.label}
+              {/* Name + Work Auth + Status */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-foreground">{app.full_name}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${statusColor}`}>
+                    {statusLabel}
                   </span>
-                )}
-              </div>
-
-              {/* Applied date */}
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Applied {format(new Date(app.created_at), "MMM d, yyyy")}
-              </p>
-            </div>
-
-            {/* Expand toggle */}
-            <button
-              onClick={() => setExpanded((e) => !e)}
-              className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
-              aria-label={expanded ? "Collapse" : "Expand"}
-            >
-              {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-            </button>
-          </div>
-
-          {/* ── Qualification pills ── */}
-          <div className="mt-3 flex flex-wrap gap-1.5">
-
-            {/* Work auth */}
-            <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${auth.ok ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-600 border-red-200"}`}>
-              <Globe size={10} />
-              {auth.label}
-            </span>
-
-            {/* Experience */}
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
-              <Briefcase size={10} />
-              {fmtExperience(app.months_experience)}
-            </span>
-
-            {/* English */}
-            <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${app.has_english ? "bg-sky-50 text-sky-700 border-sky-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
-              <Languages size={10} />
-              {fmtEnglish(app.english_level)}
-            </span>
-
-            {/* License */}
-            {licenseStr && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
-                <Car size={10} />
-                {licenseStr}
-              </span>
-            )}
-
-            {/* H-2 seasons */}
-            {app.h2b_visa_count > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border bg-violet-50 text-violet-700 border-violet-200">
-                <ShieldCheck size={10} />
-                {app.h2b_visa_count} H-2 season{app.h2b_visa_count > 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-
-          {/* ── Withdrew notice ── */}
-          {isWithdrawn && (
-            <div className="mt-3 flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              <AlertCircle size={14} className="text-slate-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-slate-500 leading-snug">
-                This candidate withdrew their application. No action needed — this is automatically recorded in your recruitment log.
-              </p>
-            </div>
-          )}
-
-          {/* ── Rejection reason ── */}
-          {app.application_status === "rejected" && app.rejection_reason && (
-            <div className="mt-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              <span className="font-semibold">Reason:</span> {app.rejection_reason}
-            </div>
-          )}
-        </div>
-
-        {/* ── Expanded contact + actions ── */}
-        {expanded && (
-          <div className="border-t bg-muted/30 px-5 py-4 space-y-4">
-
-            {/* Contact info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex items-center justify-between gap-2 bg-background border rounded-lg px-3 py-2.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Mail size={14} className="text-muted-foreground shrink-0" />
-                  <span className="text-sm truncate font-medium">{app.email}</span>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <button
-                    onClick={() => copy(app.email, "email")}
-                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy email"
-                  >
-                    <Copy size={13} />
-                  </button>
-                  <a
-                    href={`mailto:${app.email}`}
-                    className="p-1.5 rounded-md hover:bg-sky-100 text-muted-foreground hover:text-sky-600 transition-colors"
-                    title="Send email"
-                  >
-                    <Mail size={13} />
-                  </a>
+                
+                {/* PROMINENT Work Authorization */}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`inline-flex items-center gap-1.5 text-sm font-semibold px-2.5 py-1 rounded-md ${
+                    workAuth.color === "green" ? "bg-emerald-100 text-emerald-800" :
+                    workAuth.color === "yellow" ? "bg-amber-100 text-amber-800" :
+                    "bg-red-100 text-red-800"
+                  }`}>
+                    {workAuth.color === "green" && <CheckCircle2 size={14} />}
+                    {workAuth.color === "yellow" && <AlertCircle size={14} />}
+                    {workAuth.color === "red" && <XCircle size={14} />}
+                    {workAuth.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{workAuth.detail}</span>
                 </div>
               </div>
 
-              {app.phone && (
-                <div className="flex items-center justify-between gap-2 bg-background border rounded-lg px-3 py-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Phone size={14} className="text-muted-foreground shrink-0" />
-                    <span className="text-sm truncate font-medium">{app.phone}</span>
-                  </div>
-                  <button
-                    onClick={() => copy(app.phone!, "phone")}
-                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                    title="Copy phone"
-                  >
-                    {copied === "phone" ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
-                  </button>
+              {/* Match Score */}
+              {app.application_match_score !== null && (
+                <div className={`text-center px-3 py-1.5 rounded-lg shrink-0 ${
+                  app.application_match_score >= 80 ? "bg-emerald-100 text-emerald-800" :
+                  app.application_match_score >= 50 ? "bg-amber-100 text-amber-800" :
+                  "bg-red-100 text-red-800"
+                }`}>
+                  <div className="text-lg font-bold">{app.application_match_score}%</div>
+                  <div className="text-[10px] uppercase tracking-wide font-medium">Match</div>
                 </div>
               )}
             </div>
 
-            {/* Raw details */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5 text-xs text-muted-foreground">
-              <div><span className="font-medium text-foreground">Citizenship:</span> {app.citizenship_status}</div>
-              <div><span className="font-medium text-foreground">US Worker:</span> {app.is_us_worker ? "Yes" : "No"}</div>
-              <div><span className="font-medium text-foreground">H-2 seasons:</span> {app.h2b_visa_count}</div>
+            {/* ═══ 2. CONTACT INFO ═══ */}
+            <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-border/50">
+              {/* Email */}
+              <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2.5 py-1.5">
+                <Mail size={14} className="text-muted-foreground" />
+                <span className="text-sm font-medium">{app.email}</span>
+                <button
+                  onClick={() => copy(app.email, "email")}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
+                  title="Copy email"
+                >
+                  {copied === "email" ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                </button>
+                <a
+                  href={`mailto:${app.email}`}
+                  className="p-1 rounded hover:bg-sky-100 text-muted-foreground hover:text-sky-600 transition-colors"
+                  title="Send email"
+                >
+                  <Mail size={12} />
+                </a>
+              </div>
+
+              {/* Phone */}
+              {app.phone && (
+                <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2.5 py-1.5">
+                  <Phone size={14} className="text-muted-foreground" />
+                  <span className="text-sm font-medium">{app.phone}</span>
+                  <button
+                    onClick={() => copy(app.phone!, "phone")}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
+                    title="Copy phone"
+                  >
+                    {copied === "phone" ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  </button>
+                </div>
+              )}
+
+              {/* Applied date */}
+              <span className="text-xs text-muted-foreground ml-auto">
+                Applied {format(new Date(app.created_at), "MMM d, yyyy")}
+              </span>
             </div>
+
+            {/* ═══ 3. CAN DO THE JOB ═══ */}
+            <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-border/50">
+              {/* Experience */}
+              <div className="flex items-center gap-2">
+                <Briefcase size={14} className="text-muted-foreground" />
+                <span className="text-sm">
+                  <span className="font-medium">{fmtExperience(app.months_experience)}</span>
+                  <span className="text-muted-foreground ml-1">experience</span>
+                </span>
+              </div>
+
+              {/* English */}
+              <div className="flex items-center gap-2">
+                <Languages size={14} className="text-muted-foreground" />
+                <span className="text-sm">
+                  <span className="font-medium">{fmtEnglish(app.english_level)}</span>
+                  <span className="text-muted-foreground ml-1">English</span>
+                </span>
+              </div>
+
+              {/* License */}
+              <div className="flex items-center gap-2">
+                <Car size={14} className="text-muted-foreground" />
+                <span className="text-sm">
+                  <span className="font-medium">{fmtLicense(app.drivers_license_type)}</span>
+                  <span className="text-muted-foreground ml-1">license</span>
+                </span>
+              </div>
+            </div>
+
+            {/* ═══ 4. WILL COMPLETE CONTRACT ═══ */}
+            {app.h2b_visa_count > 0 && (
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                <ShieldCheck size={14} className="text-violet-600" />
+                <span className="text-sm font-medium text-violet-700">
+                  {app.h2b_visa_count} prior H-2 season{app.h2b_visa_count > 1 ? "s" : ""}
+                </span>
+                <span className="text-xs text-muted-foreground">— proven contract completion</span>
+              </div>
+            )}
+
+            {/* Withdrew notice */}
+            {isWithdrawn && (
+              <div className="mt-3 flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                <AlertCircle size={14} className="text-slate-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-slate-500">
+                  This candidate withdrew. Automatically recorded in recruitment log.
+                </p>
+              </div>
+            )}
+
+            {/* Rejection reason */}
+            {app.application_status === "rejected" && app.rejection_reason && (
+              <div className="mt-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                <span className="font-semibold">Rejection reason:</span> {app.rejection_reason}
+              </div>
+            )}
 
             {/* Action buttons */}
             {!isTerminal && (
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
                 {app.application_status !== "shortlisted" && (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                    className="gap-1.5 h-8 text-xs"
                     onClick={() => onStatusChange(app, "shortlisted")}
                   >
-                    <Star size={13} /> Shortlist
+                    <Star size={12} /> Shortlist
                   </Button>
                 )}
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-sky-300 text-sky-700 hover:bg-sky-50"
+                  className="gap-1.5 h-8 text-xs"
                   onClick={() => onStatusChange(app, "contacted")}
                 >
-                  <Mail size={13} /> Mark as contacted
+                  <Mail size={12} /> Contacted
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  className="gap-1.5 h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   onClick={() => onStatusChange(app, "hired")}
                 >
-                  <CheckCircle2 size={13} /> Mark as hired
+                  <CheckCircle2 size={12} /> Hired
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50 ml-auto"
+                  className="gap-1.5 h-8 text-xs border-red-300 text-red-600 hover:bg-red-50 ml-auto"
                   onClick={() => setRejectOpen(true)}
                 >
-                  <XCircle size={13} /> Reject
+                  <XCircle size={12} /> Reject
                 </Button>
               </div>
             )}
-
-            {/* Copied toast */}
-            {copied === "email" && (
-              <p className="text-xs text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 size={12} /> Email copied
-              </p>
-            )}
           </div>
-        )}
+        </div>
       </div>
     </>
   );
@@ -403,7 +480,7 @@ const STATUS_FILTERS = [
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function ApplicantsTab({
-  apps,
+  apps: realApps,
   loading,
   onStatusChange,
   jobId,
@@ -414,6 +491,10 @@ export function ApplicantsTab({
   jobId: string;
 }) {
   const [filter, setFilter] = useState("all");
+  
+  // Generate mock data if no real applicants
+  const mockApps = useMemo(() => generateMockApplicants(150), []);
+  const apps = realApps.length > 0 ? realApps : mockApps;
 
   const filtered = filter === "all" ? apps : apps.filter((a) => a.application_status === filter);
 
@@ -427,7 +508,7 @@ export function ApplicantsTab({
     return (
       <div className="space-y-3 pt-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
+          <div key={i} className="h-32 rounded-lg bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -445,6 +526,31 @@ export function ApplicantsTab({
 
   return (
     <div className="space-y-4 pt-4">
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-card border rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-foreground">{apps.length}</div>
+          <div className="text-xs text-muted-foreground">Total Applicants</div>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-emerald-700">
+            {apps.filter(a => ["us_citizen", "permanent_resident", "authorized"].includes(a.work_authorization_status)).length}
+          </div>
+          <div className="text-xs text-emerald-600">Work Authorized</div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-amber-700">
+            {apps.filter(a => (a.application_match_score ?? 0) >= 80).length}
+          </div>
+          <div className="text-xs text-amber-600">Strong Matches (80%+)</div>
+        </div>
+        <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-violet-700">
+            {apps.filter(a => a.h2b_visa_count > 0).length}
+          </div>
+          <div className="text-xs text-violet-600">Prior H-2 Experience</div>
+        </div>
+      </div>
 
       {/* Filter pills */}
       <div className="flex flex-wrap gap-2">
@@ -458,11 +564,11 @@ export function ApplicantsTab({
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                 filter === f.value
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-background text-muted-foreground border-border hover:border-muted-foreground/40"
+                  : "bg-card text-muted-foreground border-border hover:border-muted-foreground/40"
               }`}
             >
               {f.label}
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${filter === f.value ? "bg-background/20" : "bg-muted"}`}>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${filter === f.value ? "bg-primary-foreground/20" : "bg-muted"}`}>
                 {count}
               </span>
             </button>
@@ -471,24 +577,21 @@ export function ApplicantsTab({
       </div>
 
       {/* Cards */}
-      <div className="space-y-3">
-        {filtered.map((app) => (
+      <div className="space-y-2">
+        {filtered.slice(0, 50).map((app) => (
           <CandidateCard key={app.id} app={app} onStatusChange={onStatusChange} />
         ))}
       </div>
+
+      {filtered.length > 50 && (
+        <p className="text-center text-sm text-muted-foreground py-4">
+          Showing 50 of {filtered.length} applicants. Use filters to narrow results.
+        </p>
+      )}
 
       {filtered.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-8">No applicants in this category.</p>
       )}
     </div>
-  );
-}
-
-// missing import used in empty state
-function Users(props: { size: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={props.size} height={props.size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={props.className}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
   );
 }
