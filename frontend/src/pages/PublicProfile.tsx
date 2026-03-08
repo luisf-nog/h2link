@@ -521,7 +521,7 @@ export default function PublicProfile() {
             className="flex flex-col items-center justify-center py-2.5 gap-0.5 text-foreground disabled:opacity-30"
           >
             {downloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-            <span className="text-[10px] font-medium">Download</span>
+            <span className="text-[10px] font-medium">{t("profile.download")}</span>
           </button>
           <button
             onClick={handleShare}
