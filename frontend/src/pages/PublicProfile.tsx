@@ -391,7 +391,7 @@ export default function PublicProfile() {
 
                     {/* Key strengths as bullet points */}
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Key Strengths</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">{t("profile.key_strengths")}</p>
                       <ul className="space-y-1">
                         {aiSummary.strengths.map((s, i) => (
                           <li key={i} className="flex items-start gap-2 text-xs text-foreground">
