@@ -272,7 +272,7 @@ export default function PublicProfile() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("Failed to download resume");
+      toast.error(t("profile.download_error"));
     } finally {
       setDownloading(false);
     }
