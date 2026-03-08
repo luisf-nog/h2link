@@ -360,7 +360,7 @@ export default function PublicProfile() {
                   <div className="flex flex-col items-center py-6 gap-2 text-center">
                     <AlertCircle className="h-8 w-8 text-muted-foreground/40" />
                     <p className="text-xs text-muted-foreground">
-                      {profile.resume_data ? "Could not generate summary." : "No resume data available."}
+                      {profile.resume_data ? t("profile.summary_error") : t("profile.no_resume_data")}
                     </p>
                     {profile.resume_data && (
                       <Button variant="outline" size="sm" onClick={() => { setAiError(false); loadAiSummary(); }}>
