@@ -1196,7 +1196,7 @@ export default function Landing() {
                           marginBottom: 24,
                         }}
                       >
-                        <Building2 size={11} /> {isLangPt ? "Área do Empregador" : "Employer Area"}
+                        <Building2 size={11} /> {t("landing.employer_area_badge")}
                       </div>
                       <h2
                         style={{
