@@ -289,7 +289,7 @@ export default function Landing() {
                     className={`tab-pill ${role === "worker" ? "active-worker" : "inactive"}`}
                     onClick={() => setRole("worker")}
                   >
-                    {isLangPt ? "Trabalhador" : isLangEs ? "Trabajador" : "Worker"}
+                    {t("landing.role_worker_tab")}
                   </button>
                   <button
                     className={`tab-pill ${role === "employer" ? "active-employer" : "inactive"}`}
