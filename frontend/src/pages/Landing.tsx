@@ -1316,19 +1316,9 @@ export default function Landing() {
                           lineHeight: 1.15,
                         }}
                       >
-                        {isLangPt ? (
-                          <>
-                            Do cadastro à contratação
-                            <br />
-                            em 5 passos simples
-                          </>
-                        ) : (
-                          <>
-                            From signup to hiring
-                            <br />
-                            in 5 simple steps
-                          </>
-                        )}
+                        {t("landing.employer_hiw_title_1")}
+                        <br />
+                        {t("landing.employer_hiw_title_2")}
                       </h2>
                     </div>
                     <div className="steps-grid" style={{ display: "grid", gap: 1, background: "#E2E8F0" }}>
