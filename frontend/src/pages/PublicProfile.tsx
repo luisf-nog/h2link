@@ -328,7 +328,7 @@ export default function PublicProfile() {
               className="gap-1.5 text-xs h-8"
             >
               {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download
+              {t("profile.download")}
             </Button>
           </div>
         </div>
