@@ -448,7 +448,6 @@ export default function Landing() {
                 <p style={{ fontSize: 15, color: "#64748B", lineHeight: 1.65, marginBottom: 24 }}>
                   {t("landing.role_worker_desc")}
                 </p>
-                </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
                     t("landing.role_worker_tag1"),
