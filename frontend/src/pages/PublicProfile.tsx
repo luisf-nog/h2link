@@ -480,7 +480,7 @@ export default function PublicProfile() {
               ) : (
                 <div className="flex flex-col items-center justify-center p-20 text-center text-muted-foreground">
                   <AlertCircle className="h-12 w-12 mb-2 opacity-40" />
-                  <p>Resume not available</p>
+                  <p>{t("profile.resume_not_available")}</p>
                 </div>
               )}
             </div>
