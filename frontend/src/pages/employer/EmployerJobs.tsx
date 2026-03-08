@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail } from "lucide-react";
 import { getTierJobLimit } from "@/config/employer-plans.config";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface SponsoredJob {
   id: string;
@@ -26,6 +27,7 @@ interface SponsoredJob {
 export default function EmployerJobs() {
   const navigate = useNavigate();
   const { employerProfile } = useIsEmployer();
+  const { t } = useTranslation();
   const [jobs, setJobs] = useState<SponsoredJob[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,6 @@ export default function EmployerJobs() {
         .order("created_at", { ascending: false });
 
       if (data) {
-        // Puxa as aplicações e o status para saber quem é "Novo"
         const jobIds = data.map((j) => j.id);
         const { data: apps } = await supabase
           .from("job_applications")
@@ -72,19 +73,17 @@ export default function EmployerJobs() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Cabeçalho e Controles */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-brand text-slate-900">My Jobs</h1>
-          <p className="text-sm text-slate-500">
-            {activeCount} / {jobLimit} active sponsored jobs
+          <h1 className="text-2xl font-bold font-brand text-foreground">{t("employer.jobs.title")}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t("employer.jobs.active_count", { count: activeCount, limit: jobLimit })}
           </p>
 
-          {/* Alerta de Limite do Plano */}
           {!canCreate && employerProfile?.status === "active" && (
             <div className="flex items-center gap-2 mt-2 text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200">
               <AlertCircle className="h-4 w-4" />
-              <span>You've reached your plan's limit. Upgrade to post more.</span>
+              <span>{t("employer.jobs.plan_limit")}</span>
             </div>
           )}
         </div>
@@ -92,14 +91,12 @@ export default function EmployerJobs() {
         <Button
           onClick={() => navigate("/employer/jobs/new")}
           disabled={!canCreate}
-          className="bg-slate-900 hover:bg-slate-800"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Post Job
+          {t("employer.jobs.post_job")}
         </Button>
       </div>
 
-      {/* Lista de Vagas */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
@@ -111,15 +108,15 @@ export default function EmployerJobs() {
       ) : jobs.length === 0 ? (
         <Card className="border-dashed border-2">
           <CardContent className="p-12 text-center space-y-4">
-            <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <Plus className="h-6 w-6 text-slate-400" />
+            <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Plus className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900">No jobs posted yet</h3>
-            <p className="text-slate-500 max-w-sm mx-auto">
-              Create your first sponsored job posting to start receiving qualified candidates in your dashboard.
+            <h3 className="text-lg font-semibold text-foreground">{t("employer.jobs.no_jobs_title")}</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">
+              {t("employer.jobs.no_jobs_desc")}
             </p>
             <Button onClick={() => navigate("/employer/jobs/new")} disabled={!canCreate} className="mt-4">
-              Create First Job
+              {t("employer.jobs.create_first")}
             </Button>
           </CardContent>
         </Card>
@@ -132,32 +129,30 @@ export default function EmployerJobs() {
             return (
               <Card
                 key={job.id}
-                className="cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group"
+                className="cursor-pointer hover:shadow-md hover:border-muted-foreground/30 transition-all group"
                 onClick={() => navigate(`/employer/jobs/${job.id}/applicants`)}
               >
                 <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  {/* Info da Vaga */}
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                      <span className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                         {job.title}
                       </span>
                       <Badge
                         variant={job.is_active ? "default" : "secondary"}
                         className={job.is_active ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}
                       >
-                        {job.is_active ? "Active" : "Draft/Inactive"}
+                        {job.is_active ? t("employer.jobs.active") : t("employer.jobs.inactive")}
                       </Badge>
 
-                      {/* Badge de Novos Candidatos */}
                       {job._new_app_count && job._new_app_count > 0 ? (
-                        <Badge variant="destructive" className="bg-blue-600">
-                          {job._new_app_count} New
+                        <Badge variant="destructive" className="bg-primary">
+                          {t("employer.jobs.new_badge", { count: job._new_app_count })}
                         </Badge>
                       ) : null}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
                       {job.location && (
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5" />
@@ -171,34 +166,33 @@ export default function EmployerJobs() {
                     </div>
                   </div>
 
-                  {/* Métricas e Stats */}
-                  <div className="flex items-center gap-6 text-sm shrink-0 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    <div className="text-center px-2" title="Total Views">
-                      <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
+                  <div className="flex items-center gap-6 text-sm shrink-0 bg-muted p-2 rounded-lg border border-border">
+                    <div className="text-center px-2">
+                      <div className="flex items-center gap-1.5 text-muted-foreground mb-0.5">
                         <Eye className="h-4 w-4" />
-                        <span className="font-medium text-slate-700">{job.view_count}</span>
+                        <span className="font-medium text-foreground">{job.view_count}</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider">Views</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("employer.jobs.views")}</div>
                     </div>
 
-                    <div className="w-px h-8 bg-slate-200"></div>
+                    <div className="w-px h-8 bg-border"></div>
 
-                    <div className="text-center px-2" title="Conversion Rate">
-                      <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
+                    <div className="text-center px-2">
+                      <div className="flex items-center gap-1.5 text-muted-foreground mb-0.5">
                         <TrendingUp className="h-4 w-4" />
-                        <span className="font-medium text-slate-700">{conversionRate}%</span>
+                        <span className="font-medium text-foreground">{conversionRate}%</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider">Conv. Rate</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("employer.jobs.conv_rate")}</div>
                     </div>
 
-                    <div className="w-px h-8 bg-slate-200"></div>
+                    <div className="w-px h-8 bg-border"></div>
 
-                    <div className="text-center px-2" title="Total Candidates">
-                      <div className="flex items-center gap-1.5 font-semibold text-blue-600 mb-0.5">
+                    <div className="text-center px-2">
+                      <div className="flex items-center gap-1.5 font-semibold text-primary mb-0.5">
                         <Users className="h-4 w-4" />
                         <span>{job._app_count ?? 0}</span>
                       </div>
-                      <div className="text-[10px] text-blue-400/80 uppercase tracking-wider">Applicants</div>
+                      <div className="text-[10px] text-primary/60 uppercase tracking-wider">{t("employer.jobs.applicants")}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -206,13 +200,12 @@ export default function EmployerJobs() {
             );
           })}
 
-          {/* Rodapé B2B Escape */}
           {jobs.length > 0 && (
-            <div className="pt-6 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+            <div className="pt-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
               <Mail className="w-4 h-4" />
-              Need a larger number of jobs?{" "}
-              <a href="mailto:help@h2linker.com" className="text-blue-600 hover:underline font-medium">
-                Contact our Enterprise team
+              {t("employer.jobs.enterprise_cta")}{" "}
+              <a href="mailto:help@h2linker.com" className="text-primary hover:underline font-medium">
+                {t("employer.jobs.enterprise_link")}
               </a>
               .
             </div>
