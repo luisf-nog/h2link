@@ -1213,9 +1213,7 @@ export default function Landing() {
                         <span style={{ color: "#0ea5e9" }}>{t("landing.employer_hero_title_2")}</span>
                       </h2>
                       <p style={{ fontSize: 16, color: "#64748B", lineHeight: 1.7, marginBottom: 32, maxWidth: 440 }}>
-                        {isLangPt
-                          ? "O H2 Linker simplifica o recrutamento H-2 dando ao empregador as ferramentas para encontrar candidatos, organizar candidaturas e cuidar da documentação do DOL — tudo em um só lugar."
-                          : "H2 Linker simplifies H-2 recruitment by giving employers the tools to find candidates, organize applications, and handle DOL documentation — all in one place."}
+                        {t("landing.employer_hero_desc")}
                       </p>
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
