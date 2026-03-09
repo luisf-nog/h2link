@@ -181,7 +181,7 @@ function CandidateRow({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{format(new Date(app.created_at), "MMM d")}</span>
             <span>•</span>
-            <span className="capitalize">{app.english_level || "—"} English</span>
+            <span className="capitalize">{app.english_level ? `${app.english_level.charAt(0).toUpperCase() + app.english_level.slice(1)} English` : "—"}</span>
             <span>•</span>
             <span>{formatExperience(app.months_experience)}</span>
           </div>
