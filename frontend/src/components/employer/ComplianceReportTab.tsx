@@ -291,7 +291,7 @@ export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, 
       doc.setTextColor(80, 80, 80);
 
       // First entry: application submitted
-      doc.text(`• ${format(new Date(app.created_at), "hh:mm a")} – Application Submitted`, 20, y);
+      doc.text(`• ${format(new Date(app.created_at), "MMM d, yyyy – hh:mm a")} – Application Submitted`, 20, y);
       y += 4;
 
       appLogs.forEach((log) => {
