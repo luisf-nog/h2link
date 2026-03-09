@@ -835,10 +835,10 @@ const handler = async (req: Request): Promise<Response> => {
               // Auto-downgrade: reset to conservative profile and limit
               await serviceClient.rpc("downgrade_smtp_warmup", { p_user_id: userId });
               
-              // Pause all pending queue items
+              // Pause all pending queue items with circuit breaker flag
               await serviceClient
                 .from("my_queue")
-                .update({ status: "paused" } as any)
+                .update({ status: "paused", last_error: "[CIRCUIT_BREAKER] Pausado por 3+ erros SMTP consecutivos. Verifique suas credenciais SMTP." } as any)
                 .eq("user_id", userId)
                 .eq("status", "pending");
               

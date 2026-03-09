@@ -706,7 +706,14 @@ export default function Queue() {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
     const ids = eligible.map((it) => it.id);
-    await supabase.from("my_queue").update({ status: "pending", last_error: null }).in("id", ids);
+    await supabase.from("my_queue").update({
+      status: "pending",
+      last_error: null,
+      opened_at: null,
+      email_open_count: 0,
+      profile_viewed_at: null,
+      tracking_id: crypto.randomUUID(),
+    }).in("id", ids);
     const updatedItems = eligible.map((it) => ({ ...it, status: "pending" }));
     setSending(true);
     await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
