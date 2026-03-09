@@ -431,6 +431,19 @@ export default function Queue() {
         break;
       }
 
+      // Lazy activation: set item to pending right before sending
+      if (lazyActivate) {
+        await supabase.from("my_queue").update({
+          status: "pending",
+          last_error: null,
+          opened_at: null,
+          email_open_count: 0,
+          profile_viewed_at: null,
+          tracking_id: crypto.randomUUID(),
+        }).eq("id", item.id);
+        setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing" } : q)));
+      }
+
       const job = item.public_jobs ?? item.manual_jobs;
       if (!job?.email) {
         await supabase
