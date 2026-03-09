@@ -258,7 +258,7 @@ export default function Queue() {
     };
   }, []);
 
-  const STUCK_PROCESSING_MINUTES = 4;
+  const STUCK_PROCESSING_MINUTES = 10;
 
   const fetchQueue = async () => {
     if (!initialLoadDone.current) setLoading(true);
