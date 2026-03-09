@@ -58,7 +58,7 @@ export function useIsEmployer(): UseIsEmployerResult {
       );
       setLoading(false);
     });
-  }, [user]);
+  }, [user?.id]);
 
   return { isEmployer, loading, employerProfile };
 }
