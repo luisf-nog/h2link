@@ -76,8 +76,13 @@ async function computeSuspicion(
   if (secChUa && !fetchDest) { score += 15; reasons.push("ch_ua_no_dest"); }
 
   const sentAt = historyRow.sent_at ? new Date(historyRow.sent_at as string) : null;
-  const secSinceSend = sentAt ? (Date.now() - sentAt.getTime()) / 1000 : ANTIVIRUS_DELAY_SECONDS + 1;
-  if (secSinceSend < ANTIVIRUS_DELAY_SECONDS) { score += 70; reasons.push(`fast:${Math.round(secSinceSend)}s`); }
+  if (!sentAt) {
+    // sent_at not yet recorded — email still in transit, any open is a scanner
+    score += 90; reasons.push("no_sent_at");
+  } else {
+    const secSinceSend = (Date.now() - sentAt.getTime()) / 1000;
+    if (secSinceSend < ANTIVIRUS_DELAY_SECONDS) { score += 70; reasons.push(`fast:${Math.round(secSinceSend)}s`); }
+  }
 
   const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
   const { count: recentCount } = await db
