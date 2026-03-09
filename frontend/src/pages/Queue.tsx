@@ -86,9 +86,8 @@ export default function Queue() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { queue, setQueue, lastFetchedAt, fetchQueue: storeRefresh, forceFetchQueue, smtpReady, setSmtpReady, checkSmtp } = useQueueStore();
+  const { queue, setQueue, lastFetchedAt, fetchQueue: storeRefresh, forceFetchQueue, smtpReady, setSmtpReady, checkSmtp, sending, setSending, sendProgress, setSendProgress, sendCancelled, setSendCancelled } = useQueueStore();
   const loading = lastFetchedAt === 0;
-  const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
@@ -99,9 +98,7 @@ export default function Queue() {
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
-  const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [clockTick, setClockTick] = useState(() => Date.now());
-  const sendCancelledRef = useRef(false);
   const sendingRef = useRef(false);
 
   const planTier = profile?.plan_tier || "free";
