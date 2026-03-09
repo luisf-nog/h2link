@@ -36,8 +36,19 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [tab, setTab] = useState<"signin" | "signup">("signin");
-  const [signupRole, setSignupRole] = useState<"worker" | "employer">("worker");
+  const [signupRole, setSignupRole] = useState<"worker" | "employer" | null>(null);
   const [employerStep, setEmployerStep] = useState<EmployerStep>(1);
+  const [workerStep, setWorkerStep] = useState<1 | 2>(1);
+  const [wrkFields, setWrkFields] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    age: "",
+    phone: "",
+    contactEmail: "",
+    referralCode: "",
+  });
 
   // Employer field state (held across steps)
   const [empFields, setEmpFields] = useState({
