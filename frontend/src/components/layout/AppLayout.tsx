@@ -143,7 +143,16 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Select>
             </div>
           </header>
-          <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
+          <div ref={contentRef} className="flex-1 p-4 md:p-6 overflow-auto">
+            {/* Persistent pages – always mounted, toggled via CSS */}
+            <div style={{ display: location.pathname === "/dashboard" ? "block" : "none" }}><Dashboard /></div>
+            <div style={{ display: location.pathname === "/jobs" ? "block" : "none" }}><Jobs /></div>
+            <div style={{ display: location.pathname === "/queue" ? "block" : "none" }}><Queue /></div>
+            <div style={{ display: location.pathname === "/radar" ? "block" : "none" }}><Radar /></div>
+
+            {/* Non-persistent routes rendered normally */}
+            {!isPersistentRoute && children}
+          </div>
           <AppFooter />
           {!isEmployer && <SetupBanner />}
           {!isEmployer && <WhatsNewDialog />}
