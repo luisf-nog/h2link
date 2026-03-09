@@ -20,27 +20,31 @@ export default function EmployerDashboard() {
   useEffect(() => {
     if (!employerProfile) return;
     const load = async () => {
-      const [jobsRes, appsRes] = await Promise.all([
-        supabase
-          .from("sponsored_jobs")
-          .select("id", { count: "exact", head: true })
-          .eq("employer_id", employerProfile.id)
-          .eq("is_active", true),
-        supabase
+      const jobsRes = await supabase
+        .from("sponsored_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("employer_id", employerProfile.id)
+        .eq("is_active", true);
+
+      setActiveJobs(jobsRes.count ?? 0);
+
+      // Get job IDs first, then query applications only if there are jobs
+      const { data: jobRows } = await supabase
+        .from("sponsored_jobs")
+        .select("id")
+        .eq("employer_id", employerProfile.id);
+
+      const jobIds = jobRows?.map((j) => j.id) ?? [];
+
+      if (jobIds.length > 0) {
+        const appsRes = await supabase
           .from("job_applications")
           .select("id", { count: "exact", head: true })
-          .in(
-            "job_id",
-            (
-              await supabase
-                .from("sponsored_jobs")
-                .select("id")
-                .eq("employer_id", employerProfile.id)
-            ).data?.map((j) => j.id) ?? [],
-          ),
-      ]);
-      setActiveJobs(jobsRes.count ?? 0);
-      setTotalApplicants(appsRes.count ?? 0);
+          .in("job_id", jobIds);
+        setTotalApplicants(appsRes.count ?? 0);
+      } else {
+        setTotalApplicants(0);
+      }
       setLoading(false);
     };
     load();
