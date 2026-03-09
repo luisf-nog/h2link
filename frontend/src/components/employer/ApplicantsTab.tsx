@@ -47,13 +47,10 @@ function avatarColor(name: string) {
 
 // Simplified work auth - focus on what matters to employers
 function getWorkAuthBadge(status: string, isInUs: boolean, isUsWorker: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
-  if (status === "us_authorized") {
-    return { label: "US Authorized", icon: "check" };
-  }
   if (status === "outside_us") {
     return { label: "Outside US", icon: "globe" };
   }
-  // requires_sponsorship - person is in the US but needs visa
+  // us_authorized, inside_us, requires_sponsorship — all are US-based workers
   return { label: "US Worker", icon: "check" };
 }
 
