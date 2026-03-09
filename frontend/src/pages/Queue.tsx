@@ -416,6 +416,13 @@ export default function Queue() {
     await resetConsecutiveErrors();
 
     if (!lazyActivate) {
+      const itemIds = items.map((i) => i.id);
+      await supabase
+        .from("my_queue")
+        .update({ status: "processing" })
+        .in("id", itemIds)
+        .eq("status", "pending");
+
       setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
     }
 
@@ -431,10 +438,10 @@ export default function Queue() {
         break;
       }
 
-      // Lazy activation: set item to pending right before sending
+      // Lazy activation: mark as processing right before sending (avoid CRON/circuit-breaker races on pending)
       if (lazyActivate) {
         await supabase.from("my_queue").update({
-          status: "pending",
+          status: "processing",
           last_error: null,
           opened_at: null,
           email_open_count: 0,
