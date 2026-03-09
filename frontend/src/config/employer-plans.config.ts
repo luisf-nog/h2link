@@ -1,10 +1,11 @@
-export type EmployerTier = "essential" | "professional" | "enterprise";
+export type EmployerTier = "free" | "essential" | "professional" | "enterprise";
 
 export interface EmployerPlanConfig {
   id: EmployerTier;
   label: string;
   color: string;
   jobLimit: number;
+  canPublish: boolean;
   price: {
     monthly: number;
     annual: number;
@@ -15,11 +16,30 @@ export interface EmployerPlanConfig {
 }
 
 export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
+  free: {
+    id: "free",
+    label: "Free",
+    color: "gray",
+    jobLimit: 1,
+    canPublish: false,
+    price: {
+      monthly: 0,
+      annual: 0,
+      stripe_monthly: "",
+      stripe_annual: "",
+    },
+    features: [
+      "1 draft job posting",
+      "Preview applicant form",
+      "Upgrade to publish & receive applicants",
+    ],
+  },
   essential: {
     id: "essential",
     label: "Essential",
     color: "emerald",
     jobLimit: 1,
+    canPublish: true,
     price: {
       monthly: 49,
       annual: 470,
@@ -38,6 +58,7 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     label: "Professional",
     color: "blue",
     jobLimit: 3,
+    canPublish: true,
     price: {
       monthly: 99,
       annual: 950,
@@ -56,6 +77,7 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     label: "Enterprise",
     color: "amber",
     jobLimit: 5,
+    canPublish: true,
     price: {
       monthly: 149,
       annual: 1430,
@@ -72,5 +94,6 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
   },
 };
 
-export const getEmployerPlan = (tier: EmployerTier) => EMPLOYER_PLANS[tier];
-export const getTierJobLimit = (tier: EmployerTier) => EMPLOYER_PLANS[tier].jobLimit;
+export const getEmployerPlan = (tier: EmployerTier) => EMPLOYER_PLANS[tier] ?? EMPLOYER_PLANS.free;
+export const getTierJobLimit = (tier: EmployerTier) => (EMPLOYER_PLANS[tier] ?? EMPLOYER_PLANS.free).jobLimit;
+export const canPublish = (tier: EmployerTier) => (EMPLOYER_PLANS[tier] ?? EMPLOYER_PLANS.free).canPublish;
