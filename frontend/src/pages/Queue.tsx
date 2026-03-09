@@ -695,6 +695,16 @@ export default function Queue() {
     await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
   };
 
+  const handleRetryAllPaused = async () => {
+    const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
+    if (eligible.length === 0) return;
+    const ids = eligible.map((it) => it.id);
+    await supabase.from("my_queue").update({ status: "pending", last_error: null }).in("id", ids);
+    const updatedItems = eligible.map((it) => ({ ...it, status: "pending" }));
+    setSending(true);
+    await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
+  };
+
   const pendingCount = pendingItems.length;
   const sentCount = creditsUsedToday;
 
