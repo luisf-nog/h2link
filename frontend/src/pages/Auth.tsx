@@ -838,6 +838,7 @@ export default function Auth() {
           .emp-step-line { flex:1;height:1px;background:rgba(255,255,255,0.06);margin:0 8px; }
           .emp-step-line-done { background:rgba(14,165,233,0.3); }
           .auth-premium-bg input,.auth-premium-bg select { font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif!important; }
+          .auth-premium-bg select option { background:#0c1929; color:#fff; }
         `}</style>
 
         <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((p) => ({ ...p, open }))}>
