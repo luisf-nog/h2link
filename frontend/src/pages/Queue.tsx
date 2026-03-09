@@ -647,6 +647,22 @@ export default function Queue() {
         }
 
         console.log(`[Queue] Email enviado com sucesso para ${to}`);
+
+        // === FIX: Persist "sent" IMMEDIATELY to prevent auto-recovery from reverting ===
+        const newCount = (item.send_count ?? 0) + 1;
+        const sentNow = new Date().toISOString();
+        await supabase
+          .from("my_queue")
+          .update({ status: "sent", sent_at: sentNow, send_count: newCount, processing_started_at: null })
+          .eq("id", item.id);
+
+        await supabase.from("queue_send_history").insert({
+          queue_id: item.id,
+          user_id: profile?.id,
+          sent_at: sentNow,
+          status: "success",
+        });
+
         sentIds.push(item.id);
         creditsRemaining -= 1;
         consecutiveSmtpFailures = 0; // Reset on success
@@ -660,7 +676,6 @@ export default function Queue() {
         if (isSystemic) {
           consecutiveSmtpFailures += 1;
         }
-        // Per-recipient errors (550, mailbox full) do NOT increment the counter
 
         const now = new Date().toISOString();
         await supabase
@@ -686,7 +701,6 @@ export default function Queue() {
 
         // --- TRAVA 2: Disjuntor automático (Circuit Breaker) — only for systemic errors ---
         if (consecutiveSmtpFailures >= 5 && profile?.id) {
-          // Reset smtp_verified to force re-validation
           await supabase
             .from("profiles")
             .update({ smtp_verified: false })
@@ -713,23 +727,6 @@ export default function Queue() {
         const ms = getDelayMs();
         if (ms > 0) await sleep(ms);
       }
-    }
-
-    for (const sentId of sentIds) {
-      const currentItem = items.find((i) => i.id === sentId);
-      const newCount = (currentItem?.send_count ?? 0) + 1;
-      const now = new Date().toISOString();
-      await supabase
-        .from("my_queue")
-        .update({ status: "sent", sent_at: now, send_count: newCount, processing_started_at: null })
-        .eq("id", sentId);
-
-      await supabase.from("queue_send_history").insert({
-        queue_id: sentId,
-        user_id: profile?.id,
-        sent_at: now,
-        status: "success",
-      });
     }
 
     if (sentIds.length > 0 && failedIds.length === 0) {
