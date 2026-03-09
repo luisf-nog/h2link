@@ -673,6 +673,16 @@ export default function CreateJob() {
                           <SelectItem value="advanced">{t("employer.create_job.eng_advanced")}</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          id="req_english"
+                          checked={form.req_english}
+                          onCheckedChange={(v) => setForm((p) => ({ ...p, req_english: v }))}
+                        />
+                        <Label htmlFor="req_english" className="text-sm text-muted-foreground cursor-pointer">
+                          Requisito eliminatório (exclui candidatos sem inglês)
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
