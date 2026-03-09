@@ -551,12 +551,11 @@ export default function Queue() {
 
         console.log(`[Queue] Email enviado com sucesso para ${to}`);
 
-        // === FIX: Persist "sent" IMMEDIATELY to prevent auto-recovery from reverting ===
+        // === sent_at is now set by DB trigger (server time) to avoid clock skew ===
         const newCount = (item.send_count ?? 0) + 1;
-        const sentNow = new Date().toISOString();
         await supabase
           .from("my_queue")
-          .update({ status: "sent", sent_at: sentNow, send_count: newCount, processing_started_at: null })
+          .update({ status: "sent", send_count: newCount, processing_started_at: null })
           .eq("id", item.id);
 
         await supabase.from("queue_send_history").insert({
