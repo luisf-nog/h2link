@@ -113,7 +113,8 @@ export default function Queue() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const initialLoadDone = useRef(false);
   const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -240,6 +241,7 @@ export default function Queue() {
   }, []);
 
   const fetchQueue = async () => {
+    if (!initialLoadDone.current) setLoading(true);
     const { data, error } = await supabase
       .from("my_queue")
       .select(
@@ -262,6 +264,7 @@ export default function Queue() {
       setQueue((data as unknown as QueueItem[]) || []);
     }
     setLoading(false);
+    initialLoadDone.current = true;
   };
 
   const removeFromQueue = async (id: string) => {
