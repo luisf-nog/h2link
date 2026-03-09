@@ -8,7 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail, Pause } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail, Pause, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
