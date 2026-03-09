@@ -72,57 +72,7 @@ const JOB_CATEGORIES_LIST = [
   "Animal Caretakers",
 ];
 
-type Job = Tables<"public_jobs">;
-
-interface FeaturedJob {
-  id: string;
-  title: string;
-  description: string | null;
-  city: string | null;
-  state: string | null;
-  hourly_wage: number | null;
-  start_date: string | null;
-  end_date: string | null;
-  num_positions: number | null;
-  visa_type: string | null;
-  employer_legal_name: string | null;
-  priority_level: string;
-  is_sponsored: boolean;
-  dol_case_number: string | null;
-  primary_duties: string | null;
-  employer_id: string;
-  created_at: string;
-  min_experience_months: number | null;
-  overtime_rate: number | null;
-  additional_compensation: string | null;
-  bonuses: string | null;
-  deductions: string | null;
-  deductions_additional: string | null;
-  benefits: string | null;
-  housing_provided: boolean | null;
-  transportation_provided: boolean | null;
-  meals_provided: boolean | null;
-  daily_meal_cost: number | null;
-  training_provided: boolean | null;
-  visa_fee_reimbursement: boolean | null;
-  english_level: string | null;
-  english_proficiency: string | null;
-  drivers_license: string | null;
-  prior_experience_required: boolean | null;
-  req_background_check: boolean | null;
-  req_extreme_weather: boolean | null;
-  req_full_contract_availability: boolean | null;
-  req_travel_worksite: boolean | null;
-  req_lift_lbs: number | null;
-  lifting_weight_lbs: number | null;
-  equipment_used: string | null;
-  equipment_experience: string | null;
-  work_environment: string | null;
-  skill_level: string | null;
-  view_count: number;
-  click_count: number;
-  wage_rate: string | null;
-}
+// Job and FeaturedJob types are now imported from useJobsStore
 
 export default function Jobs() {
   const { profile } = useAuth();
