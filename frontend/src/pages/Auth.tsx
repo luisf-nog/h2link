@@ -1027,7 +1027,7 @@ export default function Auth() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="auth-premium-bg min-h-screen relative overflow-hidden flex">
+      <div className="auth-premium-bg min-h-screen relative overflow-x-hidden flex">
         <div className="absolute inset-0 auth-grid-pattern pointer-events-none" />
         <div className="auth-glow-1" />
         <div className="auth-glow-2" />
