@@ -490,18 +490,20 @@ export default function Queue() {
         break;
       }
 
-      // Lazy activation: mark as processing right before sending (avoid CRON/circuit-breaker races on pending)
-      if (lazyActivate) {
-        await supabase.from("my_queue").update({
+      // Mark item as processing right before sending (prevents stale batch locks)
+      await supabase
+        .from("my_queue")
+        .update({
           status: "processing",
+          processing_started_at: new Date().toISOString(),
           last_error: null,
           opened_at: null,
           email_open_count: 0,
           profile_viewed_at: null,
-          tracking_id: crypto.randomUUID(),
-        }).eq("id", item.id);
-        setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing" } : q)));
-      }
+          ...(lazyActivate ? { tracking_id: crypto.randomUUID() } : {}),
+        })
+        .eq("id", item.id);
+      setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing", processing_started_at: new Date().toISOString() } : q)));
 
       const job = item.public_jobs ?? item.manual_jobs;
       if (!job?.email) {
