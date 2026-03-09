@@ -124,6 +124,9 @@ export default function Queue() {
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
+  const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
+  const sendCancelledRef = useRef(false);
+  const sendingRef = useRef(false);
 
   const planTier = profile?.plan_tier || "free";
   const isFreeUser = planTier === "free";
