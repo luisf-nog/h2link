@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_sponsored_jobs_employer_id ON public.sponsored_jobs (employer_id, created_at DESC);
