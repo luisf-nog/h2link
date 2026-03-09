@@ -205,10 +205,7 @@ function CandidateRow({
           onValueChange={handleStatusChange}
         >
           <SelectTrigger className="w-[130px] h-8 text-xs">
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${getStatusColor(app.application_status)}`} />
-              <SelectValue />
-            </div>
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
