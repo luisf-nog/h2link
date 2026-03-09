@@ -129,21 +129,22 @@ export default function Queue() {
     return 1000;
   };
 
+  // Initial fetch (stale-checked — instant if already cached)
   useEffect(() => {
-    fetchQueue();
+    storeRefresh();
   }, []);
 
-  // Recompute time-based processing states and refresh queue in background
+  // Recompute time-based processing badge display every 30s (UI only, no fetch)
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setClockTick(Date.now());
-      if (!sendingRef.current) fetchQueue();
-    }, 30000);
+    const id = window.setInterval(() => setClockTick(Date.now()), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
-  // Sync module-level cache whenever queue state changes
-  useEffect(() => { cachedQueue = queue; }, [queue]);
+  // Silent refresh when user returns to tab (replaces polling)
+  const handleVisibilityRefresh = useCallback(() => {
+    if (!sendingRef.current) storeRefresh();
+  }, [storeRefresh]);
+  useVisibilityRefresh(handleVisibilityRefresh);
 
   useEffect(() => {
     let cancelled = false;
