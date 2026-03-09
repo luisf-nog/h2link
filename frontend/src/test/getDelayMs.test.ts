@@ -6,7 +6,7 @@ type PlanTier = "free" | "gold" | "diamond" | "black";
 
 function getDelayMs(planTier: PlanTier): number {
   if (planTier === "gold") return 15_000; // 15s fixo
-  if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s
+  if (planTier === "diamond") return 60_000 + Math.floor(Math.random() * 120_001); // 1-3 minutos
   if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 minutos
   return 0; // free: sem delay
 }
@@ -20,11 +20,11 @@ describe("getDelayMs", () => {
     expect(getDelayMs("gold")).toBe(15_000);
   });
 
-  it("retorna entre 15-45s para plano diamond", () => {
+  it("retorna entre 1-3 minutos para plano diamond", () => {
     for (let i = 0; i < 100; i++) {
       const delay = getDelayMs("diamond");
-      expect(delay).toBeGreaterThanOrEqual(15_000);
-      expect(delay).toBeLessThanOrEqual(45_000);
+      expect(delay).toBeGreaterThanOrEqual(60_000);
+      expect(delay).toBeLessThanOrEqual(180_000);
     }
   });
 
