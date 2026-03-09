@@ -212,49 +212,8 @@ export default function Queue() {
 
   const STUCK_PROCESSING_MINUTES = 10;
 
-  const fetchQueue = async () => {
-    if (!initialLoadDone.current) setLoading(true);
-
-    // Auto-recover stale processing items (max delay is 3min, so >4min is considered stuck)
-    const staleCutoffIso = new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000).toISOString();
-    await supabase
-      .from("my_queue")
-      .update({
-        status: "paused",
-        last_error: "[PROCESSING_TIMEOUT] Item pausado automaticamente por travar no processamento (acima do tempo máximo esperado).",
-        last_attempt_at: new Date().toISOString(),
-        processing_started_at: null,
-      })
-      .eq("status", "processing")
-      .or(`processing_started_at.lt.${staleCutoffIso},and(processing_started_at.is.null,created_at.lt.${staleCutoffIso})`);
-
-    const { data, error } = await supabase
-      .from("my_queue")
-      .select(
-        `
-        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, processing_started_at, send_count, email_open_count, last_error,
-        public_jobs (id, job_title, company, email, city, state, visa_type),
-        manual_jobs (id, company, job_title, email, eta_number, phone)
-      `,
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching queue:", error);
-      toast({
-        title: t("queue.toasts.load_error_title"),
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      const items = (data as unknown as QueueItem[]) || [];
-      setQueue(items);
-      cachedQueue = items;
-    }
-    setLoading(false);
-    initialLoadDone.current = true;
-    moduleInitialLoadDone = true;
-  };
+  // fetchQueue is now handled by the store — this local alias is for realtime/toast usage
+  const fetchQueue = forceFetchQueue;
 
   const removeFromQueue = async (id: string) => {
     const { error } = await supabase.from("my_queue").delete().eq("id", id);
