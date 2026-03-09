@@ -758,6 +758,8 @@
       "remove_success_desc": "El empleo foi eliminado de tu cola.",
       "daily_limit_reached_title": "Límite diario alcanzado",
       "daily_limit_reached_desc": "Alcanzaste tu límite diario de envíos. Intenta de nuevo mañana o actualiza tu plan.",
+      "max_retries_title": "Límite de intentos alcanzado",
+      "max_retries_desc": "Este empleo ya fue enviado {{max}} veces. Elimínalo y agrégalo de nuevo si es necesario.",
       "sent_title": "¡Emails enviados!",
       "sent_desc": "{{count}} solicitudes foram enviadas.",
       "partial_success_title": "Éxito parcial",

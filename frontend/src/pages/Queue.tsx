@@ -647,14 +647,28 @@ export default function Queue() {
     setSelectedIds({});
   };
 
+  const MAX_SEND_ATTEMPTS = 2;
+
   const handleSendOne = async (item: QueueItem) => {
-    if (item.status !== "pending" && item.status !== "sent") return;
+    const resendableStatuses = ["pending", "sent", "paused", "skipped_invalid_domain"];
+    if (!resendableStatuses.includes(item.status)) return;
     if (sendingIds.has(item.id)) return;
+
+    // Block if max retries reached
+    if (item.send_count >= MAX_SEND_ATTEMPTS && item.status !== "pending") {
+      toast({
+        title: t("queue.toasts.max_retries_title", { defaultValue: "Limite de tentativas atingido" }),
+        description: t("queue.toasts.max_retries_desc", { max: MAX_SEND_ATTEMPTS, defaultValue: "Esta vaga já foi enviada {{max}} vezes. Remova e adicione novamente se necessário." }),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSendingIds((prev) => new Set(prev).add(item.id));
-    if (item.status === "sent") {
+    if (item.status !== "pending") {
       await supabase.from("my_queue").update({ status: "pending", last_error: null }).eq("id", item.id);
     }
-    await sendQueueItems([item]).finally(() => {
+    await sendQueueItems([{ ...item, status: "pending" }]).finally(() => {
       setSendingIds((prev) => {
         const next = new Set(prev);
         next.delete(item.id);
@@ -1129,19 +1143,19 @@ export default function Queue() {
                                 size="sm"
                                 variant="ghost"
                                 disabled={
-                                  (item.status !== "pending" && item.status !== "sent") ||
+                                  !["pending", "sent", "paused", "skipped_invalid_domain"].includes(item.status) ||
                                   sending ||
                                   sendingIds.has(item.id)
                                 }
                                 onClick={() => handleSendOne(item)}
-                                title={item.status === "sent" ? t("queue.actions.resend") : undefined}
+                                title={item.status === "pending" ? undefined : t("queue.actions.resend")}
                               >
                                 {sendingIds.has(item.id) ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : item.status === "sent" ? (
-                                  <RefreshCw className="h-4 w-4" />
-                                ) : (
+                                ) : item.status === "pending" ? (
                                   <Send className="h-4 w-4" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4" />
                                 )}
                               </Button>
                             )}
