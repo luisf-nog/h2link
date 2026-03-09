@@ -10,9 +10,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useTranslation } from "react-i18next";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Jobs from "./pages/Jobs";
-import Queue from "./pages/Queue";
 import Referrals from "./pages/Referrals";
 import Plans from "./pages/Plans";
 import Settings from "./pages/Settings";
@@ -25,7 +22,6 @@ import AdminImport from "./pages/AdminImport";
 import PublicProfile from "./pages/PublicProfile";
 import SharedJobView from "./pages/SharedJobView";
 import ResumeConverter from "./pages/ResumeConverter";
-import Radar from "./pages/Radar";
 import Landing from "./pages/Landing";
 import ApplyJob from "./pages/ApplyJob";
 import EmployerDashboard from "./pages/employer/EmployerDashboard";
@@ -213,31 +209,13 @@ const AppRoutes = () => (
       }
     />
 
-    {/* PROTECTED ROUTES */}
-    <Route
-      path="/dashboard"
-      element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/jobs"
-      element={
-        <PublicOrProtectedRoute>
-          <Jobs />
-        </PublicOrProtectedRoute>
-      }
-    />
-    <Route
-      path="/queue"
-      element={
-        <ProtectedRoute>
-          <Queue />
-        </ProtectedRoute>
-      }
-    />
+    {/* PERSISTENT ROUTES — rendered inside AppLayout, children=null */}
+    <Route path="/dashboard" element={<ProtectedRoute>{null}</ProtectedRoute>} />
+    <Route path="/jobs" element={<PublicOrProtectedRoute>{null}</PublicOrProtectedRoute>} />
+    <Route path="/queue" element={<ProtectedRoute>{null}</ProtectedRoute>} />
+    <Route path="/radar" element={<ProtectedRoute>{null}</ProtectedRoute>} />
+
+    {/* NON-PERSISTENT PROTECTED ROUTES */}
     <Route
       path="/plans"
       element={
@@ -255,10 +233,26 @@ const AppRoutes = () => (
       }
     />
     <Route
-      path="/radar"
+      path="/resume-converter"
       element={
         <ProtectedRoute>
-          <Radar />
+          <ResumeConverter />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings"
+      element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings/email"
+      element={
+        <ProtectedRoute>
+          <Settings defaultTab="email" />
         </ProtectedRoute>
       }
     />

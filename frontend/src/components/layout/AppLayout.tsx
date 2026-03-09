@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { WhatsNewDialog } from "@/components/dialogs/WhatsNewDialog";
 import { AppSidebar } from "./AppSidebar";
@@ -14,6 +14,10 @@ import { useTranslation } from "react-i18next";
 import i18n, { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Menu, LogIn } from "lucide-react";
+import Dashboard from "@/pages/Dashboard";
+import Jobs from "@/pages/Jobs";
+import Queue from "@/pages/Queue";
+import Radar from "@/pages/Radar";
 
 type LanguageOption = { value: SupportedLanguage; label: string };
 
@@ -21,12 +25,33 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
+const PERSISTENT_ROUTES = ["/dashboard", "/jobs", "/queue", "/radar"] as const;
+
 export function AppLayout({ children }: AppLayoutProps) {
   const { profile, refreshProfile, user } = useAuth();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isEmployer } = useIsEmployer();
+
+  const isPersistentRoute = PERSISTENT_ROUTES.includes(location.pathname as any);
+
+  // Scroll restoration per route
+  const scrollPositions = useRef<Record<string, number>>({});
+  const contentRef = useRef<HTMLDivElement>(null);
+  const prevPathRef = useRef(location.pathname);
+
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname && contentRef.current) {
+      // Save scroll of previous route
+      scrollPositions.current[prevPathRef.current] = contentRef.current.scrollTop;
+      // Restore scroll of new route
+      const saved = scrollPositions.current[location.pathname] ?? 0;
+      contentRef.current.scrollTop = saved;
+      prevPathRef.current = location.pathname;
+    }
+  }, [location.pathname]);
 
   const options: LanguageOption[] = useMemo(
     () => [
@@ -118,7 +143,16 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Select>
             </div>
           </header>
-          <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
+          <div ref={contentRef} className="flex-1 p-4 md:p-6 overflow-auto">
+            {/* Persistent pages – always mounted, toggled via CSS */}
+            <div style={{ display: location.pathname === "/dashboard" ? "block" : "none" }}><Dashboard /></div>
+            <div style={{ display: location.pathname === "/jobs" ? "block" : "none" }}><Jobs /></div>
+            <div style={{ display: location.pathname === "/queue" ? "block" : "none" }}><Queue /></div>
+            <div style={{ display: location.pathname === "/radar" ? "block" : "none" }}><Radar /></div>
+
+            {/* Non-persistent routes rendered normally */}
+            {!isPersistentRoute && children}
+          </div>
           <AppFooter />
           {!isEmployer && <SetupBanner />}
           {!isEmployer && <WhatsNewDialog />}
