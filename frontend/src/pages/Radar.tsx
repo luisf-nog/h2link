@@ -706,53 +706,42 @@ export default function Radar() {
   // -------------------------------------------------------------------------
   useEffect(() => {
     const init = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
+      if (!profile?.id) return;
+
+      // Use store's initRadar for data (stale-checked)
+      await initRadar(profile.id, t);
+
+      // Sync local form state from store's radarProfile
+      const rp = useRadarStore.getState().radarProfile;
+      if (rp) {
+        setIsActive(rp.is_active ?? false);
+        setRadarMode(rp.auto_send ? "autopilot" : "manual");
+        setSelectedCategories(rp.categories || []);
+        setMinWage(rp.min_wage?.toString() || "");
+        setMaxExperience(rp.max_experience?.toString() || "");
+        setVisaType(rp.visa_type || "all");
+        setStateFilter(rp.state || "all");
+        setGroupFilter(rp.randomization_group || "all");
       }
-      try {
-        const { data } = await supabase
-          .from("radar_profiles" as any)
-          .select("*")
-          .eq("user_id", profile.id)
-          .single();
 
-        if (data) {
-          const d = data as any;
-          setRadarProfile(d);
-          setIsActive(d.is_active ?? false);
-          setRadarMode(d.auto_send ? "autopilot" : "manual");
-          setSelectedCategories(d.categories || []);
-          setMinWage(d.min_wage?.toString() || "");
-          setMaxExperience(d.max_experience?.toString() || "");
-          setVisaType(d.visa_type || "all");
-          setStateFilter(d.state || "all");
-          setGroupFilter(d.randomization_group || "all");
-
-          await updateStats({
-            visaType: d.visa_type || "all",
-            stateFilter: d.state || "all",
-            minWage: d.min_wage?.toString() || "",
-            maxExperience: d.max_experience?.toString() || "",
-            groupFilter: d.randomization_group || "all",
-          });
-
-          if (d.is_active) await fetchMatches();
-        }
-      } catch (e) {
-        console.error("[Radar] init error:", e);
-      } finally {
-        setLoading(false);
-        const seenKey = "radar_how_it_works_seen";
-        if (!localStorage.getItem(seenKey)) {
-          localStorage.setItem(seenKey, "1");
-          setTimeout(() => setShowHowItWorks(true), 600);
-        }
+      const seenKey = "radar_how_it_works_seen";
+      if (!localStorage.getItem(seenKey)) {
+        localStorage.setItem(seenKey, "1");
+        setTimeout(() => setShowHowItWorks(true), 600);
       }
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
+
+  // Silent refresh on tab focus
+  const handleVisibility = useCallback(() => {
+    if (profile?.id) {
+      storeUpdateStats(profile.id, { visaType, stateFilter, minWage, maxExperience, groupFilter }, t);
+      if (isActive) storeFetchMatches(profile.id);
+    }
+  }, [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, isActive, t]);
+  useVisibilityRefresh(handleVisibility);
 
   useEffect(() => {
     if (loading) return;
