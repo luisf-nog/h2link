@@ -927,8 +927,8 @@ export default function Queue() {
         </div>
       </div>
 
-      {/* Show badge when actively sending OR when there are processing items (e.g. after navigation) */}
-      {(sending || processingItems.length > 0) && (
+      {/* Show badge when actively sending OR when there are RECENT processing items */}
+      {(sending || activeProcessingItems.length > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
@@ -942,7 +942,7 @@ export default function Queue() {
                   defaultValue: "Enviando {{sent}}/{{total}} emails...",
                 })
               : t("queue.sending_badge.processing", {
-                  count: processingItems.length,
+                  count: activeProcessingItems.length,
                   defaultValue: "{{count}} email(s) sendo enviado(s)...",
                 })
             }
