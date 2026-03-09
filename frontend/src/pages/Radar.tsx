@@ -566,11 +566,24 @@ export default function Radar() {
       return;
     }
 
-    const { data: queuedJobs, error: queueError } = await supabase
-      .from("my_queue")
-      .select("job_id")
-      .eq("user_id", profile.id)
-      .in("job_id", jobIds);
+    // Batch .in() queries to avoid PostgREST URL length limits
+    const CHUNK_SIZE = 150;
+    const allQueuedJobs: any[] = [];
+    for (let i = 0; i < jobIds.length; i += CHUNK_SIZE) {
+      const chunk = jobIds.slice(i, i + CHUNK_SIZE);
+      const { data: queuedChunk, error: chunkError } = await supabase
+        .from("my_queue")
+        .select("job_id")
+        .eq("user_id", profile.id)
+        .in("job_id", chunk);
+      if (chunkError) {
+        console.error("[Radar] fetchMatches queue check error:", chunkError);
+        return;
+      }
+      if (queuedChunk) allQueuedJobs.push(...queuedChunk);
+    }
+    const queuedJobs = allQueuedJobs;
+    const queueError = null;
 
     if (queueError) {
       console.error("[Radar] fetchMatches queue check error:", queueError);
