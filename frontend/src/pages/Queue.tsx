@@ -752,19 +752,31 @@ export default function Queue() {
 
   const handleRetryAllFailed = async () => {
     if (failedItems.length === 0) return;
-    // Use lazy activation — don't batch-set to pending upfront
     const items = failedItems.slice(0, remainingToday);
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items, true).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items, true).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
   };
 
   const handleRetryAllPaused = async () => {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
-    // Use lazy activation — each item is set to pending inside the loop, right before sending
     const items = eligible.slice(0, remainingToday);
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items, true).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items, true).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
   };
 
   const pendingCount = pendingItems.length;
