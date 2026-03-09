@@ -248,18 +248,23 @@ export default function Queue() {
     };
   }, []);
 
+  const STUCK_PROCESSING_MINUTES = 4;
+
   const fetchQueue = async () => {
     if (!initialLoadDone.current) setLoading(true);
 
-    // Auto-recover stale processing items (stuck > 10 min) — only on first load
-    if (!initialLoadDone.current) {
-      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-      await supabase
-        .from("my_queue")
-        .update({ status: "pending", last_error: null })
-        .eq("status", "processing")
-        .lt("processing_started_at", tenMinAgo);
-    }
+    // Auto-recover stale processing items (max delay is 3min, so >4min is considered stuck)
+    const staleCutoffIso = new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000).toISOString();
+    await supabase
+      .from("my_queue")
+      .update({
+        status: "paused",
+        last_error: "[PROCESSING_TIMEOUT] Item pausado automaticamente por travar no processamento (acima do tempo máximo esperado).",
+        last_attempt_at: new Date().toISOString(),
+        processing_started_at: null,
+      })
+      .eq("status", "processing")
+      .or(`processing_started_at.lt.${staleCutoffIso},and(processing_started_at.is.null,created_at.lt.${staleCutoffIso})`);
 
     const { data, error } = await supabase
       .from("my_queue")
