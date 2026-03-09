@@ -339,14 +339,14 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
-  // Only show badge for items that started processing recently (< 10 min ago)
+  // Only show badge for items that started processing recently (< 4 min)
   const activeProcessingItems = useMemo(() => {
-    const tenMinAgo = Date.now() - 10 * 60 * 1000;
+    const cutoffMs = clockTick - STUCK_PROCESSING_MINUTES * 60 * 1000;
     return processingItems.filter((q) => {
       const ts = q.processing_started_at || q.created_at;
-      return new Date(ts).getTime() > tenMinAgo;
+      return new Date(ts).getTime() > cutoffMs;
     });
-  }, [processingItems]);
+  }, [processingItems, clockTick]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
   const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
