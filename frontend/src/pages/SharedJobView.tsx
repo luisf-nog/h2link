@@ -70,6 +70,8 @@ interface Job {
   job_min_special_req?: string | null;
   wage_additional?: string | null;
   rec_pay_deductions?: string | null;
+  // Sponsored job flag
+  _is_sponsored?: boolean;
 }
 
 export default function SharedJobView() {
