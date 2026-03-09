@@ -1121,7 +1121,7 @@ export default function Queue() {
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">{t("queue.table.loading")}</CardContent>
               </Card>
-            ) : queue.length === 0 ? (
+            ) : filteredQueue.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <div className="space-y-2">
@@ -1133,7 +1133,7 @@ export default function Queue() {
                 </CardContent>
               </Card>
             ) : (
-              queue.map((item) => (
+              filteredQueue.map((item) => (
                 <MobileQueueCard
                   key={item.id}
                   item={item}
