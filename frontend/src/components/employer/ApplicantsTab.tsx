@@ -95,6 +95,18 @@ function formatExperience(months: number): string {
 
 // ─── Reject Dialog ─────────────────────────────────────────────────────────────
 
+const REJECTION_REASONS = [
+  "Insufficient experience for the role",
+  "Physical job requirements not met",
+  "Unavailable for contract dates",
+  "English proficiency insufficient for job duties",
+  "Qualified U.S. worker selected",
+  "Unsatisfactory work history or references",
+  "Incomplete or inconsistent documentation",
+  "Candidate did not respond to contact attempts",
+  "Other (please specify)",
+] as const;
+
 function RejectDialog({
   app,
   open,
@@ -106,9 +118,15 @@ function RejectDialog({
   onClose: () => void;
   onConfirm: (reason: string) => void;
 }) {
-  const [reason, setReason] = useState("");
+  const [selected, setSelected] = useState("");
+  const [customReason, setCustomReason] = useState("");
+  const isOther = selected === "Other (please specify)";
+  const finalReason = isOther ? customReason.trim() : selected;
+
+  const handleClose = () => { setSelected(""); setCustomReason(""); onClose(); };
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reject {app.full_name}?</DialogTitle>
@@ -118,16 +136,36 @@ function RejectDialog({
         </DialogHeader>
         <div className="space-y-3 py-4">
           <label className="text-sm font-medium">Reason (required for compliance)</label>
-          <Textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            placeholder="e.g., Insufficient experience for the role"
-          />
+          <Select value={selected} onValueChange={(v) => { setSelected(v); if (v !== "Other (please specify)") setCustomReason(""); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a reason…" />
+            </SelectTrigger>
+            <SelectContent>
+              {REJECTION_REASONS.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isOther && (
+            <div className="space-y-1">
+              <Textarea
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value.slice(0, 150))}
+                rows={3}
+                placeholder="Describe the reason…"
+                maxLength={150}
+              />
+              <p className="text-xs text-muted-foreground text-right">{customReason.length}/150</p>
+            </div>
+          )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button variant="destructive" onClick={() => { onConfirm(reason); setReason(""); }}>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button
+            variant="destructive"
+            disabled={!finalReason}
+            onClick={() => { onConfirm(finalReason); setSelected(""); setCustomReason(""); }}
+          >
             Confirm rejection
           </Button>
         </DialogFooter>
