@@ -251,7 +251,7 @@ export default function Queue() {
       .from("my_queue")
       .select(
         `
-        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, send_count, email_open_count, last_error,
+        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, processing_started_at, send_count, email_open_count, last_error,
         public_jobs (id, job_title, company, email, city, state, visa_type),
         manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
