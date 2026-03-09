@@ -48,7 +48,7 @@ export default function EmployerJobs() {
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const getApplyUrl = (jobId: string) => `https://h2linker.com/apply/${jobId}`;
+  const getApplyUrl = (jobId: string) => `https://h2linker.com/job/${jobId}`;
 
   const handleCopyLink = async (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation();

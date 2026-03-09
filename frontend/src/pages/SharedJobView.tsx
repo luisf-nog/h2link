@@ -463,22 +463,43 @@ export default function SharedJobView() {
               </div>
             </div>
 
-            {/* Sticky Footer Mobile - Versão "Organizador" */}
+            {/* Sticky Footer Mobile */}
             <div className="sm:hidden p-4 border-t bg-white flex flex-col gap-3 sticky bottom-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
-              <Button
-                className="w-full font-black h-14 text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 uppercase tracking-tighter"
-                onClick={() => navigate("/auth")}
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                {t("jobs.shared.add_to_send_queue")}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest"
-                onClick={() => navigate("/jobs")}
-              >
-                <Search className="h-3 w-3 mr-1" /> {t("jobs.details.browse_others")}
-              </Button>
+              {job._is_sponsored ? (
+                <>
+                  <Button
+                    className="w-full font-black h-14 text-base shadow-xl bg-primary hover:bg-primary/90 uppercase tracking-tighter"
+                    onClick={() => navigate(`/apply/${job.id}`)}
+                  >
+                    <ArrowRight className="h-5 w-5 mr-2" />
+                    {t("jobs.shared.apply_now", "Apply Now")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest"
+                    onClick={() => navigate("/jobs")}
+                  >
+                    <Search className="h-3 w-3 mr-1" /> {t("jobs.details.browse_others")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="w-full font-black h-14 text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 uppercase tracking-tighter"
+                    onClick={() => navigate("/auth")}
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    {t("jobs.shared.add_to_send_queue")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest"
+                    onClick={() => navigate("/jobs")}
+                  >
+                    <Search className="h-3 w-3 mr-1" /> {t("jobs.details.browse_others")}
+                  </Button>
+                </>
+              )}
             </div>
           </Card>
         </main>
