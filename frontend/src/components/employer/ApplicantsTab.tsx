@@ -23,7 +23,7 @@ import {
   Users,
   FileText,
   MapPin,
-  Passport,
+  Globe,
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Application } from "@/pages/employer/JobApplicants";
