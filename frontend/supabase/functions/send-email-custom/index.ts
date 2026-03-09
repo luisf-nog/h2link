@@ -790,69 +790,7 @@ const handler = async (req: Request): Promise<Response> => {
     return json(200, { success: true, message: "Email sent" });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to send email";
-    
-    // ===== AUTO-DOWNGRADE FOR CRITICAL SMTP ERRORS =====
-    // Detect critical SMTP errors that indicate reputation damage
-    const isCriticalError = /SMTP erro.*\b(421|550|551|552|553|554)\b/i.test(errorMessage) ||
-      /authentication/i.test(errorMessage) ||
-      /blocked/i.test(errorMessage) ||
-      /rejected/i.test(errorMessage) ||
-      /blacklisted/i.test(errorMessage) ||
-      /spam/i.test(errorMessage);
-    
-    if (isCriticalError) {
-      try {
-        const authHeader = req.headers.get("Authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-          const serviceClient = createClient(
-            requireEnv("SUPABASE_URL"),
-            requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-          );
-          
-          const authClient = createClient(
-            requireEnv("SUPABASE_URL"),
-            requireEnv("SUPABASE_ANON_KEY"),
-            { global: { headers: { Authorization: authHeader } } },
-          );
-          
-          const token = authHeader.replace("Bearer ", "");
-          const { data: userData } = await authClient.auth.getUser(token);
-          const userId = userData?.user?.id;
-          
-          if (userId) {
-            // Increment consecutive errors
-            await serviceClient
-              .from("profiles")
-              .update({ consecutive_errors: (await serviceClient.from("profiles").select("consecutive_errors").eq("id", userId).single()).data?.consecutive_errors + 1 || 1 } as any)
-              .eq("id", userId);
-            
-            // Check if we need to trigger circuit breaker (3+ errors)
-            const { data: profile } = await serviceClient
-              .from("profiles")
-              .select("consecutive_errors")
-              .eq("id", userId)
-              .single();
-            
-            if ((profile?.consecutive_errors ?? 0) >= 3) {
-              // Auto-downgrade: reset to conservative profile and limit
-              await serviceClient.rpc("downgrade_smtp_warmup", { p_user_id: userId });
-              
-              // Pause all pending queue items with circuit breaker flag
-              await serviceClient
-                .from("my_queue")
-                .update({ status: "paused", last_error: "[CIRCUIT_BREAKER] Pausado por 3+ erros SMTP consecutivos. Verifique suas credenciais SMTP." } as any)
-                .eq("user_id", userId)
-                .eq("status", "pending");
-              
-              console.log(`[CIRCUIT BREAKER] User ${userId} downgraded due to critical SMTP errors`);
-            }
-          }
-        }
-      } catch (downgradeError) {
-        console.error("[AUTO-DOWNGRADE] Failed to process downgrade:", downgradeError);
-      }
-    }
-    // ===== END AUTO-DOWNGRADE =====
+    console.error("[send-email-custom] Error:", errorMessage);
     
     return json(500, { 
       success: false, 
