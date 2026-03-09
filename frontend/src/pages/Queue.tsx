@@ -175,7 +175,7 @@ export default function Queue() {
   useEffect(() => {
     const id = window.setInterval(() => {
       setClockTick(Date.now());
-      fetchQueue();
+      if (!sendingRef.current) fetchQueue();
     }, 30000);
     return () => window.clearInterval(id);
   }, []);
