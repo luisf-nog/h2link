@@ -549,7 +549,19 @@ export default function Queue() {
 
         if (payload?.success === false) {
           if (payload?.error === "daily_limit_reached") {
-            setUpgradeDialogOpen(true);
+            // For paid plans hitting warm-up limit, show informative toast instead of upgrade dialog
+            if (!isFreeUser) {
+              toast({
+                title: t("queue.toasts.warmup_limit_title", { defaultValue: "Limite de aquecimento atingido" }),
+                description: t("queue.toasts.warmup_limit_desc", {
+                  sent: sentIds.length,
+                  limit: dailyLimitTotal,
+                  defaultValue: "{{sent}} email(s) enviado(s). Seu limite atual de aquecimento é {{limit}}/dia. Ele aumenta automaticamente com o uso.",
+                }),
+              });
+            } else {
+              setUpgradeDialogOpen(true);
+            }
             break;
           }
           throw new Error(payload?.error || `Falha ao enviar para ${to}`);
