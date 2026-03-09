@@ -276,6 +276,28 @@ export function parseSmtpError(rawMessage: string): ParsedSmtpError {
 }
 
 /**
+ * Determines if an error is "systemic" (affects the user's entire SMTP setup)
+ * vs "per-recipient" (only affects one specific email address).
+ * 
+ * Systemic errors should trigger the circuit breaker.
+ * Per-recipient errors should only fail the individual item.
+ */
+export function isSystemicSmtpError(rawMessage: string): boolean {
+  const parsed = parseSmtpError(rawMessage);
+  const systemicCategories: SmtpErrorCategory[] = [
+    'auth_failed',
+    'app_password_required',
+    'connection_timeout',
+    'connection_refused',
+    'tls_error',
+    'rate_limited',
+    'smtp_not_configured',
+    'daily_limit',
+  ];
+  return systemicCategories.includes(parsed.category);
+}
+
+/**
  * Get a short user-friendly summary for display in badges/tooltips.
  * Falls back to truncated raw message if no category matches.
  */
