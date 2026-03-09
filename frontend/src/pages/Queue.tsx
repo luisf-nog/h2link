@@ -705,15 +705,19 @@ export default function Queue() {
   const handleRetryAllPaused = async () => {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
-    const ids = eligible.map((it) => it.id);
-    await supabase.from("my_queue").update({
-      status: "pending",
-      last_error: null,
-      opened_at: null,
-      email_open_count: 0,
-      profile_viewed_at: null,
-      tracking_id: crypto.randomUUID(),
-    }).in("id", ids);
+    // Update each item individually to generate unique tracking_ids
+    await Promise.all(
+      eligible.map((it) =>
+        supabase.from("my_queue").update({
+          status: "pending",
+          last_error: null,
+          opened_at: null,
+          email_open_count: 0,
+          profile_viewed_at: null,
+          tracking_id: crypto.randomUUID(),
+        }).eq("id", it.id)
+      )
+    );
     const updatedItems = eligible.map((it) => ({ ...it, status: "pending" }));
     setSending(true);
     await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
