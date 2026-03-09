@@ -637,6 +637,7 @@
       "send_selected": "Enviar seleccionados ({{count}})",
       "retry": "Reintentar",
       "retry_all_failed": "Reintentar fallidas ({{count}})",
+      "retry_all_paused": "Reenviar pausadas ({{count}})",
       "resend": "Reenviar",
       "view_history": "Ver historial"
     },
