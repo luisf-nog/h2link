@@ -316,6 +316,20 @@ export default function EmployerJobs() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8"
+                        onClick={(e) => handleCopyLink(job.id, e)}
+                        aria-label={t("employer.jobs.copy_link", "Copy share link")}
+                      >
+                        {copiedId === job.id ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Share2 className="h-4 w-4" />
+                        )}
+                      </Button>
+
                       <div className="flex flex-col items-center gap-0.5">
                         <Switch
                           checked={job.is_active}
