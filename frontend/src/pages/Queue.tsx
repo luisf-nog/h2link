@@ -908,28 +908,37 @@ export default function Queue() {
         </div>
       </div>
 
-      {sending && (
+      {/* Show badge when actively sending OR when there are processing items (e.g. after navigation) */}
+      {(sending || processingItems.length > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
           </span>
           <span className="text-sm font-medium text-foreground">
-            {t("queue.sending_badge.label", {
-              sent: sendProgress.sent,
-              total: sendProgress.total,
-              defaultValue: "Enviando {{sent}}/{{total}} emails...",
-            })}
+            {sending
+              ? t("queue.sending_badge.label", {
+                  sent: sendProgress.sent,
+                  total: sendProgress.total,
+                  defaultValue: "Enviando {{sent}}/{{total}} emails...",
+                })
+              : t("queue.sending_badge.processing", {
+                  count: processingItems.length,
+                  defaultValue: "{{count}} email(s) sendo enviado(s)...",
+                })
+            }
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto h-7 px-2 text-xs"
-            onClick={() => { sendCancelledRef.current = true; }}
-          >
-            <Pause className="h-3.5 w-3.5 mr-1" />
-            {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
-          </Button>
+          {sending && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-7 px-2 text-xs"
+              onClick={() => { sendCancelledRef.current = true; }}
+            >
+              <Pause className="h-3.5 w-3.5 mr-1" />
+              {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
+            </Button>
+          )}
         </div>
       )}
 
