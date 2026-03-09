@@ -497,6 +497,12 @@ export function ApplicantsTab({
               Newest first
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
+              checked={sortBy === "oldest"}
+              onCheckedChange={() => { setSortBy("oldest"); setPage(1); }}
+            >
+              Oldest first
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
               checked={sortBy === "match_desc"}
               onCheckedChange={() => { setSortBy("match_desc"); setPage(1); }}
             >
