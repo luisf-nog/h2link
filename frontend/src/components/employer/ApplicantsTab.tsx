@@ -238,7 +238,7 @@ function CandidateRow({
         {/* Single work auth badge - simplified */}
         <div className="hidden sm:flex items-center gap-2">
           {workAuthBadge && (
-            {workAuthBadge.icon === "check" ? (
+            workAuthBadge.icon === "check" ? (
               <span className="inline-flex items-stretch text-xs font-bold rounded overflow-hidden shadow-sm border border-[#8B1A28]/30">
                 <span className="bg-[#3C3B6E] text-white px-1.5 py-0.5 tracking-wide">US</span>
                 <span className="bg-[#B22234] text-white px-1.5 py-0.5 font-medium">Worker</span>
@@ -249,8 +249,7 @@ function CandidateRow({
                 {workAuthBadge.icon === "alert" && <AlertCircle size={12} className="text-amber-600" />}
                 {workAuthBadge.label}
               </span>
-            )}
-            </span>
+            )
           )}
         </div>
 
