@@ -908,15 +908,30 @@ export default function Queue() {
         </div>
       </div>
 
-      {(processingItems.length > 0 || (sending && pendingItems.length > 0)) && (
-        <SendingStatusCard
-          processingCount={processingItems.length}
-          pendingCount={pendingItems.length}
-          planTier={planTier}
-        />
+      {sending && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+          </span>
+          <span className="text-sm font-medium text-foreground">
+            {t("queue.sending_badge.label", {
+              sent: sendProgress.sent,
+              total: sendProgress.total,
+              defaultValue: "Enviando {{sent}}/{{total}} emails...",
+            })}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-7 px-2 text-xs"
+            onClick={() => { sendCancelledRef.current = true; }}
+          >
+            <Pause className="h-3.5 w-3.5 mr-1" />
+            {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
+          </Button>
+        </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">{t("queue.stats.in_queue")}</CardTitle>
