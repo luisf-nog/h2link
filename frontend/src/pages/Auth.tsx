@@ -618,6 +618,286 @@ export default function Auth() {
   const upd = (k: keyof typeof empFields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setEmpFields((p) => ({ ...p, [k]: e.target.value }));
 
+  const wrkUpd = (k: keyof typeof wrkFields) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setWrkFields((p) => ({ ...p, [k]: e.target.value }));
+
+  const validateWorkerStep = (step: 1 | 2): string | null => {
+    if (step === 1) {
+      if (!wrkFields.fullName.trim()) return t("auth.fields.full_name") + " is required.";
+      if (!wrkFields.email.trim()) return t("auth.fields.email") + " is required.";
+      if (wrkFields.password.length < 6) return "Password must be at least 6 characters.";
+      if (wrkFields.password !== wrkFields.confirmPassword) return t("auth.validation.password_mismatch");
+    }
+    if (step === 2) {
+      if (!wrkFields.age.trim() || Number(wrkFields.age) < 14 || Number(wrkFields.age) > 90) return t("auth.validation.invalid_age");
+      if (!wrkFields.phone.trim()) return t("auth.fields.phone") + " is required.";
+      if (!wrkFields.contactEmail.trim()) return t("auth.fields.contact_email") + " is required.";
+    }
+    return null;
+  };
+
+  const handleWorkerNext = () => {
+    const err = validateWorkerStep(1);
+    if (err) { openError("Required field", err); return; }
+    setWorkerStep(2);
+  };
+
+  const handleWorkerFinalSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const err2 = validateWorkerStep(2);
+    if (err2) { openError("Required field", err2); setIsLoading(false); return; }
+    if (!acceptTerms) { openError(t("auth.toasts.signup_error_title"), t("auth.validation.accept_required")); setIsLoading(false); return; }
+
+    const parsed = workerSignupSchema.safeParse({
+      ...wrkFields,
+      acceptTerms: true,
+    });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      const field = String(first?.path?.[0] ?? "");
+      const code = typeof first?.message === "string" ? first.message : "";
+      const description =
+        field === "age" || code === "invalid_age" ? t("auth.validation.invalid_age")
+        : field === "phone" || code === "invalid_phone" ? t("auth.validation.invalid_phone")
+        : field === "referralCode" || code === "invalid_referral_code" ? t("auth.validation.invalid_referral_code")
+        : field === "confirmPassword" || code === "password_mismatch" ? t("auth.validation.password_mismatch")
+        : field === "acceptTerms" || code === "accept_required" ? t("auth.validation.accept_required")
+        : t("auth.validation.invalid_contact_email");
+      openError(t("auth.toasts.signup_error_title"), description);
+      setIsLoading(false);
+      return;
+    }
+    const { fullName, email, password, age, phone, contactEmail, referralCode } = parsed.data;
+    const normalizedReferral = String(referralCode ?? "").trim();
+    if (normalizedReferral) localStorage.setItem("pending_referral_code", normalizedReferral);
+    const { error } = await signUp(email, password, fullName, { age, phone_e164: phone, contact_email: contactEmail });
+    if (error) {
+      const errCode = String((error as any)?.code ?? "");
+      const msg = String(error.message ?? "");
+      const isRateLimit = errCode === "over_email_send_rate_limit" || /rate limit/i.test(msg);
+      const isWeakPassword = errCode === "weak_password" || /weak.*password|password.*weak/i.test(msg);
+      openError(t("auth.toasts.signup_error_title"), isRateLimit ? t("auth.errors.email_rate_limit_desc") : isWeakPassword ? t("auth.errors.weak_password_desc") : error.message);
+    } else {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const isConfirmed = Boolean((sessionData.session?.user as any)?.email_confirmed_at);
+      if (sessionData.session && isConfirmed) {
+        const userId = sessionData.session.user.id;
+        await supabase.from("user_roles").insert({ user_id: userId, role: "user" } as any);
+        if (normalizedReferral) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/apply-referral-code`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` },
+              body: JSON.stringify({ code: normalizedReferral }),
+            });
+          } catch {}
+        }
+        navigate("/dashboard");
+      } else {
+        setTab("signin");
+        setSignupNotice({ visible: true, email });
+        toast({ title: t("auth.signup_notice.toast_title"), description: t("auth.signup_notice.toast_desc") });
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const WORKER_STEPS = [
+    { n: 1, icon: User, label: t("auth.steps.account", "Account") },
+    { n: 2, icon: Shield, label: t("auth.steps.details", "Details") },
+  ] as const;
+
+  // ─── WORKER MULTI-STEP LAYOUT ─────────────────────────────────────────
+  if (tab === "signup" && signupRole === "worker") {
+    return (
+      <>
+        <style>{`
+          .auth-premium-bg { background: linear-gradient(145deg,#0a0e1a 0%,#0c1929 35%,#0a1628 65%,#080d18 100%); }
+          .auth-glass-card { background: linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.01) 100%); border:1px solid rgba(255,255,255,0.06); border-radius:20px; backdrop-filter:blur(40px); box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset,0 32px 64px -12px rgba(0,0,0,0.5),0 0 120px -40px rgba(14,165,233,0.08); }
+          .auth-accent-text { background:linear-gradient(135deg,#0ea5e9,#38bdf8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+          .auth-btn-gradient { background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%); }
+          .auth-btn-gradient:hover { background:linear-gradient(135deg,#38bdf8 0%,#0ea5e9 100%); }
+          .auth-grid-pattern { background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px); background-size:60px 60px; }
+          .auth-glow-1 { position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(14,165,233,0.06) 0%,transparent 70%);top:-200px;right:-100px;pointer-events:none; }
+          .auth-glow-2 { position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(14,165,233,0.04) 0%,transparent 70%);bottom:-150px;left:-100px;pointer-events:none; }
+          .emp-step-dot { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all 0.25s; }
+          .emp-step-done { background:rgba(14,165,233,0.2);border:1px solid rgba(14,165,233,0.4);color:#38bdf8; }
+          .emp-step-active { background:linear-gradient(135deg,#0ea5e9,#0284c7);border:1px solid #0ea5e9;color:#fff;box-shadow:0 0 20px rgba(14,165,233,0.3); }
+          .emp-step-idle { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.2); }
+          .emp-step-line { flex:1;height:1px;background:rgba(255,255,255,0.06);margin:0 8px; }
+          .emp-step-line-done { background:rgba(14,165,233,0.3); }
+          .auth-premium-bg input { font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif!important; }
+        `}</style>
+
+        <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((p) => ({ ...p, open }))}>
+          <AlertDialogContent className="border-destructive/40 shadow-2xl">
+            <AlertDialogHeader className="space-y-0 text-left">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <AlertDialogTitle className="text-base font-semibold">{errorDialog.title}</AlertDialogTitle>
+                  <AlertDialogDescription className="mt-1 text-sm">{errorDialog.description}</AlertDialogDescription>
+                </div>
+              </div>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{okLabel}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <div className="auth-premium-bg min-h-screen relative overflow-hidden flex flex-col">
+          <div className="absolute inset-0 auth-grid-pattern pointer-events-none" />
+          <div className="auth-glow-1" />
+          <div className="auth-glow-2" />
+
+          {/* Top nav */}
+          <div className="relative z-10 flex items-center justify-between px-8 py-6">
+            <h1 className="text-xl font-bold font-brand text-white">
+              <span className="auth-accent-text">H2</span> Linker
+            </h1>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => { setSignupRole(null); setWorkerStep(1); }}
+                className="text-xs text-white/30 hover:text-white/60 transition-colors bg-transparent border-none cursor-pointer"
+              >
+                ← {t("auth.back_to_selection", "Back")}
+              </button>
+              <button
+                onClick={() => { setTab("signin"); setSignupRole(null); setWorkerStep(1); }}
+                className="text-xs text-white/30 hover:text-white/60 transition-colors bg-transparent border-none cursor-pointer"
+              >
+                {t("auth.tabs.signin")}
+              </button>
+              <LanguageSwitcher
+                value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+                onChange={handleChangeLanguage}
+                className="h-8 w-[120px] border-white/10 bg-white/5 text-white/60 hover:bg-white/10 rounded-xl"
+              />
+            </div>
+          </div>
+
+          {/* Main content */}
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-8">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-sky-500/20 bg-sky-500/5 text-[10px] font-bold text-sky-400/70 tracking-wider uppercase mb-4">
+                <HardHat size={10} /> {t("auth.roles.worker")}
+              </div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">
+                {workerStep === 1 && t("auth.worker_steps.step1_title", "Create your account")}
+                {workerStep === 2 && t("auth.worker_steps.step2_title", "Personal details")}
+              </h2>
+              <p className="text-sm text-white/30 mt-1.5">
+                {workerStep === 1 && t("auth.worker_steps.step1_desc", "Your login credentials")}
+                {workerStep === 2 && t("auth.worker_steps.step2_desc", "So employers can reach you")}
+              </p>
+            </div>
+
+            {/* Step indicator */}
+            <div className="flex items-center mb-10 w-full max-w-xs">
+              {WORKER_STEPS.map((s, i) => (
+                <div key={s.n} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className={`emp-step-dot ${workerStep > s.n ? "emp-step-done" : workerStep === s.n ? "emp-step-active" : "emp-step-idle"}`}>
+                      {workerStep > s.n ? <CheckCircle2 size={14} /> : <s.icon size={13} />}
+                    </div>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${workerStep >= s.n ? "text-sky-400/70" : "text-white/15"}`}>{s.label}</span>
+                  </div>
+                  {i < WORKER_STEPS.length - 1 && (
+                    <div className={`emp-step-line ${workerStep > s.n ? "emp-step-line-done" : ""}`} style={{ marginBottom: "18px" }} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Form card */}
+            <div className="w-full max-w-lg auth-glass-card p-8 sm:p-10">
+              {workerStep === 1 && (
+                <div className="flex flex-col gap-5">
+                  <div className="space-y-2">
+                    <label className={labelCls}>{t("auth.fields.full_name")} *</label>
+                    <Input value={wrkFields.fullName} onChange={wrkUpd("fullName")} required className={inputCls} placeholder="João Silva" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelCls}>{t("auth.fields.email")} *</label>
+                    <Input type="email" value={wrkFields.email} onChange={wrkUpd("email")} required className={inputCls} placeholder="you@email.com" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.password")} *</label>
+                      <Input type="password" value={wrkFields.password} onChange={wrkUpd("password")} required minLength={6} className={inputCls} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.confirm_password")} *</label>
+                      <Input type="password" value={wrkFields.confirmPassword} onChange={wrkUpd("confirmPassword")} required minLength={6} className={inputCls} />
+                    </div>
+                  </div>
+                  <button type="button" onClick={handleWorkerNext} className={btnPrimary} style={{ marginTop: "8px" }}>
+                    {t("auth.actions.continue", "Continue")} <ArrowRight size={16} />
+                  </button>
+                </div>
+              )}
+
+              {workerStep === 2 && (
+                <form onSubmit={handleWorkerFinalSubmit} className="flex flex-col gap-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.age")} *</label>
+                      <Input type="number" min={14} max={90} value={wrkFields.age} onChange={wrkUpd("age")} required className={inputCls} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelCls}>{t("auth.fields.phone")} *</label>
+                      <PhoneE164Input id="phone-wrk" name="phone-wrk" defaultCountry="BR" required inputClassName={inputCls}
+                        defaultValue={wrkFields.phone}
+                        onChange={(val) => setWrkFields((p) => ({ ...p, phone: val }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelCls}>{t("auth.fields.contact_email")} *</label>
+                    <Input type="email" value={wrkFields.contactEmail} onChange={wrkUpd("contactEmail")} required className={inputCls} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelCls}>{t("auth.fields.referral_code")}</label>
+                    <Input value={wrkFields.referralCode} onChange={wrkUpd("referralCode")} maxLength={12} className={inputCls} />
+                  </div>
+
+                  {/* Terms */}
+                  <div className="border border-white/[0.06] rounded-xl p-4 bg-white/[0.02] space-y-3 mt-1">
+                    <p className="text-[10px] text-white/25 leading-relaxed">{t("auth.disclaimer")}</p>
+                    <div className="flex gap-2.5 items-start">
+                      <Checkbox
+                        id="accept-wrk"
+                        checked={acceptTerms}
+                        onCheckedChange={(v) => setAcceptTerms(v === true)}
+                        className="border-white/20 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500 mt-0.5"
+                      />
+                      <label htmlFor="accept-wrk" className="text-[11px] text-white/40 leading-snug cursor-pointer">{t("auth.accept_terms")}</label>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setWorkerStep(1)} className={`${btnGhost} mt-0`}>
+                      <ArrowLeft size={14} style={{ display: "inline", marginRight: 6 }} /> {t("auth.actions.back", "Back")}
+                    </button>
+                    <button type="submit" disabled={isLoading} className={`${btnPrimary} mt-0`} style={{ marginTop: 0 }}>
+                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                      {t("auth.actions.signup")}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+            <p className="mt-6 text-[11px] text-white/15">Step {workerStep} of 2</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   // ─── EMPLOYER MULTI-STEP LAYOUT ────────────────────────────────────────
   if (tab === "signup" && signupRole === "employer") {
     return (
@@ -673,23 +953,16 @@ export default function Auth() {
             </h1>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => {
-                  setSignupRole("worker");
-                  setEmployerStep(1);
-                }}
+                onClick={() => { setSignupRole(null); setEmployerStep(1); }}
                 className="text-xs text-white/30 hover:text-white/60 transition-colors bg-transparent border-none cursor-pointer"
               >
-                ← Back to worker signup
+                ← {t("auth.back_to_selection", "Back")}
               </button>
               <button
-                onClick={() => {
-                  setTab("signin");
-                  setSignupRole("worker");
-                  setEmployerStep(1);
-                }}
+                onClick={() => { setTab("signin"); setSignupRole(null); setEmployerStep(1); }}
                 className="text-xs text-white/30 hover:text-white/60 transition-colors bg-transparent border-none cursor-pointer"
               >
-                Sign in instead
+                {t("auth.tabs.signin")}
               </button>
               <LanguageSwitcher
                 value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
@@ -751,55 +1024,23 @@ export default function Auth() {
                 <div className="flex flex-col gap-5">
                   <div className="space-y-2">
                     <label className={labelCls}>Full Name *</label>
-                    <Input
-                      value={empFields.fullName}
-                      onChange={upd("fullName")}
-                      required
-                      className={inputCls}
-                      placeholder="Jane Smith"
-                    />
+                    <Input value={empFields.fullName} onChange={upd("fullName")} required className={inputCls} placeholder="Jane Smith" />
                   </div>
                   <div className="space-y-2">
                     <label className={labelCls}>Work Email *</label>
-                    <Input
-                      type="email"
-                      value={empFields.email}
-                      onChange={upd("email")}
-                      required
-                      className={inputCls}
-                      placeholder="you@company.com"
-                    />
+                    <Input type="email" value={empFields.email} onChange={upd("email")} required className={inputCls} placeholder="you@company.com" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className={labelCls}>Password *</label>
-                      <Input
-                        type="password"
-                        value={empFields.password}
-                        onChange={upd("password")}
-                        required
-                        minLength={6}
-                        className={inputCls}
-                      />
+                      <Input type="password" value={empFields.password} onChange={upd("password")} required minLength={6} className={inputCls} />
                     </div>
                     <div className="space-y-2">
                       <label className={labelCls}>Confirm Password *</label>
-                      <Input
-                        type="password"
-                        value={empFields.confirmPassword}
-                        onChange={upd("confirmPassword")}
-                        required
-                        minLength={6}
-                        className={inputCls}
-                      />
+                      <Input type="password" value={empFields.confirmPassword} onChange={upd("confirmPassword")} required minLength={6} className={inputCls} />
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleEmployerNext}
-                    className={btnPrimary}
-                    style={{ marginTop: "8px" }}
-                  >
+                  <button type="button" onClick={handleEmployerNext} className={btnPrimary} style={{ marginTop: "8px" }}>
                     Continue <ArrowRight size={16} />
                   </button>
                 </div>
@@ -810,44 +1051,22 @@ export default function Auth() {
                 <div className="flex flex-col gap-5">
                   <div className="space-y-2">
                     <label className={labelCls}>Company Name *</label>
-                    <Input
-                      value={empFields.companyName}
-                      onChange={upd("companyName")}
-                      required
-                      className={inputCls}
-                      placeholder="Acme Farms LLC"
-                    />
+                    <Input value={empFields.companyName} onChange={upd("companyName")} required className={inputCls} placeholder="Acme Farms LLC" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className={labelCls}>Legal Entity Name</label>
-                      <Input
-                        value={empFields.legalEntityName}
-                        onChange={upd("legalEntityName")}
-                        className={inputCls}
-                        placeholder="Optional"
-                      />
+                      <Input value={empFields.legalEntityName} onChange={upd("legalEntityName")} className={inputCls} placeholder="Optional" />
                     </div>
                     <div className="space-y-2">
                       <label className={labelCls}>EIN / Tax ID</label>
-                      <Input
-                        value={empFields.einTaxId}
-                        onChange={upd("einTaxId")}
-                        maxLength={30}
-                        className={inputCls}
-                        placeholder="XX-XXXXXXX"
-                      />
+                      <Input value={empFields.einTaxId} onChange={upd("einTaxId")} maxLength={30} className={inputCls} placeholder="XX-XXXXXXX" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className={labelCls}>Company Size *</label>
-                      <select
-                        value={empFields.companySize}
-                        onChange={upd("companySize")}
-                        required
-                        className={selectCls}
-                      >
+                      <select value={empFields.companySize} onChange={upd("companySize")} required className={selectCls}>
                         <option value="">Select...</option>
                         <option value="1-10">1–10 employees</option>
                         <option value="11-50">11–50 employees</option>
@@ -873,24 +1092,13 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <label className={labelCls}>Website</label>
-                    <Input
-                      type="url"
-                      value={empFields.website}
-                      onChange={upd("website")}
-                      className={inputCls}
-                      placeholder="https://yourcompany.com (optional)"
-                    />
+                    <Input type="url" value={empFields.website} onChange={upd("website")} className={inputCls} placeholder="https://yourcompany.com (optional)" />
                   </div>
                   <div className="flex gap-3 mt-2">
                     <button type="button" onClick={() => setEmployerStep(1)} className={`${btnGhost} mt-0`}>
                       <ArrowLeft size={14} style={{ display: "inline", marginRight: 6 }} /> Back
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleEmployerNext}
-                      className={`${btnPrimary} mt-0`}
-                      style={{ marginTop: 0 }}
-                    >
+                    <button type="button" onClick={handleEmployerNext} className={`${btnPrimary} mt-0`} style={{ marginTop: 0 }}>
                       Continue <ArrowRight size={16} />
                     </button>
                   </div>
@@ -907,34 +1115,17 @@ export default function Auth() {
                     </div>
                     <div className="space-y-2">
                       <label className={labelCls}>State *</label>
-                      <Input
-                        value={empFields.state}
-                        onChange={upd("state")}
-                        required
-                        placeholder="e.g. Texas"
-                        className={inputCls}
-                      />
+                      <Input value={empFields.state} onChange={upd("state")} required placeholder="e.g. Texas" className={inputCls} />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <label className={labelCls}>Primary Hiring Location *</label>
-                    <Input
-                      value={empFields.primaryHiringLocation}
-                      onChange={upd("primaryHiringLocation")}
-                      required
-                      placeholder="City, State"
-                      className={inputCls}
-                    />
+                    <Input value={empFields.primaryHiringLocation} onChange={upd("primaryHiringLocation")} required placeholder="City, State" className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className={labelCls}>Worker Types *</label>
-                      <select
-                        value={empFields.workerTypes}
-                        onChange={upd("workerTypes")}
-                        required
-                        className={selectCls}
-                      >
+                      <select value={empFields.workerTypes} onChange={upd("workerTypes")} required className={selectCls}>
                         <option value="">Select...</option>
                         <option value="H-2A">H-2A (Agricultural)</option>
                         <option value="H-2B">H-2B (Non-Agricultural)</option>
@@ -943,12 +1134,7 @@ export default function Auth() {
                     </div>
                     <div className="space-y-2">
                       <label className={labelCls}>Monthly Volume *</label>
-                      <select
-                        value={empFields.estimatedMonthlyVolume}
-                        onChange={upd("estimatedMonthlyVolume")}
-                        required
-                        className={selectCls}
-                      >
+                      <select value={empFields.estimatedMonthlyVolume} onChange={upd("estimatedMonthlyVolume")} required className={selectCls}>
                         <option value="">Select...</option>
                         <option value="1-10">1–10 workers</option>
                         <option value="11-50">11–50 workers</option>
@@ -968,9 +1154,7 @@ export default function Auth() {
                         onCheckedChange={(v) => setAcceptTerms(v === true)}
                         className="border-white/20 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500 mt-0.5"
                       />
-                      <label htmlFor="accept-emp" className="text-[11px] text-white/40 leading-snug cursor-pointer">
-                        {t("auth.accept_terms")}
-                      </label>
+                      <label htmlFor="accept-emp" className="text-[11px] text-white/40 leading-snug cursor-pointer">{t("auth.accept_terms")}</label>
                     </div>
                   </div>
 
@@ -978,12 +1162,7 @@ export default function Auth() {
                     <button type="button" onClick={() => setEmployerStep(2)} className={`${btnGhost} mt-0`}>
                       <ArrowLeft size={14} style={{ display: "inline", marginRight: 6 }} /> Back
                     </button>
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className={`${btnPrimary} mt-0`}
-                      style={{ marginTop: 0 }}
-                    >
+                    <button type="submit" disabled={isLoading} className={`${btnPrimary} mt-0`} style={{ marginTop: 0 }}>
                       {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
                       Create employer account
                     </button>
@@ -1000,7 +1179,7 @@ export default function Auth() {
     );
   }
 
-  // ─── DEFAULT LAYOUT (signin + worker signup) ───────────────────────────
+  // ─── DEFAULT LAYOUT (signin + role picker) ─────────────────────────────
   return (
     <>
       <style>{`
