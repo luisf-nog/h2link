@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRadarStore } from "@/stores/useRadarStore";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -425,16 +427,22 @@ export default function Radar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
+  const {
+    radarProfile, setRadarProfile,
+    matchedJobs, setMatchedJobs,
+    matchCount, setMatchCount,
+    queuedFromRadar, setQueuedFromRadar,
+    groupedCategories, setGroupedCategories,
+    lastFetchedAt,
+    initRadar,
+    fetchMatches: storeFetchMatches,
+    updateStats: storeUpdateStats,
+  } = useRadarStore();
+
+  const loading = lastFetchedAt === 0 && !radarProfile;
   const [saving, setSaving] = useState(false);
   const [toggleSaving, setToggleSaving] = useState(false);
-  // rescanning: true while we clear stale matches + trigger edge function
   const [rescanning, setRescanning] = useState(false);
-  const [matchCount, setMatchCount] = useState(0);
-  const [queuedFromRadar, setQueuedFromRadar] = useState(0);
-  const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
-  const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
-  const [radarProfile, setRadarProfile] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
   const [isActive, setIsActive] = useState(false);
@@ -489,7 +497,7 @@ export default function Radar() {
   }, [radarMode, selectedCategories, minWage, maxExperience, visaType, stateFilter, groupFilter, radarProfile]);
 
   // -------------------------------------------------------------------------
-  // updateStats
+  // updateStats — delegates to store
   // -------------------------------------------------------------------------
   const updateStats = useCallback(
     async (override?: {
@@ -500,99 +508,28 @@ export default function Radar() {
       groupFilter?: string;
     }) => {
       if (!profile?.id) return;
-      try {
-        const vt = override?.visaType ?? visaType;
-        const st = override?.stateFilter ?? stateFilter;
-        const mw = override?.minWage ?? minWage;
-        const me = override?.maxExperience ?? maxExperience;
-        const gf = override?.groupFilter ?? groupFilter;
-
-        const { data } = await supabase.rpc("get_radar_stats" as any, {
-          p_user_id: profile.id,
-          p_visa_type: vt,
-          p_state: st,
-          p_min_wage: mw !== "" ? Number(mw) : 0,
-          p_max_exp: me !== "" ? Number(me) : 999,
-          p_group: gf,
-        });
-
-        if (data) {
-          const grouped = (data as any[]).reduce((acc: any, curr: any) => {
-            const raw = curr.raw_category || "";
-            const sectorKey = resolveSectorKey(raw, SECTOR_KEYWORDS);
-            const sectorName = t(`radar.sectors.${sectorKey}`, sectorKey);
-            if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
-            acc[sectorName].items.push(curr);
-            acc[sectorName].totalJobs += curr.count || 0;
-            return acc;
-          }, {});
-          setGroupedCategories(grouped);
-        }
-      } catch (e) {
-        console.error("[Radar] updateStats error:", e);
-      }
+      await storeUpdateStats(
+        profile.id,
+        {
+          visaType: override?.visaType ?? visaType,
+          stateFilter: override?.stateFilter ?? stateFilter,
+          minWage: override?.minWage ?? minWage,
+          maxExperience: override?.maxExperience ?? maxExperience,
+          groupFilter: override?.groupFilter ?? groupFilter,
+        },
+        t,
+      );
     },
-    [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, t],
+    [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, t, storeUpdateStats],
   );
 
   // -------------------------------------------------------------------------
-  // fetchMatches
+  // fetchMatches — delegates to store
   // -------------------------------------------------------------------------
   const fetchMatches = useCallback(async () => {
     if (!profile?.id) return;
-
-    const { data, error } = await supabase
-      .from("radar_matched_jobs" as any)
-      .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
-      .eq("user_id", profile.id);
-
-    if (error) {
-      console.error("[Radar] fetchMatches error:", error);
-      return;
-    }
-    if (!data) return;
-
-    const validMatches = (data as any[]).filter((m: any) => {
-      const job = m.public_jobs;
-      return job && job.is_active !== false && job.is_banned !== true;
-    });
-
-    const jobIds = validMatches.map((m: any) => m.job_id);
-
-    if (jobIds.length === 0) {
-      setMatchedJobs([]);
-      setMatchCount(0);
-      setQueuedFromRadar(0);
-      return;
-    }
-
-    // Batch .in() queries to avoid PostgREST URL length limits
-    const CHUNK_SIZE = 150;
-    const allQueuedJobs: any[] = [];
-    for (let i = 0; i < jobIds.length; i += CHUNK_SIZE) {
-      const chunk = jobIds.slice(i, i + CHUNK_SIZE);
-      const { data: queuedChunk, error: chunkError } = await supabase
-        .from("my_queue")
-        .select("job_id")
-        .eq("user_id", profile.id)
-        .in("job_id", chunk);
-      if (chunkError) {
-        console.error("[Radar] fetchMatches queue check error:", chunkError);
-        return;
-      }
-      if (queuedChunk) allQueuedJobs.push(...queuedChunk);
-    }
-    const queuedJobs = allQueuedJobs;
-    const queueError = null;
-
-    const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
-    const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
-    const queuedCount = validMatches.filter((m: any) => queuedSet.has(m.job_id)).length;
-
-    setMatchedJobs(finalMatches);
-    setMatchCount(finalMatches.length);
-    setQueuedFromRadar(queuedCount);
-  }, [profile?.id]);
+    await storeFetchMatches(profile.id);
+  }, [profile?.id, storeFetchMatches]);
 
   // -------------------------------------------------------------------------
   // triggerRescan
@@ -769,53 +706,42 @@ export default function Radar() {
   // -------------------------------------------------------------------------
   useEffect(() => {
     const init = async () => {
-      if (!profile?.id) {
-        setLoading(false);
-        return;
+      if (!profile?.id) return;
+
+      // Use store's initRadar for data (stale-checked)
+      await initRadar(profile.id, t);
+
+      // Sync local form state from store's radarProfile
+      const rp = useRadarStore.getState().radarProfile;
+      if (rp) {
+        setIsActive(rp.is_active ?? false);
+        setRadarMode(rp.auto_send ? "autopilot" : "manual");
+        setSelectedCategories(rp.categories || []);
+        setMinWage(rp.min_wage?.toString() || "");
+        setMaxExperience(rp.max_experience?.toString() || "");
+        setVisaType(rp.visa_type || "all");
+        setStateFilter(rp.state || "all");
+        setGroupFilter(rp.randomization_group || "all");
       }
-      try {
-        const { data } = await supabase
-          .from("radar_profiles" as any)
-          .select("*")
-          .eq("user_id", profile.id)
-          .single();
 
-        if (data) {
-          const d = data as any;
-          setRadarProfile(d);
-          setIsActive(d.is_active ?? false);
-          setRadarMode(d.auto_send ? "autopilot" : "manual");
-          setSelectedCategories(d.categories || []);
-          setMinWage(d.min_wage?.toString() || "");
-          setMaxExperience(d.max_experience?.toString() || "");
-          setVisaType(d.visa_type || "all");
-          setStateFilter(d.state || "all");
-          setGroupFilter(d.randomization_group || "all");
-
-          await updateStats({
-            visaType: d.visa_type || "all",
-            stateFilter: d.state || "all",
-            minWage: d.min_wage?.toString() || "",
-            maxExperience: d.max_experience?.toString() || "",
-            groupFilter: d.randomization_group || "all",
-          });
-
-          if (d.is_active) await fetchMatches();
-        }
-      } catch (e) {
-        console.error("[Radar] init error:", e);
-      } finally {
-        setLoading(false);
-        const seenKey = "radar_how_it_works_seen";
-        if (!localStorage.getItem(seenKey)) {
-          localStorage.setItem(seenKey, "1");
-          setTimeout(() => setShowHowItWorks(true), 600);
-        }
+      const seenKey = "radar_how_it_works_seen";
+      if (!localStorage.getItem(seenKey)) {
+        localStorage.setItem(seenKey, "1");
+        setTimeout(() => setShowHowItWorks(true), 600);
       }
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
+
+  // Silent refresh on tab focus
+  const handleVisibility = useCallback(() => {
+    if (profile?.id) {
+      storeUpdateStats(profile.id, { visaType, stateFilter, minWage, maxExperience, groupFilter }, t);
+      if (isActive) storeFetchMatches(profile.id);
+    }
+  }, [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, isActive, t]);
+  useVisibilityRefresh(handleVisibility);
 
   useEffect(() => {
     if (loading) return;

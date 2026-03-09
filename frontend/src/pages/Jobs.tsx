@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
+import { useJobsStore, type Job, type FeaturedJob } from "@/stores/useJobsStore";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS_CONFIG } from "@/config/plans.config";
@@ -8,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
-import type { Tables } from "@/integrations/supabase/types";
+
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -70,57 +72,7 @@ const JOB_CATEGORIES_LIST = [
   "Animal Caretakers",
 ];
 
-type Job = Tables<"public_jobs">;
-
-interface FeaturedJob {
-  id: string;
-  title: string;
-  description: string | null;
-  city: string | null;
-  state: string | null;
-  hourly_wage: number | null;
-  start_date: string | null;
-  end_date: string | null;
-  num_positions: number | null;
-  visa_type: string | null;
-  employer_legal_name: string | null;
-  priority_level: string;
-  is_sponsored: boolean;
-  dol_case_number: string | null;
-  primary_duties: string | null;
-  employer_id: string;
-  created_at: string;
-  min_experience_months: number | null;
-  overtime_rate: number | null;
-  additional_compensation: string | null;
-  bonuses: string | null;
-  deductions: string | null;
-  deductions_additional: string | null;
-  benefits: string | null;
-  housing_provided: boolean | null;
-  transportation_provided: boolean | null;
-  meals_provided: boolean | null;
-  daily_meal_cost: number | null;
-  training_provided: boolean | null;
-  visa_fee_reimbursement: boolean | null;
-  english_level: string | null;
-  english_proficiency: string | null;
-  drivers_license: string | null;
-  prior_experience_required: boolean | null;
-  req_background_check: boolean | null;
-  req_extreme_weather: boolean | null;
-  req_full_contract_availability: boolean | null;
-  req_travel_worksite: boolean | null;
-  req_lift_lbs: number | null;
-  lifting_weight_lbs: number | null;
-  equipment_used: string | null;
-  equipment_experience: string | null;
-  work_environment: string | null;
-  skill_level: string | null;
-  view_count: number;
-  click_count: number;
-  wage_rate: string | null;
-}
+// Job and FeaturedJob types are now imported from useJobsStore
 
 export default function Jobs() {
   const { profile } = useAuth();
@@ -131,12 +83,9 @@ export default function Jobs() {
   const isMobile = useIsMobile();
 
   const [searchParams] = useSearchParams();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [featuredJobs, setFeaturedJobs] = useState<FeaturedJob[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { jobs, featuredJobs, totalCount, queuedJobIds, lastFetchedAt, setJobsData, fetchFeaturedJobs: storeFetchFeatured, syncQueue: storeSyncQueue } = useJobsStore();
+  const [loading, setLoading] = useState(lastFetchedAt === 0);
 
-  const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [selectedFeaturedJob, setSelectedFeaturedJob] = useState<FeaturedJob | null>(null);
@@ -188,48 +137,26 @@ export default function Jobs() {
 
   const syncQueue = async () => {
     if (!profile?.id) return;
-    // Fetch ALL job_ids from queue (paginate to avoid 1000-row default limit)
-    const allJobIds: string[] = [];
-    let from = 0;
-    const batchSize = 1000;
-    let hasMore = true;
-    while (hasMore) {
-      const { data } = await supabase
-        .from("my_queue")
-        .select("job_id")
-        .eq("user_id", profile.id)
-        .not("job_id", "is", null)
-        .range(from, from + batchSize - 1);
-      if (data && data.length > 0) {
-        allJobIds.push(...data.map((r) => r.job_id).filter((id): id is string => id !== null));
-        from += batchSize;
-        hasMore = data.length === batchSize;
-      } else {
-        hasMore = false;
-      }
-    }
-    setQueuedJobIds(new Set(allJobIds));
+    await storeSyncQueue(profile.id);
   };
 
-  // Fetch featured jobs
-  const fetchFeaturedJobs = async () => {
-    const { data } = await supabase
-      .from("sponsored_jobs")
-      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months, overtime_rate, additional_compensation, bonuses, deductions, deductions_additional, benefits, housing_provided, transportation_provided, meals_provided, daily_meal_cost, training_provided, visa_fee_reimbursement, english_level, english_proficiency, drivers_license, prior_experience_required, req_background_check, req_extreme_weather, req_full_contract_availability, req_travel_worksite, req_lift_lbs, lifting_weight_lbs, equipment_used, equipment_experience, work_environment, skill_level, view_count, click_count, wage_rate")
-      .eq("is_active", true)
-      .eq("is_sponsored", true)
-      .order("priority_level", { ascending: false });
-    if (data) setFeaturedJobs(data as FeaturedJob[]);
-  };
+  const fetchFeaturedJobs = () => storeFetchFeatured(true);
 
   useEffect(() => {
-    fetchFeaturedJobs();
+    storeFetchFeatured();
     if (profile?.id) {
-      syncQueue();
+      storeSyncQueue(profile.id);
       const hasSeenWelcome = localStorage.getItem("h2linker_hub_welcome_seen");
       if (!hasSeenWelcome) setShowWelcome(true);
     }
   }, [profile?.id]);
+
+  // Silent refresh on tab focus
+  const handleVisibility = useCallback(() => {
+    storeFetchFeatured();
+    if (profile?.id) storeSyncQueue(profile.id);
+  }, [profile?.id]);
+  useVisibilityRefresh(handleVisibility);
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);
@@ -237,7 +164,7 @@ export default function Jobs() {
   };
 
   const fetchJobs = async () => {
-    setLoading(true);
+    if (lastFetchedAt === 0) setLoading(true);
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -259,8 +186,7 @@ export default function Jobs() {
 
     const { data, count } = await query.range(from, to);
     if (data) {
-      setJobs(data as Job[]);
-      setTotalCount(count ?? 0);
+      setJobsData(data as Job[], count ?? 0);
     }
     setLoading(false);
   };

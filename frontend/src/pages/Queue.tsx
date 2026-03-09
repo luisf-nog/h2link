@@ -1,5 +1,7 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueueStore, type QueueItem } from "@/stores/useQueueStore";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { PLANS_CONFIG } from "@/config/plans.config";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,36 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface QueueItem {
-  id: string;
-  status: string;
-  sent_at: string | null;
-  opened_at?: string | null;
-  profile_viewed_at?: string | null;
-  tracking_id?: string;
-  created_at: string;
-  processing_started_at?: string | null;
-  send_count: number;
-  email_open_count?: number | null;
-  last_error?: string | null;
-  public_jobs: {
-    id: string;
-    job_title: string;
-    company: string;
-    email: string;
-    city: string;
-    state: string;
-    visa_type?: string | null;
-  } | null;
-  manual_jobs: {
-    id: string;
-    company: string;
-    job_title: string;
-    email: string;
-    eta_number: string | null;
-    phone: string | null;
-  } | null;
-}
+// QueueItem type is now imported from useQueueStore
 
 type EmailTemplate = {
   id: string;
@@ -72,12 +45,6 @@ type EmailTemplate = {
   subject: string;
   body: string;
 };
-
-const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
-
-// Module-level cache to survive component remounts (navigation)
-let cachedQueue: QueueItem[] | null = null;
-let moduleInitialLoadDone = false;
 
 // --- VARIAÇÕES DE TEXTO SOBRE DOL PROCESSING (ANTI-SPAM) ---
 // Focadas no processo do Departamento de Trabalho (DOL), sem usar termos internos.
@@ -119,16 +86,14 @@ export default function Queue() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [queue, setQueue] = useState<QueueItem[]>(cachedQueue ?? []);
-  const [loading, setLoading] = useState(!moduleInitialLoadDone);
-  const initialLoadDone = useRef(moduleInitialLoadDone);
+  const { queue, setQueue, lastFetchedAt, fetchQueue: storeRefresh, forceFetchQueue, smtpReady, setSmtpReady, checkSmtp } = useQueueStore();
+  const loading = lastFetchedAt === 0;
   const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
@@ -171,44 +136,27 @@ export default function Queue() {
     return 1000;
   };
 
+  // Initial fetch (stale-checked — instant if already cached)
   useEffect(() => {
-    fetchQueue();
+    storeRefresh();
   }, []);
 
-  // Recompute time-based processing states and refresh queue in background
+  // Recompute time-based processing badge display every 30s (UI only, no fetch)
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setClockTick(Date.now());
-      if (!sendingRef.current) fetchQueue();
-    }, 30000);
+    const id = window.setInterval(() => setClockTick(Date.now()), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
-  // Sync module-level cache whenever queue state changes
-  useEffect(() => { cachedQueue = queue; }, [queue]);
+  // Silent refresh when user returns to tab (replaces polling)
+  const handleVisibilityRefresh = useCallback(() => {
+    if (!sendingRef.current) storeRefresh();
+  }, [storeRefresh]);
+  useVisibilityRefresh(handleVisibilityRefresh);
 
+  // SMTP readiness check (via store)
   useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (!profile?.id) return;
-      const { data, error } = await supabase
-        .from("smtp_credentials")
-        .select("has_password")
-        .eq("user_id", profile.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (error) {
-        setSmtpReady(null);
-        return;
-      }
-      setSmtpReady(Boolean(data?.has_password));
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [profile?.id]);
+    if (profile?.id) checkSmtp(profile.id);
+  }, [profile?.id, checkSmtp]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -264,49 +212,8 @@ export default function Queue() {
 
   const STUCK_PROCESSING_MINUTES = 10;
 
-  const fetchQueue = async () => {
-    if (!initialLoadDone.current) setLoading(true);
-
-    // Auto-recover stale processing items (max delay is 3min, so >4min is considered stuck)
-    const staleCutoffIso = new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000).toISOString();
-    await supabase
-      .from("my_queue")
-      .update({
-        status: "paused",
-        last_error: "[PROCESSING_TIMEOUT] Item pausado automaticamente por travar no processamento (acima do tempo máximo esperado).",
-        last_attempt_at: new Date().toISOString(),
-        processing_started_at: null,
-      })
-      .eq("status", "processing")
-      .or(`processing_started_at.lt.${staleCutoffIso},and(processing_started_at.is.null,created_at.lt.${staleCutoffIso})`);
-
-    const { data, error } = await supabase
-      .from("my_queue")
-      .select(
-        `
-        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, processing_started_at, send_count, email_open_count, last_error,
-        public_jobs (id, job_title, company, email, city, state, visa_type),
-        manual_jobs (id, company, job_title, email, eta_number, phone)
-      `,
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching queue:", error);
-      toast({
-        title: t("queue.toasts.load_error_title"),
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      const items = (data as unknown as QueueItem[]) || [];
-      setQueue(items);
-      cachedQueue = items;
-    }
-    setLoading(false);
-    initialLoadDone.current = true;
-    moduleInitialLoadDone = true;
-  };
+  // fetchQueue is now handled by the store — this local alias is for realtime/toast usage
+  const fetchQueue = forceFetchQueue;
 
   const removeFromQueue = async (id: string) => {
     const { error } = await supabase.from("my_queue").delete().eq("id", id);
@@ -317,7 +224,7 @@ export default function Queue() {
         variant: "destructive",
       });
     } else {
-      setQueue(queue.filter((item) => item.id !== id));
+      setQueue((prev) => prev.filter((item) => item.id !== id));
       toast({
         title: t("queue.toasts.remove_success_title"),
         description: t("queue.toasts.remove_success_desc"),
