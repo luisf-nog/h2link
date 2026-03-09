@@ -305,7 +305,7 @@ export function ApplicantsTab({
   const [detailApp, setDetailApp] = useState<Application | null>(null);
   const [page, setPage] = useState(1);
   const [locationFilter, setLocationFilter] = useState<"all" | "us" | "outside">("all");
-  const [sortBy, setSortBy] = useState<"newest" | "match_desc" | "match_asc" | "exp_desc">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "match_desc" | "match_asc" | "exp_desc">("newest");
   const PAGE_SIZE = 50;
 
   const filtered = useMemo(() => {
