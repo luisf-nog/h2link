@@ -136,11 +136,21 @@ export default function JobApplicants() {
       </div>
 
       <Tabs defaultValue="applicants">
-        <TabsList className="w-full sm:w-auto overflow-x-auto flex-nowrap">
-          <TabsTrigger value="applicants" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
-          <TabsTrigger value="recruitment-log" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
-          <TabsTrigger value="compliance-report" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
+        {/* Desktop tabs */}
+        <TabsList className="hidden sm:flex w-auto">
+          <TabsTrigger value="applicants">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
+          <TabsTrigger value="recruitment-log">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
+          <TabsTrigger value="compliance-report">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
         </TabsList>
+
+        {/* Mobile dropdown */}
+        <div className="sm:hidden">
+          <TabsList className="hidden">
+            <TabsTrigger value="applicants" />
+            <TabsTrigger value="recruitment-log" />
+            <TabsTrigger value="compliance-report" />
+          </TabsList>
+        </div>
 
         <TabsContent value="applicants">
           <ApplicantsTab
