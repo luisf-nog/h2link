@@ -1,5 +1,7 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueueStore, type QueueItem } from "@/stores/useQueueStore";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { PLANS_CONFIG } from "@/config/plans.config";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
