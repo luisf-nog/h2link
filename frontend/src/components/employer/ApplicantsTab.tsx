@@ -239,8 +239,17 @@ function CandidateRow({
         <div className="hidden sm:flex items-center gap-2">
           {workAuthBadge && (
             workAuthBadge.icon === "check" ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border-2 border-emerald-500 bg-background text-foreground">
-                <span className="text-emerald-600">🇺🇸</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border-2 border-emerald-500 bg-background text-foreground whitespace-nowrap">
+                <svg width="14" height="10" viewBox="0 0 14 10" className="shrink-0 rounded-[1px]" aria-label="US Flag">
+                  <rect width="14" height="10" fill="#B22234" />
+                  <rect y="0.77" width="14" height="0.77" fill="white" />
+                  <rect y="2.31" width="14" height="0.77" fill="white" />
+                  <rect y="3.85" width="14" height="0.77" fill="white" />
+                  <rect y="5.38" width="14" height="0.77" fill="white" />
+                  <rect y="6.92" width="14" height="0.77" fill="white" />
+                  <rect y="8.46" width="14" height="0.77" fill="white" />
+                  <rect width="5.6" height="4.62" fill="#3C3B6E" />
+                </svg>
                 US Worker
               </span>
             ) : (
