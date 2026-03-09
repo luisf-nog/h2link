@@ -113,7 +113,8 @@ export default function Queue() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const initialLoadDone = useRef(false);
   const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
