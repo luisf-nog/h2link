@@ -1445,7 +1445,26 @@ const handler = async (req: Request): Promise<Response> => {
       return json(200, { ok: true, mode: "cron-fanout", dispatched: totalDispatched, errors: totalErrors });
     }
 
-    // Mode B: authenticated user request -> process only their own queue (premium only)
+    // Mode C: Internal fan-out — a single-user background invocation from cron or user mode
+    const isInternalFanOut = req.headers.get("x-internal-fan-out") === "true";
+    if (isInternalFanOut) {
+      let body: any = null;
+      try { body = await req.json(); } catch { body = null; }
+
+      const targetUserId = body?.user_id;
+      const maxItems = body?.max_items ?? 2;
+      const queueIds = Array.isArray(body?.ids) ? (body.ids as string[]).slice(0, 50) : undefined;
+
+      if (!targetUserId) {
+        return json(400, { ok: false, error: "Missing user_id in fan-out" });
+      }
+
+      console.log(`[process-queue] Fan-out worker for user ${targetUserId}, maxItems: ${maxItems}`);
+      const r = await processOneUser({ serviceClient, userId: targetUserId, maxItems, queueIds, supabaseUrl });
+      return json(200, { ok: true, mode: "fan-out-worker", ...r });
+    }
+
+    // Mode B: authenticated user request -> fire background invocation and return immediately
     const authHeader = req.headers.get("Authorization");
     console.log(`[process-queue] Modo USER detectado, Authorization header: ${authHeader ? 'presente' : 'ausente'}`);
     
@@ -1501,25 +1520,21 @@ const handler = async (req: Request): Promise<Response> => {
     const safeIds = ids ? (ids as string[]).slice(0, 50) : undefined;
     const maxItems = safeIds ? safeIds.length : 5;
     
-    console.log(`[process-queue] Processando ${maxItems} itens${safeIds ? ` (IDs específicos: ${safeIds.length})` : ' (todos pendentes)'}`);
+    console.log(`[process-queue] Disparando background worker para usuário ${userId}, ${maxItems} itens`);
 
-    // Fire-and-forget: start processing in the background and return immediately.
-    // This prevents the browser from timing out (which shows up as "Failed to fetch").
-    console.log(`[process-queue] Iniciando processamento em background...`);
-    const work = processOneUser({ serviceClient, userId, maxItems, queueIds: safeIds, supabaseUrl });
-    const waitUntil = (globalThis as any)?.EdgeRuntime?.waitUntil as undefined | ((p: Promise<unknown>) => void);
-    if (typeof waitUntil === "function") {
-      waitUntil(
-        work.catch((e) => {
-          console.error("process-queue background error", e);
-        }),
-      );
-      return json(200, { ok: true, mode: "user", queued: true, maxItems });
-    }
+    // Fire-and-forget: dispatch to a separate invocation and return immediately
+    const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+    fetch(`${supabaseUrl}/functions/v1/process-queue`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceRoleKey}`,
+        "x-internal-fan-out": "true",
+      },
+      body: JSON.stringify({ user_id: userId, max_items: maxItems, ids: safeIds }),
+    }).catch((e) => console.error(`[process-queue] Fan-out dispatch error for ${userId}:`, e));
 
-    // Fallback (if EdgeRuntime.waitUntil isn't available): process synchronously.
-    const r = await work;
-    return json(200, { ok: true, mode: "user", ...r });
+    return json(200, { ok: true, mode: "user", queued: true, maxItems });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("[process-queue] Erro no handler:", error);
