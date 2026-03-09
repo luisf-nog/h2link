@@ -338,9 +338,8 @@ export function ApplicantsTab({
         })}
       </div>
 
-      {/* List */}
       <div className="space-y-2">
-        {filtered.slice(0, 50).map((app) => (
+        {paged.map((app) => (
           <CandidateRow
             key={app.id}
             app={app}
@@ -350,10 +349,28 @@ export function ApplicantsTab({
         ))}
       </div>
 
-      {filtered.length > 50 && (
-        <p className="text-center text-sm text-muted-foreground py-4">
-          Showing 50 of {filtered.length} applicants. Use filters to narrow results.
-        </p>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(p => p - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} ({filtered.length} applicants)
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
       )}
 
       {filtered.length === 0 && (
