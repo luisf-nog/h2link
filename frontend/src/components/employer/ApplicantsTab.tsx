@@ -46,17 +46,14 @@ function avatarColor(name: string) {
 }
 
 // Simplified work auth - focus on what matters to employers
-function getWorkAuthBadge(status: string, isInUs: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
-  const usWorkerStatuses = ["us_citizen", "permanent_resident", "authorized"];
-  if (usWorkerStatuses.includes(status)) {
-    return { label: "US Worker", icon: "check" };
+function getWorkAuthBadge(status: string, isInUs: boolean, isUsWorker: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
+  if (status === "us_authorized") {
+    return { label: "US Authorized", icon: "check" };
   }
-  if (!isInUs) {
+  if (status === "outside_us") {
     return { label: "Outside US", icon: "globe" };
   }
-  if (status === "h2_visa_holder") {
-    return { label: "H-2 Returner", icon: "check" };
-  }
+  // requires_sponsorship
   return { label: "Requires H-2 Visa", icon: "alert" };
 }
 
@@ -142,7 +139,7 @@ function CandidateRow({
   onOpenDetail: (app: Application) => void;
 }) {
   const [rejectOpen, setRejectOpen] = useState(false);
-  const workAuthBadge = getWorkAuthBadge(app.work_authorization_status, app.is_in_us);
+  const workAuthBadge = getWorkAuthBadge(app.work_authorization_status, app.is_in_us, app.is_us_worker);
 
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === "rejected") {
@@ -298,7 +295,7 @@ export function ApplicantsTab({
         </div>
         <div className="bg-card border rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-foreground">
-            {apps.filter(a => ["us_citizen", "permanent_resident", "authorized"].includes(a.work_authorization_status)).length}
+            {apps.filter(a => a.work_authorization_status === "us_authorized").length}
           </div>
           <div className="text-xs text-muted-foreground">US Workers</div>
         </div>
