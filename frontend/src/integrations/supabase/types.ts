@@ -2093,7 +2093,7 @@ export type Database = {
       app_role: "admin" | "user" | "employer"
       email_risk_profile: "conservative" | "standard" | "aggressive"
       employer_status: "active" | "inactive"
-      employer_tier: "essential" | "professional" | "enterprise"
+      employer_tier: "free" | "essential" | "professional" | "enterprise"
       plan_tier: "free" | "gold" | "diamond" | "black"
     }
     CompositeTypes: {
@@ -2225,7 +2225,7 @@ export const Constants = {
       app_role: ["admin", "user", "employer"],
       email_risk_profile: ["conservative", "standard", "aggressive"],
       employer_status: ["active", "inactive"],
-      employer_tier: ["essential", "professional", "enterprise"],
+      employer_tier: ["free", "essential", "professional", "enterprise"],
       plan_tier: ["free", "gold", "diamond", "black"],
     },
   },
