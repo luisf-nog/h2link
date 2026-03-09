@@ -1998,7 +1998,18 @@
       "conv_rate": "Conv. Rate",
       "applicants": "Applicants",
       "enterprise_cta": "Need a larger number of jobs?",
-      "enterprise_link": "Contact our Enterprise team"
+      "enterprise_link": "Contact our Enterprise team",
+      "cant_activate_limit": "You've reached your plan's active job limit. Deactivate another job first or upgrade your plan.",
+      "activated": "Job activated",
+      "deactivated": "Job deactivated",
+      "deleted": "Job deleted successfully",
+      "delete_title": "Delete Job",
+      "delete_desc": "Are you sure you want to delete \"{{title}}\"? This will permanently remove the job and all its applicant data. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm_delete": "Delete",
+      "delete": "Delete job",
+      "activate": "Activate",
+      "deactivate": "Deactivate"
     },
     "plans": {
       "title": "Employer Plans",

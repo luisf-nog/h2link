@@ -1998,7 +1998,18 @@
       "conv_rate": "Tasa Conv.",
       "applicants": "Candidatos",
       "enterprise_cta": "¿Necesitas más empleos?",
-      "enterprise_link": "Contacta a nuestro equipo Enterprise"
+      "enterprise_link": "Contacta a nuestro equipo Enterprise",
+      "cant_activate_limit": "Alcanzaste el límite de empleos activos de tu plan. Desactiva otro empleo primero o mejora tu plan.",
+      "activated": "Empleo activado",
+      "deactivated": "Empleo desactivado",
+      "deleted": "Empleo eliminado exitosamente",
+      "delete_title": "Eliminar Empleo",
+      "delete_desc": "¿Estás seguro de que deseas eliminar \"{{title}}\"? Esto eliminará permanentemente el empleo y todos los datos de candidatos. Esta acción no se puede deshacer.",
+      "cancel": "Cancelar",
+      "confirm_delete": "Eliminar",
+      "delete": "Eliminar empleo",
+      "activate": "Activar",
+      "deactivate": "Desactivar"
     },
     "plans": {
       "title": "Planes para Empleadores",

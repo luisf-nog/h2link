@@ -1998,7 +1998,18 @@
       "conv_rate": "Taxa Conv.",
       "applicants": "Candidatos",
       "enterprise_cta": "Precisa de mais vagas?",
-      "enterprise_link": "Fale com nosso time Enterprise"
+      "enterprise_link": "Fale com nosso time Enterprise",
+      "cant_activate_limit": "Você atingiu o limite de vagas ativas do seu plano. Desative outra vaga primeiro ou faça upgrade.",
+      "activated": "Vaga ativada",
+      "deactivated": "Vaga desativada",
+      "deleted": "Vaga excluída com sucesso",
+      "delete_title": "Excluir Vaga",
+      "delete_desc": "Tem certeza que deseja excluir \"{{title}}\"? Isso removerá permanentemente a vaga e todos os dados de candidatos. Esta ação não pode ser desfeita.",
+      "cancel": "Cancelar",
+      "confirm_delete": "Excluir",
+      "delete": "Excluir vaga",
+      "activate": "Ativar",
+      "deactivate": "Desativar"
     },
     "plans": {
       "title": "Planos para Empregadores",
