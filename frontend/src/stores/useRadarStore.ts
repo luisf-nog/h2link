@@ -25,7 +25,7 @@ interface RadarStore {
   updateStats: (
     userId: string,
     params: { visaType: string; stateFilter: string; minWage: string; maxExperience: string; groupFilter: string },
-    t: (key: string, fallback?: string) => string,
+    t: any,
   ) => Promise<void>;
 }
 
