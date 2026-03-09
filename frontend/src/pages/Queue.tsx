@@ -396,7 +396,12 @@ export default function Queue() {
     return data;
   };
 
-  const sendQueueItems = async (items: QueueItem[]) => {
+  const resetConsecutiveErrors = async () => {
+    if (!profile?.id) return;
+    await supabase.from("profiles").update({ consecutive_errors: 0 }).eq("id", profile.id);
+  };
+
+  const sendQueueItems = async (items: QueueItem[], lazyActivate = false) => {
     const guard = await ensureCanSend();
     if (!guard.ok) return;
 
@@ -407,7 +412,12 @@ export default function Queue() {
     let creditsRemaining = remainingToday;
     let consecutiveSmtpFailures = 0;
 
-    setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
+    // Reset stale consecutive_errors before any batch send
+    await resetConsecutiveErrors();
+
+    if (!lazyActivate) {
+      setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
+    }
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
