@@ -66,6 +66,7 @@ export default function JobApplicants() {
     wage_rate: string | null;
   }>({} as any);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("applicants");
 
   const loadData = async () => {
     if (!jobId) return;
