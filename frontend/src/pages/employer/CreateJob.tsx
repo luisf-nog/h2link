@@ -723,6 +723,25 @@ export default function CreateJob() {
                     </div>
                   </div>
 
+                  {/* Consular Only - Only for H-2 visas */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
+                      <div className="space-y-0.5 pr-4">
+                        <Label className="text-base font-medium cursor-pointer" htmlFor="consular_only">
+                          Visto exclusivo para candidatos no exterior
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Marca esta vaga como disponível apenas para candidatos que ainda estão fora dos EUA (processamento consular). Candidatos já nos EUA serão automaticamente desqualificados.
+                        </p>
+                      </div>
+                      <Switch
+                        id="consular_only"
+                        checked={form.consular_only}
+                        onCheckedChange={(v) => setForm((p) => ({ ...p, consular_only: v }))}
+                      />
+                    </div>
+                  </div>
+
                   <div className="pt-6 border-t space-y-4">
                     <Label className="text-base">{t("employer.create_job.physical_requirements")}</Label>
                     <div className="grid grid-cols-1 gap-3">
