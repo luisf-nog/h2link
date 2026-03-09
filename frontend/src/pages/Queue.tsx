@@ -630,6 +630,7 @@ export default function Queue() {
             status: "failed",
             last_error: message,
             last_attempt_at: now,
+            processing_started_at: null,
           })
           .eq("id", item.id);
 
