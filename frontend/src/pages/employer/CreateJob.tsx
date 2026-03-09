@@ -647,6 +647,16 @@ export default function CreateJob() {
                           <SelectItem value="12">{t("employer.create_job.exp_12m")}</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          id="req_experience"
+                          checked={form.req_experience}
+                          onCheckedChange={(v) => setForm((p) => ({ ...p, req_experience: v }))}
+                        />
+                        <Label htmlFor="req_experience" className="text-sm text-muted-foreground cursor-pointer">
+                          Requisito eliminatório (exclui candidatos sem experiência)
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
