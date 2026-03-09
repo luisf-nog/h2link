@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { HELP_EMAIL } from '@/config/app.config';
 import { Button } from '@/components/ui/button';
 import { WhatsNewDialog } from '@/components/dialogs/WhatsNewDialog';
+import { useIsEmployer } from '@/hooks/useIsEmployer';
 
 export function AppFooter() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const { isEmployer } = useIsEmployer();
 
   return (
     <>
@@ -22,15 +24,17 @@ export function AppFooter() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-xs text-muted-foreground hover:text-primary h-8"
-              onClick={() => setShowWhatsNew(true)}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {t('whatsNew.footer_link', "What's New")}
-            </Button>
+            {!isEmployer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground hover:text-primary h-8"
+                onClick={() => setShowWhatsNew(true)}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {t('whatsNew.footer_link', "What's New")}
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
               <span>{t('common.helpExpanded', 'Dúvidas ou sugestões? Entre em contato')}: {HELP_EMAIL}</span>
@@ -38,7 +42,7 @@ export function AppFooter() {
           </div>
         </div>
       </footer>
-      <WhatsNewDialog open={showWhatsNew} onOpenChange={setShowWhatsNew} />
+      {!isEmployer && <WhatsNewDialog open={showWhatsNew} onOpenChange={setShowWhatsNew} />}
     </>
   );
 }
