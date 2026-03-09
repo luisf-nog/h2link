@@ -147,7 +147,8 @@ export default function Auth() {
       confirmPassword: z.string().min(6).max(200),
       companyName: z.string().trim().min(1).max(200),
       legalEntityName: z.string().trim().max(200).optional().default(""),
-      einTaxId: z.string().trim().max(30).optional().default(""),
+      einTaxId: z.string().trim().max(30).optional().default("")
+        .refine((v) => !v || /^\d{2}-\d{7}$/.test(v), { message: "invalid_ein" }),
       companySize: z.string().trim().min(1),
       industry: z.string().trim().min(1).max(120),
       website: z.string().trim().max(255).optional().default(""),
