@@ -53,8 +53,8 @@ function getWorkAuthBadge(status: string, isInUs: boolean, isUsWorker: boolean):
   if (status === "outside_us") {
     return { label: "Outside US", icon: "globe" };
   }
-  // requires_sponsorship
-  return { label: "Requires H-2 Visa", icon: "alert" };
+  // requires_sponsorship - person is in the US but needs visa
+  return { label: "US Worker", icon: "check" };
 }
 
 // Match score color - simple 3-tier system (90+, 70-89, <70)
