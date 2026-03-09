@@ -18,7 +18,7 @@ interface RadarStore {
   setGroupedCategories: (cats: Record<string, { items: any[]; totalJobs: number }>) => void;
 
   /** Full init: loads profile + stats + matches. Stale-checked. */
-  initRadar: (userId: string, t: (key: string, fallback?: string) => string) => Promise<void>;
+  initRadar: (userId: string, t: any) => Promise<void>;
   /** Force-refresh matches only */
   fetchMatches: (userId: string) => Promise<void>;
   /** Force-refresh stats */
