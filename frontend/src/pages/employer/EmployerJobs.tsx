@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail, Trash2 } from "lucide-react";
+import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail, Trash2, Share2, Copy, Check } from "lucide-react";
 import { getTierJobLimit } from "@/config/employer-plans.config";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
