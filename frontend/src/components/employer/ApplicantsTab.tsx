@@ -266,9 +266,35 @@ export function ApplicantsTab({
   const [filter, setFilter] = useState("all");
   const [detailApp, setDetailApp] = useState<Application | null>(null);
   const [page, setPage] = useState(1);
+  const [locationFilter, setLocationFilter] = useState<"all" | "us" | "outside">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "match_desc" | "match_asc" | "exp_desc">("newest");
   const PAGE_SIZE = 50;
 
-  const filtered = filter === "all" ? apps : apps.filter((a) => a.application_status === filter);
+  const filtered = useMemo(() => {
+    let result = filter === "all" ? apps : apps.filter((a) => a.application_status === filter);
+    
+    if (locationFilter === "us") {
+      result = result.filter(a => a.work_authorization_status !== "outside_us");
+    } else if (locationFilter === "outside") {
+      result = result.filter(a => a.work_authorization_status === "outside_us");
+    }
+
+    switch (sortBy) {
+      case "match_desc":
+        result = [...result].sort((a, b) => (b.application_match_score ?? 0) - (a.application_match_score ?? 0));
+        break;
+      case "match_asc":
+        result = [...result].sort((a, b) => (a.application_match_score ?? 0) - (b.application_match_score ?? 0));
+        break;
+      case "exp_desc":
+        result = [...result].sort((a, b) => b.months_experience - a.months_experience);
+        break;
+      default: // newest
+        break;
+    }
+    return result;
+  }, [apps, filter, locationFilter, sortBy]);
+
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
