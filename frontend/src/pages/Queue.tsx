@@ -104,9 +104,13 @@ export default function Queue() {
 
   const planTier = profile?.plan_tier || "free";
   const isFreeUser = planTier === "free";
+  const warmup = useWarmupStatus();
   const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
-  const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
-  const creditsUsedToday = profile?.credits_used_today || 0;
+  // For paid plans, use the effective warm-up limit instead of the plan hard cap
+  const dailyLimitTotal = isFreeUser
+    ? (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus
+    : warmup.effectiveLimit;
+  const creditsUsedToday = isFreeUser ? (profile?.credits_used_today || 0) : warmup.emailsSentToday;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
   const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
