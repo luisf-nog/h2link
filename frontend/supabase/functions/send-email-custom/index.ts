@@ -769,12 +769,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ===== INCREMENT CREDITS AFTER SUCCESSFUL SEND =====
-    // Increment profile credits
+    // Increment profile credits AND reset consecutive_errors on success
     await serviceClient
       .from("profiles")
       .update({ 
         credits_used_today: creditsUsed + 1, 
-        credits_reset_date: today 
+        credits_reset_date: today,
+        consecutive_errors: 0,
       } as any)
       .eq("id", userId);
     
