@@ -124,21 +124,21 @@ export default function JobApplicants() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-1 sm:px-0">
       <Button variant="ghost" size="sm" onClick={() => navigate("/employer/jobs")}>
         <ArrowLeft className="h-4 w-4 mr-1" /> {t("employer.applicants.back_to_jobs")}
       </Button>
 
       <div>
-        <h1 className="text-xl font-bold">{jobTitle}</h1>
-        {dolCaseNumber && <p className="text-sm text-muted-foreground">{t("employer.applicants.dol_case", { number: dolCaseNumber })}</p>}
+        <h1 className="text-lg sm:text-xl font-bold leading-tight">{jobTitle}</h1>
+        {dolCaseNumber && <p className="text-xs sm:text-sm text-muted-foreground">{t("employer.applicants.dol_case", { number: dolCaseNumber })}</p>}
       </div>
 
       <Tabs defaultValue="applicants">
-        <TabsList>
-          <TabsTrigger value="applicants">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
-          <TabsTrigger value="recruitment-log">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
-          <TabsTrigger value="compliance-report">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
+        <TabsList className="w-full sm:w-auto overflow-x-auto flex-nowrap">
+          <TabsTrigger value="applicants" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
+          <TabsTrigger value="recruitment-log" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
+          <TabsTrigger value="compliance-report" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="applicants">
