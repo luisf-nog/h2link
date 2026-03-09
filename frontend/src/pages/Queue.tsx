@@ -171,6 +171,15 @@ export default function Queue() {
     fetchQueue();
   }, []);
 
+  // Recompute time-based processing states and refresh queue in background
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setClockTick(Date.now());
+      fetchQueue();
+    }, 30000);
+    return () => window.clearInterval(id);
+  }, []);
+
   // Sync module-level cache whenever queue state changes
   useEffect(() => { cachedQueue = queue; }, [queue]);
 
