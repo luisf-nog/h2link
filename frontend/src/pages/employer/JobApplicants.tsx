@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ApplicantsTab } from "@/components/employer/ApplicantsTab";
@@ -65,6 +66,7 @@ export default function JobApplicants() {
     wage_rate: string | null;
   }>({} as any);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("applicants");
 
   const loadData = async () => {
     if (!jobId) return;
@@ -134,12 +136,27 @@ export default function JobApplicants() {
         {dolCaseNumber && <p className="text-xs sm:text-sm text-muted-foreground">{t("employer.applicants.dol_case", { number: dolCaseNumber })}</p>}
       </div>
 
-      <Tabs defaultValue="applicants">
-        <TabsList className="w-full sm:w-auto overflow-x-auto flex-nowrap">
-          <TabsTrigger value="applicants" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
-          <TabsTrigger value="recruitment-log" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
-          <TabsTrigger value="compliance-report" className="text-xs sm:text-sm whitespace-nowrap">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {/* Desktop tabs */}
+        <TabsList className="hidden sm:flex w-auto">
+          <TabsTrigger value="applicants">{t("employer.applicants.tab_applicants", { count: apps.length })}</TabsTrigger>
+          <TabsTrigger value="recruitment-log">{t("employer.applicants.tab_recruitment_log")}</TabsTrigger>
+          <TabsTrigger value="compliance-report">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
         </TabsList>
+
+        {/* Mobile dropdown */}
+        <div className="sm:hidden">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="applicants" className="text-xs">{t("employer.applicants.tab_applicants", { count: apps.length })}</SelectItem>
+              <SelectItem value="recruitment-log" className="text-xs">{t("employer.applicants.tab_recruitment_log")}</SelectItem>
+              <SelectItem value="compliance-report" className="text-xs">{t("employer.applicants.tab_compliance_report")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <TabsContent value="applicants">
           <ApplicantsTab
