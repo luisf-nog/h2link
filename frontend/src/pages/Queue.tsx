@@ -1066,6 +1066,7 @@ export default function Queue() {
                         </TableCell>
 
                         <TableCell className="text-center">
+                          {item.send_count > 0 || item.status === "sent" ? (
                           <div className="flex items-center justify-center gap-2">
                             {/* Email open tracking */}
                             <Tooltip>
@@ -1122,6 +1123,9 @@ export default function Queue() {
                               </TooltipContent>
                             </Tooltip>
                           </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
 
                         <TableCell className="text-right">

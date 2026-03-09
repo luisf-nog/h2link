@@ -176,7 +176,8 @@ export function MobileQueueCard({
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          {/* Tracking Icons */}
+          {/* Tracking Icons - only show if email was sent at least once */}
+          {(item.send_count > 0 || item.status === "sent") ? (
           <div className="flex items-center gap-3">
             {/* Email open tracking */}
             <Tooltip>
@@ -243,6 +244,9 @@ export function MobileQueueCard({
               </TooltipContent>
             </Tooltip>
           </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
