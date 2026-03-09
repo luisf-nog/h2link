@@ -677,7 +677,10 @@ export default function Queue() {
       const currentItem = items.find((i) => i.id === sentId);
       const newCount = (currentItem?.send_count ?? 0) + 1;
       const now = new Date().toISOString();
-      await supabase.from("my_queue").update({ status: "sent", sent_at: now, send_count: newCount }).eq("id", sentId);
+      await supabase
+        .from("my_queue")
+        .update({ status: "sent", sent_at: now, send_count: newCount, processing_started_at: null })
+        .eq("id", sentId);
 
       await supabase.from("queue_send_history").insert({
         queue_id: sentId,
