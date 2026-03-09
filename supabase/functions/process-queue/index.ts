@@ -1279,6 +1279,7 @@ async function processOneUser(params: {
           sent_at: new Date().toISOString(),
           processing_started_at: null,
           last_error: null,
+          send_count: (row as any).send_count ? Number((row as any).send_count) + 1 : 1,
         } as any)
         .eq("id", row.id)) as any;
 
