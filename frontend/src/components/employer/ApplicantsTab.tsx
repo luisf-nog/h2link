@@ -253,8 +253,12 @@ export function ApplicantsTab({
 }) {
   const [filter, setFilter] = useState("all");
   const [detailApp, setDetailApp] = useState<Application | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const filtered = filter === "all" ? apps : apps.filter((a) => a.application_status === filter);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // counts per status for badge
   const counts = apps.reduce<Record<string, number>>((acc, a) => {
@@ -318,7 +322,7 @@ export function ApplicantsTab({
           return (
             <button
               key={f.value}
-              onClick={() => setFilter(f.value)}
+              onClick={() => { setFilter(f.value); setPage(1); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                 filter === f.value
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
@@ -334,9 +338,8 @@ export function ApplicantsTab({
         })}
       </div>
 
-      {/* List */}
       <div className="space-y-2">
-        {filtered.slice(0, 50).map((app) => (
+        {paged.map((app) => (
           <CandidateRow
             key={app.id}
             app={app}
@@ -346,10 +349,28 @@ export function ApplicantsTab({
         ))}
       </div>
 
-      {filtered.length > 50 && (
-        <p className="text-center text-sm text-muted-foreground py-4">
-          Showing 50 of {filtered.length} applicants. Use filters to narrow results.
-        </p>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(p => p - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} ({filtered.length} applicants)
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
       )}
 
       {filtered.length === 0 && (
