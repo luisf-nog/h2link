@@ -983,7 +983,7 @@ async function processOneUser(params: {
         .from("my_queue")
         .update({
           status: "paused",
-          last_error: "Pausado por 3 erros consecutivos. Verifique SMTP e tente novamente.",
+          last_error: "[CIRCUIT_BREAKER] Pausado por 3+ erros consecutivos. Verifique SMTP e tente novamente.",
         } as any)
         .eq("user_id", userId)
         .eq("status", "pending")) as any;

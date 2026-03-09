@@ -1,71 +1,164 @@
 
 
-## Investigação: Circuit Breaker no `send-email-custom` pausa itens já enviados
+# H2 Linker B2B Pivot -- Phase 1: Foundation
 
-### Problema Confirmado
+## Overview
+Add an employer portal alongside the existing worker system. Phase 1 covers: database schema, role separation (RBAC), employer profiles, sponsored jobs, guest application flow, and Stripe subscription billing for employers.
 
-O código em `send-email-custom/index.ts` (linhas 837-842) tem um bug crítico:
+## Pricing (USD only for employers, subscription model)
 
-```typescript
-// Pause all pending queue items
-await serviceClient
-  .from("my_queue")
-  .update({ status: "paused" })
-  .eq("user_id", userId)
-  .eq("status", "pending");
+| Tier | Monthly | Annual |
+|------|---------|--------|
+| Essential | $49/mo | $470/yr |
+| Professional | $99/mo | $950/yr |
+| Enterprise | $149/mo | $1,430/yr |
+
+---
+
+## Step 1: Stripe Products & Prices
+
+Create 6 Stripe prices (monthly + annual for each tier) using Stripe tools before writing any code.
+
+---
+
+## Step 2: Database Migration
+
+### New Enum
+```text
+employer_tier: 'essential' | 'professional' | 'enterprise'
+employer_status: 'active' | 'inactive'
 ```
 
-Quando o circuit breaker dispara (3+ `consecutive_errors`), ele pausa **todos** os itens com `status = "pending"` do usuário. Isso inclui itens que já foram enviados anteriormente e cujo status foi resetado para `"pending"` via o botão "Reenviar". Esses itens carregam dados de tracking antigos (`opened_at`, `email_open_count`, `profile_viewed_at`) que não são limpos, gerando a inconsistência visual que você viu: vagas "pausadas" mostrando "2x visualização".
+### New Tables
 
-### Cenário completo do bug
+**employer_profiles**
+- id (uuid PK), user_id (uuid, references auth.users, unique), company_name, tier (employer_tier), is_verified (bool, default false), contact_email, contact_phone, status (employer_status, default 'active'), stripe_customer_id, stripe_subscription_id, created_at, updated_at
+- Indexes: user_id, tier, status
 
-1. Item enviado com sucesso (status `sent`, tracking acumula aberturas)
-2. Usuário clica "Reenviar" → status volta para `pending`, mas `opened_at`, `email_open_count`, `profile_viewed_at` **não são resetados**
-3. Outro envio falha com erro SMTP crítico
-4. `consecutive_errors` chega a 3
-5. Circuit breaker pausa todos os `pending` → esse item volta a `paused` com dados de tracking "fantasma"
+**sponsored_jobs**
+- id (uuid PK), employer_id (uuid FK -> employer_profiles), title, description, location, start_date, end_date, is_active (bool, default true), is_sponsored (bool, default true), priority_level (text: free/essential/professional/enterprise), req_english, req_experience, req_drivers_license, consular_only (booleans), view_count, click_count (integers, default 0), created_at
+- Indexes: employer_id, is_active, priority_level, created_at
 
-### Mesmo problema no `process-queue`
+**job_applications** (immutable -- no delete)
+- id (uuid PK), job_id (FK -> sponsored_jobs), full_name, email, phone, has_english, has_experience, has_license, is_in_us (booleans), citizenship_status (text enum), employer_status (text: new/contacted/rejected, default 'new'), rejection_reason, score_color (text: green/yellow/red), created_at
+- UNIQUE(email, job_id)
+- Indexes: job_id, employer_status, citizenship_status, created_at
 
-O `process-queue/index.ts` (linhas 980-989) tem a mesma lógica:
-```typescript
-if (consecutiveErrors >= 3) {
-  await serviceClient.from("my_queue")
-    .update({ status: "paused", last_error: "..." })
-    .eq("user_id", userId)
-    .eq("status", "pending");
-}
+**audit_logs** (immutable -- INSERT only, no UPDATE/DELETE)
+- id (uuid PK), job_id, application_id, employer_id (uuid FK), action (text: contacted/rejected), reason, created_at
+
+### Add 'employer' to existing app_role enum
+```sql
+ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'employer';
 ```
 
-### Plano de Correção
+### RLS Policies
 
-#### 1. Limpar dados de tracking ao reenviar (Frontend - `Queue.tsx`)
+- **employer_profiles**: SELECT/UPDATE only where user_id = auth.uid()
+- **sponsored_jobs**: Employer CRUD on own jobs; Public SELECT where is_active = true
+- **job_applications**: Anon INSERT only; Employer SELECT/UPDATE(employer_status only) on own jobs' applications
+- **audit_logs**: Employer SELECT on own jobs; INSERT via server function only
 
-Quando o usuário clica "Reenviar", resetar os campos de tracking junto com o status:
-- `opened_at: null`
-- `email_open_count: 0`
-- `profile_viewed_at: null`
-- `send_count: 0` (ou manter para o limite de tentativas)
-- `tracking_id: crypto.randomUUID()` (gerar novo tracking para não misturar dados)
+### DB Functions
+- `check_employer_job_limit(employer_id)`: enforces tier-based active job limits (1/3/5)
+- `compute_application_score(job_id, application_id)`: server-side green/yellow/red scoring
+- `deactivate_employer_jobs(employer_id)`: sets all sponsored jobs to free when subscription lapses
 
-#### 2. Adicionar `paused_reason` ao circuit breaker (Edge Functions)
+---
 
-Nos dois edge functions (`send-email-custom` e `process-queue`), ao pausar itens, incluir no `last_error` uma flag clara como `"[CIRCUIT_BREAKER]"` para que o frontend saiba diferenciar "pausado pelo sistema" vs "outro motivo".
+## Step 3: Edge Functions
 
-#### 3. Validar status no tracker (`track-email-open`)
+### create-employer-checkout
+- Accepts tier + billing_interval (month/year)
+- Creates Stripe checkout session with mode: 'subscription'
+- Stores user_id in metadata
 
-Adicionar verificação: só incrementar `email_open_count` e `opened_at` no `my_queue` se o item tem `status = 'sent'`. Isso previne que tracking de emails antigos polua itens que voltaram a `pending`/`paused`.
+### check-employer-subscription
+- Queries Stripe for active subscription by customer email
+- Returns: subscribed, tier, subscription_end
+- Called on login + periodically
 
-#### 4. Resetar `consecutive_errors` após sucesso
+### employer-portal (customer portal)
+- Creates Stripe billing portal session for subscription management
 
-Verificar se o `send-email-custom` reseta `consecutive_errors = 0` após um envio bem-sucedido. Se não, corrigir para evitar que o circuit breaker dispare prematuramente em sessões futuras.
+### submit-application (public, no auth)
+- Validates honeypot field, rate limits by IP
+- Normalizes email, checks UNIQUE(email, job_id)
+- Computes score_color server-side
+- Inserts into job_applications
 
-### Arquivos a editar
+### Update existing stripe-webhook
+- Handle `customer.subscription.updated` and `customer.subscription.deleted` events
+- On cancellation/failure: update employer_profiles.status = 'inactive', call deactivate_employer_jobs()
+- On reactivation: restore status = 'active'
 
-| Arquivo | Mudança |
-|---------|---------|
-| `frontend/src/pages/Queue.tsx` | Limpar tracking ao reenviar (handleSendOne + handleRetryAllPaused) |
-| `frontend/supabase/functions/send-email-custom/index.ts` | Resetar `consecutive_errors=0` após sucesso; melhorar `last_error` no circuit breaker |
-| `frontend/supabase/functions/process-queue/index.ts` | Melhorar `last_error` no circuit breaker |
-| `frontend/supabase/functions/track-email-open/index.ts` | Validar `status='sent'` antes de atualizar tracking |
+---
+
+## Step 4: Frontend -- Role-Based Routing
+
+### Auth Page Updates
+- Add role selector on signup: "I'm looking for work" (worker) vs "I'm hiring" (employer)
+- Store role in user_roles table on signup
+- Worker signup keeps current flow (no SMTP required initially per spec -- but existing onboarding stays for now)
+- Employer signup skips SMTP onboarding entirely
+
+### Route Guards
+- New `EmployerRoute` component that checks user role
+- Worker routes remain unchanged
+- Employer routes: /employer/dashboard, /employer/jobs, /employer/jobs/:id/applicants, /employer/plans, /employer/settings
+
+---
+
+## Step 5: Frontend -- Employer Pages
+
+### Employer Plans Page (/employer/plans)
+- 3 cards: Essential ($49/mo), Professional ($99/mo), Enterprise ($149/mo)
+- Annual toggle showing discounted prices
+- Checkout via create-employer-checkout edge function
+
+### Employer Dashboard (/employer/dashboard)
+- Active jobs count (with tier limit indicator)
+- Total applications count
+- Quick actions: Create Job, View Applicants
+- When status = 'inactive': blurred dashboard with "Reactivate" CTA
+
+### Create/Edit Job (/employer/jobs/new)
+- Form: title, description, location, dates, screening toggles
+- Tier limit enforcement (1/3/5 active jobs)
+
+### Applicant Table (/employer/jobs/:id/applicants)
+- Columns: Name, Email, Phone, Citizenship Badge, Score (traffic light), Status, Date
+- Contact buttons (mailto, tel) that log to audit_logs
+- Reject button with modal + reason dropdown
+- Paginated, sortable
+
+### Guest Application Page (/apply/:jobId)
+- Public route, no login required
+- Fetches job details, renders form based on screening toggles
+- Honeypot field, basic rate limiting
+- Success message after submission
+
+---
+
+## Step 6: Hub Integration
+
+Update the existing Jobs page to display sponsored jobs with priority ordering:
+1. Enterprise (Gold badge)
+2. Professional (Silver badge)
+3. Essential (Sponsored badge)
+4. Free (existing DOL jobs)
+
+Add "Sponsored" / "Verified Employer" badges to job cards.
+
+---
+
+## Technical Notes
+
+- All existing worker functionality (mailing queue, worker plans, radar, etc.) remains completely untouched
+- Employer billing is subscription-based (Stripe subscriptions), separate from worker one-time payments
+- The profiles table is NOT modified -- employer data lives in employer_profiles
+- Role check uses existing `has_role()` function and user_roles table
+- Scoring computation happens server-side only (edge function), never on the client
+- US citizen/permanent resident applications get "Priority Review" badge, pinned above others
+- Compliance disclaimer shown on screening setup page
 

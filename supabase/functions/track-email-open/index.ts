@@ -210,9 +210,11 @@ serve(async (req: Request): Promise<Response> => {
       if (historyRow.queue_id) {
         const { data: qRow } = await db
           .from("my_queue")
-          .select("id, opened_at, email_open_count")
+          .select("id, opened_at, email_open_count, status")
           .eq("id", historyRow.queue_id).single();
-        if (qRow) {
+        // Only update tracking on my_queue if the item is currently 'sent'
+        // This prevents ghost tracking data on items that were re-queued (pending/paused)
+        if (qRow && qRow.status === "sent") {
           await db.from("my_queue").update({
             email_open_count: (qRow.email_open_count ?? 0) + 1,
             ...(!qRow.opened_at && { opened_at: now.toISOString() }),

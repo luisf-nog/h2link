@@ -769,12 +769,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ===== INCREMENT CREDITS AFTER SUCCESSFUL SEND =====
-    // Increment profile credits
+    // Increment profile credits AND reset consecutive_errors on success
     await serviceClient
       .from("profiles")
       .update({ 
         credits_used_today: creditsUsed + 1, 
-        credits_reset_date: today 
+        credits_reset_date: today,
+        consecutive_errors: 0,
       } as any)
       .eq("id", userId);
     
@@ -834,10 +835,10 @@ const handler = async (req: Request): Promise<Response> => {
               // Auto-downgrade: reset to conservative profile and limit
               await serviceClient.rpc("downgrade_smtp_warmup", { p_user_id: userId });
               
-              // Pause all pending queue items
+              // Pause all pending queue items with circuit breaker flag
               await serviceClient
                 .from("my_queue")
-                .update({ status: "paused" } as any)
+                .update({ status: "paused", last_error: "[CIRCUIT_BREAKER] Pausado por 3+ erros SMTP consecutivos. Verifique suas credenciais SMTP." } as any)
                 .eq("user_id", userId)
                 .eq("status", "pending");
               
