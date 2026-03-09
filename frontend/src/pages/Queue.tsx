@@ -37,49 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface QueueItem {
-  id: string;
-  status: string;
-  sent_at: string | null;
-  opened_at?: string | null;
-  profile_viewed_at?: string | null;
-  tracking_id?: string;
-  created_at: string;
-  processing_started_at?: string | null;
-  send_count: number;
-  email_open_count?: number | null;
-  last_error?: string | null;
-  public_jobs: {
-    id: string;
-    job_title: string;
-    company: string;
-    email: string;
-    city: string;
-    state: string;
-    visa_type?: string | null;
-  } | null;
-  manual_jobs: {
-    id: string;
-    company: string;
-    job_title: string;
-    email: string;
-    eta_number: string | null;
-    phone: string | null;
-  } | null;
-}
-
-type EmailTemplate = {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-};
-
-const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
-
-// Module-level cache to survive component remounts (navigation)
-let cachedQueue: QueueItem[] | null = null;
-let moduleInitialLoadDone = false;
+// QueueItem type is now imported from useQueueStore
 
 // --- VARIAÇÕES DE TEXTO SOBRE DOL PROCESSING (ANTI-SPAM) ---
 // Focadas no processo do Departamento de Trabalho (DOL), sem usar termos internos.
