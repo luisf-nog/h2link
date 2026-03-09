@@ -466,16 +466,8 @@ export default function Queue() {
     // Reset stale consecutive_errors before any batch send
     await resetConsecutiveErrors();
 
-    if (!lazyActivate) {
-      const itemIds = items.map((i) => i.id);
-      await supabase
-        .from("my_queue")
-        .update({ status: "processing" })
-        .in("id", itemIds)
-        .eq("status", "pending");
-
-      setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
-    }
+    // IMPORTANT: do not pre-mark the whole batch as processing.
+    // We activate per-item right before each send to avoid stuck "processing" states on pause/break.
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
