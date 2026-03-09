@@ -931,6 +931,7 @@ export default function Queue() {
             {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
           </Button>
         </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
