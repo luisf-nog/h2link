@@ -30,6 +30,10 @@ import {
   Users,
   FileText,
   Globe,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Application } from "@/pages/employer/JobApplicants";
