@@ -50,7 +50,7 @@ export function useIsEmployer(): UseIsEmployerResult {
           ? {
               id: profileRes.data.id,
               company_name: profileRes.data.company_name,
-              tier: profileRes.data.tier as "essential" | "professional" | "enterprise",
+              tier: profileRes.data.tier as "free" | "essential" | "professional" | "enterprise",
               status: profileRes.data.status as "active" | "inactive",
               is_verified: profileRes.data.is_verified,
             }
