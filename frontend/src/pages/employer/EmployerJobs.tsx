@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail, Trash2 } from "lucide-react";
+import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail, Trash2, Share2, Copy, Check } from "lucide-react";
 import { getTierJobLimit } from "@/config/employer-plans.config";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -46,6 +46,21 @@ export default function EmployerJobs() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SponsoredJob | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const getApplyUrl = (jobId: string) => `https://h2linker.com/apply/${jobId}`;
+
+  const handleCopyLink = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(getApplyUrl(jobId));
+      setCopiedId(jobId);
+      toast({ title: t("employer.jobs.link_copied", "Link copied!") });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+  };
 
   const loadJobs = async () => {
     if (!employerProfile) return;
@@ -301,6 +316,20 @@ export default function EmployerJobs() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8"
+                        onClick={(e) => handleCopyLink(job.id, e)}
+                        aria-label={t("employer.jobs.copy_link", "Copy share link")}
+                      >
+                        {copiedId === job.id ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Share2 className="h-4 w-4" />
+                        )}
+                      </Button>
+
                       <div className="flex flex-col items-center gap-0.5">
                         <Switch
                           checked={job.is_active}
