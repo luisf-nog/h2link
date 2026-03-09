@@ -432,6 +432,15 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
+      // Check if user paused sending
+      if (sendCancelledRef.current) {
+        toast({
+          title: t("queue.toasts.paused_title", { defaultValue: "Envio pausado" }),
+          description: t("queue.toasts.paused_desc", { count: sentIds.length, defaultValue: "{{count}} email(s) enviado(s) antes da pausa." }),
+        });
+        break;
+      }
+
       if (creditsRemaining <= 0) {
         toast({
           title: t("queue.toasts.daily_limit_reached_title"),
