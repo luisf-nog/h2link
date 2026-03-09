@@ -20,11 +20,11 @@ describe("getDelayMs", () => {
     expect(getDelayMs("gold")).toBe(15_000);
   });
 
-  it("retorna entre 15-45s para plano diamond", () => {
+  it("retorna entre 1-3 minutos para plano diamond", () => {
     for (let i = 0; i < 100; i++) {
       const delay = getDelayMs("diamond");
-      expect(delay).toBeGreaterThanOrEqual(15_000);
-      expect(delay).toBeLessThanOrEqual(45_000);
+      expect(delay).toBeGreaterThanOrEqual(60_000);
+      expect(delay).toBeLessThanOrEqual(180_000);
     }
   });
 
