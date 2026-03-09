@@ -146,28 +146,10 @@ export default function Queue() {
   }, [storeRefresh]);
   useVisibilityRefresh(handleVisibilityRefresh);
 
+  // SMTP readiness check (via store)
   useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (!profile?.id) return;
-      const { data, error } = await supabase
-        .from("smtp_credentials")
-        .select("has_password")
-        .eq("user_id", profile.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (error) {
-        setSmtpReady(null);
-        return;
-      }
-      setSmtpReady(Boolean(data?.has_password));
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [profile?.id]);
+    if (profile?.id) checkSmtp(profile.id);
+  }, [profile?.id, checkSmtp]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
