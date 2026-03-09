@@ -114,6 +114,12 @@ export default function CreateJob() {
     req_full_contract_availability: false,
     req_travel_worksite: false,
     req_background_check: false,
+
+    // Eliminatory requirements (affects match score)
+    req_english: false,
+    req_experience: false,
+    req_drivers_license: false,
+    consular_only: false,
   });
 
   const scrollToSection = (id: string) => {
