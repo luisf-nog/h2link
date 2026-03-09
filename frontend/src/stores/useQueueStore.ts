@@ -112,6 +112,9 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   },
 
   setSmtpReady: (ready) => set({ smtpReady: ready }),
+  setSending: (v) => set({ sending: v }),
+  setSendProgress: (p) => set({ sendProgress: p }),
+  setSendCancelled: (v) => set({ sendCancelled: v }),
 
   checkSmtp: async (userId: string) => {
     const { data, error } = await supabase
