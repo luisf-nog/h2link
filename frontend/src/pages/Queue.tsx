@@ -405,7 +405,8 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
-      if (sendCancelled) {
+      // Read directly from store to avoid stale closure
+      if (useQueueStore.getState().sendCancelled) {
         toast({
           title: t("queue.toasts.paused_title", { defaultValue: "Envio pausado" }),
           description: t("queue.toasts.paused_desc", { count: sentIds.length, defaultValue: "{{count}} email(s) enviado(s) antes da pausa." }),
