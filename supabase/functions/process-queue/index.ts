@@ -1380,7 +1380,7 @@ const handler = async (req: Request): Promise<Response> => {
     const cronToken = req.headers.get("x-cron-token");
     console.log(`[process-queue] Cron token presente: ${cronToken ? 'sim' : 'não'}`);
 
-    // Mode A: cron calls without user session -> process multiple premium users
+    // Mode A: cron calls without user session -> fan-out to per-user invocations
     if (cronToken) {
       console.log(`[process-queue] Modo CRON detectado`);
       const { data: settings, error: settingsErr } = await serviceClient
@@ -1402,20 +1402,47 @@ const handler = async (req: Request): Promise<Response> => {
         .limit(200);
       if (uErr) throw uErr;
 
-      let usersTouched = 0;
-      let processed = 0;
-      let sent = 0;
-      let failed = 0;
+      const userList = (users ?? []) as Array<{ id: string }>;
+      console.log(`[process-queue] Fan-out: disparando ${userList.length} invocações paralelas`);
 
-      for (const u of (users ?? []) as Array<{ id: string }>) {
-        const r = await processOneUser({ serviceClient, userId: u.id, maxItems: 2, supabaseUrl });
-        if (r.processed > 0) usersTouched += 1;
-        processed += r.processed;
-        sent += r.sent;
-        failed += r.failed;
+      // Fan-out: fire a separate self-invocation for each user
+      // Each runs in its own edge function instance with its own timeout
+      const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+      const CONCURRENCY = 10; // Process in batches to avoid overwhelming
+      let totalDispatched = 0;
+      let totalErrors = 0;
+
+      for (let i = 0; i < userList.length; i += CONCURRENCY) {
+        const batch = userList.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map(async (u) => {
+            try {
+              const resp = await fetch(`${supabaseUrl}/functions/v1/process-queue`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${serviceRoleKey}`,
+                  "x-internal-fan-out": "true",
+                },
+                body: JSON.stringify({ user_id: u.id, max_items: 2 }),
+              });
+              // Consume body to prevent resource leak
+              await resp.text();
+              return resp.ok;
+            } catch (e) {
+              console.error(`[process-queue] Fan-out error for ${u.id}:`, e);
+              return false;
+            }
+          })
+        );
+        for (const r of results) {
+          if (r.status === "fulfilled" && r.value) totalDispatched++;
+          else totalErrors++;
+        }
       }
 
-      return json(200, { ok: true, mode: "cron", usersTouched, processed, sent, failed });
+      console.log(`[process-queue] Fan-out complete: ${totalDispatched} dispatched, ${totalErrors} errors`);
+      return json(200, { ok: true, mode: "cron-fanout", dispatched: totalDispatched, errors: totalErrors });
     }
 
     // Mode B: authenticated user request -> process only their own queue (premium only)
