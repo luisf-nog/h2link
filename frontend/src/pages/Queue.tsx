@@ -664,6 +664,70 @@ export default function Queue() {
         });
 
         sentIds.push(item.id);
+        creditsRemaining -= 1;
+        consecutiveSmtpFailures = 0; // Reset on success
+        setSendProgress({ sent: sentIds.length, total: items.length });
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : t("common.errors.send_failed");
+        console.error(`[Queue] Erro ao processar item ${item.id}:`, e);
+
+        // Only count systemic errors (auth, connection, AI) toward circuit breaker
+        const isSystemic = isSystemicSmtpError(message);
+        if (isSystemic) {
+          consecutiveSmtpFailures += 1;
+        }
+
+        const now = new Date().toISOString();
+        await supabase
+          .from("my_queue")
+          .update({
+            status: "failed",
+            last_error: message,
+            last_attempt_at: now,
+            processing_started_at: null,
+          })
+          .eq("id", item.id);
+
+        await supabase.from("queue_send_history").insert({
+          queue_id: item.id,
+          user_id: profile?.id,
+          sent_at: now,
+          status: "failed",
+          error_message: message,
+        });
+
+        failedIds.push(item.id);
+        failedErrors.push(message);
+
+        // --- TRAVA 2: Disjuntor automático (Circuit Breaker) — only for systemic errors ---
+        if (consecutiveSmtpFailures >= 5 && profile?.id) {
+          await supabase
+            .from("profiles")
+            .update({ smtp_verified: false })
+            .eq("id", profile.id);
+          await refreshProfile();
+
+          const lastErrorParsed = parseSmtpError(message);
+
+          toast({
+            title: t("smtp.circuit_breaker_title"),
+            description: t(lastErrorParsed.descriptionKey, { defaultValue: t("smtp.circuit_breaker_desc") }),
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => navigate("/settings/email")} className="shrink-0">
+                {t("smtp.verify_and_activate")}
+              </Button>
+            ),
+          });
+          break;
+        }
+      }
+
+      if (idx < items.length - 1 && sentIds.length > 0) {
+        const ms = getDelayMs();
+        if (ms > 0) await sleep(ms);
+      }
+    }
 
     if (sentIds.length > 0 && failedIds.length === 0) {
       toast({
