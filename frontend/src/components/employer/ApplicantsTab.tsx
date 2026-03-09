@@ -561,8 +561,8 @@ export function ApplicantsTab({
         </div>
       </div>
 
-      {/* Filter pills - scrollable on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+      {/* Filter pills - desktop: chips, mobile: dropdown */}
+      <div className="hidden sm:flex flex-wrap gap-2">
         {STATUS_FILTERS.map((f) => {
           const count = f.value === "all" ? apps.length : (counts[f.value] ?? 0);
           if (f.value !== "all" && count === 0) return null;
@@ -570,7 +570,7 @@ export function ApplicantsTab({
             <button
               key={f.value}
               onClick={() => { setFilter(f.value); setPage(1); }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                 filter === f.value
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                   : "bg-card text-muted-foreground border-border hover:border-muted-foreground/40"
@@ -583,6 +583,24 @@ export function ApplicantsTab({
             </button>
           );
         })}
+      </div>
+      <div className="sm:hidden">
+        <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 text-xs">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map((f) => {
+              const count = f.value === "all" ? apps.length : (counts[f.value] ?? 0);
+              if (f.value !== "all" && count === 0) return null;
+              return (
+                <SelectItem key={f.value} value={f.value} className="text-xs">
+                  {f.label} ({count})
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Filter & Sort controls */}
