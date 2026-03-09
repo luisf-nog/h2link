@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRadarStore } from "@/stores/useRadarStore";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
