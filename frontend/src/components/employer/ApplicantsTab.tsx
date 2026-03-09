@@ -253,8 +253,12 @@ export function ApplicantsTab({
 }) {
   const [filter, setFilter] = useState("all");
   const [detailApp, setDetailApp] = useState<Application | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const filtered = filter === "all" ? apps : apps.filter((a) => a.application_status === filter);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // counts per status for badge
   const counts = apps.reduce<Record<string, number>>((acc, a) => {
