@@ -97,7 +97,7 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     features: [
       "5 active Featured jobs",
       "Top priority in Job Hub",
-      "Verified Employer badge",
+      
       "AI-powered applicant screening & scoring",
       "Shareable job links for social media",
       "Full ATS dashboard",
@@ -105,8 +105,7 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       "Compliance report",
       "All Professional features",
     ],
-    highlights: ["5 Featured Jobs", "Top Priority"],
-  },
+    highlights: ["5 Featured Jobs", "},
 };
 
 export const getEmployerPlan = (tier: EmployerTier) => EMPLOYER_PLANS[tier] ?? EMPLOYER_PLANS.free;

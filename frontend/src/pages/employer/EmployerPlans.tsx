@@ -3,25 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsEmployer } from "@/hooks/useIsEmployer";
 import { EMPLOYER_PLANS, type EmployerTier } from "@/config/employer-plans.config";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Check,
   Loader2,
-  Briefcase,
-  Shield,
   Zap,
   Crown,
   Star,
+  Shield,
   ArrowRight,
-  Users,
-  Share2,
-  ClipboardList,
-  ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -33,10 +28,19 @@ const TIER_ICONS: Record<string, React.ElementType> = {
   enterprise: Crown,
 };
 
-const TIER_GRADIENT: Record<string, string> = {
-  essential: "from-emerald-500 to-emerald-700",
-  professional: "from-blue-500 to-indigo-700",
-  enterprise: "from-amber-500 to-orange-700",
+const TIER_COLORS: Record<string, { text: string; btn: string }> = {
+  essential: {
+    text: "text-emerald-600",
+    btn: "bg-emerald-600 hover:bg-emerald-700 text-white",
+  },
+  professional: {
+    text: "text-cyan-600",
+    btn: "bg-cyan-600 hover:bg-cyan-700 text-white",
+  },
+  enterprise: {
+    text: "text-slate-900",
+    btn: "bg-slate-900 hover:bg-slate-800 text-white",
+  },
 };
 
 export default function EmployerPlans() {
@@ -95,151 +99,133 @@ export default function EmployerPlans() {
   );
 
   return (
-    <div className="space-y-10 max-w-5xl mx-auto">
+    <div className="space-y-12 pb-12">
       {/* Hero */}
-      <div className="text-center space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-black font-brand tracking-tight text-foreground">
+      <div className="text-center space-y-4 pt-8 max-w-3xl mx-auto px-4">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
           {t("employer.plans.title", "Recruitment Plans")}
         </h1>
-        <p className="text-muted-foreground max-w-lg mx-auto text-sm sm:text-base">
+        <p className="text-xl text-slate-600">
           {t("employer.plans.subtitle", "Publish Featured Jobs, receive applications, and manage your hiring pipeline — all in one place.")}
         </p>
       </div>
 
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-3">
-        <Label className={cn("text-sm font-semibold transition-colors", !annual ? "text-foreground" : "text-muted-foreground")}>
+        <Label className={cn("text-sm font-semibold transition-colors", !annual ? "text-slate-900" : "text-slate-400")}>
           {t("employer.plans.monthly", "Monthly")}
         </Label>
         <Switch checked={annual} onCheckedChange={setAnnual} />
-        <Label className={cn("text-sm font-semibold transition-colors", annual ? "text-foreground" : "text-muted-foreground")}>
+        <Label className={cn("text-sm font-semibold transition-colors", annual ? "text-slate-900" : "text-slate-400")}>
           {t("employer.plans.annual", "Annual")}
-          <Badge variant="secondary" className="ml-2 text-[10px] font-bold bg-green-100 text-green-800 border-green-200">
+          <Badge variant="outline" className="ml-2 border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold text-[10px]">
             {t("employer.plans.annual_discount", "Save ~20%")}
           </Badge>
         </Label>
       </div>
 
-      {/* Platform features banner */}
-      <div className="bg-muted/50 border rounded-2xl p-5 sm:p-6">
-        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4 text-center">
-          {t("employer.plans.all_plans_include", "All paid plans include")}
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { icon: Sparkles, label: t("employer.plans.feat_ai", "AI Applicant Scoring") },
-            { icon: Share2, label: t("employer.plans.feat_share", "Shareable Job Links") },
-            { icon: ClipboardList, label: t("employer.plans.feat_ats", "Full ATS Dashboard") },
-            { icon: ShieldCheck, label: t("employer.plans.feat_compliance", "Compliance Reports") },
-          ].map((f) => (
-            <div key={f.label} className="flex flex-col items-center gap-2 text-center">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <f.icon className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-xs font-semibold text-foreground leading-tight">{f.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Plan cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto px-4">
         {paidTiers.map((plan) => {
           const isCurrent = employerProfile?.tier === plan.id && employerProfile?.status === "active";
           const price = annual ? plan.price.annual : plan.price.monthly;
           const period = annual ? "/yr" : "/mo";
           const isPopular = plan.id === "professional";
-          const TierIcon = TIER_ICONS[plan.id] || Briefcase;
-          const gradient = TIER_GRADIENT[plan.id] || "from-gray-500 to-gray-700";
+          const isBest = plan.id === "enterprise";
+          const colors = TIER_COLORS[plan.id] || TIER_COLORS.essential;
+          const TierIcon = TIER_ICONS[plan.id] || Zap;
 
           return (
             <Card
               key={plan.id}
               className={cn(
-                "relative overflow-hidden transition-all border-2",
-                isPopular
-                  ? "border-primary shadow-xl shadow-primary/10 scale-[1.02]"
-                  : "border-border hover:border-muted-foreground/30 hover:shadow-md",
-                isCurrent && "ring-2 ring-green-500/30 border-green-500",
+                "relative flex flex-col transition-all duration-300 hover:-translate-y-1",
+                isBest
+                  ? "border-2 border-slate-900 shadow-xl scale-105 z-10"
+                  : "border border-slate-200 shadow-sm hover:shadow-lg",
+                isCurrent && "ring-4 ring-primary/20 ring-offset-2",
               )}
             >
-              {/* Gradient header */}
-              <div className={cn("bg-gradient-to-br text-white p-5 pb-6", gradient)}>
-                {isPopular && (
-                  <Badge className="absolute top-3 right-3 bg-white/20 text-white border-white/30 text-[10px] font-bold uppercase backdrop-blur-sm">
+              {isPopular && (
+                <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                  <span className="bg-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md uppercase tracking-wider">
                     {t("employer.plans.popular", "Most Popular")}
-                  </Badge>
-                )}
-                {isCurrent && (
-                  <Badge className="absolute top-3 right-3 bg-green-500 text-white border-0 text-[10px] font-bold uppercase">
-                    {t("employer.plans.current", "Current Plan")}
-                  </Badge>
-                )}
+                  </span>
+                </div>
+              )}
+              {isBest && (
+                <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                  <span className="bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md uppercase tracking-wider flex items-center gap-1">
+                    <Crown className="h-3 w-3" /> {t("employer.plans.best", "Best Value")}
+                  </span>
+                </div>
+              )}
 
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                    <TierIcon className="h-5 w-5" />
+              <CardHeader className="text-center pb-8 pt-8">
+                <h3 className={cn("text-2xl font-bold uppercase tracking-tight", colors.text)}>
+                  {plan.label}
+                </h3>
+
+                <div className="mt-4 flex flex-col items-center justify-center min-h-[80px]">
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-extrabold text-slate-900">${price}</span>
+                    <span className="text-slate-500 text-sm font-medium">{period}</span>
                   </div>
-                  <h2 className="text-lg font-black tracking-tight">{plan.label}</h2>
+                  {annual && (
+                    <p className="text-slate-400 text-xs mt-1">
+                      ${Math.round(plan.price.annual / 12)}/mo billed annually
+                    </p>
+                  )}
                 </div>
+              </CardHeader>
 
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black tracking-tighter">${price}</span>
-                  <span className="text-white/70 text-sm font-medium">{period}</span>
-                </div>
+              <Separator />
 
-                {annual && (
-                  <p className="text-white/60 text-xs mt-1">
-                    ${Math.round(plan.price.annual / 12)}/mo billed annually
-                  </p>
-                )}
-              </div>
-
-              <CardContent className="p-5 space-y-5">
-                {/* Key highlights */}
-                <div className="space-y-1">
+              <CardContent className="flex-1 flex flex-col gap-6 pt-6">
+                {/* Highlights */}
+                <div className="space-y-2">
                   {plan.highlights.map((h) => (
-                    <div key={h} className="flex items-center gap-2 text-sm font-bold text-foreground">
-                      <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Check className="h-3 w-3 text-primary" />
+                    <div key={h} className="flex items-center gap-3">
+                      <div className="p-1 rounded-full bg-green-100 text-green-700 shrink-0">
+                        <Check className="h-3.5 w-3.5" />
                       </div>
-                      {h}
+                      <span className="text-sm font-semibold text-slate-900">{h}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Feature list */}
-                <ul className="space-y-2 border-t pt-4">
+                <ul className="space-y-3 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                      <span>{f}</span>
+                    <li key={f} className="flex items-start gap-3">
+                      <div className="mt-0.5 p-1 rounded-full bg-slate-100 text-slate-500 shrink-0">
+                        <Check className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-sm text-slate-600">{f}</span>
                     </li>
                   ))}
                 </ul>
 
                 {/* CTA */}
                 {isCurrent ? (
-                  <Button variant="outline" className="w-full font-semibold" onClick={handlePortal}>
-                    <Shield className="h-4 w-4 mr-2" />
+                  <Button
+                    className="w-full py-6 text-base font-bold shadow-md"
+                    variant="outline"
+                    onClick={handlePortal}
+                  >
+                    <Shield className="mr-2 h-5 w-5" />
                     {t("employer.plans.manage", "Manage Subscription")}
                   </Button>
                 ) : (
                   <Button
-                    className={cn(
-                      "w-full font-bold",
-                      isPopular
-                        ? "bg-primary hover:bg-primary/90 shadow-lg"
-                        : "",
-                    )}
-                    variant={isPopular ? "default" : "outline"}
+                    className={cn("w-full py-6 text-base font-bold shadow-md transition-all", colors.btn)}
                     disabled={!!loadingTier}
                     onClick={() => handleCheckout(plan.id)}
                   >
                     {loadingTier === plan.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     ) : (
-                      <ArrowRight className="h-4 w-4 mr-2" />
+                      <ArrowRight className="mr-2 h-5 w-5" />
                     )}
                     {t("employer.plans.subscribe", "Get Started")}
                   </Button>
@@ -251,14 +237,11 @@ export default function EmployerPlans() {
       </div>
 
       {/* Bottom CTA */}
-      <div className="text-center space-y-2 pb-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="max-w-3xl mx-auto px-4 text-center space-y-2">
+        <p className="text-sm text-slate-600">
           {t("employer.plans.enterprise_note", "Need custom volume or have questions?")}
         </p>
-        <a
-          href="mailto:help@h2linker.com"
-          className="text-sm font-bold text-primary hover:underline"
-        >
+        <a href="mailto:help@h2linker.com" className="text-sm font-bold text-primary hover:underline">
           help@h2linker.com
         </a>
       </div>
