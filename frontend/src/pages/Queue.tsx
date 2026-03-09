@@ -360,6 +360,26 @@ export default function Queue() {
   );
   const allPendingSelected = pendingItems.length > 0 && selectedPendingIds.length === pendingItems.length;
 
+  const filteredQueue = useMemo(() => {
+    let items = queue;
+    if (statusFilter !== "all") {
+      items = items.filter((q) => q.status === statusFilter);
+    }
+    if (searchText.trim()) {
+      const lower = searchText.trim().toLowerCase();
+      items = items.filter((q) => {
+        const job = q.public_jobs ?? q.manual_jobs;
+        if (!job) return false;
+        return (
+          job.email.toLowerCase().includes(lower) ||
+          job.company.toLowerCase().includes(lower) ||
+          job.job_title.toLowerCase().includes(lower)
+        );
+      });
+    }
+    return items;
+  }, [queue, searchText, statusFilter]);
+
   const ensureCanSend = async () => {
     // --- TRAVA 1: Verificação obrigatória de SMTP ---
     if (!(profile as any)?.smtp_verified) {
