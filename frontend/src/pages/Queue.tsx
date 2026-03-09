@@ -772,6 +772,7 @@ export default function Queue() {
     if (item.status !== "pending") {
       await supabase.from("my_queue").update({
         status: "processing",
+        processing_started_at: new Date().toISOString(),
         last_error: null,
         opened_at: null,
         email_open_count: 0,
