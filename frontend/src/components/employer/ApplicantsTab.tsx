@@ -144,7 +144,7 @@ function CandidateRow({
   onOpenDetail: (app: Application) => void;
 }) {
   const [rejectOpen, setRejectOpen] = useState(false);
-  const workAuth = getWorkAuthDisplay(app.work_authorization_status);
+  const workAuthBadge = getWorkAuthBadge(app.work_authorization_status, app.is_in_us);
 
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === "rejected") {
@@ -152,12 +152,6 @@ function CandidateRow({
     } else {
       onStatusChange(app, newStatus);
     }
-  };
-
-  const authBadgeClasses = {
-    green: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    yellow: "bg-amber-100 text-amber-700 border-amber-200",
-    red: "bg-red-100 text-red-700 border-red-200",
   };
 
   return (
@@ -170,66 +164,61 @@ function CandidateRow({
       />
 
       <div className="flex items-center gap-3 p-3 bg-card border rounded-lg hover:shadow-sm transition-shadow">
-        {/* Avatar */}
-        <div className={`${avatarColor(app.full_name)} w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0`}>
+        {/* Avatar - neutral professional colors */}
+        <div className={`${avatarColor(app.full_name)} w-9 h-9 rounded-full flex items-center justify-center text-foreground font-semibold text-xs shrink-0`}>
           {initials(app.full_name)}
         </div>
 
-        {/* Name + Match Score */}
+        {/* Name + Match Score + Quick Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-foreground truncate">{app.full_name}</span>
             {app.application_match_score !== null && (
-              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                app.application_match_score >= 80 ? "bg-emerald-100 text-emerald-700" :
-                app.application_match_score >= 50 ? "bg-amber-100 text-amber-700" :
-                "bg-red-100 text-red-700"
-              }`}>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${getMatchScoreStyle(app.application_match_score)}`}>
                 {app.application_match_score}%
               </span>
             )}
           </div>
-          <div className="text-xs text-muted-foreground">
-            {format(new Date(app.created_at), "MMM d")}
+          {/* Quick info row */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{format(new Date(app.created_at), "MMM d")}</span>
+            <span>•</span>
+            <span className="capitalize">{app.english_level || "—"} English</span>
+            <span>•</span>
+            <span>{formatExperience(app.months_experience)}</span>
           </div>
         </div>
 
-        {/* Work Auth Badge (key info) */}
+        {/* Single work auth badge - simplified */}
         <div className="hidden sm:flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ${authBadgeClasses[workAuth.color]}`}>
-            {workAuth.color === "green" && <CheckCircle2 size={12} />}
-            {workAuth.color === "yellow" && <AlertCircle size={12} />}
-            {workAuth.color === "red" && <XCircle size={12} />}
-            {workAuth.label}
-          </span>
-          
-          {workAuth.requiresVisa && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border bg-violet-100 text-violet-700 border-violet-200">
-              <Globe size={12} />
-              Requires Visa
-            </span>
-          )}
-          
-          {!app.is_in_us && (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin size={12} />
-              Outside US
+          {workAuthBadge && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border bg-muted text-muted-foreground border-border">
+              {workAuthBadge.icon === "check" && <CheckCircle2 size={12} className="text-emerald-600" />}
+              {workAuthBadge.icon === "globe" && <Globe size={12} />}
+              {workAuthBadge.icon === "alert" && <AlertCircle size={12} className="text-amber-600" />}
+              {workAuthBadge.label}
             </span>
           )}
         </div>
 
-        {/* Status Dropdown */}
+        {/* Status Dropdown with color indicator */}
         <Select
           value={app.application_status}
           onValueChange={handleStatusChange}
         >
-          <SelectTrigger className="w-[120px] h-8 text-xs">
-            <SelectValue />
+          <SelectTrigger className="w-[130px] h-8 text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${getStatusColor(app.application_status)}`} />
+              <SelectValue />
+            </div>
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                {opt.label}
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                  {opt.label}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
