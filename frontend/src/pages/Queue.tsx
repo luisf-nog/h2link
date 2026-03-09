@@ -513,6 +513,7 @@ export default function Queue() {
             status: "failed",
             last_error: "Email ausente",
             last_attempt_at: new Date().toISOString(),
+            processing_started_at: null,
           })
           .eq("id", item.id);
         failedIds.push(item.id);
