@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.submit-application]
 verify_jwt = false
+
+[functions.run-pending-migrations]
+verify_jwt = false
