@@ -114,6 +114,12 @@ export default function CreateJob() {
     req_full_contract_availability: false,
     req_travel_worksite: false,
     req_background_check: false,
+
+    // Eliminatory requirements (affects match score)
+    req_english: false,
+    req_experience: false,
+    req_drivers_license: false,
+    consular_only: false,
   });
 
   const scrollToSection = (id: string) => {
@@ -262,6 +268,12 @@ export default function CreateJob() {
       req_full_contract_availability: form.req_full_contract_availability,
       req_travel_worksite: form.req_travel_worksite,
       req_background_check: form.req_background_check,
+
+      // Eliminatory requirements
+      req_english: form.req_english,
+      req_experience: form.req_experience,
+      req_drivers_license: form.req_drivers_license,
+      consular_only: form.consular_only,
     });
 
     if (error) {
@@ -635,6 +647,16 @@ export default function CreateJob() {
                           <SelectItem value="12">{t("employer.create_job.exp_12m")}</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          id="req_experience"
+                          checked={form.req_experience}
+                          onCheckedChange={(v) => setForm((p) => ({ ...p, req_experience: v }))}
+                        />
+                        <Label htmlFor="req_experience" className="text-sm text-muted-foreground cursor-pointer">
+                          Requisito eliminatório (exclui candidatos sem experiência)
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
@@ -651,6 +673,16 @@ export default function CreateJob() {
                           <SelectItem value="advanced">{t("employer.create_job.eng_advanced")}</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          id="req_english"
+                          checked={form.req_english}
+                          onCheckedChange={(v) => setForm((p) => ({ ...p, req_english: v }))}
+                        />
+                        <Label htmlFor="req_english" className="text-sm text-muted-foreground cursor-pointer">
+                          Requisito eliminatório (exclui candidatos sem inglês)
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
@@ -666,6 +698,16 @@ export default function CreateJob() {
                           <SelectItem value="required">{t("employer.create_job.dl_required")}</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          id="req_drivers_license"
+                          checked={form.req_drivers_license}
+                          onCheckedChange={(v) => setForm((p) => ({ ...p, req_drivers_license: v }))}
+                        />
+                        <Label htmlFor="req_drivers_license" className="text-sm text-muted-foreground cursor-pointer">
+                          Requisito eliminatório (exclui candidatos sem CNH)
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
@@ -677,6 +719,25 @@ export default function CreateJob() {
                         placeholder={t("employer.create_job.equipment_placeholder")}
                         value={form.equipment_experience}
                         onChange={(e) => setForm((p) => ({ ...p, equipment_experience: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Consular Only - Only for H-2 visas */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
+                      <div className="space-y-0.5 pr-4">
+                        <Label className="text-base font-medium cursor-pointer" htmlFor="consular_only">
+                          Visto exclusivo para candidatos no exterior
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Marca esta vaga como disponível apenas para candidatos que ainda estão fora dos EUA (processamento consular). Candidatos já nos EUA serão automaticamente desqualificados.
+                        </p>
+                      </div>
+                      <Switch
+                        id="consular_only"
+                        checked={form.consular_only}
+                        onCheckedChange={(v) => setForm((p) => ({ ...p, consular_only: v }))}
                       />
                     </div>
                   </div>
