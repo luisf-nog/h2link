@@ -57,9 +57,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // 3. Employers skip SMTP onboarding entirely
+  // 3. Employers are isolated to employer portal routes
   if (isEmployer) {
-    return <AppLayout>{children}</AppLayout>;
+    return <Navigate to="/employer/dashboard" replace />;
   }
 
   // 4. Verificação de Onboarding for workers
@@ -77,9 +77,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // --- EMPLOYER ROUTE ---
 function EmployerRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
   const { t } = useTranslation();
 
-  if (loading) {
+  if (loading || employerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -88,6 +89,7 @@ function EmployerRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (!isEmployer) return <Navigate to="/dashboard" replace />;
 
   return <AppLayout>{children}</AppLayout>;
 }
@@ -152,10 +154,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 // --- PUBLIC OR PROTECTED ROUTE (accessible without login, but shows full layout when logged in) ---
 function PublicOrProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
   const { t } = useTranslation();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || employerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -166,6 +169,11 @@ function PublicOrProtectedRoute({ children }: { children: React.ReactNode }) {
   // If not logged in, show with AppLayout (which has a login button in header)
   if (!user) {
     return <AppLayout>{children}</AppLayout>;
+  }
+
+  // Employers are isolated to employer portal routes
+  if (isEmployer) {
+    return <Navigate to="/employer/dashboard" replace />;
   }
 
   // If logged in and needs onboarding, redirect
