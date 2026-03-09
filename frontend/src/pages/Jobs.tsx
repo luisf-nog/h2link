@@ -87,7 +87,6 @@ export default function Jobs() {
   const [loading, setLoading] = useState(lastFetchedAt === 0);
 
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
-  const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [selectedFeaturedJob, setSelectedFeaturedJob] = useState<FeaturedJob | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
