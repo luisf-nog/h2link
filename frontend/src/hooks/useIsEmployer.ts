@@ -8,7 +8,7 @@ interface UseIsEmployerResult {
   employerProfile: {
     id: string;
     company_name: string;
-    tier: "essential" | "professional" | "enterprise";
+    tier: "free" | "essential" | "professional" | "enterprise";
     status: "active" | "inactive";
     is_verified: boolean;
   } | null;
