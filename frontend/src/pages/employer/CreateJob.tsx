@@ -268,6 +268,12 @@ export default function CreateJob() {
       req_full_contract_availability: form.req_full_contract_availability,
       req_travel_worksite: form.req_travel_worksite,
       req_background_check: form.req_background_check,
+
+      // Eliminatory requirements
+      req_english: form.req_english,
+      req_experience: form.req_experience,
+      req_drivers_license: form.req_drivers_license,
+      consular_only: form.consular_only,
     });
 
     if (error) {
