@@ -1,104 +1,164 @@
 
 
-# Diagnóstico: Por que a fila trava repetidamente
+# H2 Linker B2B Pivot -- Phase 1: Foundation
 
-## Dados observados no banco (agora)
+## Overview
+Add an employer portal alongside the existing worker system. Phase 1 covers: database schema, role separation (RBAC), employer profiles, sponsored jobs, guest application flow, and Stripe subscription billing for employers.
 
-| Usuário | Paused | Erro | consecutive_errors | credits_used_today | limit |
-|---------|--------|------|--------------------|--------------------|-------|
-| Cassiano (9d1bf5d2) | 265 | `[CIRCUIT_BREAKER] Pausado por 3+ erros consecutivos` | **13** | 0 | 350 |
-| Luís (09cc9f10) | 93 | `[PROCESSING_TIMEOUT]` | 0 | 158 | 350 |
+## Pricing (USD only for employers, subscription model)
 
----
-
-## Bug 1 — CIRCUIT_BREAKER e PROCESSING_TIMEOUT são erros de código ANTIGO (causa principal)
-
-Os 265 itens do Cassiano foram pausados em massa por uma versão ANTERIOR do `process-queue` que fazia bulk-pause (marcava todos os itens restantes como "paused" com erro CIRCUIT_BREAKER quando 3 erros consecutivos ocorriam). **Esse código já foi removido**, mas os itens permanecem no banco com esse status.
-
-A migração `20260309130850` que deveria resetar esses itens **não foi executada** (migração timeout — o problema conhecido do Lovable Cloud).
-
-Os 93 itens do Luís foram auto-recuperados pelo frontend (heartbeat de 10 minutos) — todos com o mesmo timestamp `14:02:12.78`, indicando que foram recuperados em lote. Provavelmente originados de uma sessão de envio onde o navegador foi fechado/backgrounded.
-
-**Correção**: Executar a SQL pendente via `run-pending-migrations` ou SQL editor manual.
+| Tier | Monthly | Annual |
+|------|---------|--------|
+| Essential | $49/mo | $470/yr |
+| Professional | $99/mo | $950/yr |
+| Enterprise | $149/mo | $1,430/yr |
 
 ---
 
-## Bug 2 — `consecutive_errors = 13` bloqueia o cron (backend)
+## Step 1: Stripe Products & Prices
 
-O cron (`process-queue`) lê `consecutive_errors` do perfil (linha 838) e faz `break` se >= 3 (linha 991). O Cassiano tem **13**. Isso significa que toda execução do cron para ele é imediatamente abortada.
-
-O frontend faz `resetConsecutiveErrors()` antes de cada retry manual, mas o cron não faz. Então, mesmo que o problema original (SMTP) já tenha sido resolvido, o cron nunca processa novos itens "pending" para esse usuário.
-
-**Correção**: No início de `processOneUser`, se `last_usage_date < today` (novo dia), resetar `consecutive_errors` para 0.
+Create 6 Stripe prices (monthly + annual for each tier) using Stripe tools before writing any code.
 
 ---
 
-## Bug 3 — Backend usa limite ERRADO (plan hard cap vs warm-up)
+## Step 2: Database Migration
 
-`process-queue` linha 825:
+### New Enum
 ```text
-const dailyLimit = getDailyEmailLimit(p.plan_tier) + referralBonus;
+employer_tier: 'essential' | 'professional' | 'enterprise'
+employer_status: 'active' | 'inactive'
 ```
-Isso retorna o TETO do plano (350 para Diamond), ignorando completamente o sistema de warm-up. Enquanto isso, o `send-email-custom` (chamado pelo frontend) usa `get_effective_daily_limit()` que respeita o warm-up.
 
-Resultado: o cron pode enviar muito mais que o warm-up permite, causando rate limits no provedor SMTP → erros 421/429 → circuit breaker → bulk-pause (no código antigo).
+### New Tables
 
-**Correção**: Trocar `getDailyEmailLimit()` por `get_effective_daily_limit()` RPC no `processOneUser`.
+**employer_profiles**
+- id (uuid PK), user_id (uuid, references auth.users, unique), company_name, tier (employer_tier), is_verified (bool, default false), contact_email, contact_phone, status (employer_status, default 'active'), stripe_customer_id, stripe_subscription_id, created_at, updated_at
+- Indexes: user_id, tier, status
 
----
+**sponsored_jobs**
+- id (uuid PK), employer_id (uuid FK -> employer_profiles), title, description, location, start_date, end_date, is_active (bool, default true), is_sponsored (bool, default true), priority_level (text: free/essential/professional/enterprise), req_english, req_experience, req_drivers_license, consular_only (booleans), view_count, click_count (integers, default 0), created_at
+- Indexes: employer_id, is_active, priority_level, created_at
 
-## Bug 4 — Erros de Edge Function não ativam o circuit breaker
+**job_applications** (immutable -- no delete)
+- id (uuid PK), job_id (FK -> sponsored_jobs), full_name, email, phone, has_english, has_experience, has_license, is_in_us (booleans), citizenship_status (text enum), employer_status (text: new/contacted/rejected, default 'new'), rejection_reason, score_color (text: green/yellow/red), created_at
+- UNIQUE(email, job_id)
+- Indexes: job_id, employer_status, citizenship_status, created_at
 
-Os erros registrados para Luís incluem:
-- `"Edge Function returned a non-2xx status code"`
-- `"Failed to send a request to the Edge Function"`
+**audit_logs** (immutable -- INSERT only, no UPDATE/DELETE)
+- id (uuid PK), job_id, application_id, employer_id (uuid FK), action (text: contacted/rejected), reason, created_at
 
-Estes são erros de **infraestrutura** (função fora do ar, timeout do edge runtime). Mas `isSystemicSmtpError()` classifica-os como `'unknown'` e retorna `false`. O circuit breaker nunca dispara, e o loop continua tentando inutilmente item após item.
-
-**Correção**: Adicionar "edge function" como padrão sistêmico no `smtpErrorParser.ts`.
-
----
-
-## Bug 5 — Trigger `set_sent_at_on_sent` não executado
-
-Todos os itens "sent" do Luís têm `sent_at = NULL`. O frontend (Queue.tsx) não define `sent_at` explicitamente — depende de um trigger de banco que foi criado como migração pendente mas nunca aplicado.
-
-Isso causa o problema do "email visualizado antes de ser enviado" (opened_at tem valor mas sent_at é null).
-
-**Correção**: Executar a migração pendente do trigger.
-
----
-
-## Plano de Implementação
-
-### 1. Migração de dados: resetar itens presos
-SQL a executar (via `run-pending-migrations` ou SQL editor):
+### Add 'employer' to existing app_role enum
 ```sql
--- Reset CIRCUIT_BREAKER items
-UPDATE my_queue SET status = 'pending', last_error = NULL
-WHERE status = 'paused' AND last_error LIKE '%CIRCUIT_BREAKER%';
-
--- Reset PROCESSING_TIMEOUT items 
-UPDATE my_queue SET status = 'pending', last_error = NULL
-WHERE status = 'paused' AND last_error LIKE '%PROCESSING_TIMEOUT%';
-
--- Reset consecutive_errors
-UPDATE profiles SET consecutive_errors = 0 WHERE consecutive_errors > 0;
+ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'employer';
 ```
 
-### 2. `process-queue` — Usar warm-up limit + auto-reset errors
-- Trocar `getDailyEmailLimit(p.plan_tier)` por chamada RPC `get_effective_daily_limit(userId)`
-- No início de `processOneUser`, se é um novo dia, resetar `consecutive_errors` para 0
+### RLS Policies
 
-### 3. `smtpErrorParser.ts` — Classificar erros de Edge Function como sistêmicos
-- Adicionar patterns para "edge function", "non-2xx", "failed to send a request" como categoria `connection_timeout` ou novo tipo `edge_function_error`
-- Incluir na lista de `systemicCategories`
+- **employer_profiles**: SELECT/UPDATE only where user_id = auth.uid()
+- **sponsored_jobs**: Employer CRUD on own jobs; Public SELECT where is_active = true
+- **job_applications**: Anon INSERT only; Employer SELECT/UPDATE(employer_status only) on own jobs' applications
+- **audit_logs**: Employer SELECT on own jobs; INSERT via server function only
 
-### 4. Trigger `set_sent_at_on_sent` — Executar migração pendente
-- Verificar se o trigger existe; se não, executá-lo
+### DB Functions
+- `check_employer_job_limit(employer_id)`: enforces tier-based active job limits (1/3/5)
+- `compute_application_score(job_id, application_id)`: server-side green/yellow/red scoring
+- `deactivate_employer_jobs(employer_id)`: sets all sponsored jobs to free when subscription lapses
 
-### Arquivos afetados
-- `supabase/functions/process-queue/index.ts` — bugs 2 e 3
-- `frontend/src/lib/smtpErrorParser.ts` — bug 4
-- Migrações SQL — bugs 1 e 5
+---
+
+## Step 3: Edge Functions
+
+### create-employer-checkout
+- Accepts tier + billing_interval (month/year)
+- Creates Stripe checkout session with mode: 'subscription'
+- Stores user_id in metadata
+
+### check-employer-subscription
+- Queries Stripe for active subscription by customer email
+- Returns: subscribed, tier, subscription_end
+- Called on login + periodically
+
+### employer-portal (customer portal)
+- Creates Stripe billing portal session for subscription management
+
+### submit-application (public, no auth)
+- Validates honeypot field, rate limits by IP
+- Normalizes email, checks UNIQUE(email, job_id)
+- Computes score_color server-side
+- Inserts into job_applications
+
+### Update existing stripe-webhook
+- Handle `customer.subscription.updated` and `customer.subscription.deleted` events
+- On cancellation/failure: update employer_profiles.status = 'inactive', call deactivate_employer_jobs()
+- On reactivation: restore status = 'active'
+
+---
+
+## Step 4: Frontend -- Role-Based Routing
+
+### Auth Page Updates
+- Add role selector on signup: "I'm looking for work" (worker) vs "I'm hiring" (employer)
+- Store role in user_roles table on signup
+- Worker signup keeps current flow (no SMTP required initially per spec -- but existing onboarding stays for now)
+- Employer signup skips SMTP onboarding entirely
+
+### Route Guards
+- New `EmployerRoute` component that checks user role
+- Worker routes remain unchanged
+- Employer routes: /employer/dashboard, /employer/jobs, /employer/jobs/:id/applicants, /employer/plans, /employer/settings
+
+---
+
+## Step 5: Frontend -- Employer Pages
+
+### Employer Plans Page (/employer/plans)
+- 3 cards: Essential ($49/mo), Professional ($99/mo), Enterprise ($149/mo)
+- Annual toggle showing discounted prices
+- Checkout via create-employer-checkout edge function
+
+### Employer Dashboard (/employer/dashboard)
+- Active jobs count (with tier limit indicator)
+- Total applications count
+- Quick actions: Create Job, View Applicants
+- When status = 'inactive': blurred dashboard with "Reactivate" CTA
+
+### Create/Edit Job (/employer/jobs/new)
+- Form: title, description, location, dates, screening toggles
+- Tier limit enforcement (1/3/5 active jobs)
+
+### Applicant Table (/employer/jobs/:id/applicants)
+- Columns: Name, Email, Phone, Citizenship Badge, Score (traffic light), Status, Date
+- Contact buttons (mailto, tel) that log to audit_logs
+- Reject button with modal + reason dropdown
+- Paginated, sortable
+
+### Guest Application Page (/apply/:jobId)
+- Public route, no login required
+- Fetches job details, renders form based on screening toggles
+- Honeypot field, basic rate limiting
+- Success message after submission
+
+---
+
+## Step 6: Hub Integration
+
+Update the existing Jobs page to display sponsored jobs with priority ordering:
+1. Enterprise (Gold badge)
+2. Professional (Silver badge)
+3. Essential (Sponsored badge)
+4. Free (existing DOL jobs)
+
+Add "Sponsored" / "Verified Employer" badges to job cards.
+
+---
+
+## Technical Notes
+
+- All existing worker functionality (mailing queue, worker plans, radar, etc.) remains completely untouched
+- Employer billing is subscription-based (Stripe subscriptions), separate from worker one-time payments
+- The profiles table is NOT modified -- employer data lives in employer_profiles
+- Role check uses existing `has_role()` function and user_roles table
+- Scoring computation happens server-side only (edge function), never on the client
+- US citizen/permanent resident applications get "Priority Review" badge, pinned above others
+- Compliance disclaimer shown on screening setup page
 

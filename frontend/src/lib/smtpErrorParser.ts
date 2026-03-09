@@ -41,7 +41,25 @@ export interface ParsedSmtpError {
 export function parseSmtpError(rawMessage: string): ParsedSmtpError {
   const m = (rawMessage ?? '').toLowerCase();
 
-  // --- HTTP-level errors (Edge Function issues) ---
+  // --- Edge Function infrastructure errors (systemic) ---
+  // These indicate the Edge Function itself is down/unreachable, not an SMTP issue
+  if (m.includes('edge function') && (m.includes('non-2xx') || m.includes('returned a non'))) {
+    return {
+      category: 'connection_timeout',
+      titleKey: 'smtp_errors.edge_function_error.title',
+      descriptionKey: 'smtp_errors.edge_function_error.description',
+      rawMessage,
+    };
+  }
+  if (m.includes('failed to send a request') && m.includes('edge function')) {
+    return {
+      category: 'connection_timeout',
+      titleKey: 'smtp_errors.edge_function_error.title',
+      descriptionKey: 'smtp_errors.edge_function_error.description',
+      rawMessage,
+    };
+  }
+
   // Edge Function not deployed (404 with empty body or specific message)
   if (m.includes('edge function') && m.includes('não encontrada') || m.includes('edge function') && m.includes('not found')) {
     return {

@@ -88,6 +88,8 @@ function isCircuitBreakerError(message: string): boolean {
   if (m.includes("tls") || m.includes("ssl") || m.includes("handshake") || m.includes("certificate")) return true;
   // AI gateway errors — systemic (AI API is down)
   if (m.includes("non-2xx") || m.includes("ai error") || m.includes("ai gateway") || m.includes("generate-job-email") || m.includes("generation failed")) return true;
+  // Edge Function infrastructure errors — systemic (Bug 4 fix)
+  if (m.includes("edge function") || m.includes("failed to send a request")) return true;
   // Rate limiting from SMTP provider — systemic
   if (m.includes("421") || m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) return true;
   // NOT included: 550, 551, 552, 553, 554 — these are per-recipient errors
@@ -811,18 +813,29 @@ async function processOneUser(params: {
   const p = profile as ProfileRow;
   if (p.plan_tier === "free") return { processed: 0, sent: 0, failed: 0 };
 
-  // Daily limit enforcement (backend)
+  // Daily limit enforcement (backend) — use warm-up aware limit
   const today = new Date().toISOString().slice(0, 10);
   let creditsUsed = Number(p.credits_used_today ?? 0);
   const resetDate = String(p.credits_reset_date ?? "");
   if (resetDate !== today) {
     creditsUsed = 0;
+    // Auto-reset consecutive_errors on new day (Bug 2 fix)
     await (serviceClient
       .from("profiles")
-      .update({ credits_used_today: 0, credits_reset_date: today } as any)
+      .update({ credits_used_today: 0, credits_reset_date: today, consecutive_errors: 0 } as any)
       .eq("id", userId)) as any;
+    consecutiveErrors = 0;
   }
-  const dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
+  // Use warm-up aware limit via RPC instead of plan hard cap (Bug 3 fix)
+  let dailyLimit: number;
+  try {
+    const { data: effectiveLimit, error: limitErr } = await serviceClient.rpc('get_effective_daily_limit', { p_user_id: userId });
+    if (limitErr) throw limitErr;
+    dailyLimit = Number(effectiveLimit ?? getDailyEmailLimit(p.plan_tier));
+  } catch (e) {
+    console.warn(`[process-queue] Failed to get effective limit, falling back to plan cap:`, e);
+    dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
+  }
 
   // Diamond: manter processamento automático também fora da janela local
   // (itens vindos do Radar devem sair da fila automaticamente)
@@ -835,6 +848,7 @@ async function processOneUser(params: {
     }
   }
 
+  // Note: consecutiveErrors may have been reset above if new day
   let consecutiveErrors = Number(p.consecutive_errors ?? 0);
 
   // No retry: if profile is incomplete, mark first pending as failed and stop
