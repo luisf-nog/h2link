@@ -754,7 +754,7 @@ export default function Queue() {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
     const items = eligible.slice(0, remainingToday);
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
