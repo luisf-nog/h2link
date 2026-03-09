@@ -223,7 +223,7 @@ function CandidateRow({
           </div>
           {/* Quick info row */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{format(new Date(app.created_at), "MMM d")}</span>
+            <span title={format(new Date(app.created_at), "PPpp")}>{format(new Date(app.created_at), "MMM d, h:mm a")}</span>
             <span>•</span>
             <span className="capitalize">{app.english_level ? `${app.english_level.charAt(0).toUpperCase() + app.english_level.slice(1)} English` : "—"}</span>
             <span>•</span>
@@ -305,7 +305,7 @@ export function ApplicantsTab({
   const [detailApp, setDetailApp] = useState<Application | null>(null);
   const [page, setPage] = useState(1);
   const [locationFilter, setLocationFilter] = useState<"all" | "us" | "outside">("all");
-  const [sortBy, setSortBy] = useState<"newest" | "match_desc" | "match_asc" | "exp_desc">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "match_desc" | "match_asc" | "exp_desc">("newest");
   const PAGE_SIZE = 50;
 
   const filtered = useMemo(() => {
@@ -316,8 +316,11 @@ export function ApplicantsTab({
     } else if (locationFilter === "outside") {
       result = result.filter(a => a.work_authorization_status === "outside_us");
     }
-
+    
     switch (sortBy) {
+      case "oldest":
+        // Keep current order (oldest first - ascending created_at)
+        break;
       case "match_desc":
         result = [...result].sort((a, b) => (b.application_match_score ?? 0) - (a.application_match_score ?? 0));
         break;
@@ -327,7 +330,8 @@ export function ApplicantsTab({
       case "exp_desc":
         result = [...result].sort((a, b) => b.months_experience - a.months_experience);
         break;
-      default: // newest
+      default: // newest - reverse chronological
+        result = [...result].reverse();
         break;
     }
     return result;
@@ -491,6 +495,12 @@ export function ApplicantsTab({
               onCheckedChange={() => { setSortBy("newest"); setPage(1); }}
             >
               Newest first
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={sortBy === "oldest"}
+              onCheckedChange={() => { setSortBy("oldest"); setPage(1); }}
+            >
+              Oldest first
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={sortBy === "match_desc"}

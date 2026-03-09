@@ -95,6 +95,10 @@ export default function JobApplicants() {
   const handleStatusChange = async (app: Application, newStatus: string, rejectionReason?: string) => {
     if (!session?.user?.id) return;
 
+    // Optimistic update - atualiza UI imediatamente
+    setApps(prev => prev.map(a => a.id === app.id ? { ...a, application_status: newStatus, employer_status: newStatus === "rejected" ? "rejected" : newStatus === "hired" ? "contacted" : a.employer_status, rejection_reason: rejectionReason || a.rejection_reason } : a));
+
+    // Audit log
     await supabase.from("application_audit_log").insert({
       application_id: app.id,
       changed_by_user_id: session.user.id,
@@ -103,14 +107,20 @@ export default function JobApplicants() {
       rejection_reason: rejectionReason || null,
     });
 
+    // Update na database
     const updateData: Record<string, string | null> = {
       application_status: newStatus,
       employer_status: newStatus === "rejected" ? "rejected" : newStatus === "hired" ? "contacted" : app.employer_status,
     };
     if (rejectionReason) updateData.rejection_reason = rejectionReason;
 
-    await supabase.from("job_applications").update(updateData).eq("id", app.id);
-    await loadData();
+    const { error } = await supabase.from("job_applications").update(updateData).eq("id", app.id);
+    
+    // Se falhou, reverter
+    if (error) {
+      console.error("Status update failed:", error);
+      await loadData(); // Re-sync from database
+    }
   };
 
   return (
