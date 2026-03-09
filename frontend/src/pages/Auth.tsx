@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckCircle2, Loader2, ArrowRight, ArrowLeft, Building2, User, Briefcase } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, ArrowRight, ArrowLeft, Building2, User, Briefcase, Shield, HardHat } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
