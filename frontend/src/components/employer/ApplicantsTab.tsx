@@ -18,11 +18,9 @@ import {
 } from "@/components/ui/select";
 import {
   CheckCircle2,
-  XCircle,
   AlertCircle,
   Users,
   FileText,
-  MapPin,
   Globe,
 } from "lucide-react";
 import { format } from "date-fns";
