@@ -224,7 +224,7 @@ export default function Queue() {
         variant: "destructive",
       });
     } else {
-      setQueue(queue.filter((item) => item.id !== id));
+      setQueue((prev) => prev.filter((item) => item.id !== id));
       toast({
         title: t("queue.toasts.remove_success_title"),
         description: t("queue.toasts.remove_success_desc"),
