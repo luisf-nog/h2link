@@ -90,7 +90,11 @@ export function useWarmupStatus(): WarmupStatus {
   // o effectiveLimit já será 150 no primeiro dia!
   const effectiveLimit = Math.min(currentDailyLimit, planMax);
 
-  const emailsSentToday = smtpData?.emails_sent_today ?? 0;
+  // If last_usage_date is not today, the daily counter hasn't been reset yet
+  // → show 0 instead of stale yesterday's count
+  const today = new Date().toISOString().slice(0, 10);
+  const isStaleDate = smtpData?.last_usage_date && smtpData.last_usage_date < today;
+  const emailsSentToday = isStaleDate ? 0 : (smtpData?.emails_sent_today ?? 0);
 
   // Consideramos "Velocidade Máxima" se o limite atual atingiu ou passou o plano
   const isMaxSpeed = currentDailyLimit >= planMax;
