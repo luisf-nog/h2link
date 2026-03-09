@@ -370,12 +370,34 @@ export function ApplicantsTab({
           <div className="text-2xl font-bold text-foreground">{apps.length}</div>
           <div className="text-xs text-muted-foreground">Total</div>
         </div>
-        <div className="bg-card border rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-foreground">
-            {apps.filter(a => a.work_authorization_status !== "outside_us").length}
-          </div>
-          <div className="text-xs text-muted-foreground">US Workers</div>
-        </div>
+        {(() => {
+          const usWorkers = apps.filter(a => a.work_authorization_status !== "outside_us");
+          const usTotal = usWorkers.length;
+          const usNew = usWorkers.filter(a => a.application_status === "received").length;
+          const usContacted = usWorkers.filter(a => a.application_status === "contacted").length;
+          const usShortlisted = usWorkers.filter(a => a.application_status === "shortlisted").length;
+          const usHired = usWorkers.filter(a => a.application_status === "hired").length;
+          const usProcessed = usContacted + usShortlisted + usHired;
+          const progressPct = usTotal > 0 ? Math.round((usProcessed / usTotal) * 100) : 0;
+          const newPct = usTotal > 0 ? Math.round((usNew / usTotal) * 100) : 0;
+          return (
+            <div className="bg-card border rounded-lg p-3 text-center space-y-2">
+              <div className="text-2xl font-bold text-foreground">{usTotal}</div>
+              <div className="text-xs text-muted-foreground">US Workers</div>
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="text-[10px] text-muted-foreground leading-tight">
+                <span className="font-semibold text-amber-600 dark:text-amber-400">{newPct}%</span> pending
+                {" · "}
+                <span className="font-semibold text-primary">{progressPct}%</span> in progress
+              </div>
+            </div>
+          );
+        })()}
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-primary">
             {apps.filter(a => (a.application_match_score ?? 0) >= 80).length}
