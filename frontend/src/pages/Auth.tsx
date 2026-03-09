@@ -1233,7 +1233,7 @@ export default function Auth() {
 
             {/* ── SIGN UP (worker only here) ── */}
             {tab === "signup" && (
-              <form onSubmit={handleWorkerSignUp} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
+              <form onSubmit={handleWorkerSignUp} className="flex flex-col gap-4">
                 {/* Role selector */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <button
