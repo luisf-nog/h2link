@@ -574,6 +574,7 @@ export default function Queue() {
         sentIds.push(item.id);
         creditsRemaining -= 1;
         consecutiveSmtpFailures = 0; // Reset on success
+        setSendProgress({ sent: sentIds.length, total: items.length });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : t("common.errors.send_failed");
         console.error(`[Queue] Erro ao processar item ${item.id}:`, e);
