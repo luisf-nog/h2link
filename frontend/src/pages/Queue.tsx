@@ -400,8 +400,7 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
-      // Check if user paused sending
-      if (sendCancelledRef.current) {
+      if (sendCancelled) {
         toast({
           title: t("queue.toasts.paused_title", { defaultValue: "Envio pausado" }),
           description: t("queue.toasts.paused_desc", { count: sentIds.length, defaultValue: "{{count}} email(s) enviado(s) antes da pausa." }),
