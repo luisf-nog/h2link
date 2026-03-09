@@ -40,6 +40,11 @@ interface QueueStore {
   lastFetchedAt: number;
   smtpReady: boolean | null;
 
+  // Sending state (global so it persists across page navigation)
+  sending: boolean;
+  sendProgress: { sent: number; total: number };
+  sendCancelled: boolean;
+
   /** Fetch only if data is stale (>30s). Returns immediately if fresh. */
   fetchQueue: () => Promise<void>;
   /** Always fetches, regardless of staleness. */
@@ -48,12 +53,18 @@ interface QueueStore {
   setQueue: (updater: QueueItem[] | ((prev: QueueItem[]) => QueueItem[])) => void;
   setSmtpReady: (ready: boolean | null) => void;
   checkSmtp: (userId: string) => Promise<void>;
+  setSending: (v: boolean) => void;
+  setSendProgress: (p: { sent: number; total: number }) => void;
+  setSendCancelled: (v: boolean) => void;
 }
 
 export const useQueueStore = create<QueueStore>((set, get) => ({
   queue: [],
   lastFetchedAt: 0,
   smtpReady: null,
+  sending: false,
+  sendProgress: { sent: 0, total: 0 },
+  sendCancelled: false,
 
   fetchQueue: async () => {
     const { lastFetchedAt } = get();
@@ -101,6 +112,9 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   },
 
   setSmtpReady: (ready) => set({ smtpReady: ready }),
+  setSending: (v) => set({ sending: v }),
+  setSendProgress: (p) => set({ sendProgress: p }),
+  setSendCancelled: (v) => set({ sendCancelled: v }),
 
   checkSmtp: async (userId: string) => {
     const { data, error } = await supabase

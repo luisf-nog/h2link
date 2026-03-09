@@ -86,9 +86,8 @@ export default function Queue() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { queue, setQueue, lastFetchedAt, fetchQueue: storeRefresh, forceFetchQueue, smtpReady, setSmtpReady, checkSmtp } = useQueueStore();
+  const { queue, setQueue, lastFetchedAt, fetchQueue: storeRefresh, forceFetchQueue, smtpReady, setSmtpReady, checkSmtp, sending, setSending, sendProgress, setSendProgress, sendCancelled, setSendCancelled } = useQueueStore();
   const loading = lastFetchedAt === 0;
-  const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
@@ -99,9 +98,7 @@ export default function Queue() {
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
-  const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [clockTick, setClockTick] = useState(() => Date.now());
-  const sendCancelledRef = useRef(false);
   const sendingRef = useRef(false);
 
   const planTier = profile?.plan_tier || "free";
@@ -403,8 +400,7 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
-      // Check if user paused sending
-      if (sendCancelledRef.current) {
+      if (sendCancelled) {
         toast({
           title: t("queue.toasts.paused_title", { defaultValue: "Envio pausado" }),
           description: t("queue.toasts.paused_desc", { count: sentIds.length, defaultValue: "{{count}} email(s) enviado(s) antes da pausa." }),
@@ -555,18 +551,16 @@ export default function Queue() {
 
         console.log(`[Queue] Email enviado com sucesso para ${to}`);
 
-        // === FIX: Persist "sent" IMMEDIATELY to prevent auto-recovery from reverting ===
+        // === sent_at is now set by DB trigger (server time) to avoid clock skew ===
         const newCount = (item.send_count ?? 0) + 1;
-        const sentNow = new Date().toISOString();
         await supabase
           .from("my_queue")
-          .update({ status: "sent", sent_at: sentNow, send_count: newCount, processing_started_at: null })
+          .update({ status: "sent", send_count: newCount, processing_started_at: null })
           .eq("id", item.id);
 
         await supabase.from("queue_send_history").insert({
           queue_id: item.id,
           user_id: profile?.id,
-          sent_at: sentNow,
           status: "success",
         });
 
@@ -666,7 +660,7 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
@@ -684,7 +678,7 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
@@ -745,7 +739,7 @@ export default function Queue() {
   const handleRetryAllFailed = async () => {
     if (failedItems.length === 0) return;
     const items = failedItems.slice(0, remainingToday);
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
@@ -760,7 +754,7 @@ export default function Queue() {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
     const items = eligible.slice(0, remainingToday);
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
@@ -925,7 +919,7 @@ export default function Queue() {
               variant="ghost"
               size="sm"
               className="ml-auto h-7 px-2 text-xs"
-              onClick={() => { sendCancelledRef.current = true; }}
+              onClick={() => { setSendCancelled(true); }}
             >
               <Pause className="h-3.5 w-3.5 mr-1" />
               {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}

@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import i18n, { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, LogIn } from "lucide-react";
+import { Menu, LogIn, Send, Loader2, Pause } from "lucide-react";
+import { useQueueStore } from "@/stores/useQueueStore";
 import Dashboard from "@/pages/Dashboard";
 import Jobs from "@/pages/Jobs";
 import Queue from "@/pages/Queue";
@@ -26,6 +27,45 @@ interface AppLayoutProps {
 }
 
 const PERSISTENT_ROUTES = ["/dashboard", "/jobs", "/queue", "/radar"] as const;
+
+/** Compact sending badge shown outside Queue page */
+function GlobalSendingBadge({ currentPath }: { currentPath: string }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { sending, sendProgress, setSendCancelled } = useQueueStore();
+
+  // Don't show on Queue page – Queue has its own detailed badge
+  if (!sending || currentPath === "/queue") return null;
+
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5 mb-4 cursor-pointer"
+      onClick={() => navigate("/queue")}
+    >
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+      </span>
+      <Send className="h-4 w-4 text-primary" />
+      <span className="text-sm font-medium text-foreground">
+        {t("queue.sending_badge.label", {
+          sent: sendProgress.sent,
+          total: sendProgress.total,
+          defaultValue: "Enviando {{sent}}/{{total}} emails...",
+        })}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="ml-auto h-7 px-2 text-xs"
+        onClick={(e) => { e.stopPropagation(); setSendCancelled(true); }}
+      >
+        <Pause className="h-3.5 w-3.5 mr-1" />
+        {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
+      </Button>
+    </div>
+  );
+}
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { profile, refreshProfile, user } = useAuth();
@@ -144,6 +184,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
           <div ref={contentRef} className="flex-1 p-4 md:p-6 overflow-auto">
+            {/* Global sending badge – visible on all pages */}
+            <GlobalSendingBadge currentPath={location.pathname} />
+
             {/* Persistent pages – always mounted, toggled via CSS */}
             <div style={{ display: location.pathname === "/dashboard" ? "block" : "none" }}><Dashboard /></div>
             <div style={{ display: location.pathname === "/jobs" ? "block" : "none" }}><Jobs /></div>
