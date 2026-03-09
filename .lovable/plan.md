@@ -1,164 +1,79 @@
 
 
-# H2 Linker B2B Pivot -- Phase 1: Foundation
+# Análise: Por que o envio de pausadas sempre para
 
-## Overview
-Add an employer portal alongside the existing worker system. Phase 1 covers: database schema, role separation (RBAC), employer profiles, sponsored jobs, guest application flow, and Stripe subscription billing for employers.
+## Diagnóstico — Causa Raiz Encontrada
 
-## Pricing (USD only for employers, subscription model)
-
-| Tier | Monthly | Annual |
-|------|---------|--------|
-| Essential | $49/mo | $470/yr |
-| Professional | $99/mo | $950/yr |
-| Enterprise | $149/mo | $1,430/yr |
+Identifiquei **3 bugs** que juntos causam o problema. O principal é um **desalinhamento entre o limite que o frontend calcula e o limite que o backend aplica**.
 
 ---
 
-## Step 1: Stripe Products & Prices
+## Bug 1 — Limite errado no Queue.tsx (CAUSA PRINCIPAL)
 
-Create 6 Stripe prices (monthly + annual for each tier) using Stripe tools before writing any code.
+**O que acontece:**
+- `Queue.tsx` (linha 107-109) calcula o limite diário usando o **teto do plano** (`PLANS_CONFIG[planTier].limits.daily_emails` = 150 para Gold, 350 para Diamond)
+- Mas a Edge Function `send-email-custom` (linha 621-631) usa o **limite efetivo de warm-up** via `get_effective_daily_limit()`, que pode ser **20** (perfil conservativo no início do warm-up)
+- Resultado: o frontend acha que tem 150 créditos, envia 20, e o servidor começa a rejeitar **todos os seguintes** com `daily_limit_reached`
 
----
+**Prova:** O `Dashboard.tsx` (linha 62-68) já faz isso corretamente — usa `warmup.effectiveLimit` para planos pagos. Mas o `Queue.tsx` não usa.
 
-## Step 2: Database Migration
-
-### New Enum
+**Fluxo do problema:**
 ```text
-employer_tier: 'essential' | 'professional' | 'enterprise'
-employer_status: 'active' | 'inactive'
+Retry All Paused (116 items)
+  → Frontend: creditsRemaining = 150 (hard cap do plano)
+  → Envia item 1... 20 → servidor aceita
+  → Item 21 → servidor rejeita: "daily_limit_reached"
+  → Frontend: abre diálogo de "upgrade" e para o loop
+  → Usuário vê que parou, tenta de novo
+  → Agora credits_used_today = 20 no banco
+  → TODA tentativa seguinte falha no item 1
 ```
 
-### New Tables
-
-**employer_profiles**
-- id (uuid PK), user_id (uuid, references auth.users, unique), company_name, tier (employer_tier), is_verified (bool, default false), contact_email, contact_phone, status (employer_status, default 'active'), stripe_customer_id, stripe_subscription_id, created_at, updated_at
-- Indexes: user_id, tier, status
-
-**sponsored_jobs**
-- id (uuid PK), employer_id (uuid FK -> employer_profiles), title, description, location, start_date, end_date, is_active (bool, default true), is_sponsored (bool, default true), priority_level (text: free/essential/professional/enterprise), req_english, req_experience, req_drivers_license, consular_only (booleans), view_count, click_count (integers, default 0), created_at
-- Indexes: employer_id, is_active, priority_level, created_at
-
-**job_applications** (immutable -- no delete)
-- id (uuid PK), job_id (FK -> sponsored_jobs), full_name, email, phone, has_english, has_experience, has_license, is_in_us (booleans), citizenship_status (text enum), employer_status (text: new/contacted/rejected, default 'new'), rejection_reason, score_color (text: green/yellow/red), created_at
-- UNIQUE(email, job_id)
-- Indexes: job_id, employer_status, citizenship_status, created_at
-
-**audit_logs** (immutable -- INSERT only, no UPDATE/DELETE)
-- id (uuid PK), job_id, application_id, employer_id (uuid FK), action (text: contacted/rejected), reason, created_at
-
-### Add 'employer' to existing app_role enum
-```sql
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'employer';
-```
-
-### RLS Policies
-
-- **employer_profiles**: SELECT/UPDATE only where user_id = auth.uid()
-- **sponsored_jobs**: Employer CRUD on own jobs; Public SELECT where is_active = true
-- **job_applications**: Anon INSERT only; Employer SELECT/UPDATE(employer_status only) on own jobs' applications
-- **audit_logs**: Employer SELECT on own jobs; INSERT via server function only
-
-### DB Functions
-- `check_employer_job_limit(employer_id)`: enforces tier-based active job limits (1/3/5)
-- `compute_application_score(job_id, application_id)`: server-side green/yellow/red scoring
-- `deactivate_employer_jobs(employer_id)`: sets all sponsored jobs to free when subscription lapses
+**Correção:** Usar `useWarmupStatus()` no `Queue.tsx` para calcular `remainingToday` com o limite efetivo (igual ao Dashboard).
 
 ---
 
-## Step 3: Edge Functions
+## Bug 2 — `sendCancelled` nunca atualiza durante o loop
 
-### create-employer-checkout
-- Accepts tier + billing_interval (month/year)
-- Creates Stripe checkout session with mode: 'subscription'
-- Stores user_id in metadata
+**O que acontece:**
+- `sendCancelled` é desestruturado do Zustand no escopo de render (linha 89)
+- Dentro do `sendQueueItems` (async), a variável é uma closure estática — nunca reflete updates da store
+- O botão "Pausar" do `GlobalSendingBadge` atualiza a store, mas o loop não vê a mudança
 
-### check-employer-subscription
-- Queries Stripe for active subscription by customer email
-- Returns: subscribed, tier, subscription_end
-- Called on login + periodically
+**Consequência dupla:**
+1. O botão "Pausar" não funciona para parar o envio
+2. Se `sendCancelled` ficou `true` de uma pausa anterior, o próximo batch pode herdar esse valor no momento da chamada (antes do React re-renderizar após `setSendCancelled(false)`)
 
-### employer-portal (customer portal)
-- Creates Stripe billing portal session for subscription management
-
-### submit-application (public, no auth)
-- Validates honeypot field, rate limits by IP
-- Normalizes email, checks UNIQUE(email, job_id)
-- Computes score_color server-side
-- Inserts into job_applications
-
-### Update existing stripe-webhook
-- Handle `customer.subscription.updated` and `customer.subscription.deleted` events
-- On cancellation/failure: update employer_profiles.status = 'inactive', call deactivate_employer_jobs()
-- On reactivation: restore status = 'active'
+**Correção:** Usar `useQueueStore.getState().sendCancelled` dentro do loop para ler o valor atual da store.
 
 ---
 
-## Step 4: Frontend -- Role-Based Routing
+## Bug 3 — Diálogo "Upgrade" enganoso
 
-### Auth Page Updates
-- Add role selector on signup: "I'm looking for work" (worker) vs "I'm hiring" (employer)
-- Store role in user_roles table on signup
-- Worker signup keeps current flow (no SMTP required initially per spec -- but existing onboarding stays for now)
-- Employer signup skips SMTP onboarding entirely
+**O que acontece:**
+- Quando o servidor retorna `daily_limit_reached`, o frontend abre `setUpgradeDialogOpen(true)` (linha 546)
+- Mas o limite atingido é o de **warm-up**, não o do plano
+- O usuário vê "faça upgrade" quando já está num plano pago, o que confunde
 
-### Route Guards
-- New `EmployerRoute` component that checks user role
-- Worker routes remain unchanged
-- Employer routes: /employer/dashboard, /employer/jobs, /employer/jobs/:id/applicants, /employer/plans, /employer/settings
+**Correção:** Diferenciar entre "limite de warm-up atingido" (mostrar progresso do warm-up) e "limite do plano atingido" (sugerir upgrade).
 
 ---
 
-## Step 5: Frontend -- Employer Pages
+## Plano de Implementação
 
-### Employer Plans Page (/employer/plans)
-- 3 cards: Essential ($49/mo), Professional ($99/mo), Enterprise ($149/mo)
-- Annual toggle showing discounted prices
-- Checkout via create-employer-checkout edge function
+### 1. Queue.tsx — Usar limite efetivo de warm-up
+- Importar `useWarmupStatus` 
+- Substituir `PLANS_CONFIG[planTier].limits.daily_emails` pelo `effectiveLimit` do warm-up para planos pagos
+- Manter o cálculo atual apenas para free tier
 
-### Employer Dashboard (/employer/dashboard)
-- Active jobs count (with tier limit indicator)
-- Total applications count
-- Quick actions: Create Job, View Applicants
-- When status = 'inactive': blurred dashboard with "Reactivate" CTA
+### 2. Queue.tsx — Corrigir closure de `sendCancelled`
+- Dentro do loop `sendQueueItems`, trocar `if (sendCancelled)` por `if (useQueueStore.getState().sendCancelled)`
+- Isso lê o valor atual da store a cada iteração, sem depender da closure
 
-### Create/Edit Job (/employer/jobs/new)
-- Form: title, description, location, dates, screening toggles
-- Tier limit enforcement (1/3/5 active jobs)
+### 3. Queue.tsx — Melhorar feedback de `daily_limit_reached`
+- Quando o servidor retorna `daily_limit_reached`, mostrar toast explicando o limite de warm-up em vez de abrir o diálogo de upgrade
+- Incluir o limite atual e quantos foram enviados
 
-### Applicant Table (/employer/jobs/:id/applicants)
-- Columns: Name, Email, Phone, Citizenship Badge, Score (traffic light), Status, Date
-- Contact buttons (mailto, tel) that log to audit_logs
-- Reject button with modal + reason dropdown
-- Paginated, sortable
-
-### Guest Application Page (/apply/:jobId)
-- Public route, no login required
-- Fetches job details, renders form based on screening toggles
-- Honeypot field, basic rate limiting
-- Success message after submission
-
----
-
-## Step 6: Hub Integration
-
-Update the existing Jobs page to display sponsored jobs with priority ordering:
-1. Enterprise (Gold badge)
-2. Professional (Silver badge)
-3. Essential (Sponsored badge)
-4. Free (existing DOL jobs)
-
-Add "Sponsored" / "Verified Employer" badges to job cards.
-
----
-
-## Technical Notes
-
-- All existing worker functionality (mailing queue, worker plans, radar, etc.) remains completely untouched
-- Employer billing is subscription-based (Stripe subscriptions), separate from worker one-time payments
-- The profiles table is NOT modified -- employer data lives in employer_profiles
-- Role check uses existing `has_role()` function and user_roles table
-- Scoring computation happens server-side only (edge function), never on the client
-- US citizen/permanent resident applications get "Priority Review" badge, pinned above others
-- Compliance disclaimer shown on screening setup page
+### Arquivos afetados
+- `frontend/src/pages/Queue.tsx` — único arquivo que precisa de alterações
 
