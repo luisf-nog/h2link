@@ -497,7 +497,7 @@ export default function Radar() {
   }, [radarMode, selectedCategories, minWage, maxExperience, visaType, stateFilter, groupFilter, radarProfile]);
 
   // -------------------------------------------------------------------------
-  // updateStats
+  // updateStats — delegates to store
   // -------------------------------------------------------------------------
   const updateStats = useCallback(
     async (override?: {
@@ -508,99 +508,28 @@ export default function Radar() {
       groupFilter?: string;
     }) => {
       if (!profile?.id) return;
-      try {
-        const vt = override?.visaType ?? visaType;
-        const st = override?.stateFilter ?? stateFilter;
-        const mw = override?.minWage ?? minWage;
-        const me = override?.maxExperience ?? maxExperience;
-        const gf = override?.groupFilter ?? groupFilter;
-
-        const { data } = await supabase.rpc("get_radar_stats" as any, {
-          p_user_id: profile.id,
-          p_visa_type: vt,
-          p_state: st,
-          p_min_wage: mw !== "" ? Number(mw) : 0,
-          p_max_exp: me !== "" ? Number(me) : 999,
-          p_group: gf,
-        });
-
-        if (data) {
-          const grouped = (data as any[]).reduce((acc: any, curr: any) => {
-            const raw = curr.raw_category || "";
-            const sectorKey = resolveSectorKey(raw, SECTOR_KEYWORDS);
-            const sectorName = t(`radar.sectors.${sectorKey}`, sectorKey);
-            if (!acc[sectorName]) acc[sectorName] = { items: [], totalJobs: 0 };
-            acc[sectorName].items.push(curr);
-            acc[sectorName].totalJobs += curr.count || 0;
-            return acc;
-          }, {});
-          setGroupedCategories(grouped);
-        }
-      } catch (e) {
-        console.error("[Radar] updateStats error:", e);
-      }
+      await storeUpdateStats(
+        profile.id,
+        {
+          visaType: override?.visaType ?? visaType,
+          stateFilter: override?.stateFilter ?? stateFilter,
+          minWage: override?.minWage ?? minWage,
+          maxExperience: override?.maxExperience ?? maxExperience,
+          groupFilter: override?.groupFilter ?? groupFilter,
+        },
+        t,
+      );
     },
-    [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, t],
+    [profile?.id, visaType, stateFilter, minWage, maxExperience, groupFilter, t, storeUpdateStats],
   );
 
   // -------------------------------------------------------------------------
-  // fetchMatches
+  // fetchMatches — delegates to store
   // -------------------------------------------------------------------------
   const fetchMatches = useCallback(async () => {
     if (!profile?.id) return;
-
-    const { data, error } = await supabase
-      .from("radar_matched_jobs" as any)
-      .select(`id, job_id, auto_queued, public_jobs!fk_radar_job (*)`)
-      .eq("user_id", profile.id);
-
-    if (error) {
-      console.error("[Radar] fetchMatches error:", error);
-      return;
-    }
-    if (!data) return;
-
-    const validMatches = (data as any[]).filter((m: any) => {
-      const job = m.public_jobs;
-      return job && job.is_active !== false && job.is_banned !== true;
-    });
-
-    const jobIds = validMatches.map((m: any) => m.job_id);
-
-    if (jobIds.length === 0) {
-      setMatchedJobs([]);
-      setMatchCount(0);
-      setQueuedFromRadar(0);
-      return;
-    }
-
-    // Batch .in() queries to avoid PostgREST URL length limits
-    const CHUNK_SIZE = 150;
-    const allQueuedJobs: any[] = [];
-    for (let i = 0; i < jobIds.length; i += CHUNK_SIZE) {
-      const chunk = jobIds.slice(i, i + CHUNK_SIZE);
-      const { data: queuedChunk, error: chunkError } = await supabase
-        .from("my_queue")
-        .select("job_id")
-        .eq("user_id", profile.id)
-        .in("job_id", chunk);
-      if (chunkError) {
-        console.error("[Radar] fetchMatches queue check error:", chunkError);
-        return;
-      }
-      if (queuedChunk) allQueuedJobs.push(...queuedChunk);
-    }
-    const queuedJobs = allQueuedJobs;
-    const queueError = null;
-
-    const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
-    const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
-    const queuedCount = validMatches.filter((m: any) => queuedSet.has(m.job_id)).length;
-
-    setMatchedJobs(finalMatches);
-    setMatchCount(finalMatches.length);
-    setQueuedFromRadar(queuedCount);
-  }, [profile?.id]);
+    await storeFetchMatches(profile.id);
+  }, [profile?.id, storeFetchMatches]);
 
   // -------------------------------------------------------------------------
   // triggerRescan
