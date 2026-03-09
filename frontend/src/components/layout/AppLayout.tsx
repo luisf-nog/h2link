@@ -145,6 +145,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
           <div ref={contentRef} className="flex-1 p-4 md:p-6 overflow-auto">
+            {/* Global sending badge – visible on all pages */}
+            <GlobalSendingBadge currentPath={location.pathname} />
+
             {/* Persistent pages – always mounted, toggled via CSS */}
             <div style={{ display: location.pathname === "/dashboard" ? "block" : "none" }}><Dashboard /></div>
             <div style={{ display: location.pathname === "/jobs" ? "block" : "none" }}><Jobs /></div>
