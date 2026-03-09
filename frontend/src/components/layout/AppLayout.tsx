@@ -121,7 +121,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
           <AppFooter />
           {!isEmployer && <SetupBanner />}
-          <WhatsNewDialog />
+          {!isEmployer && <WhatsNewDialog />}
         </main>
       </div>
     </SidebarProvider>
