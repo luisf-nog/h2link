@@ -51,7 +51,7 @@ export default function EmployerJobs() {
     if (!employerProfile) return;
     const { data } = await supabase
       .from("sponsored_jobs")
-      .select("*")
+      .select("id, title, location, is_active, view_count, click_count, start_date, end_date, created_at")
       .eq("employer_id", employerProfile.id)
       .order("created_at", { ascending: false });
 
