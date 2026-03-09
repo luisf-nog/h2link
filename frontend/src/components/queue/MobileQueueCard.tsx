@@ -281,15 +281,15 @@ export function MobileQueueCard({
                 size="icon"
                 variant="ghost"
                 className="h-8 w-8"
-                disabled={(item.status !== "pending" && item.status !== "sent") || globalSending || isSending}
+                disabled={!["pending", "sent", "paused", "skipped_invalid_domain"].includes(item.status) || globalSending || isSending}
                 onClick={onSend}
               >
                 {isSending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : item.status === "sent" ? (
-                  <RefreshCw className="h-4 w-4" />
-                ) : (
+                ) : item.status === "pending" ? (
                   <Send className="h-4 w-4" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
             )}

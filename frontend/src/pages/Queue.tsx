@@ -1143,19 +1143,19 @@ export default function Queue() {
                                 size="sm"
                                 variant="ghost"
                                 disabled={
-                                  (item.status !== "pending" && item.status !== "sent") ||
+                                  !["pending", "sent", "paused", "skipped_invalid_domain"].includes(item.status) ||
                                   sending ||
                                   sendingIds.has(item.id)
                                 }
                                 onClick={() => handleSendOne(item)}
-                                title={item.status === "sent" ? t("queue.actions.resend") : undefined}
+                                title={item.status === "pending" ? undefined : t("queue.actions.resend")}
                               >
                                 {sendingIds.has(item.id) ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : item.status === "sent" ? (
-                                  <RefreshCw className="h-4 w-4" />
-                                ) : (
+                                ) : item.status === "pending" ? (
                                   <Send className="h-4 w-4" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4" />
                                 )}
                               </Button>
                             )}
