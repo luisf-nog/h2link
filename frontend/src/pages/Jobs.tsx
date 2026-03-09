@@ -137,48 +137,26 @@ export default function Jobs() {
 
   const syncQueue = async () => {
     if (!profile?.id) return;
-    // Fetch ALL job_ids from queue (paginate to avoid 1000-row default limit)
-    const allJobIds: string[] = [];
-    let from = 0;
-    const batchSize = 1000;
-    let hasMore = true;
-    while (hasMore) {
-      const { data } = await supabase
-        .from("my_queue")
-        .select("job_id")
-        .eq("user_id", profile.id)
-        .not("job_id", "is", null)
-        .range(from, from + batchSize - 1);
-      if (data && data.length > 0) {
-        allJobIds.push(...data.map((r) => r.job_id).filter((id): id is string => id !== null));
-        from += batchSize;
-        hasMore = data.length === batchSize;
-      } else {
-        hasMore = false;
-      }
-    }
-    setQueuedJobIds(new Set(allJobIds));
+    await storeSyncQueue(profile.id);
   };
 
-  // Fetch featured jobs
-  const fetchFeaturedJobs = async () => {
-    const { data } = await supabase
-      .from("sponsored_jobs")
-      .select("id, title, description, city, state, hourly_wage, start_date, end_date, num_positions, visa_type, employer_legal_name, priority_level, is_sponsored, dol_case_number, primary_duties, employer_id, created_at, min_experience_months, overtime_rate, additional_compensation, bonuses, deductions, deductions_additional, benefits, housing_provided, transportation_provided, meals_provided, daily_meal_cost, training_provided, visa_fee_reimbursement, english_level, english_proficiency, drivers_license, prior_experience_required, req_background_check, req_extreme_weather, req_full_contract_availability, req_travel_worksite, req_lift_lbs, lifting_weight_lbs, equipment_used, equipment_experience, work_environment, skill_level, view_count, click_count, wage_rate")
-      .eq("is_active", true)
-      .eq("is_sponsored", true)
-      .order("priority_level", { ascending: false });
-    if (data) setFeaturedJobs(data as FeaturedJob[]);
-  };
+  const fetchFeaturedJobs = () => storeFetchFeatured(true);
 
   useEffect(() => {
-    fetchFeaturedJobs();
+    storeFetchFeatured();
     if (profile?.id) {
-      syncQueue();
+      storeSyncQueue(profile.id);
       const hasSeenWelcome = localStorage.getItem("h2linker_hub_welcome_seen");
       if (!hasSeenWelcome) setShowWelcome(true);
     }
   }, [profile?.id]);
+
+  // Silent refresh on tab focus
+  const handleVisibility = useCallback(() => {
+    storeFetchFeatured();
+    if (profile?.id) storeSyncQueue(profile.id);
+  }, [profile?.id]);
+  useVisibilityRefresh(handleVisibility);
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);
@@ -186,7 +164,7 @@ export default function Jobs() {
   };
 
   const fetchJobs = async () => {
-    setLoading(true);
+    if (lastFetchedAt === 0) setLoading(true);
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -208,8 +186,7 @@ export default function Jobs() {
 
     const { data, count } = await query.range(from, to);
     if (data) {
-      setJobs(data as Job[]);
-      setTotalCount(count ?? 0);
+      setJobsData(data as Job[], count ?? 0);
     }
     setLoading(false);
   };
