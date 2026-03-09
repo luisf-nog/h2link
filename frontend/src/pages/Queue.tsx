@@ -131,6 +131,7 @@ export default function Queue() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
+  const [clockTick, setClockTick] = useState(() => Date.now());
   const sendCancelledRef = useRef(false);
   const sendingRef = useRef(false);
 
