@@ -739,7 +739,7 @@ export default function Queue() {
   const handleRetryAllFailed = async () => {
     if (failedItems.length === 0) return;
     const items = failedItems.slice(0, remainingToday);
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
