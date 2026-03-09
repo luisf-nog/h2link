@@ -561,8 +561,8 @@ export function ApplicantsTab({
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filter pills - scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
         {STATUS_FILTERS.map((f) => {
           const count = f.value === "all" ? apps.length : (counts[f.value] ?? 0);
           if (f.value !== "all" && count === 0) return null;
@@ -570,7 +570,7 @@ export function ApplicantsTab({
             <button
               key={f.value}
               onClick={() => { setFilter(f.value); setPage(1); }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap shrink-0 ${
                 filter === f.value
                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                   : "bg-card text-muted-foreground border-border hover:border-muted-foreground/40"
