@@ -41,6 +41,7 @@ interface QueueItem {
   profile_viewed_at?: string | null;
   tracking_id?: string;
   created_at: string;
+  processing_started_at?: string | null;
   send_count: number;
   email_open_count?: number | null;
   last_error?: string | null;
