@@ -241,6 +241,7 @@ export default function Queue() {
   }, []);
 
   const fetchQueue = async () => {
+    if (!initialLoadDone.current) setLoading(true);
     const { data, error } = await supabase
       .from("my_queue")
       .select(
@@ -263,6 +264,7 @@ export default function Queue() {
       setQueue((data as unknown as QueueItem[]) || []);
     }
     setLoading(false);
+    initialLoadDone.current = true;
   };
 
   const removeFromQueue = async (id: string) => {
