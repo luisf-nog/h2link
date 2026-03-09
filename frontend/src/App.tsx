@@ -24,8 +24,6 @@ import SharedJobView from "./pages/SharedJobView";
 import ResumeConverter from "./pages/ResumeConverter";
 import Landing from "./pages/Landing";
 import ApplyJob from "./pages/ApplyJob";
-import Landing from "./pages/Landing";
-import ApplyJob from "./pages/ApplyJob";
 import EmployerDashboard from "./pages/employer/EmployerDashboard";
 import EmployerPlans from "./pages/employer/EmployerPlans";
 import EmployerJobs from "./pages/employer/EmployerJobs";
