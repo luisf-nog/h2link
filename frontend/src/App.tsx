@@ -213,31 +213,13 @@ const AppRoutes = () => (
       }
     />
 
-    {/* PROTECTED ROUTES */}
-    <Route
-      path="/dashboard"
-      element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/jobs"
-      element={
-        <PublicOrProtectedRoute>
-          <Jobs />
-        </PublicOrProtectedRoute>
-      }
-    />
-    <Route
-      path="/queue"
-      element={
-        <ProtectedRoute>
-          <Queue />
-        </ProtectedRoute>
-      }
-    />
+    {/* PERSISTENT ROUTES — rendered inside AppLayout, children=null */}
+    <Route path="/dashboard" element={<ProtectedRoute>{null}</ProtectedRoute>} />
+    <Route path="/jobs" element={<PublicOrProtectedRoute>{null}</PublicOrProtectedRoute>} />
+    <Route path="/queue" element={<ProtectedRoute>{null}</ProtectedRoute>} />
+    <Route path="/radar" element={<ProtectedRoute>{null}</ProtectedRoute>} />
+
+    {/* NON-PERSISTENT PROTECTED ROUTES */}
     <Route
       path="/plans"
       element={
@@ -255,10 +237,26 @@ const AppRoutes = () => (
       }
     />
     <Route
-      path="/radar"
+      path="/resume-converter"
       element={
         <ProtectedRoute>
-          <Radar />
+          <ResumeConverter />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings"
+      element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/settings/email"
+      element={
+        <ProtectedRoute>
+          <Settings defaultTab="email" />
         </ProtectedRoute>
       }
     />
