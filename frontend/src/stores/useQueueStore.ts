@@ -40,6 +40,11 @@ interface QueueStore {
   lastFetchedAt: number;
   smtpReady: boolean | null;
 
+  // Sending state (global so it persists across page navigation)
+  sending: boolean;
+  sendProgress: { sent: number; total: number };
+  sendCancelled: boolean;
+
   /** Fetch only if data is stale (>30s). Returns immediately if fresh. */
   fetchQueue: () => Promise<void>;
   /** Always fetches, regardless of staleness. */
@@ -48,6 +53,9 @@ interface QueueStore {
   setQueue: (updater: QueueItem[] | ((prev: QueueItem[]) => QueueItem[])) => void;
   setSmtpReady: (ready: boolean | null) => void;
   checkSmtp: (userId: string) => Promise<void>;
+  setSending: (v: boolean) => void;
+  setSendProgress: (p: { sent: number; total: number }) => void;
+  setSendCancelled: (v: boolean) => void;
 }
 
 export const useQueueStore = create<QueueStore>((set, get) => ({
