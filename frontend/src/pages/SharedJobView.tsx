@@ -70,6 +70,8 @@ interface Job {
   job_min_special_req?: string | null;
   wage_additional?: string | null;
   rec_pay_deductions?: string | null;
+  // Sponsored job flag
+  _is_sponsored?: boolean;
 }
 
 export default function SharedJobView() {
@@ -89,9 +91,49 @@ export default function SharedJobView() {
         return;
       }
       try {
+        // Try public_jobs first
         const { data, error } = await supabase.from("public_jobs").select("*").eq("id", jobId).single();
-        if (error) throw error;
-        setJob(data as unknown as Job);
+        if (data && !error) {
+          setJob(data as unknown as Job);
+          return;
+        }
+
+        // Fallback: try sponsored_jobs
+        const { data: sj, error: sjErr } = await supabase
+          .from("sponsored_jobs")
+          .select("id, title, description, location, city, state, visa_type, hourly_wage, start_date, end_date, created_at, num_positions, primary_duties, min_experience_months, employer_legal_name, is_active")
+          .eq("id", jobId)
+          .eq("is_active", true)
+          .single();
+
+        if (sj && !sjErr) {
+          const location = sj.location || "";
+          const [sjCity, sjState] = location.includes(",")
+            ? location.split(",").map((s: string) => s.trim())
+            : [sj.city || location, sj.state || ""];
+
+          setJob({
+            id: sj.id,
+            job_id: "",
+            job_title: sj.title,
+            company: sj.employer_legal_name || "Employer",
+            email: "",
+            city: sjCity,
+            state: sjState,
+            visa_type: sj.visa_type || "H-2B",
+            salary: sj.hourly_wage,
+            start_date: sj.start_date,
+            end_date: sj.end_date,
+            posted_date: sj.created_at,
+            openings: sj.num_positions,
+            job_duties: sj.primary_duties || sj.description,
+            experience_months: sj.min_experience_months,
+            _is_sponsored: true,
+          });
+          return;
+        }
+
+        setJob(null);
       } catch (error) {
         console.error("Error fetching job:", error);
         setJob(null);
@@ -322,27 +364,50 @@ export default function SharedJobView() {
                     )}
                   </div>
 
-                  {/* CARD DE ORGANIZAÇÃO (O "ANTI-AGÊNCIA") */}
-                  <div className="bg-slate-900 rounded-2xl p-6 text-center text-white space-y-4 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                      <Database className="h-20 w-20" />
+                  {/* CARD DE ORGANIZAÇÃO / APPLY */}
+                  {job._is_sponsored ? (
+                    <div className="bg-primary rounded-2xl p-6 text-center text-primary-foreground space-y-4 shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 opacity-10">
+                        <Users className="h-20 w-20" />
+                      </div>
+                      <div className="bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <ArrowRight className="h-7 w-7" />
+                      </div>
+                      <h3 className="font-black text-xl leading-tight">
+                        {t("jobs.shared.apply_title", "Apply for this position")}
+                      </h3>
+                      <p className="text-xs opacity-80 leading-relaxed">
+                        {t("jobs.shared.apply_desc", "Submit your application directly to the employer. No account required.")}
+                      </p>
+                      <Button
+                        className="w-full font-black bg-white text-primary hover:bg-white/90 shadow-lg h-12"
+                        onClick={() => navigate(`/apply/${job.id}`)}
+                      >
+                        {t("jobs.shared.apply_now", "Apply Now")}
+                      </Button>
                     </div>
-                    <div className="bg-indigo-500/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <ListPlus className="h-7 w-7 text-indigo-400" />
+                  ) : (
+                    <div className="bg-slate-900 rounded-2xl p-6 text-center text-white space-y-4 shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 opacity-10">
+                        <Database className="h-20 w-20" />
+                      </div>
+                      <div className="bg-indigo-500/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <ListPlus className="h-7 w-7 text-indigo-400" />
+                      </div>
+                      <h3 className="font-black text-xl leading-tight">
+                        {t("jobs.shared.organize_title")}
+                      </h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {t("jobs.shared.organize_desc")}
+                      </p>
+                      <Button
+                        className="w-full font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg h-12"
+                        onClick={() => navigate("/auth")}
+                      >
+                        {t("jobs.shared.add_to_queue")}
+                      </Button>
                     </div>
-                    <h3 className="font-black text-xl leading-tight">
-                      {t("jobs.shared.organize_title")}
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {t("jobs.shared.organize_desc")}
-                    </p>
-                    <Button
-                      className="w-full font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg h-12"
-                      onClick={() => navigate("/auth")}
-                    >
-                      {t("jobs.shared.add_to_queue")}
-                    </Button>
-                  </div>
+                  )}
                 </div>
 
                 {/* CONTEÚDO PRINCIPAL */}
@@ -398,22 +463,43 @@ export default function SharedJobView() {
               </div>
             </div>
 
-            {/* Sticky Footer Mobile - Versão "Organizador" */}
+            {/* Sticky Footer Mobile */}
             <div className="sm:hidden p-4 border-t bg-white flex flex-col gap-3 sticky bottom-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
-              <Button
-                className="w-full font-black h-14 text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 uppercase tracking-tighter"
-                onClick={() => navigate("/auth")}
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                {t("jobs.shared.add_to_send_queue")}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest"
-                onClick={() => navigate("/jobs")}
-              >
-                <Search className="h-3 w-3 mr-1" /> {t("jobs.details.browse_others")}
-              </Button>
+              {job._is_sponsored ? (
+                <>
+                  <Button
+                    className="w-full font-black h-14 text-base shadow-xl bg-primary hover:bg-primary/90 uppercase tracking-tighter"
+                    onClick={() => navigate(`/apply/${job.id}`)}
+                  >
+                    <ArrowRight className="h-5 w-5 mr-2" />
+                    {t("jobs.shared.apply_now", "Apply Now")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest"
+                    onClick={() => navigate("/jobs")}
+                  >
+                    <Search className="h-3 w-3 mr-1" /> {t("jobs.details.browse_others")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="w-full font-black h-14 text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 uppercase tracking-tighter"
+                    onClick={() => navigate("/auth")}
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    {t("jobs.shared.add_to_send_queue")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest"
+                    onClick={() => navigate("/jobs")}
+                  >
+                    <Search className="h-3 w-3 mr-1" /> {t("jobs.details.browse_others")}
+                  </Button>
+                </>
+              )}
             </div>
           </Card>
         </main>
