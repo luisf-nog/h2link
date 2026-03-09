@@ -1421,82 +1421,54 @@ export default function Auth() {
               </div>
             )}
 
-            {/* ── SIGN UP (worker only here) ── */}
+            {/* ── SIGN UP — Role Picker ── */}
             {tab === "signup" && (
-              <form onSubmit={handleWorkerSignUp} className="flex flex-col gap-4">
-                {/* Role selector */}
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setSignupRole("worker")}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${signupRole === "worker" ? "auth-tab-active" : "border-white/10 text-white/30 hover:text-white/50"}`}
-                  >
-                    🔧 {t("auth.roles.worker")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSignupRole("employer")}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all border ${signupRole === "employer" ? "auth-tab-active" : "border-white/10 text-white/30 hover:text-white/50"}`}
-                  >
-                    💼 {t("auth.roles.employer")}
-                  </button>
+              <div className="flex flex-col gap-5">
+                <div className="text-center mb-2">
+                  <h3 className="text-lg font-bold text-white">{t("auth.role_picker.title", "Choose your account type")}</h3>
+                  <p className="text-sm text-white/30 mt-1">{t("auth.role_picker.desc", "Select how you'll use H2 Linker")}</p>
                 </div>
-
-                {/* Worker fields */}
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.full_name")}</label>
-                  <Input name="fullName" required className={inputCls} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className={labelCls}>{t("auth.fields.age")}</label>
-                    <Input name="age" type="number" min={14} max={90} required className={inputCls} />
+                <button
+                  type="button"
+                  onClick={() => setSignupRole("worker")}
+                  className="group w-full text-left p-5 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:border-sky-500/30 hover:bg-sky-500/[0.05] transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                      <HardHat size={22} className="text-sky-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors">
+                        {t("auth.roles.worker")}
+                      </p>
+                      <p className="text-xs text-white/30 mt-0.5">
+                        {t("auth.role_picker.worker_desc", "Find H-2A/H-2B jobs and apply directly to employers")}
+                      </p>
+                    </div>
+                    <ArrowRight size={16} className="text-white/15 group-hover:text-sky-400 transition-colors shrink-0" />
                   </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>{t("auth.fields.phone")}</label>
-                    <PhoneE164Input id="phone" name="phone" defaultCountry="BR" required inputClassName={inputCls} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.email")}</label>
-                  <Input name="email" type="email" required className={inputCls} />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.contact_email")}</label>
-                  <Input name="contactEmail" type="email" required className={inputCls} />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.referral_code")}</label>
-                  <Input name="referralCode" maxLength={12} className={inputCls} />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.password")}</label>
-                  <Input name="password" type="password" minLength={6} required className={inputCls} />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelCls}>{t("auth.fields.confirm_password")}</label>
-                  <Input name="confirmPassword" type="password" minLength={6} required className={inputCls} />
-                </div>
-                <div className="flex flex-col gap-3 pt-1">
-                  <p className="text-[10px] text-white/25 leading-relaxed">{t("auth.disclaimer")}</p>
-                  <div className="flex gap-2.5 items-start">
-                    <Checkbox
-                      id="accept"
-                      checked={acceptTerms}
-                      onCheckedChange={(v) => setAcceptTerms(v === true)}
-                      className="border-white/20 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500"
-                    />
-                    <input type="hidden" name="acceptTerms" value={acceptTerms ? "on" : ""} />
-                    <label htmlFor="accept" className="text-[11px] text-white/40 leading-snug cursor-pointer">
-                      {t("auth.accept_terms")}
-                    </label>
-                  </div>
-                </div>
-                <button type="submit" disabled={isLoading} className={btnPrimary}>
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-                  {t("auth.actions.signup")}
                 </button>
-              </form>
+                <button
+                  type="button"
+                  onClick={() => setSignupRole("employer")}
+                  className="group w-full text-left p-5 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:border-sky-500/30 hover:bg-sky-500/[0.05] transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                      <Building2 size={22} className="text-sky-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors">
+                        {t("auth.roles.employer")}
+                      </p>
+                      <p className="text-xs text-white/30 mt-0.5">
+                        {t("auth.role_picker.employer_desc", "Post jobs and recruit H-2 visa workers")}
+                      </p>
+                    </div>
+                    <ArrowRight size={16} className="text-white/15 group-hover:text-sky-400 transition-colors shrink-0" />
+                  </div>
+                </button>
+              </div>
             )}
           </div>
 
