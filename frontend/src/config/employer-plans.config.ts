@@ -105,7 +105,8 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       "Compliance report",
       "All Professional features",
     ],
-    highlights: ["5 Featured Jobs", "},
+    highlights: ["5 Featured Jobs", "Top Priority"],
+  },
 };
 
 export const getEmployerPlan = (tier: EmployerTier) => EMPLOYER_PLANS[tier] ?? EMPLOYER_PLANS.free;
