@@ -243,7 +243,18 @@ function CandidateRow({
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800"
                 : "bg-muted text-muted-foreground border-border"
             }`}>
-              {workAuthBadge.icon === "check" && <span className="text-xs leading-none">🇺🇸</span>}
+              {workAuthBadge.icon === "check" && (
+                <svg width="14" height="10" viewBox="0 0 14 10" className="shrink-0" aria-label="US Flag">
+                  <rect width="14" height="10" fill="#B22234" />
+                  <rect y="1.54" width="14" height="0.77" fill="white" />
+                  <rect y="3.08" width="14" height="0.77" fill="white" />
+                  <rect y="4.62" width="14" height="0.77" fill="white" />
+                  <rect y="6.15" width="14" height="0.77" fill="white" />
+                  <rect y="7.69" width="14" height="0.77" fill="white" />
+                  <rect y="9.23" width="14" height="0.77" fill="white" />
+                  <rect width="5.6" height="5.38" fill="#3C3B6E" />
+                </svg>
+              )}
               {workAuthBadge.icon === "globe" && <Globe size={12} />}
               {workAuthBadge.icon === "alert" && <AlertCircle size={12} className="text-amber-600" />}
               {workAuthBadge.label}
