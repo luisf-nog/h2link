@@ -247,6 +247,54 @@ function CandidateRow({
           )}
         </div>
 
+        {/* Contact action icons */}
+        <TooltipProvider delayDuration={300}>
+          <div className="hidden sm:flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={`mailto:${app.email}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                >
+                  <Mail size={14} />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p className="text-xs">Email</p></TooltipContent>
+            </Tooltip>
+
+            {app.phone && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={`sms:${app.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                    >
+                      <MessageSquare size={14} />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom"><p className="text-xs">Message</p></TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={`tel:${app.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                    >
+                      <Phone size={14} />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom"><p className="text-xs">Call</p></TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
+        </TooltipProvider>
+
         {/* Status Dropdown with color indicator */}
         <Select
           value={app.application_status}
