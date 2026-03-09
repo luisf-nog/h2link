@@ -65,20 +65,16 @@ export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, 
     let y = 0;
 
     // ====== PAGE 1: COVER ======
-    y = 20;
+    y = 28;
 
-    // Logo
-    try {
-      const logoBase64 = await loadImageAsBase64(logoWordmark);
-      doc.addImage(logoBase64, "PNG", 14, y - 8, 40, 20);
-      y += 18;
-    } catch {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
-      doc.setTextColor(30, 30, 30);
-      doc.text("H2 Linker", 14, y + 6);
-      y += 14;
-    }
+    // Logo text styled like auth page: cyan "H2" + dark "Linker"
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(0, 163, 224); // Cyan accent for "H2"
+    doc.text("H2", 14, y);
+    const h2Width = doc.getTextWidth("H2");
+    doc.setTextColor(30, 30, 30); // Dark for " Linker"
+    doc.text(" Linker", 14 + h2Width, y);
 
     y += 10;
     doc.setFontSize(14);
