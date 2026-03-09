@@ -376,7 +376,82 @@ export function ApplicantsTab({
         })}
       </div>
 
-      <div className="space-y-2">
+      {/* Filter & Sort controls */}
+      <div className="flex flex-wrap items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filter
+              {locationFilter !== "all" && (
+                <span className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full">1</span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Location</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={locationFilter === "all"}
+              onCheckedChange={() => { setLocationFilter("all"); setPage(1); }}
+            >
+              All locations
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={locationFilter === "us"}
+              onCheckedChange={() => { setLocationFilter("us"); setPage(1); }}
+            >
+              US Workers only
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={locationFilter === "outside"}
+              onCheckedChange={() => { setLocationFilter("outside"); setPage(1); }}
+            >
+              Outside US only
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              Sort
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuCheckboxItem
+              checked={sortBy === "newest"}
+              onCheckedChange={() => { setSortBy("newest"); setPage(1); }}
+            >
+              Newest first
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={sortBy === "match_desc"}
+              onCheckedChange={() => { setSortBy("match_desc"); setPage(1); }}
+            >
+              <ArrowDown className="h-3 w-3 mr-1" /> Match score (high → low)
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={sortBy === "match_asc"}
+              onCheckedChange={() => { setSortBy("match_asc"); setPage(1); }}
+            >
+              <ArrowUp className="h-3 w-3 mr-1" /> Match score (low → high)
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={sortBy === "exp_desc"}
+              onCheckedChange={() => { setSortBy("exp_desc"); setPage(1); }}
+            >
+              Most experience first
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <span className="text-xs text-muted-foreground ml-1">
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
         {paged.map((app) => (
           <CandidateRow
             key={app.id}
