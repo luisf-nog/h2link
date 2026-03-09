@@ -72,226 +72,40 @@ export default function Dashboard() {
   const creditsRemaining = Math.max(0, dailyLimit - creditsUsed);
   const usagePercent = dailyLimit > 0 ? (creditsUsed / dailyLimit) * 100 : 0;
 
-  // --- Estados de Dados ---
-  const [jobMarketLoading, setJobMarketLoading] = useState(true);
-  const [visaCounts, setVisaCounts] = useState<{ h2a: number; h2b: number; early: number }>({
-    h2a: 0, h2b: 0, early: 0,
-  });
-  const [hotCount, setHotCount] = useState(0);
+  // --- Store-backed data (survives navigation) ---
+  const {
+    visaCounts, hotCount, topCategories, topStates, topPayingStates,
+    marketDataLastFetchedAt, fetchMarketData,
+    queueCount, sentThisMonth, personalLastFetchedAt, fetchPersonalStats,
+    totalEmailsSent, totalOpened, totalCvViewed, totalSentItems,
+    engagementLastFetchedAt, fetchEngagement,
+  } = useDashboardStore();
 
-  // Listas Top 5
-  const [topCategories, setTopCategories] = useState<Array<{ name: string; count: number; percent: number }>>([]);
-  const [topStates, setTopStates] = useState<Array<{ name: string; count: number; percent: number }>>([]);
-  const [topPayingStates, setTopPayingStates] = useState<Array<{ name: string; avgSalary: number }>>([]);
+  const jobMarketLoading = marketDataLastFetchedAt === 0;
+  const engagementLoading = engagementLastFetchedAt === 0;
 
-  const [queueCount, setQueueCount] = useState(0);
-  const [sentThisMonth, setSentThisMonth] = useState(0);
-
-  // --- Engagement Metrics ---
-  const [engagementLoading, setEngagementLoading] = useState(true);
-  const [totalEmailsSent, setTotalEmailsSent] = useState(0);
-  const [totalOpened, setTotalOpened] = useState(0);
-  const [totalCvViewed, setTotalCvViewed] = useState(0);
-  const [totalSentItems, setTotalSentItems] = useState(0);
-
-  // 1. Estatísticas Pessoais
+  // Initial fetches (stale-checked)
   useEffect(() => {
-    if (!profile?.id) return;
-
-    const fetchPersonalStats = async () => {
-      const { count: pendingCount } = await supabase
-        .from("my_queue")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", profile.id)
-        .eq("status", "pending");
-      setQueueCount(pendingCount ?? 0);
-
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const { count: monthCount } = await supabase
-        .from("queue_send_history")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", profile.id)
-        .eq("status", "sent")
-        .gte("sent_at", startOfMonth.toISOString());
-      setSentThisMonth(monthCount ?? 0);
-    };
-
-    fetchPersonalStats();
-  }, [profile?.id, creditsUsed]);
-
-  // Engagement metrics
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    const fetchEngagement = async () => {
-      setEngagementLoading(true);
-      try {
-        // Total emails sent (all time) from profile
-        setTotalEmailsSent((profile as any).emails_sent_total || 0);
-
-        // Get sent queue items with open/view stats (paginated)
-        let sentCount = 0;
-        let openedCount = 0;
-        let cvViewedCount = 0;
-        let from = 0;
-        const batchSize = 1000;
-        let hasMore = true;
-
-        while (hasMore) {
-          const { data } = await supabase
-            .from("my_queue")
-            .select("id, opened_at, profile_viewed_at")
-            .eq("user_id", profile.id)
-            .eq("status", "sent")
-            .range(from, from + batchSize - 1);
-
-          if (data && data.length > 0) {
-            sentCount += data.length;
-            openedCount += data.filter(r => r.opened_at != null).length;
-            cvViewedCount += data.filter(r => r.profile_viewed_at != null).length;
-            from += batchSize;
-            hasMore = data.length === batchSize;
-          } else {
-            hasMore = false;
-          }
-        }
-
-        setTotalSentItems(sentCount);
-        setTotalOpened(openedCount);
-        setTotalCvViewed(cvViewedCount);
-      } catch (e) {
-        console.error("Engagement fetch error:", e);
-      } finally {
-        setEngagementLoading(false);
-      }
-    };
-
-    fetchEngagement();
-  }, [profile?.id, (profile as any)?.emails_sent_total]);
-
-
-  // 2. Dados de Mercado (Paginação Robusta)
-  useEffect(() => {
-    const fetchMarketData = async () => {
-      setJobMarketLoading(true);
-
-      const PAGE_SIZE = 1000;
-      let allRows: any[] = [];
-      let page = 0;
-      let hasMore = true;
-
-      try {
-        while (hasMore) {
-          const from = page * PAGE_SIZE;
-          const to = from + PAGE_SIZE - 1;
-
-          const { data, error } = await supabase
-            .from("public_jobs")
-            .select("visa_type, category, state, salary, posted_date, job_id")
-            .eq("is_active", true)
-            .range(from, to);
-
-          if (error) throw error;
-
-          if (data && data.length > 0) {
-            allRows = [...allRows, ...data];
-            if (data.length < PAGE_SIZE) {
-              hasMore = false;
-            } else {
-              page++;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
-
-        // --- Processamento ---
-        const counts = { h2a: 0, h2b: 0, early: 0 };
-        const cats = new Map<string, number>();
-        const states = new Map<string, number>();
-        const salaries = new Map<string, { sum: number; count: number }>();
-        let hot = 0;
-
-        const today = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        const todayStr = today.toISOString().split("T")[0];
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-        allRows.forEach((job) => {
-          const visa = (job.visa_type || "").trim();
-          const jobId = (job.job_id || "").toUpperCase();
-
-          if (jobId.startsWith("JO-") || visa.includes("Early Access")) {
-            counts.early++;
-          } else if (visa === "H-2B") {
-            counts.h2b++;
-          } else {
-            counts.h2a++;
-          }
-
-          const c = job.category?.trim();
-          if (c) cats.set(c, (cats.get(c) || 0) + 1);
-
-          const s = job.state?.trim();
-          if (s) states.set(s, (states.get(s) || 0) + 1);
-
-          if (job.salary && typeof job.salary === "number" && job.salary > 7 && job.salary < 150) {
-            const acc = salaries.get(s || "Unknown") || { sum: 0, count: 0 };
-            salaries.set(s || "Unknown", { sum: acc.sum + job.salary, count: acc.count + 1 });
-          }
-
-          if (job.posted_date) {
-            if (job.posted_date === todayStr || job.posted_date === yesterdayStr) {
-              hot++;
-            }
-          }
-        });
-
-        setVisaCounts(counts);
-        setHotCount(hot);
-
-        const totalCats = Array.from(cats.values()).reduce((a, b) => a + b, 0);
-        setTopCategories(
-          Array.from(cats.entries())
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 6)
-            .map(([name, count]) => ({
-              name, count,
-              percent: totalCats > 0 ? (count / totalCats) * 100 : 0,
-            })),
-        );
-
-        const totalStates = Array.from(states.values()).reduce((a, b) => a + b, 0);
-        setTopStates(
-          Array.from(states.entries())
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 6)
-            .map(([name, count]) => ({
-              name, count,
-              percent: totalStates > 0 ? (count / totalStates) * 100 : 0,
-            })),
-        );
-
-        const topSalaries = Array.from(salaries.entries())
-          .map(([name, val]) => ({ name, avgSalary: val.sum / val.count, count: val.count }))
-          .filter((x) => x.count >= 5)
-          .sort((a, b) => b.avgSalary - a.avgSalary)
-          .slice(0, 5);
-
-        setTopPayingStates(topSalaries);
-      } catch (error) {
-        console.error("Market data error:", error);
-      } finally {
-        setJobMarketLoading(false);
-      }
-    };
-
     fetchMarketData();
   }, []);
+
+  useEffect(() => {
+    if (profile?.id) fetchPersonalStats(profile.id);
+  }, [profile?.id, creditsUsed]);
+
+  useEffect(() => {
+    if (profile?.id) fetchEngagement(profile.id, (profile as any).emails_sent_total || 0);
+  }, [profile?.id, (profile as any)?.emails_sent_total]);
+
+  // Silent refresh on tab focus
+  const handleVisibility = useCallback(() => {
+    fetchMarketData();
+    if (profile?.id) {
+      fetchPersonalStats(profile.id);
+      fetchEngagement(profile.id, (profile as any).emails_sent_total || 0);
+    }
+  }, [profile?.id, (profile as any)?.emails_sent_total]);
+  useVisibilityRefresh(handleVisibility);
 
   const getTimeOfDayGreeting = () => {
     const hours = new Date().getHours();
