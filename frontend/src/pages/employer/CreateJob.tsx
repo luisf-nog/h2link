@@ -698,6 +698,16 @@ export default function CreateJob() {
                           <SelectItem value="required">{t("employer.create_job.dl_required")}</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          id="req_drivers_license"
+                          checked={form.req_drivers_license}
+                          onCheckedChange={(v) => setForm((p) => ({ ...p, req_drivers_license: v }))}
+                        />
+                        <Label htmlFor="req_drivers_license" className="text-sm text-muted-foreground cursor-pointer">
+                          Requisito eliminatório (exclui candidatos sem CNH)
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
