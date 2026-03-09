@@ -987,16 +987,9 @@ async function processOneUser(params: {
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
 
-    // Circuit breaker: pause remaining queue if too many consecutive errors
+    // Circuit breaker: stop processing for this cron run (but do NOT bulk-pause remaining items)
     if (consecutiveErrors >= 3) {
-      await (serviceClient
-        .from("my_queue")
-        .update({
-          status: "paused",
-          last_error: "[CIRCUIT_BREAKER] Pausado por 3+ erros consecutivos. Verifique SMTP e tente novamente.",
-        } as any)
-        .eq("user_id", userId)
-        .eq("status", "pending")) as any;
+      console.log(`[process-queue] Circuit breaker: 3+ erros sistêmicos consecutivos para ${userId}. Parando este ciclo.`);
       break;
     }
 
