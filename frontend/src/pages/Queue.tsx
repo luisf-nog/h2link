@@ -12,7 +12,7 @@ import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle,
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
-import { parseSmtpError } from "@/lib/smtpErrorParser";
+import { parseSmtpError, isSystemicSmtpError } from "@/lib/smtpErrorParser";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
 import { SendHistoryDialog } from "@/components/queue/SendHistoryDialog";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
@@ -627,11 +627,16 @@ export default function Queue() {
         creditsRemaining -= 1;
         consecutiveSmtpFailures = 0; // Reset on success
         setSendProgress({ sent: sentIds.length, total: items.length });
-      } catch (e: unknown) {
+    } catch (e: unknown) {
         const message = e instanceof Error ? e.message : t("common.errors.send_failed");
         console.error(`[Queue] Erro ao processar item ${item.id}:`, e);
 
-        consecutiveSmtpFailures += 1;
+        // Only count systemic errors (auth, connection, AI) toward circuit breaker
+        const isSystemic = isSystemicSmtpError(message);
+        if (isSystemic) {
+          consecutiveSmtpFailures += 1;
+        }
+        // Per-recipient errors (550, mailbox full) do NOT increment the counter
 
         const now = new Date().toISOString();
         await supabase
@@ -655,7 +660,7 @@ export default function Queue() {
         failedIds.push(item.id);
         failedErrors.push(message);
 
-        // --- TRAVA 2: Disjuntor automático (Circuit Breaker) ---
+        // --- TRAVA 2: Disjuntor automático (Circuit Breaker) — only for systemic errors ---
         if (consecutiveSmtpFailures >= 5 && profile?.id) {
           // Reset smtp_verified to force re-validation
           await supabase
@@ -664,9 +669,11 @@ export default function Queue() {
             .eq("id", profile.id);
           await refreshProfile();
 
+          const lastErrorParsed = parseSmtpError(message);
+
           toast({
             title: t("smtp.circuit_breaker_title"),
-            description: t("smtp.circuit_breaker_desc"),
+            description: t(lastErrorParsed.descriptionKey, { defaultValue: t("smtp.circuit_breaker_desc") }),
             variant: "destructive",
             action: (
               <Button variant="outline" size="sm" onClick={() => navigate("/settings/email")} className="shrink-0">
