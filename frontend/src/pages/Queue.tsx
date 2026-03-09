@@ -919,7 +919,7 @@ export default function Queue() {
               variant="ghost"
               size="sm"
               className="ml-auto h-7 px-2 text-xs"
-              onClick={() => { sendCancelledRef.current = true; }}
+              onClick={() => { setSendCancelled(true); }}
             >
               <Pause className="h-3.5 w-3.5 mr-1" />
               {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
