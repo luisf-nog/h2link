@@ -154,10 +154,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 // --- PUBLIC OR PROTECTED ROUTE (accessible without login, but shows full layout when logged in) ---
 function PublicOrProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, smtpStatus } = useAuth();
+  const { isEmployer, loading: employerLoading } = useIsEmployer();
   const { t } = useTranslation();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || employerLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
@@ -168,6 +169,11 @@ function PublicOrProtectedRoute({ children }: { children: React.ReactNode }) {
   // If not logged in, show with AppLayout (which has a login button in header)
   if (!user) {
     return <AppLayout>{children}</AppLayout>;
+  }
+
+  // Employers are isolated to employer portal routes
+  if (isEmployer) {
+    return <Navigate to="/employer/dashboard" replace />;
   }
 
   // If logged in and needs onboarding, redirect
