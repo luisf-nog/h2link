@@ -297,6 +297,7 @@ export default function Queue() {
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
+  const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
   const selectedPendingIds = useMemo(
     () => Object.keys(selectedIds).filter((id) => selectedIds[id] && pendingIds.has(id)),
