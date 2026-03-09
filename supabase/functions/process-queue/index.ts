@@ -88,6 +88,8 @@ function isCircuitBreakerError(message: string): boolean {
   if (m.includes("tls") || m.includes("ssl") || m.includes("handshake") || m.includes("certificate")) return true;
   // AI gateway errors — systemic (AI API is down)
   if (m.includes("non-2xx") || m.includes("ai error") || m.includes("ai gateway") || m.includes("generate-job-email") || m.includes("generation failed")) return true;
+  // Edge Function infrastructure errors — systemic (Bug 4 fix)
+  if (m.includes("edge function") || m.includes("failed to send a request")) return true;
   // Rate limiting from SMTP provider — systemic
   if (m.includes("421") || m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) return true;
   // NOT included: 550, 551, 552, 553, 554 — these are per-recipient errors
