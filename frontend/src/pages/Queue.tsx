@@ -219,11 +219,11 @@ export default function Queue() {
               const next = payload?.new;
               if (!next?.id) return;
               setQueue((prev) => prev.map((it) => (it.id === next.id ? { ...it, ...next } : it)));
-              // Also refetch to get fresh joined data (company, job_title)
-              debouncedFetch();
+              // Skip full refetch while sending to avoid overwriting optimistic state
+              if (!sendingRef.current) debouncedFetch();
             } else {
               // INSERT or DELETE — refetch to get full joined data
-              debouncedFetch();
+              if (!sendingRef.current) debouncedFetch();
             }
           },
         )
