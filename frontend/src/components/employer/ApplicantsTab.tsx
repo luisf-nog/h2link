@@ -39,38 +39,55 @@ function initials(name: string) {
     .join("");
 }
 
+// Professional neutral avatars - alternating between 2 neutral tones
 function avatarColor(name: string) {
-  const colors = [
-    "bg-sky-500", "bg-violet-500", "bg-emerald-500",
-    "bg-amber-500", "bg-rose-500", "bg-indigo-500",
-  ];
+  const colors = ["bg-muted", "bg-primary/10"];
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) % colors.length;
   return colors[h];
 }
 
-// Work Authorization display
-function getWorkAuthDisplay(status: string): { label: string; color: "green" | "yellow" | "red"; requiresVisa: boolean } {
-  const map: Record<string, { label: string; color: "green" | "yellow" | "red"; requiresVisa: boolean }> = {
-    us_citizen:          { label: "US Citizen",          color: "green",  requiresVisa: false },
-    permanent_resident:  { label: "Permanent Resident",  color: "green",  requiresVisa: false },
-    authorized:          { label: "Work Authorized",     color: "green",  requiresVisa: false },
-    inside_us:           { label: "In US",               color: "yellow", requiresVisa: true },
-    h2_visa_holder:      { label: "H-2 Returner",        color: "yellow", requiresVisa: true },
-    needs_sponsorship:   { label: "Needs Visa",          color: "red",    requiresVisa: true },
-    outside_us:          { label: "Outside US",          color: "red",    requiresVisa: true },
-    unauthorized:        { label: "Not Authorized",      color: "red",    requiresVisa: true },
-  };
-  return map[status] ?? { label: status, color: "red", requiresVisa: true };
+// Simplified work auth - focus on what matters to employers
+function getWorkAuthBadge(status: string, isInUs: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
+  const usWorkerStatuses = ["us_citizen", "permanent_resident", "authorized"];
+  if (usWorkerStatuses.includes(status)) {
+    return { label: "US Worker", icon: "check" };
+  }
+  if (!isInUs) {
+    return { label: "Outside US", icon: "globe" };
+  }
+  if (status === "h2_visa_holder") {
+    return { label: "H-2 Returner", icon: "check" };
+  }
+  return { label: "Requires H-2 Visa", icon: "alert" };
+}
+
+// Match score color - simple 3-tier system
+function getMatchScoreStyle(score: number | null): string {
+  if (score === null) return "bg-muted text-muted-foreground";
+  if (score >= 90) return "bg-emerald-100 text-emerald-700";
+  if (score >= 70) return "bg-amber-100 text-amber-700";
+  return "bg-muted text-muted-foreground";
 }
 
 const STATUS_OPTIONS = [
-  { value: "received", label: "New" },
-  { value: "shortlisted", label: "Shortlisted" },
-  { value: "contacted", label: "Contacted" },
-  { value: "hired", label: "Hired" },
-  { value: "rejected", label: "Rejected" },
+  { value: "received", label: "New", color: "bg-amber-400" },
+  { value: "shortlisted", label: "Shortlisted", color: "bg-primary" },
+  { value: "contacted", label: "Contacted", color: "bg-sky-500" },
+  { value: "hired", label: "Hired", color: "bg-emerald-500" },
+  { value: "rejected", label: "Rejected", color: "bg-destructive" },
 ];
+
+function getStatusColor(status: string): string {
+  return STATUS_OPTIONS.find(s => s.value === status)?.color ?? "bg-muted";
+}
+
+// Format experience
+function formatExperience(months: number): string {
+  if (months < 12) return `${months}mo exp`;
+  const years = Math.floor(months / 12);
+  return `${years}yr exp`;
+}
 
 // ─── Reject Dialog ─────────────────────────────────────────────────────────────
 
