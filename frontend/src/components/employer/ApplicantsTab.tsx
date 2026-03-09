@@ -295,7 +295,7 @@ export function ApplicantsTab({
         </div>
         <div className="bg-card border rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-foreground">
-            {apps.filter(a => ["us_citizen", "permanent_resident", "authorized"].includes(a.work_authorization_status)).length}
+            {apps.filter(a => a.work_authorization_status === "us_authorized").length}
           </div>
           <div className="text-xs text-muted-foreground">US Workers</div>
         </div>
