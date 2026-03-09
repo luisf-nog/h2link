@@ -758,6 +758,8 @@
       "remove_success_desc": "A vaga foi removida da sua fila.",
       "daily_limit_reached_title": "Limite diário atingido",
       "daily_limit_reached_desc": "You’ve reached your daily sending limit. Try again tomorrow or upgrade your plan.",
+      "max_retries_title": "Limite de tentativas atingido",
+      "max_retries_desc": "Esta vaga já foi enviada {{max}} vezes. Remova e adicione novamente se necessário.",
       "sent_title": "Emails enviados!",
       "sent_desc": "{{count}} candidaturas foram enviadas.",
       "partial_success_title": "Sucesso parcial",
