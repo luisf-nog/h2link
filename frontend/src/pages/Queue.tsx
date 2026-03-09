@@ -170,6 +170,9 @@ export default function Queue() {
     fetchQueue();
   }, []);
 
+  // Sync module-level cache whenever queue state changes
+  useEffect(() => { cachedQueue = queue; }, [queue]);
+
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
