@@ -8,7 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail, Pause } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail, Pause, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
@@ -124,6 +126,8 @@ export default function Queue() {
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
@@ -355,6 +359,26 @@ export default function Queue() {
     [selectedIds, pendingIds],
   );
   const allPendingSelected = pendingItems.length > 0 && selectedPendingIds.length === pendingItems.length;
+
+  const filteredQueue = useMemo(() => {
+    let items = queue;
+    if (statusFilter !== "all") {
+      items = items.filter((q) => q.status === statusFilter);
+    }
+    if (searchText.trim()) {
+      const lower = searchText.trim().toLowerCase();
+      items = items.filter((q) => {
+        const job = q.public_jobs ?? q.manual_jobs;
+        if (!job) return false;
+        return (
+          job.email.toLowerCase().includes(lower) ||
+          job.company.toLowerCase().includes(lower) ||
+          job.job_title.toLowerCase().includes(lower)
+        );
+      });
+    }
+    return items;
+  }, [queue, searchText, statusFilter]);
 
   const ensureCanSend = async () => {
     // --- TRAVA 1: Verificação obrigatória de SMTP ---
@@ -1033,6 +1057,46 @@ export default function Queue() {
         </Card>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t("queue.filters.search_placeholder", { defaultValue: "Buscar email, empresa ou cargo..." })}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="pl-9 pr-8"
+          />
+          {searchText && (
+            <button
+              onClick={() => setSearchText("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder={t("queue.filters.status_placeholder", { defaultValue: "Filtrar status" })} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("queue.filters.all", { defaultValue: "Todos" })}</SelectItem>
+            <SelectItem value="pending">{t("queue.status.pending", { defaultValue: "Pendente" })}</SelectItem>
+            <SelectItem value="processing">{t("queue.status.processing", { defaultValue: "Processando" })}</SelectItem>
+            <SelectItem value="sent">{t("queue.status.sent", { defaultValue: "Enviado" })}</SelectItem>
+            <SelectItem value="failed">{t("queue.status.failed", { defaultValue: "Falhou" })}</SelectItem>
+            <SelectItem value="paused">{t("queue.status.paused", { defaultValue: "Pausado" })}</SelectItem>
+            <SelectItem value="skipped_invalid_domain">{t("queue.status.skipped_invalid_domain", { defaultValue: "DNS inválido" })}</SelectItem>
+          </SelectContent>
+        </Select>
+        {(searchText || statusFilter !== "all") && (
+          <span className="text-sm text-muted-foreground self-center">
+            {t("queue.filters.results_count", { count: filteredQueue.length, defaultValue: "{{count}} resultado(s)" })}
+          </span>
+        )}
+      </div>
+
       <TooltipProvider>
         {isMobile ? (
           <div className="space-y-3">
@@ -1057,7 +1121,7 @@ export default function Queue() {
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">{t("queue.table.loading")}</CardContent>
               </Card>
-            ) : queue.length === 0 ? (
+            ) : filteredQueue.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <div className="space-y-2">
@@ -1069,7 +1133,7 @@ export default function Queue() {
                 </CardContent>
               </Card>
             ) : (
-              queue.map((item) => (
+              filteredQueue.map((item) => (
                 <MobileQueueCard
                   key={item.id}
                   item={item}
@@ -1130,7 +1194,7 @@ export default function Queue() {
                         {t("queue.table.loading")}
                       </TableCell>
                     </TableRow>
-                  ) : queue.length === 0 ? (
+                  ) : filteredQueue.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="space-y-2">
@@ -1142,7 +1206,7 @@ export default function Queue() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    queue.map((item) => (
+                    filteredQueue.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="w-10">
                           <Checkbox
