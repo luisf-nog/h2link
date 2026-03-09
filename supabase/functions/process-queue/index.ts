@@ -811,18 +811,29 @@ async function processOneUser(params: {
   const p = profile as ProfileRow;
   if (p.plan_tier === "free") return { processed: 0, sent: 0, failed: 0 };
 
-  // Daily limit enforcement (backend)
+  // Daily limit enforcement (backend) — use warm-up aware limit
   const today = new Date().toISOString().slice(0, 10);
   let creditsUsed = Number(p.credits_used_today ?? 0);
   const resetDate = String(p.credits_reset_date ?? "");
   if (resetDate !== today) {
     creditsUsed = 0;
+    // Auto-reset consecutive_errors on new day (Bug 2 fix)
     await (serviceClient
       .from("profiles")
-      .update({ credits_used_today: 0, credits_reset_date: today } as any)
+      .update({ credits_used_today: 0, credits_reset_date: today, consecutive_errors: 0 } as any)
       .eq("id", userId)) as any;
+    consecutiveErrors = 0;
   }
-  const dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
+  // Use warm-up aware limit via RPC instead of plan hard cap (Bug 3 fix)
+  let dailyLimit: number;
+  try {
+    const { data: effectiveLimit, error: limitErr } = await serviceClient.rpc('get_effective_daily_limit', { p_user_id: userId });
+    if (limitErr) throw limitErr;
+    dailyLimit = Number(effectiveLimit ?? getDailyEmailLimit(p.plan_tier));
+  } catch (e) {
+    console.warn(`[process-queue] Failed to get effective limit, falling back to plan cap:`, e);
+    dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
+  }
 
   // Diamond: manter processamento automático também fora da janela local
   // (itens vindos do Radar devem sair da fila automaticamente)
