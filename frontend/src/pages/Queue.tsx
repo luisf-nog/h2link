@@ -561,7 +561,6 @@ export default function Queue() {
         await supabase.from("queue_send_history").insert({
           queue_id: item.id,
           user_id: profile?.id,
-          sent_at: sentNow,
           status: "success",
         });
 
