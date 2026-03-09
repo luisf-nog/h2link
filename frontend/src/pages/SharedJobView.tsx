@@ -91,9 +91,49 @@ export default function SharedJobView() {
         return;
       }
       try {
+        // Try public_jobs first
         const { data, error } = await supabase.from("public_jobs").select("*").eq("id", jobId).single();
-        if (error) throw error;
-        setJob(data as unknown as Job);
+        if (data && !error) {
+          setJob(data as unknown as Job);
+          return;
+        }
+
+        // Fallback: try sponsored_jobs
+        const { data: sj, error: sjErr } = await supabase
+          .from("sponsored_jobs")
+          .select("id, title, description, location, city, state, visa_type, hourly_wage, start_date, end_date, created_at, num_positions, primary_duties, min_experience_months, employer_legal_name, is_active")
+          .eq("id", jobId)
+          .eq("is_active", true)
+          .single();
+
+        if (sj && !sjErr) {
+          const location = sj.location || "";
+          const [sjCity, sjState] = location.includes(",")
+            ? location.split(",").map((s: string) => s.trim())
+            : [sj.city || location, sj.state || ""];
+
+          setJob({
+            id: sj.id,
+            job_id: "",
+            job_title: sj.title,
+            company: sj.employer_legal_name || "Employer",
+            email: "",
+            city: sjCity,
+            state: sjState,
+            visa_type: sj.visa_type || "H-2B",
+            salary: sj.hourly_wage,
+            start_date: sj.start_date,
+            end_date: sj.end_date,
+            posted_date: sj.created_at,
+            openings: sj.num_positions,
+            job_duties: sj.primary_duties || sj.description,
+            experience_months: sj.min_experience_months,
+            _is_sponsored: true,
+          });
+          return;
+        }
+
+        setJob(null);
       } catch (error) {
         console.error("Error fetching job:", error);
         setJob(null);
