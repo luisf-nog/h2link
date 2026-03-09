@@ -247,6 +247,17 @@ export default function Queue() {
 
   const fetchQueue = async () => {
     if (!initialLoadDone.current) setLoading(true);
+
+    // Auto-recover stale processing items (stuck > 10 min) — only on first load
+    if (!initialLoadDone.current) {
+      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      await supabase
+        .from("my_queue")
+        .update({ status: "pending", last_error: null })
+        .eq("status", "processing")
+        .lt("processing_started_at", tenMinAgo);
+    }
+
     const { data, error } = await supabase
       .from("my_queue")
       .select(
