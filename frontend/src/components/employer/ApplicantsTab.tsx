@@ -238,7 +238,11 @@ function CandidateRow({
         {/* Single work auth badge - simplified */}
         <div className="hidden sm:flex items-center gap-2">
           {workAuthBadge && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border bg-muted text-muted-foreground border-border">
+            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ${
+              workAuthBadge.icon === "check"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800"
+                : "bg-muted text-muted-foreground border-border"
+            }`}>
               {workAuthBadge.icon === "check" && <CheckCircle2 size={12} className="text-emerald-600" />}
               {workAuthBadge.icon === "globe" && <Globe size={12} />}
               {workAuthBadge.icon === "alert" && <AlertCircle size={12} className="text-amber-600" />}
