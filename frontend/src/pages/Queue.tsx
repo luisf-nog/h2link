@@ -39,6 +39,13 @@ import {
 
 // QueueItem type is now imported from useQueueStore
 
+type EmailTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+};
+
 // --- VARIAÇÕES DE TEXTO SOBRE DOL PROCESSING (ANTI-SPAM) ---
 // Focadas no processo do Departamento de Trabalho (DOL), sem usar termos internos.
 const EARLY_ACCESS_VARIATIONS = [
