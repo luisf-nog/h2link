@@ -396,7 +396,12 @@ export default function Queue() {
     return data;
   };
 
-  const sendQueueItems = async (items: QueueItem[]) => {
+  const resetConsecutiveErrors = async () => {
+    if (!profile?.id) return;
+    await supabase.from("profiles").update({ consecutive_errors: 0 }).eq("id", profile.id);
+  };
+
+  const sendQueueItems = async (items: QueueItem[], lazyActivate = false) => {
     const guard = await ensureCanSend();
     if (!guard.ok) return;
 
@@ -407,7 +412,12 @@ export default function Queue() {
     let creditsRemaining = remainingToday;
     let consecutiveSmtpFailures = 0;
 
-    setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
+    // Reset stale consecutive_errors before any batch send
+    await resetConsecutiveErrors();
+
+    if (!lazyActivate) {
+      setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
+    }
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
@@ -419,6 +429,19 @@ export default function Queue() {
           variant: "destructive",
         });
         break;
+      }
+
+      // Lazy activation: set item to pending right before sending
+      if (lazyActivate) {
+        await supabase.from("my_queue").update({
+          status: "pending",
+          last_error: null,
+          opened_at: null,
+          email_open_count: 0,
+          profile_viewed_at: null,
+          tracking_id: crypto.randomUUID(),
+        }).eq("id", item.id);
+        setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing" } : q)));
       }
 
       const job = item.public_jobs ?? item.manual_jobs;
@@ -695,32 +718,19 @@ export default function Queue() {
 
   const handleRetryAllFailed = async () => {
     if (failedItems.length === 0) return;
-    const failedIds = failedItems.map((it) => it.id);
-    await supabase.from("my_queue").update({ status: "pending", last_error: null }).in("id", failedIds);
-    const updatedItems = failedItems.map((it) => ({ ...it, status: "pending" }));
+    // Use lazy activation — don't batch-set to pending upfront
+    const items = failedItems.slice(0, remainingToday);
     setSending(true);
-    await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
+    await sendQueueItems(items, true).finally(() => setSending(false));
   };
 
   const handleRetryAllPaused = async () => {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
-    // Update each item individually to generate unique tracking_ids
-    await Promise.all(
-      eligible.map((it) =>
-        supabase.from("my_queue").update({
-          status: "pending",
-          last_error: null,
-          opened_at: null,
-          email_open_count: 0,
-          profile_viewed_at: null,
-          tracking_id: crypto.randomUUID(),
-        }).eq("id", it.id)
-      )
-    );
-    const updatedItems = eligible.map((it) => ({ ...it, status: "pending" }));
+    // Use lazy activation — each item is set to pending inside the loop, right before sending
+    const items = eligible.slice(0, remainingToday);
     setSending(true);
-    await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
+    await sendQueueItems(items, true).finally(() => setSending(false));
   };
 
   const pendingCount = pendingItems.length;
