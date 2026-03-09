@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueueStore, type QueueItem } from "@/stores/useQueueStore";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { PLANS_CONFIG } from "@/config/plans.config";
+import { useWarmupStatus } from "@/hooks/useWarmupStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,9 +104,13 @@ export default function Queue() {
 
   const planTier = profile?.plan_tier || "free";
   const isFreeUser = planTier === "free";
+  const warmup = useWarmupStatus();
   const referralBonus = isFreeUser ? Number((profile as any)?.referral_bonus_limit ?? 0) : 0;
-  const dailyLimitTotal = (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus;
-  const creditsUsedToday = profile?.credits_used_today || 0;
+  // For paid plans, use the effective warm-up limit instead of the plan hard cap
+  const dailyLimitTotal = isFreeUser
+    ? (PLANS_CONFIG[planTier]?.limits?.daily_emails ?? 0) + referralBonus
+    : warmup.effectiveLimit;
+  const creditsUsedToday = isFreeUser ? (profile?.credits_used_today || 0) : warmup.emailsSentToday;
   const remainingToday = Math.max(0, dailyLimitTotal - creditsUsedToday);
 
   const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
@@ -400,7 +405,8 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
-      if (sendCancelled) {
+      // Read directly from store to avoid stale closure
+      if (useQueueStore.getState().sendCancelled) {
         toast({
           title: t("queue.toasts.paused_title", { defaultValue: "Envio pausado" }),
           description: t("queue.toasts.paused_desc", { count: sentIds.length, defaultValue: "{{count}} email(s) enviado(s) antes da pausa." }),
@@ -543,7 +549,19 @@ export default function Queue() {
 
         if (payload?.success === false) {
           if (payload?.error === "daily_limit_reached") {
-            setUpgradeDialogOpen(true);
+            // For paid plans hitting warm-up limit, show informative toast instead of upgrade dialog
+            if (!isFreeUser) {
+              toast({
+                title: t("queue.toasts.warmup_limit_title", { defaultValue: "Limite de aquecimento atingido" }),
+                description: t("queue.toasts.warmup_limit_desc", {
+                  sent: sentIds.length,
+                  limit: dailyLimitTotal,
+                  defaultValue: "{{sent}} email(s) enviado(s). Seu limite atual de aquecimento é {{limit}}/dia. Ele aumenta automaticamente com o uso.",
+                }),
+              });
+            } else {
+              setUpgradeDialogOpen(true);
+            }
             break;
           }
           throw new Error(payload?.error || `Falha ao enviar para ${to}`);
