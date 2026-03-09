@@ -116,9 +116,9 @@ export default function Queue() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const initialLoadDone = useRef(false);
+  const [queue, setQueue] = useState<QueueItem[]>(cachedQueue ?? []);
+  const [loading, setLoading] = useState(!moduleInitialLoadDone);
+  const initialLoadDone = useRef(moduleInitialLoadDone);
   const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
