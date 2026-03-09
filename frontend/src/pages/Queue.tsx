@@ -79,16 +79,14 @@ export default function Queue() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [queue, setQueue] = useState<QueueItem[]>(cachedQueue ?? []);
-  const [loading, setLoading] = useState(!moduleInitialLoadDone);
-  const initialLoadDone = useRef(moduleInitialLoadDone);
+  const { queue, setQueue, lastFetchedAt, fetchQueue: storeRefresh, forceFetchQueue, smtpReady, setSmtpReady, checkSmtp } = useQueueStore();
+  const loading = lastFetchedAt === 0;
   const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
