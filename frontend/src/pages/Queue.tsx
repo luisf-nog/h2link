@@ -675,8 +675,15 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
   };
 
   const handleSendSelected = async () => {
@@ -686,8 +693,15 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
     setSelectedIds({});
   };
 
