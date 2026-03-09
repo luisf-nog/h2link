@@ -72,6 +72,10 @@ type EmailTemplate = {
 
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
 
+// Module-level cache to survive component remounts (navigation)
+let cachedQueue: QueueItem[] | null = null;
+let moduleInitialLoadDone = false;
+
 // --- VARIAÇÕES DE TEXTO SOBRE DOL PROCESSING (ANTI-SPAM) ---
 // Focadas no processo do Departamento de Trabalho (DOL), sem usar termos internos.
 const EARLY_ACCESS_VARIATIONS = [
