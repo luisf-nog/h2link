@@ -62,6 +62,9 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   queue: [],
   lastFetchedAt: 0,
   smtpReady: null,
+  sending: false,
+  sendProgress: { sent: 0, total: 0 },
+  sendCancelled: false,
 
   fetchQueue: async () => {
     const { lastFetchedAt } = get();
