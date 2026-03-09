@@ -13,6 +13,7 @@ export interface EmployerPlanConfig {
     stripe_annual: string;
   };
   features: string[];
+  highlights: string[]; // top-level selling points
 }
 
 export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
@@ -33,6 +34,7 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       "Preview applicant form",
       "Upgrade to publish & receive applicants",
     ],
+    highlights: ["Test the platform"],
   },
   essential: {
     id: "essential",
@@ -47,11 +49,14 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       stripe_annual: "price_1T6r3dKliiuLyRPmjWL9NsSu",
     },
     features: [
-      "1 active job posting",
-      "Applicant screening & scoring",
-      "Contact & reject tracking",
-      "Email notifications",
+      "1 active Featured job",
+      "AI-powered applicant screening & scoring",
+      "Shareable job link for social media",
+      "Full ATS dashboard",
+      "Recruitment audit log",
+      "Compliance report",
     ],
+    highlights: ["1 Featured Job", "AI Screening"],
   },
   professional: {
     id: "professional",
@@ -66,11 +71,16 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       stripe_annual: "price_1T6r4CKliiuLyRPmR44u7HqC",
     },
     features: [
-      "3 active job postings",
+      "3 active Featured jobs",
       "Priority listing in Job Hub",
-      "Silver badge on listings",
+      "AI-powered applicant screening & scoring",
+      "Shareable job links for social media",
+      "Full ATS dashboard",
+      "Recruitment audit log",
+      "Compliance report",
       "All Essential features",
     ],
+    highlights: ["3 Featured Jobs", "Priority Listing"],
   },
   enterprise: {
     id: "enterprise",
@@ -85,12 +95,17 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       stripe_annual: "price_1T6r4sKliiuLyRPmSp5PmrAq",
     },
     features: [
-      "5 active job postings",
+      "5 active Featured jobs",
       "Top priority in Job Hub",
-      "Gold badge on listings",
       "Verified Employer badge",
+      "AI-powered applicant screening & scoring",
+      "Shareable job links for social media",
+      "Full ATS dashboard",
+      "Recruitment audit log",
+      "Compliance report",
       "All Professional features",
     ],
+    highlights: ["5 Featured Jobs", "Verified Badge", "Top Priority"],
   },
 };
 
