@@ -364,27 +364,50 @@ export default function SharedJobView() {
                     )}
                   </div>
 
-                  {/* CARD DE ORGANIZAÇÃO (O "ANTI-AGÊNCIA") */}
-                  <div className="bg-slate-900 rounded-2xl p-6 text-center text-white space-y-4 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                      <Database className="h-20 w-20" />
+                  {/* CARD DE ORGANIZAÇÃO / APPLY */}
+                  {job._is_sponsored ? (
+                    <div className="bg-primary rounded-2xl p-6 text-center text-primary-foreground space-y-4 shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 opacity-10">
+                        <Users className="h-20 w-20" />
+                      </div>
+                      <div className="bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <ArrowRight className="h-7 w-7" />
+                      </div>
+                      <h3 className="font-black text-xl leading-tight">
+                        {t("jobs.shared.apply_title", "Apply for this position")}
+                      </h3>
+                      <p className="text-xs opacity-80 leading-relaxed">
+                        {t("jobs.shared.apply_desc", "Submit your application directly to the employer. No account required.")}
+                      </p>
+                      <Button
+                        className="w-full font-black bg-white text-primary hover:bg-white/90 shadow-lg h-12"
+                        onClick={() => navigate(`/apply/${job.id}`)}
+                      >
+                        {t("jobs.shared.apply_now", "Apply Now")}
+                      </Button>
                     </div>
-                    <div className="bg-indigo-500/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <ListPlus className="h-7 w-7 text-indigo-400" />
+                  ) : (
+                    <div className="bg-slate-900 rounded-2xl p-6 text-center text-white space-y-4 shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 opacity-10">
+                        <Database className="h-20 w-20" />
+                      </div>
+                      <div className="bg-indigo-500/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <ListPlus className="h-7 w-7 text-indigo-400" />
+                      </div>
+                      <h3 className="font-black text-xl leading-tight">
+                        {t("jobs.shared.organize_title")}
+                      </h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {t("jobs.shared.organize_desc")}
+                      </p>
+                      <Button
+                        className="w-full font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg h-12"
+                        onClick={() => navigate("/auth")}
+                      >
+                        {t("jobs.shared.add_to_queue")}
+                      </Button>
                     </div>
-                    <h3 className="font-black text-xl leading-tight">
-                      {t("jobs.shared.organize_title")}
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {t("jobs.shared.organize_desc")}
-                    </p>
-                    <Button
-                      className="w-full font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg h-12"
-                      onClick={() => navigate("/auth")}
-                    >
-                      {t("jobs.shared.add_to_queue")}
-                    </Button>
-                  </div>
+                  )}
                 </div>
 
                 {/* CONTEÚDO PRINCIPAL */}
