@@ -698,7 +698,7 @@ export default function Queue() {
     setSendingIds((prev) => new Set(prev).add(item.id));
     if (item.status !== "pending") {
       await supabase.from("my_queue").update({
-        status: "pending",
+        status: "processing",
         last_error: null,
         opened_at: null,
         email_open_count: 0,
@@ -706,7 +706,7 @@ export default function Queue() {
         tracking_id: crypto.randomUUID(),
       }).eq("id", item.id);
     }
-    await sendQueueItems([{ ...item, status: "pending" }]).finally(() => {
+    await sendQueueItems([{ ...item, status: "processing" }]).finally(() => {
       setSendingIds((prev) => {
         const next = new Set(prev);
         next.delete(item.id);
