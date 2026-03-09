@@ -1,164 +1,70 @@
 
 
-# H2 Linker B2B Pivot -- Phase 1: Foundation
+## Diagnosis Confirmed
 
-## Overview
-Add an employer portal alongside the existing worker system. Phase 1 covers: database schema, role separation (RBAC), employer profiles, sponsored jobs, guest application flow, and Stripe subscription billing for employers.
+The **bulk-pause circuit breaker in `process-queue`** is alive and well. Here's the exact problematic code at line 981-990:
 
-## Pricing (USD only for employers, subscription model)
-
-| Tier | Monthly | Annual |
-|------|---------|--------|
-| Essential | $49/mo | $470/yr |
-| Professional | $99/mo | $950/yr |
-| Enterprise | $149/mo | $1,430/yr |
-
----
-
-## Step 1: Stripe Products & Prices
-
-Create 6 Stripe prices (monthly + annual for each tier) using Stripe tools before writing any code.
-
----
-
-## Step 2: Database Migration
-
-### New Enum
-```text
-employer_tier: 'essential' | 'professional' | 'enterprise'
-employer_status: 'active' | 'inactive'
+```typescript
+if (consecutiveErrors >= 3) {
+  await serviceClient
+    .from("my_queue")
+    .update({
+      status: "paused",
+      last_error: "[CIRCUIT_BREAKER] Pausado por 3+ erros consecutivos...",
+    })
+    .eq("user_id", userId)
+    .eq("status", "pending");  // ← BULK PAUSE: all pending items
+  break;
+}
 ```
 
-### New Tables
+**The scenario you described is exactly what happens:**
+1. Cron processes user's queue, hits 3 bad emails (550 user unknown, mailbox full, etc.)
+2. `consecutiveErrors` reaches 3
+3. **ALL remaining pending items** are bulk-paused with `[CIRCUIT_BREAKER]`
+4. User sees 149+ items suddenly paused with no clear explanation
 
-**employer_profiles**
-- id (uuid PK), user_id (uuid, references auth.users, unique), company_name, tier (employer_tier), is_verified (bool, default false), contact_email, contact_phone, status (employer_status, default 'active'), stripe_customer_id, stripe_subscription_id, created_at, updated_at
-- Indexes: user_id, tier, status
+**Additional problem:** The `isCircuitBreakerError()` function (line 73-85) counts **550 errors** (invalid recipient) as circuit-breaker-worthy. But "550 user unknown" is a **per-recipient** problem, not an SMTP credential problem. The user's SMTP is fine; it's just that 3 bad email addresses in a row kill the entire queue.
 
-**sponsored_jobs**
-- id (uuid PK), employer_id (uuid FK -> employer_profiles), title, description, location, start_date, end_date, is_active (bool, default true), is_sponsored (bool, default true), priority_level (text: free/essential/professional/enterprise), req_english, req_experience, req_drivers_license, consular_only (booleans), view_count, click_count (integers, default 0), created_at
-- Indexes: employer_id, is_active, priority_level, created_at
+### Two separate circuit breakers with different behavior:
 
-**job_applications** (immutable -- no delete)
-- id (uuid PK), job_id (FK -> sponsored_jobs), full_name, email, phone, has_english, has_experience, has_license, is_in_us (booleans), citizenship_status (text enum), employer_status (text: new/contacted/rejected, default 'new'), rejection_reason, score_color (text: green/yellow/red), created_at
-- UNIQUE(email, job_id)
-- Indexes: job_id, employer_status, citizenship_status, created_at
-
-**audit_logs** (immutable -- INSERT only, no UPDATE/DELETE)
-- id (uuid PK), job_id, application_id, employer_id (uuid FK), action (text: contacted/rejected), reason, created_at
-
-### Add 'employer' to existing app_role enum
-```sql
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'employer';
-```
-
-### RLS Policies
-
-- **employer_profiles**: SELECT/UPDATE only where user_id = auth.uid()
-- **sponsored_jobs**: Employer CRUD on own jobs; Public SELECT where is_active = true
-- **job_applications**: Anon INSERT only; Employer SELECT/UPDATE(employer_status only) on own jobs' applications
-- **audit_logs**: Employer SELECT on own jobs; INSERT via server function only
-
-### DB Functions
-- `check_employer_job_limit(employer_id)`: enforces tier-based active job limits (1/3/5)
-- `compute_application_score(job_id, application_id)`: server-side green/yellow/red scoring
-- `deactivate_employer_jobs(employer_id)`: sets all sponsored jobs to free when subscription lapses
+| Aspect | Backend (process-queue) | Frontend (Queue.tsx) |
+|--------|------------------------|---------------------|
+| Threshold | 3 errors | 5 errors |
+| Action | Bulk-pause ALL pending | Stop loop + reset smtp_verified |
+| Error types | 550, 551, 552, 553, 554, auth, AI errors | Any error at all |
+| Scope | Persisted via `profiles.consecutive_errors` (survives across cron runs) | Local variable (session only) |
 
 ---
 
-## Step 3: Edge Functions
+## Plan
 
-### create-employer-checkout
-- Accepts tier + billing_interval (month/year)
-- Creates Stripe checkout session with mode: 'subscription'
-- Stores user_id in metadata
+### 1. Fix `isCircuitBreakerError()` in process-queue — only count SMTP auth/config errors
 
-### check-employer-subscription
-- Queries Stripe for active subscription by customer email
-- Returns: subscribed, tier, subscription_end
-- Called on login + periodically
+Remove recipient-specific errors (550 user unknown, mailbox full) from the circuit breaker trigger. Only true SMTP credential/config failures should count:
 
-### employer-portal (customer portal)
-- Creates Stripe billing portal session for subscription management
+- Keep: 535, 534, 530 (auth failures), timeouts, AI gateway errors
+- Remove: 550, 551, 552, 553, 554 (these are per-recipient, not systemic)
 
-### submit-application (public, no auth)
-- Validates honeypot field, rate limits by IP
-- Normalizes email, checks UNIQUE(email, job_id)
-- Computes score_color server-side
-- Inserts into job_applications
+### 2. Remove the bulk-pause from process-queue
 
-### Update existing stripe-webhook
-- Handle `customer.subscription.updated` and `customer.subscription.deleted` events
-- On cancellation/failure: update employer_profiles.status = 'inactive', call deactivate_employer_jobs()
-- On reactivation: restore status = 'active'
+Replace the bulk `UPDATE ... SET status = 'paused' WHERE status = 'pending'` with a simple `break` — stop processing for this cron run but don't touch the remaining items. The next cron run will re-check `consecutive_errors` and skip if still high.
 
----
+### 3. Add descriptive `last_error` on failed items
 
-## Step 4: Frontend -- Role-Based Routing
+The error message is already being saved per-item via `classifySmtpError()`. The frontend already displays it with tooltips (`parseSmtpError`). No change needed here — the per-item error display already works. What's missing is the **badge-level summary** when the circuit breaker fires.
 
-### Auth Page Updates
-- Add role selector on signup: "I'm looking for work" (worker) vs "I'm hiring" (employer)
-- Store role in user_roles table on signup
-- Worker signup keeps current flow (no SMTP required initially per spec -- but existing onboarding stays for now)
-- Employer signup skips SMTP onboarding entirely
+### 4. Show circuit breaker reason in the sending badge
 
-### Route Guards
-- New `EmployerRoute` component that checks user role
-- Worker routes remain unchanged
-- Employer routes: /employer/dashboard, /employer/jobs, /employer/jobs/:id/applicants, /employer/plans, /employer/settings
+When the backend circuit breaker fires (or frontend detects 5+ errors), show the **last error type** in the progress badge so the user understands why sending stopped. Example: "Envio pausado: Senha SMTP incorreta" or "Envio pausado: 3 falhas consecutivas de autenticação".
 
----
+### 5. Sync frontend circuit breaker to also only count auth errors
 
-## Step 5: Frontend -- Employer Pages
+Update `Queue.tsx` to only increment `consecutiveSmtpFailures` for auth/config errors (not for "550 user unknown" which is a per-recipient issue). Individual bad-address failures should mark that item as `failed` and move on.
 
-### Employer Plans Page (/employer/plans)
-- 3 cards: Essential ($49/mo), Professional ($99/mo), Enterprise ($149/mo)
-- Annual toggle showing discounted prices
-- Checkout via create-employer-checkout edge function
-
-### Employer Dashboard (/employer/dashboard)
-- Active jobs count (with tier limit indicator)
-- Total applications count
-- Quick actions: Create Job, View Applicants
-- When status = 'inactive': blurred dashboard with "Reactivate" CTA
-
-### Create/Edit Job (/employer/jobs/new)
-- Form: title, description, location, dates, screening toggles
-- Tier limit enforcement (1/3/5 active jobs)
-
-### Applicant Table (/employer/jobs/:id/applicants)
-- Columns: Name, Email, Phone, Citizenship Badge, Score (traffic light), Status, Date
-- Contact buttons (mailto, tel) that log to audit_logs
-- Reject button with modal + reason dropdown
-- Paginated, sortable
-
-### Guest Application Page (/apply/:jobId)
-- Public route, no login required
-- Fetches job details, renders form based on screening toggles
-- Honeypot field, basic rate limiting
-- Success message after submission
-
----
-
-## Step 6: Hub Integration
-
-Update the existing Jobs page to display sponsored jobs with priority ordering:
-1. Enterprise (Gold badge)
-2. Professional (Silver badge)
-3. Essential (Sponsored badge)
-4. Free (existing DOL jobs)
-
-Add "Sponsored" / "Verified Employer" badges to job cards.
-
----
-
-## Technical Notes
-
-- All existing worker functionality (mailing queue, worker plans, radar, etc.) remains completely untouched
-- Employer billing is subscription-based (Stripe subscriptions), separate from worker one-time payments
-- The profiles table is NOT modified -- employer data lives in employer_profiles
-- Role check uses existing `has_role()` function and user_roles table
-- Scoring computation happens server-side only (edge function), never on the client
-- US citizen/permanent resident applications get "Priority Review" badge, pinned above others
-- Compliance disclaimer shown on screening setup page
+### Files to edit:
+- `supabase/functions/process-queue/index.ts` — fix `isCircuitBreakerError`, remove bulk-pause
+- `frontend/supabase/functions/process-queue/index.ts` — same (mirror)
+- `frontend/src/pages/Queue.tsx` — filter which errors count toward circuit breaker, show reason in badge
+- `frontend/src/lib/smtpErrorParser.ts` — add helper to classify error as "systemic" vs "per-recipient"
 
