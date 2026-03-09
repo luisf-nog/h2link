@@ -46,17 +46,14 @@ function avatarColor(name: string) {
 }
 
 // Simplified work auth - focus on what matters to employers
-function getWorkAuthBadge(status: string, isInUs: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
-  const usWorkerStatuses = ["us_citizen", "permanent_resident", "authorized"];
-  if (usWorkerStatuses.includes(status)) {
-    return { label: "US Worker", icon: "check" };
+function getWorkAuthBadge(status: string, isInUs: boolean, isUsWorker: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
+  if (status === "us_authorized") {
+    return { label: "US Authorized", icon: "check" };
   }
-  if (!isInUs) {
+  if (status === "outside_us") {
     return { label: "Outside US", icon: "globe" };
   }
-  if (status === "h2_visa_holder") {
-    return { label: "H-2 Returner", icon: "check" };
-  }
+  // requires_sponsorship
   return { label: "Requires H-2 Visa", icon: "alert" };
 }
 
