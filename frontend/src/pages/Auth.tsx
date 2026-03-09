@@ -1075,21 +1075,24 @@ export default function Auth() {
         </div>
 
         {/* ── Right form panel ── */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-16 relative z-10">
-          <div className="w-full max-w-[440px] flex items-center justify-between mb-10 lg:absolute lg:top-10 lg:right-16 lg:w-auto">
+        <div className="flex-1 flex flex-col items-center p-6 sm:p-10 lg:p-16 relative z-10">
+          {/* Language switcher - always on top */}
+          <div className="w-full max-w-[440px] flex items-center justify-between mb-4 lg:mb-6 shrink-0">
             <div className="lg:hidden">
               <h1 className="text-xl font-bold font-brand text-white">
                 <span className="auth-accent-text">H2</span> Linker
               </h1>
             </div>
-            <LanguageSwitcher
-              value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
-              onChange={handleChangeLanguage}
-              className="h-9 w-[130px] border-white/10 bg-white/5 text-white/60 hover:bg-white/10 rounded-xl"
-            />
+            <div className="lg:ml-auto">
+              <LanguageSwitcher
+                value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+                onChange={handleChangeLanguage}
+                className="h-9 w-[130px] border-white/10 bg-white/5 text-white/60 hover:bg-white/10 rounded-xl"
+              />
+            </div>
           </div>
 
-          <div className="w-full max-w-[440px] auth-glass-card p-8 sm:p-10">
+          <div className="w-full max-w-[440px] auth-glass-card p-8 sm:p-10 my-auto">
             {/* Tabs */}
             <div className="grid grid-cols-2 gap-2 mb-8">
               <button
