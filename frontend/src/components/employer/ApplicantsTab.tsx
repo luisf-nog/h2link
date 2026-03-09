@@ -34,7 +34,11 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Mail,
+  MessageSquare,
+  Phone,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import type { Application } from "@/pages/employer/JobApplicants";
 import { ApplicantDetailDialog } from "./ApplicantDetailDialog";
