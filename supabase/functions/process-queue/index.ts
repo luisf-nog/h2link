@@ -846,6 +846,7 @@ async function processOneUser(params: {
     }
   }
 
+  // Note: consecutiveErrors may have been reset above if new day
   let consecutiveErrors = Number(p.consecutive_errors ?? 0);
 
   // No retry: if profile is incomplete, mark first pending as failed and stop
