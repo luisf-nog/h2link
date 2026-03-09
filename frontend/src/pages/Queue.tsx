@@ -1194,7 +1194,7 @@ export default function Queue() {
                         {t("queue.table.loading")}
                       </TableCell>
                     </TableRow>
-                  ) : queue.length === 0 ? (
+                  ) : filteredQueue.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="space-y-2">
@@ -1206,7 +1206,7 @@ export default function Queue() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    queue.map((item) => (
+                    filteredQueue.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="w-10">
                           <Checkbox
