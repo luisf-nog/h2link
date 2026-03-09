@@ -678,7 +678,7 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
-    sendCancelledRef.current = false;
+    setSendCancelled(false);
     setSending(true);
     sendingRef.current = true;
     setSendProgress({ sent: 0, total: items.length });
