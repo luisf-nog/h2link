@@ -200,7 +200,7 @@ function CandidateRow({
     }
   };
 
-  return (
+   return (
     <>
       <RejectDialog
         app={app}
@@ -209,13 +209,12 @@ function CandidateRow({
         onConfirm={(reason) => { onStatusChange(app, "rejected", reason); setRejectOpen(false); }}
       />
 
-      <div className="flex items-center gap-3 p-3 bg-card border rounded-lg hover:shadow-sm transition-shadow">
-        {/* Avatar - neutral professional colors */}
+      {/* Desktop row */}
+      <div className="hidden sm:flex items-center gap-3 p-3 bg-card border rounded-lg hover:shadow-sm transition-shadow">
         <div className={`${avatarColor(app.full_name)} w-9 h-9 rounded-full flex items-center justify-center text-foreground font-semibold text-xs shrink-0`}>
           {initials(app.full_name)}
         </div>
 
-        {/* Name + Match Score + Quick Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-foreground truncate">{app.full_name}</span>
@@ -225,7 +224,6 @@ function CandidateRow({
               </span>
             )}
           </div>
-          {/* Quick info row */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span title={format(new Date(app.created_at), "PPpp")}>{format(new Date(app.created_at), "MMM d, h:mm a")}</span>
             <span>•</span>
@@ -235,8 +233,7 @@ function CandidateRow({
           </div>
         </div>
 
-        {/* Single work auth badge - simplified */}
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {workAuthBadge && (
             workAuthBadge.icon === "check" ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border-2 border-emerald-500 bg-background text-foreground whitespace-nowrap">
@@ -262,44 +259,29 @@ function CandidateRow({
           )}
         </div>
 
-        {/* Contact action icons */}
         <TooltipProvider delayDuration={300}>
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <a
-                  href={`mailto:${app.email}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                >
+                <a href={`mailto:${app.email}`} onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors">
                   <Mail size={14} />
                 </a>
               </TooltipTrigger>
               <TooltipContent side="bottom"><p className="text-xs">Email</p></TooltipContent>
             </Tooltip>
-
             {app.phone && (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <a
-                      href={`sms:${app.phone}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                    >
+                    <a href={`sms:${app.phone}`} onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors">
                       <MessageSquare size={14} />
                     </a>
                   </TooltipTrigger>
                   <TooltipContent side="bottom"><p className="text-xs">Message</p></TooltipContent>
                 </Tooltip>
-
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <a
-                      href={`tel:${app.phone}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                    >
+                    <a href={`tel:${app.phone}`} onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors">
                       <Phone size={14} />
                     </a>
                   </TooltipTrigger>
@@ -310,11 +292,7 @@ function CandidateRow({
           </div>
         </TooltipProvider>
 
-        {/* Status Dropdown with color indicator */}
-        <Select
-          value={app.application_status}
-          onValueChange={handleStatusChange}
-        >
+        <Select value={app.application_status} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-[130px] h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
@@ -330,16 +308,110 @@ function CandidateRow({
           </SelectContent>
         </Select>
 
-        {/* View Details Button */}
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 text-xs gap-1.5"
-          onClick={() => onOpenDetail(app)}
-        >
+        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={() => onOpenDetail(app)}>
           <FileText size={14} />
-          <span className="hidden sm:inline">Details</span>
+          <span>Details</span>
         </Button>
+      </div>
+
+      {/* Mobile card */}
+      <div className="sm:hidden bg-card border rounded-lg p-3 space-y-3">
+        {/* Row 1: Avatar + Name + Match + Badge */}
+        <div className="flex items-start gap-2.5">
+          <div className={`${avatarColor(app.full_name)} w-9 h-9 rounded-full flex items-center justify-center text-foreground font-semibold text-xs shrink-0`}>
+            {initials(app.full_name)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-sm text-foreground">{app.full_name}</span>
+              {app.application_match_score !== null && (
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${getMatchScoreStyle(app.application_match_score)}`}>
+                  {app.application_match_score}%
+                </span>
+              )}
+              {workAuthBadge && (
+                workAuthBadge.icon === "check" ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border-2 border-emerald-500 bg-background text-foreground whitespace-nowrap">
+                    <svg width="12" height="8" viewBox="0 0 14 10" className="shrink-0 rounded-[1px]" aria-label="US Flag">
+                      <rect width="14" height="10" fill="#B22234" />
+                      <rect y="0.77" width="14" height="0.77" fill="white" />
+                      <rect y="2.31" width="14" height="0.77" fill="white" />
+                      <rect y="3.85" width="14" height="0.77" fill="white" />
+                      <rect y="5.38" width="14" height="0.77" fill="white" />
+                      <rect y="6.92" width="14" height="0.77" fill="white" />
+                      <rect y="8.46" width="14" height="0.77" fill="white" />
+                      <rect width="5.6" height="4.62" fill="#3C3B6E" />
+                    </svg>
+                    US
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border bg-muted text-muted-foreground border-border">
+                    <Globe size={10} />
+                    {workAuthBadge.label}
+                  </span>
+                )
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
+              <span>{format(new Date(app.created_at), "MMM d, h:mm a")}</span>
+              <span>•</span>
+              <span className="capitalize">{app.english_level ? `${app.english_level.charAt(0).toUpperCase() + app.english_level.slice(1)} Eng` : "—"}</span>
+              <span>•</span>
+              <span>{formatExperience(app.months_experience)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Status + Contact actions + Details */}
+        <div className="flex items-center gap-2">
+          <Select value={app.application_status} onValueChange={handleStatusChange}>
+            <SelectTrigger className="h-8 text-xs flex-1 max-w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                    {opt.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-0.5 ml-auto">
+            <a
+              href={`mailto:${app.email}`}
+              onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${app.email}`; }}
+              className="p-2 rounded-md text-muted-foreground active:bg-accent transition-colors"
+            >
+              <Mail size={16} />
+            </a>
+            {app.phone && (
+              <>
+                <a
+                  href={`sms:${app.phone}`}
+                  onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${app.phone}`; }}
+                  className="p-2 rounded-md text-muted-foreground active:bg-accent transition-colors"
+                >
+                  <MessageSquare size={16} />
+                </a>
+                <a
+                  href={`tel:${app.phone}`}
+                  onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${app.phone}`; }}
+                  className="p-2 rounded-md text-muted-foreground active:bg-accent transition-colors"
+                >
+                  <Phone size={16} />
+                </a>
+              </>
+            )}
+          </div>
+
+          <Button size="sm" variant="outline" className="h-8 text-xs px-2.5" onClick={() => onOpenDetail(app)}>
+            <FileText size={14} />
+          </Button>
+        </div>
       </div>
     </>
   );
