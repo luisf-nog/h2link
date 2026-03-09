@@ -293,29 +293,29 @@ export function ApplicantsTab({
 
   return (
     <div className="space-y-4 pt-4">
-      {/* Summary stats */}
+      {/* Summary stats - neutral + primary only */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-card border rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-foreground">{apps.length}</div>
           <div className="text-xs text-muted-foreground">Total</div>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-700">
+        <div className="bg-card border rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-foreground">
             {apps.filter(a => ["us_citizen", "permanent_resident", "authorized"].includes(a.work_authorization_status)).length}
           </div>
-          <div className="text-xs text-emerald-600">US Workers</div>
+          <div className="text-xs text-muted-foreground">US Workers</div>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-amber-700">
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-primary">
             {apps.filter(a => (a.application_match_score ?? 0) >= 80).length}
           </div>
-          <div className="text-xs text-amber-600">80%+ Match</div>
+          <div className="text-xs text-primary/70">80%+ Match</div>
         </div>
-        <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-violet-700">
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-primary">
             {counts["hired"] ?? 0}
           </div>
-          <div className="text-xs text-violet-600">Hired</div>
+          <div className="text-xs text-primary/70">Hired</div>
         </div>
       </div>
 
