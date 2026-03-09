@@ -83,12 +83,10 @@ export default function Jobs() {
   const isMobile = useIsMobile();
 
   const [searchParams] = useSearchParams();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [featuredJobs, setFeaturedJobs] = useState<FeaturedJob[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { jobs, featuredJobs, totalCount, queuedJobIds, lastFetchedAt, setJobsData, fetchFeaturedJobs: storeFetchFeatured, syncQueue: storeSyncQueue } = useJobsStore();
+  const [loading, setLoading] = useState(lastFetchedAt === 0);
 
-  const [queuedJobIds, setQueuedJobIds] = useState<Set<string>>(new Set());
+  const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [processingJobIds, setProcessingJobIds] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [selectedFeaturedJob, setSelectedFeaturedJob] = useState<FeaturedJob | null>(null);
