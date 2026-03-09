@@ -12,7 +12,7 @@ import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle,
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
-import { parseSmtpError } from "@/lib/smtpErrorParser";
+import { parseSmtpError, isSystemicSmtpError } from "@/lib/smtpErrorParser";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
 import { SendHistoryDialog } from "@/components/queue/SendHistoryDialog";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
