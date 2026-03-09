@@ -1027,7 +1027,7 @@ export default function Auth() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="auth-premium-bg min-h-screen relative overflow-hidden flex">
+      <div className="auth-premium-bg min-h-screen relative overflow-x-hidden flex">
         <div className="absolute inset-0 auth-grid-pattern pointer-events-none" />
         <div className="auth-glow-1" />
         <div className="auth-glow-2" />
@@ -1233,7 +1233,7 @@ export default function Auth() {
 
             {/* ── SIGN UP (worker only here) ── */}
             {tab === "signup" && (
-              <form onSubmit={handleWorkerSignUp} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
+              <form onSubmit={handleWorkerSignUp} className="flex flex-col gap-4">
                 {/* Role selector */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <button
