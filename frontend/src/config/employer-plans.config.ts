@@ -105,7 +105,7 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
       "Compliance report",
       "All Professional features",
     ],
-    highlights: ["5 Featured Jobs", "Verified Badge", "Top Priority"],
+    highlights: ["5 Featured Jobs", "Top Priority"],
   },
 };
 
