@@ -131,6 +131,7 @@ export default function Queue() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
+  const [clockTick, setClockTick] = useState(() => Date.now());
   const sendCancelledRef = useRef(false);
   const sendingRef = useRef(false);
 
@@ -168,6 +169,15 @@ export default function Queue() {
 
   useEffect(() => {
     fetchQueue();
+  }, []);
+
+  // Recompute time-based processing states and refresh queue in background
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setClockTick(Date.now());
+      fetchQueue();
+    }, 30000);
+    return () => window.clearInterval(id);
   }, []);
 
   // Sync module-level cache whenever queue state changes
@@ -248,18 +258,23 @@ export default function Queue() {
     };
   }, []);
 
+  const STUCK_PROCESSING_MINUTES = 4;
+
   const fetchQueue = async () => {
     if (!initialLoadDone.current) setLoading(true);
 
-    // Auto-recover stale processing items (stuck > 10 min) — only on first load
-    if (!initialLoadDone.current) {
-      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-      await supabase
-        .from("my_queue")
-        .update({ status: "pending", last_error: null })
-        .eq("status", "processing")
-        .lt("processing_started_at", tenMinAgo);
-    }
+    // Auto-recover stale processing items (max delay is 3min, so >4min is considered stuck)
+    const staleCutoffIso = new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000).toISOString();
+    await supabase
+      .from("my_queue")
+      .update({
+        status: "paused",
+        last_error: "[PROCESSING_TIMEOUT] Item pausado automaticamente por travar no processamento (acima do tempo máximo esperado).",
+        last_attempt_at: new Date().toISOString(),
+        processing_started_at: null,
+      })
+      .eq("status", "processing")
+      .or(`processing_started_at.lt.${staleCutoffIso},and(processing_started_at.is.null,created_at.lt.${staleCutoffIso})`);
 
     const { data, error } = await supabase
       .from("my_queue")
@@ -324,14 +339,14 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
-  // Only show badge for items that started processing recently (< 10 min ago)
+  // Only show badge for items that started processing recently (< 4 min)
   const activeProcessingItems = useMemo(() => {
-    const tenMinAgo = Date.now() - 10 * 60 * 1000;
+    const cutoffMs = clockTick - STUCK_PROCESSING_MINUTES * 60 * 1000;
     return processingItems.filter((q) => {
       const ts = q.processing_started_at || q.created_at;
-      return new Date(ts).getTime() > tenMinAgo;
+      return new Date(ts).getTime() > cutoffMs;
     });
-  }, [processingItems]);
+  }, [processingItems, clockTick]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
   const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
@@ -451,16 +466,8 @@ export default function Queue() {
     // Reset stale consecutive_errors before any batch send
     await resetConsecutiveErrors();
 
-    if (!lazyActivate) {
-      const itemIds = items.map((i) => i.id);
-      await supabase
-        .from("my_queue")
-        .update({ status: "processing" })
-        .in("id", itemIds)
-        .eq("status", "pending");
-
-      setQueue((prev) => prev.map((q) => (items.find((i) => i.id === q.id) ? { ...q, status: "processing" } : q)));
-    }
+    // IMPORTANT: do not pre-mark the whole batch as processing.
+    // We activate per-item right before each send to avoid stuck "processing" states on pause/break.
 
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
@@ -483,18 +490,20 @@ export default function Queue() {
         break;
       }
 
-      // Lazy activation: mark as processing right before sending (avoid CRON/circuit-breaker races on pending)
-      if (lazyActivate) {
-        await supabase.from("my_queue").update({
+      // Mark item as processing right before sending (prevents stale batch locks)
+      await supabase
+        .from("my_queue")
+        .update({
           status: "processing",
+          processing_started_at: new Date().toISOString(),
           last_error: null,
           opened_at: null,
           email_open_count: 0,
           profile_viewed_at: null,
-          tracking_id: crypto.randomUUID(),
-        }).eq("id", item.id);
-        setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing" } : q)));
-      }
+          ...(lazyActivate ? { tracking_id: crypto.randomUUID() } : {}),
+        })
+        .eq("id", item.id);
+      setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing", processing_started_at: new Date().toISOString() } : q)));
 
       const job = item.public_jobs ?? item.manual_jobs;
       if (!job?.email) {
@@ -504,6 +513,7 @@ export default function Queue() {
             status: "failed",
             last_error: "Email ausente",
             last_attempt_at: new Date().toISOString(),
+            processing_started_at: null,
           })
           .eq("id", item.id);
         failedIds.push(item.id);
@@ -621,6 +631,7 @@ export default function Queue() {
             status: "failed",
             last_error: message,
             last_attempt_at: now,
+            processing_started_at: null,
           })
           .eq("id", item.id);
 
@@ -668,7 +679,10 @@ export default function Queue() {
       const currentItem = items.find((i) => i.id === sentId);
       const newCount = (currentItem?.send_count ?? 0) + 1;
       const now = new Date().toISOString();
-      await supabase.from("my_queue").update({ status: "sent", sent_at: now, send_count: newCount }).eq("id", sentId);
+      await supabase
+        .from("my_queue")
+        .update({ status: "sent", sent_at: now, send_count: newCount, processing_started_at: null })
+        .eq("id", sentId);
 
       await supabase.from("queue_send_history").insert({
         queue_id: sentId,
@@ -759,6 +773,7 @@ export default function Queue() {
     if (item.status !== "pending") {
       await supabase.from("my_queue").update({
         status: "processing",
+        processing_started_at: new Date().toISOString(),
         last_error: null,
         opened_at: null,
         email_open_count: 0,
