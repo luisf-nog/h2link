@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users, ClipboardList, ShieldCheck } from "lucide-react";
 import { ApplicantsTab } from "@/components/employer/ApplicantsTab";
 import { RecruitmentLogTab } from "@/components/employer/RecruitmentLogTab";
 import { ComplianceReportTab } from "@/components/employer/ComplianceReportTab";
@@ -144,18 +144,26 @@ export default function JobApplicants() {
           <TabsTrigger value="compliance-report">{t("employer.applicants.tab_compliance_report")}</TabsTrigger>
         </TabsList>
 
-        {/* Mobile dropdown */}
-        <div className="sm:hidden">
-          <Select value={activeTab} onValueChange={setActiveTab}>
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="applicants" className="text-xs">{t("employer.applicants.tab_applicants", { count: apps.length })}</SelectItem>
-              <SelectItem value="recruitment-log" className="text-xs">{t("employer.applicants.tab_recruitment_log")}</SelectItem>
-              <SelectItem value="compliance-report" className="text-xs">{t("employer.applicants.tab_compliance_report")}</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Mobile icon tabs */}
+        <div className="sm:hidden flex border rounded-lg overflow-hidden">
+          {[
+            { value: "applicants", icon: Users, label: `${apps.length}` },
+            { value: "recruitment-log", icon: ClipboardList, label: "Log" },
+            { value: "compliance-report", icon: ShieldCheck, label: "Report" },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                activeTab === tab.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground"
+              }`}
+            >
+              <tab.icon size={16} />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         <TabsContent value="applicants">
