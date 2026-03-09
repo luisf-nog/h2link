@@ -265,10 +265,13 @@ export default function Queue() {
         variant: "destructive",
       });
     } else {
-      setQueue((data as unknown as QueueItem[]) || []);
+      const items = (data as unknown as QueueItem[]) || [];
+      setQueue(items);
+      cachedQueue = items;
     }
     setLoading(false);
     initialLoadDone.current = true;
+    moduleInitialLoadDone = true;
   };
 
   const removeFromQueue = async (id: string) => {
