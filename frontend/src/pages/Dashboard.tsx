@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useDashboardStore } from "@/stores/useDashboardStore";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPlanLimit } from "@/config/plans.config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
