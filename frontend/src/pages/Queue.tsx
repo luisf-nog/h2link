@@ -126,6 +126,8 @@ export default function Queue() {
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [smtpReady, setSmtpReady] = useState<boolean | null>(null);
   const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
