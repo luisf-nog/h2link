@@ -41,6 +41,7 @@ interface QueueItem {
   profile_viewed_at?: string | null;
   tracking_id?: string;
   created_at: string;
+  processing_started_at?: string | null;
   send_count: number;
   email_open_count?: number | null;
   last_error?: string | null;
@@ -71,6 +72,10 @@ type EmailTemplate = {
 };
 
 const dateLocaleMap: Record<string, Locale> = { pt: ptBR, en: enUS, es: es };
+
+// Module-level cache to survive component remounts (navigation)
+let cachedQueue: QueueItem[] | null = null;
+let moduleInitialLoadDone = false;
 
 // --- VARIAÇÕES DE TEXTO SOBRE DOL PROCESSING (ANTI-SPAM) ---
 // Focadas no processo do Departamento de Trabalho (DOL), sem usar termos internos.
@@ -112,9 +117,9 @@ export default function Queue() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const initialLoadDone = useRef(false);
+  const [queue, setQueue] = useState<QueueItem[]>(cachedQueue ?? []);
+  const [loading, setLoading] = useState(!moduleInitialLoadDone);
+  const initialLoadDone = useRef(moduleInitialLoadDone);
   const [sending, setSending] = useState(false);
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -164,6 +169,9 @@ export default function Queue() {
   useEffect(() => {
     fetchQueue();
   }, []);
+
+  // Sync module-level cache whenever queue state changes
+  useEffect(() => { cachedQueue = queue; }, [queue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,11 +250,22 @@ export default function Queue() {
 
   const fetchQueue = async () => {
     if (!initialLoadDone.current) setLoading(true);
+
+    // Auto-recover stale processing items (stuck > 10 min) — only on first load
+    if (!initialLoadDone.current) {
+      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      await supabase
+        .from("my_queue")
+        .update({ status: "pending", last_error: null })
+        .eq("status", "processing")
+        .lt("processing_started_at", tenMinAgo);
+    }
+
     const { data, error } = await supabase
       .from("my_queue")
       .select(
         `
-        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, send_count, email_open_count, last_error,
+        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, processing_started_at, send_count, email_open_count, last_error,
         public_jobs (id, job_title, company, email, city, state, visa_type),
         manual_jobs (id, company, job_title, email, eta_number, phone)
       `,
@@ -261,10 +280,13 @@ export default function Queue() {
         variant: "destructive",
       });
     } else {
-      setQueue((data as unknown as QueueItem[]) || []);
+      const items = (data as unknown as QueueItem[]) || [];
+      setQueue(items);
+      cachedQueue = items;
     }
     setLoading(false);
     initialLoadDone.current = true;
+    moduleInitialLoadDone = true;
   };
 
   const removeFromQueue = async (id: string) => {
@@ -302,6 +324,14 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
+  // Only show badge for items that started processing recently (< 10 min ago)
+  const activeProcessingItems = useMemo(() => {
+    const tenMinAgo = Date.now() - 10 * 60 * 1000;
+    return processingItems.filter((q) => {
+      const ts = q.processing_started_at || q.created_at;
+      return new Date(ts).getTime() > tenMinAgo;
+    });
+  }, [processingItems]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
   const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
@@ -911,8 +941,8 @@ export default function Queue() {
         </div>
       </div>
 
-      {/* Show badge when actively sending OR when there are processing items (e.g. after navigation) */}
-      {(sending || processingItems.length > 0) && (
+      {/* Show badge when actively sending OR when there are RECENT processing items */}
+      {(sending || activeProcessingItems.length > 0) && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
@@ -926,7 +956,7 @@ export default function Queue() {
                   defaultValue: "Enviando {{sent}}/{{total}} emails...",
                 })
               : t("queue.sending_badge.processing", {
-                  count: processingItems.length,
+                  count: activeProcessingItems.length,
                   defaultValue: "{{count}} email(s) sendo enviado(s)...",
                 })
             }
