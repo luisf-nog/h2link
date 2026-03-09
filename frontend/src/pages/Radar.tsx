@@ -427,16 +427,22 @@ export default function Radar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
+  const {
+    radarProfile, setRadarProfile,
+    matchedJobs, setMatchedJobs,
+    matchCount, setMatchCount,
+    queuedFromRadar, setQueuedFromRadar,
+    groupedCategories, setGroupedCategories,
+    lastFetchedAt,
+    initRadar,
+    fetchMatches: storeFetchMatches,
+    updateStats: storeUpdateStats,
+  } = useRadarStore();
+
+  const loading = lastFetchedAt === 0 && !radarProfile;
   const [saving, setSaving] = useState(false);
   const [toggleSaving, setToggleSaving] = useState(false);
-  // rescanning: true while we clear stale matches + trigger edge function
   const [rescanning, setRescanning] = useState(false);
-  const [matchCount, setMatchCount] = useState(0);
-  const [queuedFromRadar, setQueuedFromRadar] = useState(0);
-  const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
-  const [groupedCategories, setGroupedCategories] = useState<Record<string, { items: any[]; totalJobs: number }>>({});
-  const [radarProfile, setRadarProfile] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
   const [isActive, setIsActive] = useState(false);
