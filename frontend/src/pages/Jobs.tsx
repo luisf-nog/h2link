@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
+import { useJobsStore, type Job, type FeaturedJob } from "@/stores/useJobsStore";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS_CONFIG } from "@/config/plans.config";
