@@ -452,6 +452,7 @@ export function ApplicantsTab({
         </span>
       </div>
 
+      <div className="space-y-2">
         {paged.map((app) => (
           <CandidateRow
             key={app.id}
