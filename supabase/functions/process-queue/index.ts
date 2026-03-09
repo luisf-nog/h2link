@@ -70,17 +70,27 @@ function getLocalHour(params: { timeZone: string; now?: Date }): number {
   return Number.isFinite(hour) ? hour : 0;
 }
 
+/**
+ * Only SYSTEMIC errors (auth/config/AI) should trigger the circuit breaker.
+ * Per-recipient errors (550 user unknown, mailbox full, etc.) are NOT systemic —
+ * they just mean that specific address is bad, not that the user's SMTP is broken.
+ */
 function isCircuitBreakerError(message: string): boolean {
   const m = message.toLowerCase();
-  // Auth / credentials
-  if (m.includes("auth") || m.includes("authentication") || m.includes("senha") || m.includes("password")) return true;
+  // Auth / credentials — these ARE systemic (user's SMTP password is wrong)
   if (m.includes("535") || m.includes("534") || m.includes("530")) return true;
-  // Typical bounces / hard fails
-  if (m.includes("550") || m.includes("551") || m.includes("552") || m.includes("553") || m.includes("554")) return true;
-  if (m.includes("mailbox") || m.includes("recipient") || m.includes("unknown user") || m.includes("user unknown")) return true;
-  // AI gateway errors — pause queue when AI API is down
+  if (m.includes("username and password not accepted") || m.includes("invalid credentials")) return true;
+  if (m.includes("application-specific password") || m.includes("app password")) return true;
+  if ((m.includes("auth") && (m.includes("fail") || m.includes("falhou") || m.includes("erro")))) return true;
+  // Connection errors — systemic (server unreachable)
+  if (m.includes("timeout") || m.includes("timed out")) return true;
+  if (m.includes("connection refused") || m.includes("econnrefused")) return true;
+  if (m.includes("tls") || m.includes("ssl") || m.includes("handshake") || m.includes("certificate")) return true;
+  // AI gateway errors — systemic (AI API is down)
   if (m.includes("non-2xx") || m.includes("ai error") || m.includes("ai gateway") || m.includes("generate-job-email") || m.includes("generation failed")) return true;
-  if (m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) return true;
+  // Rate limiting from SMTP provider — systemic
+  if (m.includes("421") || m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) return true;
+  // NOT included: 550, 551, 552, 553, 554 — these are per-recipient errors
   return false;
 }
 
