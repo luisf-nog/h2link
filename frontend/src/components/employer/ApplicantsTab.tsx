@@ -374,26 +374,32 @@ export function ApplicantsTab({
           const usWorkers = apps.filter(a => a.work_authorization_status !== "outside_us");
           const usTotal = usWorkers.length;
           const usNew = usWorkers.filter(a => a.application_status === "received").length;
-          const usContacted = usWorkers.filter(a => a.application_status === "contacted").length;
-          const usShortlisted = usWorkers.filter(a => a.application_status === "shortlisted").length;
-          const usHired = usWorkers.filter(a => a.application_status === "hired").length;
-          const usProcessed = usContacted + usShortlisted + usHired;
-          const progressPct = usTotal > 0 ? Math.round((usProcessed / usTotal) * 100) : 0;
+          const usContacted = usWorkers.filter(a => a.application_status === "contacted" || a.application_status === "shortlisted").length;
+          const usFinalized = usWorkers.filter(a => a.application_status === "hired" || a.application_status === "rejected").length;
+          const progressPct = usTotal > 0 ? Math.round(((usContacted + usFinalized) / usTotal) * 100) : 0;
           const newPct = usTotal > 0 ? Math.round((usNew / usTotal) * 100) : 0;
+          const finalizedPct = usTotal > 0 ? Math.round((usFinalized / usTotal) * 100) : 0;
+          const inProgressPct = usTotal > 0 ? Math.round((usContacted / usTotal) * 100) : 0;
           return (
             <div className="bg-card border rounded-lg p-3 text-center space-y-2">
               <div className="text-2xl font-bold text-foreground">{usTotal}</div>
               <div className="text-xs text-muted-foreground">US Workers</div>
-              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden flex">
                 <div
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${progressPct}%` }}
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{ width: `${finalizedPct}%` }}
+                />
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${inProgressPct}%` }}
                 />
               </div>
               <div className="text-[10px] text-muted-foreground leading-tight">
                 <span className="font-semibold text-amber-600 dark:text-amber-400">{newPct}%</span> pending
                 {" · "}
-                <span className="font-semibold text-primary">{progressPct}%</span> in progress
+                <span className="font-semibold text-primary">{inProgressPct}%</span> in progress
+                {" · "}
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{finalizedPct}%</span> finalized
               </div>
             </div>
           );
