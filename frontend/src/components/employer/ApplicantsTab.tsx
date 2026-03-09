@@ -188,7 +188,7 @@ function CandidateRow({
           
           {workAuth.requiresVisa && (
             <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border bg-violet-100 text-violet-700 border-violet-200">
-              <Passport size={12} />
+              <Globe size={12} />
               Requires Visa
             </span>
           )}
