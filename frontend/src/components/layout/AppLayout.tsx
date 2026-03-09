@@ -25,12 +25,33 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
+const PERSISTENT_ROUTES = ["/dashboard", "/jobs", "/queue", "/radar"] as const;
+
 export function AppLayout({ children }: AppLayoutProps) {
   const { profile, refreshProfile, user } = useAuth();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isEmployer } = useIsEmployer();
+
+  const isPersistentRoute = PERSISTENT_ROUTES.includes(location.pathname as any);
+
+  // Scroll restoration per route
+  const scrollPositions = useRef<Record<string, number>>({});
+  const contentRef = useRef<HTMLDivElement>(null);
+  const prevPathRef = useRef(location.pathname);
+
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname && contentRef.current) {
+      // Save scroll of previous route
+      scrollPositions.current[prevPathRef.current] = contentRef.current.scrollTop;
+      // Restore scroll of new route
+      const saved = scrollPositions.current[location.pathname] ?? 0;
+      contentRef.current.scrollTop = saved;
+      prevPathRef.current = location.pathname;
+    }
+  }, [location.pathname]);
 
   const options: LanguageOption[] = useMemo(
     () => [
