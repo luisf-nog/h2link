@@ -565,11 +565,13 @@ const handler = async (req: Request): Promise<Response> => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: userData, error: userError } = await authClient.auth.getUser(token);
-    if (userError || !userData?.user?.id) {
+    // Use getClaims for local JWT verification (no network call, more resilient)
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error("[send-email-custom] JWT validation failed:", claimsError);
       return json(401, { success: false, error: "Unauthorized" });
     }
-    const userId = userData.user.id;
+    const userId = claimsData.claims.sub as string;
 
     const body: EmailRequest = await req.json();
     if (!body?.to || !body?.subject || !body?.body) {
