@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS_CONFIG } from "@/config/plans.config";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail, Pause } from "lucide-react";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
@@ -16,7 +16,6 @@ import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
 import { SendHistoryDialog } from "@/components/queue/SendHistoryDialog";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
-import { SendingStatusCard } from "@/components/queue/SendingStatusCard";
 import { useNavigate } from "react-router-dom";
 import { format, type Locale } from "date-fns";
 import { ptBR, enUS, es } from "date-fns/locale";
@@ -125,6 +124,9 @@ export default function Queue() {
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<QueueItem | null>(null);
+  const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
+  const sendCancelledRef = useRef(false);
+  const sendingRef = useRef(false);
 
   const planTier = profile?.plan_tier || "free";
   const isFreeUser = planTier === "free";
@@ -217,11 +219,11 @@ export default function Queue() {
               const next = payload?.new;
               if (!next?.id) return;
               setQueue((prev) => prev.map((it) => (it.id === next.id ? { ...it, ...next } : it)));
-              // Also refetch to get fresh joined data (company, job_title)
-              debouncedFetch();
+              // Skip full refetch while sending to avoid overwriting optimistic state
+              if (!sendingRef.current) debouncedFetch();
             } else {
               // INSERT or DELETE — refetch to get full joined data
-              debouncedFetch();
+              if (!sendingRef.current) debouncedFetch();
             }
           },
         )
@@ -430,6 +432,15 @@ export default function Queue() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
+      // Check if user paused sending
+      if (sendCancelledRef.current) {
+        toast({
+          title: t("queue.toasts.paused_title", { defaultValue: "Envio pausado" }),
+          description: t("queue.toasts.paused_desc", { count: sentIds.length, defaultValue: "{{count}} email(s) enviado(s) antes da pausa." }),
+        });
+        break;
+      }
+
       if (creditsRemaining <= 0) {
         toast({
           title: t("queue.toasts.daily_limit_reached_title"),
@@ -563,6 +574,7 @@ export default function Queue() {
         sentIds.push(item.id);
         creditsRemaining -= 1;
         consecutiveSmtpFailures = 0; // Reset on success
+        setSendProgress({ sent: sentIds.length, total: items.length });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : t("common.errors.send_failed");
         console.error(`[Queue] Erro ao processar item ${item.id}:`, e);
@@ -663,8 +675,15 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
   };
 
   const handleSendSelected = async () => {
@@ -674,8 +693,15 @@ export default function Queue() {
       toast({ title: t("queue.toasts.daily_limit_reached_title"), variant: "destructive" });
       return;
     }
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
     setSelectedIds({});
   };
 
@@ -726,19 +752,31 @@ export default function Queue() {
 
   const handleRetryAllFailed = async () => {
     if (failedItems.length === 0) return;
-    // Use lazy activation — don't batch-set to pending upfront
     const items = failedItems.slice(0, remainingToday);
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items, true).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items, true).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
   };
 
   const handleRetryAllPaused = async () => {
     const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
     if (eligible.length === 0) return;
-    // Use lazy activation — each item is set to pending inside the loop, right before sending
     const items = eligible.slice(0, remainingToday);
+    sendCancelledRef.current = false;
     setSending(true);
-    await sendQueueItems(items, true).finally(() => setSending(false));
+    sendingRef.current = true;
+    setSendProgress({ sent: 0, total: items.length });
+    await sendQueueItems(items, true).finally(() => {
+      setSending(false);
+      sendingRef.current = false;
+      setSendProgress({ sent: 0, total: 0 });
+    });
   };
 
   const pendingCount = pendingItems.length;
@@ -870,12 +908,29 @@ export default function Queue() {
         </div>
       </div>
 
-      {(processingItems.length > 0 || (sending && pendingItems.length > 0)) && (
-        <SendingStatusCard
-          processingCount={processingItems.length}
-          pendingCount={pendingItems.length}
-          planTier={planTier}
-        />
+      {sending && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-primary/20 bg-primary/5">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+          </span>
+          <span className="text-sm font-medium text-foreground">
+            {t("queue.sending_badge.label", {
+              sent: sendProgress.sent,
+              total: sendProgress.total,
+              defaultValue: "Enviando {{sent}}/{{total}} emails...",
+            })}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-7 px-2 text-xs"
+            onClick={() => { sendCancelledRef.current = true; }}
+          >
+            <Pause className="h-3.5 w-3.5 mr-1" />
+            {t("queue.sending_badge.pause", { defaultValue: "Pausar" })}
+          </Button>
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
