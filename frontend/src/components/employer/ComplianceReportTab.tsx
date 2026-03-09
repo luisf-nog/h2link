@@ -5,23 +5,6 @@ import { Button } from "@/components/ui/button";
 import { FileDown, Shield } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
-import logoWordmark from "@/assets/h2link-logo-wordmark.png";
-
-function loadImageAsBase64(src: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      canvas.getContext("2d")!.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-}
 
 interface JobDetails {
   employer_legal_name: string | null;
