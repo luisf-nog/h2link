@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS_CONFIG } from "@/config/plans.config";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail } from "lucide-react";
+import { Trash2, Send, Loader2, RefreshCw, History, Lock, FileText, AlertCircle, Mail, Pause } from "lucide-react";
 import { ReportJobButton } from "@/components/queue/ReportJobButton";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
@@ -16,7 +16,6 @@ import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { AddManualJobDialog } from "@/components/queue/AddManualJobDialog";
 import { SendHistoryDialog } from "@/components/queue/SendHistoryDialog";
 import { MobileQueueCard } from "@/components/queue/MobileQueueCard";
-import { SendingStatusCard } from "@/components/queue/SendingStatusCard";
 import { useNavigate } from "react-router-dom";
 import { format, type Locale } from "date-fns";
 import { ptBR, enUS, es } from "date-fns/locale";
