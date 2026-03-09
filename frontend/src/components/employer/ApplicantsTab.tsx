@@ -223,7 +223,7 @@ function CandidateRow({
           </div>
           {/* Quick info row */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{format(new Date(app.created_at), "MMM d")}</span>
+            <span title={format(new Date(app.created_at), "PPpp")}>{format(new Date(app.created_at), "MMM d, h:mm a")}</span>
             <span>•</span>
             <span className="capitalize">{app.english_level ? `${app.english_level.charAt(0).toUpperCase() + app.english_level.slice(1)} English` : "—"}</span>
             <span>•</span>
