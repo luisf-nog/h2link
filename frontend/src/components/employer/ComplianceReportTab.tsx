@@ -296,7 +296,7 @@ export function ComplianceReportTab({ apps, auditLogs, jobTitle, dolCaseNumber, 
 
       appLogs.forEach((log) => {
         if (y > 270) { doc.addPage(); y = 20; }
-        const time = format(new Date(log.created_at), "hh:mm a");
+        const time = format(new Date(log.created_at), "MMM d, yyyy – hh:mm a");
         const statusLabel = log.new_status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
         let line = `• ${time} – Status Updated: ${statusLabel}`;
         if (log.rejection_reason) line += ` (${log.rejection_reason.replace(/_/g, " ")})`;
