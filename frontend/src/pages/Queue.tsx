@@ -162,7 +162,7 @@ export default function Queue() {
 
   const getDelayMs = () => {
     if (planTier === "gold") return 15_000; // 15s fixo
-    if (planTier === "diamond") return 60_000 + Math.floor(Math.random() * 120_001); // 1-3 min
+    if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s (synced with backend)
     if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 min
     return 1000;
   };
@@ -175,7 +175,7 @@ export default function Queue() {
   useEffect(() => {
     const id = window.setInterval(() => {
       setClockTick(Date.now());
-      fetchQueue();
+      if (!sendingRef.current) fetchQueue();
     }, 30000);
     return () => window.clearInterval(id);
   }, []);
@@ -258,7 +258,7 @@ export default function Queue() {
     };
   }, []);
 
-  const STUCK_PROCESSING_MINUTES = 4;
+  const STUCK_PROCESSING_MINUTES = 10;
 
   const fetchQueue = async () => {
     if (!initialLoadDone.current) setLoading(true);
@@ -490,8 +490,8 @@ export default function Queue() {
         break;
       }
 
-      // Mark item as processing right before sending (prevents stale batch locks)
-      await supabase
+      // Mark item as processing right before sending (atomic lock — only if still pending)
+      const { data: locked } = await supabase
         .from("my_queue")
         .update({
           status: "processing",
@@ -502,7 +502,16 @@ export default function Queue() {
           profile_viewed_at: null,
           ...(lazyActivate ? { tracking_id: crypto.randomUUID() } : {}),
         })
-        .eq("id", item.id);
+        .eq("id", item.id)
+        .eq("status", lazyActivate ? item.status : "pending")
+        .select("id")
+        .maybeSingle();
+
+      if (!locked) {
+        // Another process (cron) already grabbed this item — skip it
+        console.log(`[Queue] Item ${item.id} lock not acquired, skipping`);
+        continue;
+      }
       setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing", processing_started_at: new Date().toISOString() } : q)));
 
       const job = item.public_jobs ?? item.manual_jobs;
