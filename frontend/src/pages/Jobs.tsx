@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { JobDetailsDialog } from "@/components/jobs/JobDetailsDialog";
-import type { Tables } from "@/integrations/supabase/types";
+
 import { JobImportDialog } from "@/components/jobs/JobImportDialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
