@@ -636,7 +636,8 @@
       "send": "Enviar todos ({{pendingCount}})",
       "send_selected": "Enviar selecionados ({{count}})",
       "retry": "Retry",
-      "retry_all_failed": "Retry failed ({{count}})",
+      "retry_all_failed": "Reenviar falhadas ({{count}})",
+      "retry_all_paused": "Reenviar pausadas ({{count}})",
       "resend": "Resend",
       "view_history": "Ver histórico"
     },

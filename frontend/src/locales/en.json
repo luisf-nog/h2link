@@ -637,6 +637,7 @@
       "send_selected": "Send selected ({{count}})",
       "retry": "Retry",
       "retry_all_failed": "Retry failed ({{count}})",
+      "retry_all_paused": "Resend paused ({{count}})",
       "resend": "Resend",
       "view_history": "View history"
     },

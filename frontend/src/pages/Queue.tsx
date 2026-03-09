@@ -297,6 +297,7 @@ export default function Queue() {
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
+  const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
   const selectedPendingIds = useMemo(
     () => Object.keys(selectedIds).filter((id) => selectedIds[id] && pendingIds.has(id)),
@@ -694,6 +695,16 @@ export default function Queue() {
     await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
   };
 
+  const handleRetryAllPaused = async () => {
+    const eligible = pausedItems.filter((it) => it.send_count < MAX_SEND_ATTEMPTS);
+    if (eligible.length === 0) return;
+    const ids = eligible.map((it) => it.id);
+    await supabase.from("my_queue").update({ status: "pending", last_error: null }).in("id", ids);
+    const updatedItems = eligible.map((it) => ({ ...it, status: "pending" }));
+    setSending(true);
+    await sendQueueItems(updatedItems.slice(0, remainingToday)).finally(() => setSending(false));
+  };
+
   const pendingCount = pendingItems.length;
   const sentCount = creditsUsedToday;
 
@@ -792,6 +803,13 @@ export default function Queue() {
 
         <div className="flex gap-2 flex-wrap">
           <AddManualJobDialog onAdded={fetchQueue} />
+
+          {pausedItems.length > 0 && (
+            <Button variant="outline" onClick={handleRetryAllPaused} disabled={sending}>
+              {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              {t("queue.actions.retry_all_paused", { count: pausedItems.length, defaultValue: "Reenviar pausadas ({{count}})" })}
+            </Button>
+          )}
 
           {failedItems.length > 0 && (
             <Button variant="outline" onClick={handleRetryAllFailed} disabled={sending}>
