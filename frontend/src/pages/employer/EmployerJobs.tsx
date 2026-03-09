@@ -46,6 +46,21 @@ export default function EmployerJobs() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SponsoredJob | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const getApplyUrl = (jobId: string) => `https://h2linker.com/apply/${jobId}`;
+
+  const handleCopyLink = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(getApplyUrl(jobId));
+      setCopiedId(jobId);
+      toast({ title: t("employer.jobs.link_copied", "Link copied!") });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+  };
 
   const loadJobs = async () => {
     if (!employerProfile) return;
