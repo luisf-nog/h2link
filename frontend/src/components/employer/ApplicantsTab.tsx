@@ -60,18 +60,18 @@ function getWorkAuthBadge(status: string, isInUs: boolean): { label: string; ico
   return { label: "Requires H-2 Visa", icon: "alert" };
 }
 
-// Match score color - simple 3-tier system
+// Match score color - simple 3-tier system (90+, 70-89, <70)
 function getMatchScoreStyle(score: number | null): string {
   if (score === null) return "bg-muted text-muted-foreground";
-  if (score >= 90) return "bg-emerald-100 text-emerald-700";
-  if (score >= 70) return "bg-amber-100 text-amber-700";
+  if (score >= 90) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400";
+  if (score >= 70) return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400";
   return "bg-muted text-muted-foreground";
 }
 
 const STATUS_OPTIONS = [
-  { value: "received", label: "New", color: "bg-amber-400" },
+  { value: "received", label: "New", color: "bg-amber-500" },
   { value: "shortlisted", label: "Shortlisted", color: "bg-primary" },
-  { value: "contacted", label: "Contacted", color: "bg-sky-500" },
+  { value: "contacted", label: "Contacted", color: "bg-primary" },
   { value: "hired", label: "Hired", color: "bg-emerald-500" },
   { value: "rejected", label: "Rejected", color: "bg-destructive" },
 ];
