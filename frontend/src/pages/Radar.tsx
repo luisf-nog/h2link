@@ -585,11 +585,6 @@ export default function Radar() {
     const queuedJobs = allQueuedJobs;
     const queueError = null;
 
-    if (queueError) {
-      console.error("[Radar] fetchMatches queue check error:", queueError);
-      return;
-    }
-
     const queuedSet = new Set((queuedJobs || []).map((q: any) => q.job_id));
     const finalMatches = validMatches.filter((m: any) => !queuedSet.has(m.job_id));
     const queuedCount = validMatches.filter((m: any) => queuedSet.has(m.job_id)).length;
