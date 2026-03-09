@@ -57,9 +57,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // 3. Employers skip SMTP onboarding entirely
+  // 3. Employers are isolated to employer portal routes
   if (isEmployer) {
-    return <AppLayout>{children}</AppLayout>;
+    return <Navigate to="/employer/dashboard" replace />;
   }
 
   // 4. Verificação de Onboarding for workers
