@@ -412,11 +412,13 @@ export default function Auth() {
       const field = String(first?.path?.[0] ?? "");
       const code = typeof first?.message === "string" ? first.message : "";
       const description =
-        field === "confirmPassword" || code === "password_mismatch"
+          field === "confirmPassword" || code === "password_mismatch"
           ? t("auth.validation.password_mismatch")
-          : field === "acceptTerms" || code === "accept_required"
-            ? t("auth.validation.accept_required")
-            : `Please fill in the required field: ${field}`;
+          : field === "einTaxId" || code === "invalid_ein"
+            ? t("auth.validation.invalid_ein", "EIN must follow the format XX-XXXXXXX (e.g. 12-3456789)")
+            : field === "acceptTerms" || code === "accept_required"
+              ? t("auth.validation.accept_required")
+              : `Please fill in the required field: ${field}`;
       openError(t("auth.toasts.signup_error_title"), description);
       setIsLoading(false);
       return;
