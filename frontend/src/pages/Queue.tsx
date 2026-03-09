@@ -490,8 +490,8 @@ export default function Queue() {
         break;
       }
 
-      // Mark item as processing right before sending (prevents stale batch locks)
-      await supabase
+      // Mark item as processing right before sending (atomic lock — only if still pending)
+      const { data: locked } = await supabase
         .from("my_queue")
         .update({
           status: "processing",
@@ -502,7 +502,16 @@ export default function Queue() {
           profile_viewed_at: null,
           ...(lazyActivate ? { tracking_id: crypto.randomUUID() } : {}),
         })
-        .eq("id", item.id);
+        .eq("id", item.id)
+        .eq("status", lazyActivate ? item.status : "pending")
+        .select("id")
+        .maybeSingle();
+
+      if (!locked) {
+        // Another process (cron) already grabbed this item — skip it
+        console.log(`[Queue] Item ${item.id} lock not acquired, skipping`);
+        continue;
+      }
       setQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: "processing", processing_started_at: new Date().toISOString() } : q)));
 
       const job = item.public_jobs ?? item.manual_jobs;
