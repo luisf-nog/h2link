@@ -859,7 +859,6 @@ const handler = async (req: Request): Promise<Response> => {
       error: classifySmtpError(errorMessage).userMessage, 
       error_category: classifySmtpError(errorMessage).category,
       error_raw: errorMessage,
-      critical: isCriticalError 
     });
   }
 };
