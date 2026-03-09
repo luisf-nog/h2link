@@ -957,7 +957,7 @@ async function processOneUser(params: {
 
   let q = serviceClient
     .from("my_queue")
-    .select("id,user_id,status,job_id,manual_job_id,tracking_id,cached_subject,cached_body")
+    .select("id,user_id,status,job_id,manual_job_id,tracking_id,cached_subject,cached_body,send_count")
     .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: true });

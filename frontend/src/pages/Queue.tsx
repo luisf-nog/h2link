@@ -162,7 +162,7 @@ export default function Queue() {
 
   const getDelayMs = () => {
     if (planTier === "gold") return 15_000; // 15s fixo
-    if (planTier === "diamond") return 60_000 + Math.floor(Math.random() * 120_001); // 1-3 min
+    if (planTier === "diamond") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s (synced with backend)
     if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 min
     return 1000;
   };
