@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { WhatsNewDialog } from "@/components/dialogs/WhatsNewDialog";
 import { AppSidebar } from "./AppSidebar";
@@ -14,6 +14,10 @@ import { useTranslation } from "react-i18next";
 import i18n, { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Menu, LogIn } from "lucide-react";
+import Dashboard from "@/pages/Dashboard";
+import Jobs from "@/pages/Jobs";
+import Queue from "@/pages/Queue";
+import Radar from "@/pages/Radar";
 
 type LanguageOption = { value: SupportedLanguage; label: string };
 
