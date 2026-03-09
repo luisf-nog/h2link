@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users, ClipboardList, ShieldCheck } from "lucide-react";
 import { ApplicantsTab } from "@/components/employer/ApplicantsTab";
 import { RecruitmentLogTab } from "@/components/employer/RecruitmentLogTab";
 import { ComplianceReportTab } from "@/components/employer/ComplianceReportTab";
