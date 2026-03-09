@@ -139,7 +139,7 @@ function CandidateRow({
   onOpenDetail: (app: Application) => void;
 }) {
   const [rejectOpen, setRejectOpen] = useState(false);
-  const workAuthBadge = getWorkAuthBadge(app.work_authorization_status, app.is_in_us);
+  const workAuthBadge = getWorkAuthBadge(app.work_authorization_status, app.is_in_us, app.is_us_worker);
 
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === "rejected") {
