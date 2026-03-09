@@ -147,7 +147,8 @@ export default function Auth() {
       confirmPassword: z.string().min(6).max(200),
       companyName: z.string().trim().min(1).max(200),
       legalEntityName: z.string().trim().max(200).optional().default(""),
-      einTaxId: z.string().trim().max(30).optional().default(""),
+      einTaxId: z.string().trim().max(30).optional().default("")
+        .refine((v) => !v || /^\d{2}-\d{7}$/.test(v), { message: "invalid_ein" }),
       companySize: z.string().trim().min(1),
       industry: z.string().trim().min(1).max(120),
       website: z.string().trim().max(255).optional().default(""),
@@ -411,11 +412,13 @@ export default function Auth() {
       const field = String(first?.path?.[0] ?? "");
       const code = typeof first?.message === "string" ? first.message : "";
       const description =
-        field === "confirmPassword" || code === "password_mismatch"
+          field === "confirmPassword" || code === "password_mismatch"
           ? t("auth.validation.password_mismatch")
-          : field === "acceptTerms" || code === "accept_required"
-            ? t("auth.validation.accept_required")
-            : `Please fill in the required field: ${field}`;
+          : field === "einTaxId" || code === "invalid_ein"
+            ? t("auth.validation.invalid_ein", "EIN must follow the format XX-XXXXXXX (e.g. 12-3456789)")
+            : field === "acceptTerms" || code === "accept_required"
+              ? t("auth.validation.accept_required")
+              : `Please fill in the required field: ${field}`;
       openError(t("auth.toasts.signup_error_title"), description);
       setIsLoading(false);
       return;
