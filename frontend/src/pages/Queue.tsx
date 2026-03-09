@@ -314,9 +314,8 @@ export default function Queue() {
   const activeProcessingItems = useMemo(() => {
     const tenMinAgo = Date.now() - 10 * 60 * 1000;
     return processingItems.filter((q) => {
-      const createdMs = new Date(q.created_at).getTime();
-      // If no processing_started_at available, use created_at as rough proxy
-      return createdMs > tenMinAgo || !q.sent_at;
+      const ts = q.processing_started_at || q.created_at;
+      return new Date(ts).getTime() > tenMinAgo;
     });
   }, [processingItems]);
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
