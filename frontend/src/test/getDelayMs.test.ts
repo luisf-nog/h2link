@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 type PlanTier = "free" | "gold" | "diamond" | "black";
 
 function getDelayMs(planTier: PlanTier): number {
-  if (planTier === "gold") return 15_000; // 15s fixo
+  if (planTier === "gold") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s aleatório
   if (planTier === "diamond") return 60_000 + Math.floor(Math.random() * 120_001); // 1-3 minutos
   if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 minutos
   return 0; // free: sem delay
@@ -16,8 +16,12 @@ describe("getDelayMs", () => {
     expect(getDelayMs("free")).toBe(0);
   });
 
-  it("retorna 15000ms fixo para plano gold", () => {
-    expect(getDelayMs("gold")).toBe(15_000);
+  it("retorna entre 15-45 segundos para plano gold", () => {
+    for (let i = 0; i < 100; i++) {
+      const delay = getDelayMs("gold");
+      expect(delay).toBeGreaterThanOrEqual(15_000);
+      expect(delay).toBeLessThanOrEqual(45_000);
+    }
   });
 
   it("retorna entre 1-3 minutos para plano diamond", () => {
