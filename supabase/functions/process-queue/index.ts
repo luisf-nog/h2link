@@ -1355,6 +1355,7 @@ async function processOneUser(params: {
         } as any)) as any;
 
       sent += 1;
+      sentTodayEmails.add(job.email.toLowerCase()); // Track for dedup within batch
       creditsUsed += 1;
       await (serviceClient
         .from("profiles")
