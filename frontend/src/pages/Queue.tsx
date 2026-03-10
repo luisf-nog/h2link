@@ -252,7 +252,7 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
-  // Only show badge for items that started processing recently (< 4 min)
+  // Only show badge for items that started processing recently (< 10 min)
   const activeProcessingItems = useMemo(() => {
     const cutoffMs = clockTick - STUCK_PROCESSING_MINUTES * 60 * 1000;
     return processingItems.filter((q) => {
@@ -260,6 +260,8 @@ export default function Queue() {
       return new Date(ts).getTime() > cutoffMs;
     });
   }, [processingItems, clockTick]);
+  // True when cron or another session is actively processing items
+  const externalProcessing = !sending && activeProcessingItems.length > 0;
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
   const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
