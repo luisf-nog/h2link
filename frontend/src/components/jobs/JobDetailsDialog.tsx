@@ -190,7 +190,7 @@ export function JobDetailsDialog({
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
                 <span className="flex items-center gap-1" translate="no">
-                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
+                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {getStateName(job?.state)}
                 </span>
                 {!isSponsored && job?.category && (
                   <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
