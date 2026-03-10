@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -49,6 +50,48 @@ export function JobDetailsDialog({
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const [dolPdfAvailable, setDolPdfAvailable] = useState<boolean | null>(null);
+  const [dolPdfLoading, setDolPdfLoading] = useState(false);
+
+  // Check DOL PDF availability
+  useEffect(() => {
+    if (!open || isSponsored || !job?.job_id) {
+      setDolPdfAvailable(null);
+      return;
+    }
+
+    // Only for H- prefixed jobs (not JO- early access)
+    const etaNumber = job.job_id;
+    if (!etaNumber.startsWith("H-")) {
+      setDolPdfAvailable(null);
+      return;
+    }
+
+    // Cache hit: already confirmed available
+    if (job.dol_pdf_available === true) {
+      setDolPdfAvailable(true);
+      return;
+    }
+
+    // Need to check
+    setDolPdfLoading(true);
+    setDolPdfAvailable(null);
+
+    supabase.functions
+      .invoke("check-dol-pdf", {
+        body: { jobId: job.id, etaNumber },
+      })
+      .then(({ data }) => {
+        setDolPdfAvailable(data?.available === true);
+      })
+      .catch(() => {
+        setDolPdfAvailable(false);
+      })
+      .finally(() => {
+        setDolPdfLoading(false);
+      });
+  }, [open, job?.id, job?.job_id, job?.dol_pdf_available, isSponsored]);
 
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
@@ -307,7 +350,26 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* Financial */}
+                {/* DOL Job Order PDF */}
+                {!isSponsored && job?.job_id?.startsWith("H-") && (
+                  dolPdfLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                      <span className="h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      {t("jobs.details.checking_dol", { defaultValue: "Checking DOL records..." })}
+                    </div>
+                  ) : dolPdfAvailable ? (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-center gap-2 text-sm font-bold border-blue-200 text-blue-700 hover:bg-blue-50"
+                      onClick={() => window.open(`https://seasonaljobs.dol.gov/api/job-order/${job.job_id}`, "_blank")}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                      Job Order (DOL)
+                    </Button>
+                  ) : null
+                )}
+
+
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
                   <div className="flex justify-between items-center border-b pb-4">
                     <span className="font-semibold text-sm text-slate-600">
