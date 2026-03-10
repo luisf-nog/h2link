@@ -907,7 +907,7 @@ export default function Queue() {
             {t("queue.actions.send_selected", { count: selectedPendingIds.length })}
           </Button>
 
-          <Button onClick={handleSendAll} disabled={pendingCount === 0 || sending}>
+          <Button onClick={handleSendAll} disabled={pendingCount === 0 || sending || externalProcessing}>
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             {t("queue.actions.send", { pendingCount })}
           </Button>
