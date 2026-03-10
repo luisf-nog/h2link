@@ -998,6 +998,33 @@ async function processOneUser(params: {
   let sent = 0;
   let failed = 0;
 
+  // Build dedup set: emails already sent today for this user
+  const sentTodayEmails = new Set<string>();
+  try {
+    const { data: sentToday } = await serviceClient
+      .from("my_queue")
+      .select("job_id,manual_job_id")
+      .eq("user_id", userId)
+      .eq("status", "sent")
+      .gte("sent_at", today + "T00:00:00Z");
+    if (sentToday) {
+      for (const s of sentToday) {
+        let email: string | null = null;
+        if (s.job_id) {
+          const { data: pj } = await serviceClient.from("public_jobs").select("email").eq("id", s.job_id).maybeSingle();
+          email = pj?.email ?? null;
+        } else if (s.manual_job_id) {
+          const { data: mj } = await serviceClient.from("manual_jobs").select("email").eq("id", s.manual_job_id).maybeSingle();
+          email = mj?.email ?? null;
+        }
+        if (email) sentTodayEmails.add(email.toLowerCase());
+      }
+    }
+    console.log(`[process-queue] Dedup: ${sentTodayEmails.size} emails already sent today for user ${userId}`);
+  } catch (e) {
+    console.error(`[process-queue] Dedup check failed, continuing without dedup:`, e);
+  }
+
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
 
