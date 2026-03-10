@@ -550,8 +550,8 @@ export default function Jobs() {
                     <span className="flex items-center gap-1">
                       <Briefcase className="h-3.5 w-3.5" /> {j.company}
                     </span>
-                    <span className="flex items-center gap-1 uppercase">
-                      <MapPin className="h-3.5 w-3.5" /> {j.city}, {j.state}
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {j.city}, {getStateName(j.state)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
