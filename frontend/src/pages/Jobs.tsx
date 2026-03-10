@@ -181,7 +181,7 @@ export default function Jobs() {
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim())
       query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
-    if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
+    if (stateFilter.trim()) query = query.eq("state", stateFilter.trim());
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`);
     if (minSalary) query = query.gte("salary", Number(minSalary));
