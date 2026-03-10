@@ -49,6 +49,9 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
+import { US_STATES_LIST, getStateName } from "@/lib/usStates";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const JOB_CATEGORIES_LIST = [
   "Farmworkers and Laborers, Crop, Nursery, and Greenhouse",
@@ -178,7 +181,7 @@ export default function Jobs() {
     if (visaType !== "all") query = query.eq("visa_type", visaType);
     if (searchTerm.trim())
       query = query.or(`job_title.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`);
-    if (stateFilter.trim()) query = query.ilike("state", `%${stateFilter.trim()}%`);
+    if (stateFilter.trim()) query = query.eq("state", stateFilter.trim());
     if (cityFilter.trim()) query = query.ilike("city", `%${cityFilter.trim()}%`);
     if (categoryFilter.trim()) query = query.ilike("category", `%${categoryFilter.trim()}%`);
     if (minSalary) query = query.gte("salary", Number(minSalary));
@@ -302,7 +305,7 @@ export default function Jobs() {
               <Briefcase className="h-3.5 w-3.5" /> {sj.employer_legal_name || "—"}
             </span>
             <span className="flex items-center gap-1 uppercase">
-              <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}
+              <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${getStateName(sj.state)}` : "—"}
             </span>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
@@ -357,7 +360,7 @@ export default function Jobs() {
           </div>
         </TableCell>
         <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
-        <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
+        <TableCell className="text-sm" translate="no">{sj.city && sj.state ? `${sj.city}, ${getStateName(sj.state)}` : "—"}</TableCell>
         <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
         <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : sj.wage_rate ? sj.wage_rate : "-"}</TableCell>
         <TableCell>
@@ -446,12 +449,43 @@ export default function Jobs() {
                   className="pl-10 h-10"
                 />
               </div>
-              <Input
-                placeholder={t("jobs.filters.state")}
-                value={stateFilter}
-                onChange={(e) => setStateFilter(e.target.value)}
-                className="h-10"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-10 w-full justify-start font-normal text-sm bg-white">
+                    {stateFilter ? (
+                      <span>{getStateName(stateFilter)} ({stateFilter})</span>
+                    ) : (
+                      <span className="text-muted-foreground">{t("jobs.filters.state")}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[280px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={t("jobs.filters.state_search") || "Search state..."} />
+                    <CommandList>
+                      <CommandEmpty>No state found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-states"
+                          onSelect={() => { setStateFilter(""); setPage(1); }}
+                        >
+                          {t("jobs.filters.all_states") || "All States"}
+                        </CommandItem>
+                        {US_STATES_LIST.map((s) => (
+                          <CommandItem
+                            key={s.abbr}
+                            value={`${s.name} ${s.abbr}`}
+                            onSelect={() => { setStateFilter(s.abbr); setPage(1); }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", stateFilter === s.abbr ? "opacity-100" : "opacity-0")} />
+                            {s.name} ({s.abbr})
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <Input
                 placeholder={t("jobs.filters.city")}
                 value={cityFilter}
@@ -516,8 +550,8 @@ export default function Jobs() {
                     <span className="flex items-center gap-1">
                       <Briefcase className="h-3.5 w-3.5" /> {j.company}
                     </span>
-                    <span className="flex items-center gap-1 uppercase">
-                      <MapPin className="h-3.5 w-3.5" /> {j.city}, {j.state}
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {j.city}, {getStateName(j.state)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
@@ -590,8 +624,8 @@ export default function Jobs() {
                   >
                     <TableCell className="font-semibold text-sm">{j.job_title}</TableCell>
                     <TableCell className="text-sm text-slate-600">{j.company}</TableCell>
-                    <TableCell className="text-sm uppercase">
-                      {j.city}, {j.state}
+                    <TableCell className="text-sm">
+                      {j.city}, {getStateName(j.state)}
                     </TableCell>
                     <TableCell className="text-center text-sm">{j.openings ?? "-"}</TableCell>
                     <TableCell className="font-bold text-green-700 text-sm">{renderPrice(j)}</TableCell>
