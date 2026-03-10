@@ -398,6 +398,18 @@ export default function Queue() {
     let creditsRemaining = remainingToday;
     let consecutiveSmtpFailures = 0;
 
+    // Build set of emails already sent today (dedup protection)
+    const alreadySentEmails = new Set<string>();
+    for (const q of queue) {
+      if (q.status === "sent" && q.sent_at) {
+        const sentDate = new Date(q.sent_at).toDateString();
+        if (sentDate === new Date().toDateString()) {
+          const email = (q.public_jobs ?? q.manual_jobs)?.email?.toLowerCase();
+          if (email) alreadySentEmails.add(email);
+        }
+      }
+    }
+
     // Reset stale consecutive_errors before any batch send
     await resetConsecutiveErrors();
 
