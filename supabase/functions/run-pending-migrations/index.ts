@@ -54,6 +54,12 @@ const MIGRATIONS = [
     ],
   },
   {
+    name: "public_jobs dol_pdf_available column",
+    sqls: [
+      `ALTER TABLE public.public_jobs ADD COLUMN IF NOT EXISTS dol_pdf_available boolean DEFAULT null;`,
+    ],
+  },
+  {
     name: "sponsored_jobs new columns",
     sqls: [
       `DO $$ BEGIN
