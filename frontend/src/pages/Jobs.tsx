@@ -449,12 +449,43 @@ export default function Jobs() {
                   className="pl-10 h-10"
                 />
               </div>
-              <Input
-                placeholder={t("jobs.filters.state")}
-                value={stateFilter}
-                onChange={(e) => setStateFilter(e.target.value)}
-                className="h-10"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-10 w-full justify-start font-normal text-sm bg-white">
+                    {stateFilter ? (
+                      <span>{getStateName(stateFilter)} ({stateFilter})</span>
+                    ) : (
+                      <span className="text-muted-foreground">{t("jobs.filters.state")}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[280px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={t("jobs.filters.state_search") || "Search state..."} />
+                    <CommandList>
+                      <CommandEmpty>No state found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-states"
+                          onSelect={() => { setStateFilter(""); setPage(1); }}
+                        >
+                          {t("jobs.filters.all_states") || "All States"}
+                        </CommandItem>
+                        {US_STATES_LIST.map((s) => (
+                          <CommandItem
+                            key={s.abbr}
+                            value={`${s.name} ${s.abbr}`}
+                            onSelect={() => { setStateFilter(s.abbr); setPage(1); }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", stateFilter === s.abbr ? "opacity-100" : "opacity-0")} />
+                            {s.name} ({s.abbr})
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <Input
                 placeholder={t("jobs.filters.city")}
                 value={cityFilter}
