@@ -360,7 +360,7 @@ export default function Jobs() {
           </div>
         </TableCell>
         <TableCell className="text-sm text-slate-600" translate="no">{sj.employer_legal_name || "—"}</TableCell>
-        <TableCell className="text-sm uppercase" translate="no">{sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}</TableCell>
+        <TableCell className="text-sm" translate="no">{sj.city && sj.state ? `${sj.city}, ${getStateName(sj.state)}` : "—"}</TableCell>
         <TableCell className="text-center text-sm">{sj.num_positions ?? "-"}</TableCell>
         <TableCell className="font-bold text-green-700 text-sm">{sj.hourly_wage ? `$${Number(sj.hourly_wage).toFixed(2)}` : sj.wage_rate ? sj.wage_rate : "-"}</TableCell>
         <TableCell>
