@@ -1101,6 +1101,22 @@ async function processOneUser(params: {
 
       if (!job?.email) throw new Error("Destino (email) ausente");
 
+      // DEDUP: Skip if already sent to this email today
+      if (sentTodayEmails.has(job.email.toLowerCase())) {
+        console.log(`[process-queue] DEDUP: Skipping queue ${row.id} — already sent to ${job.email} today`);
+        await (serviceClient
+          .from("my_queue")
+          .update({
+            status: "paused",
+            processing_started_at: null,
+            last_error: "[DEDUP] Email já enviado para este destinatário hoje.",
+            last_attempt_at: new Date().toISOString(),
+          } as any)
+          .eq("id", row.id)) as any;
+        failed += 1;
+        continue;
+      }
+
       // Validate email domain before sending (prevent hard bounces)
       const emailValidation = await validateEmailDNS(job.email);
       if (!emailValidation.valid) {
