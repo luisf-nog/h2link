@@ -437,6 +437,13 @@ export default function Queue() {
         break;
       }
 
+      // DEDUP: Skip if we already sent to this email today
+      const itemEmail = (item.public_jobs ?? item.manual_jobs)?.email?.toLowerCase();
+      if (itemEmail && alreadySentEmails.has(itemEmail)) {
+        console.log(`[Queue] DEDUP: Skipping item ${item.id} — already sent to ${itemEmail} today`);
+        continue;
+      }
+
       // Mark item as processing right before sending (atomic lock — only if still pending)
       const { data: locked } = await supabase
         .from("my_queue")
