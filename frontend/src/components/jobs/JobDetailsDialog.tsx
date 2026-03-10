@@ -51,6 +51,48 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const [dolPdfAvailable, setDolPdfAvailable] = useState<boolean | null>(null);
+  const [dolPdfLoading, setDolPdfLoading] = useState(false);
+
+  // Check DOL PDF availability
+  useEffect(() => {
+    if (!open || isSponsored || !job?.job_id) {
+      setDolPdfAvailable(null);
+      return;
+    }
+
+    // Only for H- prefixed jobs (not JO- early access)
+    const etaNumber = job.job_id;
+    if (!etaNumber.startsWith("H-")) {
+      setDolPdfAvailable(null);
+      return;
+    }
+
+    // Cache hit: already confirmed available
+    if (job.dol_pdf_available === true) {
+      setDolPdfAvailable(true);
+      return;
+    }
+
+    // Need to check
+    setDolPdfLoading(true);
+    setDolPdfAvailable(null);
+
+    supabase.functions
+      .invoke("check-dol-pdf", {
+        body: { jobId: job.id, etaNumber },
+      })
+      .then(({ data }) => {
+        setDolPdfAvailable(data?.available === true);
+      })
+      .catch(() => {
+        setDolPdfAvailable(false);
+      })
+      .finally(() => {
+        setDolPdfLoading(false);
+      });
+  }, [open, job?.id, job?.job_id, job?.dol_pdf_available, isSponsored]);
+
   const isRegistered = !!planSettings && Object.keys(planSettings).length > 0;
   const planTier = (planSettings?.plan_tier || planSettings?.tier || "visitor").toLowerCase();
   const canSeeContacts = !isSponsored && ["gold", "diamond", "black"].includes(planTier);
