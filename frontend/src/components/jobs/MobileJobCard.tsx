@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { JobWarningBadge } from "@/components/jobs/JobWarningBadge";
 import type { ReportReason } from "@/components/queue/ReportJobButton";
 import { getVisaBadgeConfig } from "@/lib/visaTypes";
+import { getStateName } from "@/lib/usStates";
 
 interface JobData {
   id: string;
