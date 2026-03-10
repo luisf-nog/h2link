@@ -624,8 +624,8 @@ export default function Jobs() {
                   >
                     <TableCell className="font-semibold text-sm">{j.job_title}</TableCell>
                     <TableCell className="text-sm text-slate-600">{j.company}</TableCell>
-                    <TableCell className="text-sm uppercase">
-                      {j.city}, {j.state}
+                    <TableCell className="text-sm">
+                      {j.city}, {getStateName(j.state)}
                     </TableCell>
                     <TableCell className="text-center text-sm">{j.openings ?? "-"}</TableCell>
                     <TableCell className="font-bold text-green-700 text-sm">{renderPrice(j)}</TableCell>
