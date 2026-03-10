@@ -1333,6 +1333,7 @@ export default function Queue() {
                                 disabled={
                                   !["pending", "sent", "paused", "skipped_invalid_domain"].includes(item.status) ||
                                   sending ||
+                                  externalProcessing ||
                                   sendingIds.has(item.id)
                                 }
                                 onClick={() => handleSendOne(item)}
