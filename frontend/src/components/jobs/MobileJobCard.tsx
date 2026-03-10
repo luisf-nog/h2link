@@ -160,7 +160,7 @@ export function MobileJobCard({
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
             <span className="truncate" translate="no">
-              {job.city}, {job.state}
+              {job.city}, {getStateName(job.state)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 text-green-700 font-bold">
