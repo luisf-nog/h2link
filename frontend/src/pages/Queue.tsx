@@ -252,7 +252,7 @@ export default function Queue() {
 
   const pendingItems = useMemo(() => queue.filter((q) => q.status === "pending"), [queue]);
   const processingItems = useMemo(() => queue.filter((q) => q.status === "processing"), [queue]);
-  // Only show badge for items that started processing recently (< 4 min)
+  // Only show badge for items that started processing recently (< 10 min)
   const activeProcessingItems = useMemo(() => {
     const cutoffMs = clockTick - STUCK_PROCESSING_MINUTES * 60 * 1000;
     return processingItems.filter((q) => {
@@ -260,6 +260,8 @@ export default function Queue() {
       return new Date(ts).getTime() > cutoffMs;
     });
   }, [processingItems, clockTick]);
+  // True when cron or another session is actively processing items
+  const externalProcessing = !sending && activeProcessingItems.length > 0;
   const failedItems = useMemo(() => queue.filter((q) => q.status === "failed"), [queue]);
   const pausedItems = useMemo(() => queue.filter((q) => q.status === "paused" || q.status === "skipped_invalid_domain"), [queue]);
   const pendingIds = useMemo(() => new Set(pendingItems.map((i) => i.id)), [pendingItems]);
@@ -396,6 +398,18 @@ export default function Queue() {
     let creditsRemaining = remainingToday;
     let consecutiveSmtpFailures = 0;
 
+    // Build set of emails already sent today (dedup protection)
+    const alreadySentEmails = new Set<string>();
+    for (const q of queue) {
+      if (q.status === "sent" && q.sent_at) {
+        const sentDate = new Date(q.sent_at).toDateString();
+        if (sentDate === new Date().toDateString()) {
+          const email = (q.public_jobs ?? q.manual_jobs)?.email?.toLowerCase();
+          if (email) alreadySentEmails.add(email);
+        }
+      }
+    }
+
     // Reset stale consecutive_errors before any batch send
     await resetConsecutiveErrors();
 
@@ -421,6 +435,13 @@ export default function Queue() {
           variant: "destructive",
         });
         break;
+      }
+
+      // DEDUP: Skip if we already sent to this email today
+      const itemEmail = (item.public_jobs ?? item.manual_jobs)?.email?.toLowerCase();
+      if (itemEmail && alreadySentEmails.has(itemEmail)) {
+        console.log(`[Queue] DEDUP: Skipping item ${item.id} — already sent to ${itemEmail} today`);
+        continue;
       }
 
       // Mark item as processing right before sending (atomic lock — only if still pending)
@@ -583,6 +604,7 @@ export default function Queue() {
         });
 
         sentIds.push(item.id);
+        if (itemEmail) alreadySentEmails.add(itemEmail); // Track for dedup
         creditsRemaining -= 1;
         consecutiveSmtpFailures = 0; // Reset on success
         setSendProgress({ sent: sentIds.length, total: items.length });
@@ -883,14 +905,14 @@ export default function Queue() {
           <AddManualJobDialog onAdded={fetchQueue} />
 
           {pausedItems.length > 0 && (
-            <Button variant="outline" onClick={handleRetryAllPaused} disabled={sending}>
+            <Button variant="outline" onClick={handleRetryAllPaused} disabled={sending || externalProcessing}>
               {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               {t("queue.actions.retry_all_paused", { count: pausedItems.length, defaultValue: "Reenviar pausadas ({{count}})" })}
             </Button>
           )}
 
           {failedItems.length > 0 && (
-            <Button variant="outline" onClick={handleRetryAllFailed} disabled={sending}>
+            <Button variant="outline" onClick={handleRetryAllFailed} disabled={sending || externalProcessing}>
               {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               {t("queue.actions.retry_all_failed", { count: failedItems.length })}
             </Button>
@@ -899,13 +921,13 @@ export default function Queue() {
           <Button
             variant="secondary"
             onClick={handleSendSelected}
-            disabled={selectedPendingIds.length === 0 || sending}
+            disabled={selectedPendingIds.length === 0 || sending || externalProcessing}
           >
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             {t("queue.actions.send_selected", { count: selectedPendingIds.length })}
           </Button>
 
-          <Button onClick={handleSendAll} disabled={pendingCount === 0 || sending}>
+          <Button onClick={handleSendAll} disabled={pendingCount === 0 || sending || externalProcessing}>
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             {t("queue.actions.send", { pendingCount })}
           </Button>
@@ -1311,6 +1333,7 @@ export default function Queue() {
                                 disabled={
                                   !["pending", "sent", "paused", "skipped_invalid_domain"].includes(item.status) ||
                                   sending ||
+                                  externalProcessing ||
                                   sendingIds.has(item.id)
                                 }
                                 onClick={() => handleSendOne(item)}
