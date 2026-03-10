@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getStateName } from "@/lib/usStates";
 import { getJobShareUrl } from "@/lib/shareUtils";
 import {
   Mail,
