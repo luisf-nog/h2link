@@ -49,6 +49,9 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/lib/number";
 import { VISA_TYPE_OPTIONS, type VisaTypeFilter } from "@/lib/visaTypes";
+import { US_STATES_LIST, getStateName } from "@/lib/usStates";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const JOB_CATEGORIES_LIST = [
   "Farmworkers and Laborers, Crop, Nursery, and Greenhouse",
