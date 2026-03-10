@@ -1318,6 +1318,11 @@ async function processOneUser(params: {
         .update({ credits_used_today: creditsUsed, credits_reset_date: today, consecutive_errors: 0 } as any)
         .eq("id", userId)) as any;
 
+      // Increment SMTP warm-up counter (keeps smtp_credentials.emails_sent_today in sync)
+      if (p.plan_tier !== "free") {
+        await serviceClient.rpc("increment_smtp_email_count", { p_user_id: userId });
+      }
+
       consecutiveErrors = 0;
     } catch (err: unknown) {
       const rawMessage = err instanceof Error ? err.message : "Falha ao enviar";
