@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 type PlanTier = "free" | "gold" | "diamond" | "black";
 
 function getDelayMs(planTier: PlanTier): number {
-  if (planTier === "gold") return 15_000; // 15s fixo
+  if (planTier === "gold") return 15_000 + Math.floor(Math.random() * 30_001); // 15-45s aleatório
   if (planTier === "diamond") return 60_000 + Math.floor(Math.random() * 120_001); // 1-3 minutos
   if (planTier === "black") return 60_000 + Math.floor(Math.random() * 240_001); // 1-5 minutos
   return 0; // free: sem delay
