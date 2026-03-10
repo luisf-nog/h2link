@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getStateName } from "@/lib/usStates";
 import { getJobShareUrl } from "@/lib/shareUtils";
 import {
   Mail,
@@ -189,7 +190,7 @@ export function JobDetailsDialog({
                   <Briefcase className="h-4 w-4 text-slate-400" /> {job?.company}
                 </span>
                 <span className="flex items-center gap-1" translate="no">
-                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {job?.state}
+                  <MapPin className="h-4 w-4 text-slate-400" /> {job?.city}, {getStateName(job?.state)}
                 </span>
                 {!isSponsored && job?.category && (
                   <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
