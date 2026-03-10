@@ -604,6 +604,7 @@ export default function Queue() {
         });
 
         sentIds.push(item.id);
+        if (itemEmail) alreadySentEmails.add(itemEmail); // Track for dedup
         creditsRemaining -= 1;
         consecutiveSmtpFailures = 0; // Reset on success
         setSendProgress({ sent: sentIds.length, total: items.length });
