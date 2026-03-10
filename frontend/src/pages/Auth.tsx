@@ -34,7 +34,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// ─── Employer multi-step state ────────────────────────────────────────────────
 type EmployerStep = 1 | 2 | 3;
 
 const EMPLOYER_STEPS = [
@@ -43,340 +42,652 @@ const EMPLOYER_STEPS = [
   { n: 3, icon: Briefcase, label: "Hiring" },
 ] as const;
 
-// ─── Shared design tokens ─────────────────────────────────────────────────────
+// ─── Shared design tokens ──────────────────────────────────────────────────────
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
 
   .auth-root {
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-    background: #F7F6F3;
     min-height: 100vh;
+    background: #F4F3F0;
+    font-family: 'DM Sans', ui-sans-serif, sans-serif;
+    position: relative;
   }
 
-  .auth-root * {
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif !important;
+  .auth-root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(14,165,233,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(99,102,241,0.04) 0%, transparent 40%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23000' fill-opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 100% 100%, 100% 100%, 60px 60px;
+    pointer-events: none;
+    z-index: 0;
   }
 
-  .auth-logo-text {
-    font-family: 'DM Serif Display', Georgia, serif !important;
-    letter-spacing: -0.02em;
+  .auth-split {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
   }
 
-  /* Left branding panel */
-  .auth-panel-left {
+  /* ── Left panel ── */
+  .auth-left {
+    display: none;
+    width: 44%;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3rem 3.5rem;
+    border-right: 1px solid rgba(0,0,0,0.07);
     background: #FFFFFF;
-    border-right: 1px solid #EBEBEB;
     position: relative;
     overflow: hidden;
   }
 
-  .auth-panel-pattern {
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(circle at 1px 1px, #E5E3DE 1px, transparent 0);
-    background-size: 28px 28px;
-    opacity: 0.7;
+  @media (min-width: 1024px) {
+    .auth-left { display: flex; }
   }
 
-  .auth-panel-glow {
+  .auth-left::after {
+    content: '';
     position: absolute;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 65%);
-    top: -100px;
-    left: -100px;
+    bottom: -80px;
+    right: -80px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 70%);
     pointer-events: none;
   }
 
-  /* Right form panel */
-  .auth-panel-right {
-    background: #F7F6F3;
+  .auth-left-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
   }
 
-  /* Card */
-  .auth-card {
-    background: #FFFFFF;
-    border: 1px solid #E8E6E1;
-    border-radius: 20px;
-    box-shadow:
-      0 1px 2px rgba(0,0,0,0.04),
-      0 4px 16px rgba(0,0,0,0.06),
-      0 12px 40px rgba(0,0,0,0.04);
+  .auth-brand {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2rem;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 1;
   }
 
-  /* Tabs */
-  .auth-tab {
-    padding: 10px 16px;
-    border-radius: 10px;
-    font-size: 13.5px;
-    font-weight: 500;
-    color: #9CA3AF;
-    border: 1px solid transparent;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.18s ease;
+  .auth-brand-accent {
+    color: #0EA5E9;
   }
-  .auth-tab:hover {
-    color: #374151;
-    background: #F3F2EF;
+
+  .auth-tagline {
+    font-size: 0.9rem;
+    color: #64748B;
+    line-height: 1.7;
+    max-width: 280px;
+    margin-top: 1rem;
+    position: relative;
+    z-index: 1;
   }
-  .auth-tab.active {
-    color: #0284C7;
-    background: #EFF8FF;
-    border-color: #BAE6FD;
+
+  .auth-divider-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-divider-line {
+    height: 1px;
+    width: 40px;
+    background: linear-gradient(to right, #CBD5E1, transparent);
+  }
+
+  .auth-divider-text {
+    font-size: 0.65rem;
     font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #94A3B8;
   }
 
-  /* Inputs */
+  .auth-stats {
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-stat-number {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.25rem;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-stat-label {
+    font-size: 0.7rem;
+    color: #94A3B8;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  .auth-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 100px;
+    border: 1px solid rgba(14,165,233,0.2);
+    background: rgba(14,165,233,0.06);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #0284C7;
+  }
+
+  /* ── Right panel ── */
+  .auth-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 1.25rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (min-width: 640px) {
+    .auth-right { padding: 2.5rem 2rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .auth-right { padding: 3rem 4rem; }
+  }
+
+  .auth-right-topbar {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-mobile-brand {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.4rem;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+  }
+
+  /* ── Card ── */
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 2rem 1.75rem;
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.04),
+      0 8px 32px rgba(0,0,0,0.06),
+      0 0 0 1px rgba(255,255,255,0.8) inset;
+    margin: auto 0;
+  }
+
+  @media (min-width: 640px) {
+    .auth-card { padding: 2.25rem 2rem; }
+  }
+
+  /* ── Tabs ── */
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.375rem;
+    background: #F1F5F9;
+    padding: 0.25rem;
+    border-radius: 10px;
+    margin-bottom: 1.75rem;
+  }
+
+  .auth-tab {
+    padding: 0.55rem 1rem;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: #94A3B8;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .auth-tab:hover { color: #475569; }
+
+  .auth-tab.active {
+    background: #FFFFFF;
+    color: #0F172A;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+
+  /* ── Labels ── */
+  .auth-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  /* ── Inputs ── */
   .auth-input {
-    background: #FAFAFA !important;
-    border: 1.5px solid #E5E7EB !important;
-    color: #111827 !important;
-    border-radius: 10px !important;
-    height: 44px !important;
-    font-size: 14px !important;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #0F172A !important;
+    border-radius: 8px !important;
+    height: 2.75rem !important;
+    font-size: 0.875rem !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+    font-family: 'DM Sans', sans-serif !important;
   }
-  .auth-input::placeholder {
-    color: #C4C4C0 !important;
-  }
+
+  .auth-input::placeholder { color: #CBD5E1 !important; }
+
   .auth-input:focus {
-    border-color: #0ea5e9 !important;
+    border-color: #0EA5E9 !important;
     box-shadow: 0 0 0 3px rgba(14,165,233,0.1) !important;
     background: #FFFFFF !important;
     outline: none !important;
   }
 
-  /* Select */
   .auth-select {
-    background: #FAFAFA;
-    border: 1.5px solid #E5E7EB;
-    color: #111827;
-    border-radius: 10px;
-    height: 44px;
-    font-size: 14px;
-    padding: 0 12px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    color: #0F172A;
+    border-radius: 8px;
+    height: 2.75rem;
+    font-size: 0.875rem;
     width: 100%;
-    transition: border-color 0.15s ease;
+    padding: 0 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
     appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
+    background-position: right 0.75rem center;
   }
+
   .auth-select:focus {
-    border-color: #0ea5e9;
+    border-color: #0EA5E9;
     box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
     outline: none;
   }
-  .auth-select option {
-    background: #fff;
-    color: #111827;
-  }
 
-  /* Labels */
-  .auth-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: #9CA3AF;
-  }
+  .auth-select option { background: #fff; color: #0F172A; }
 
-  /* Primary button */
+  /* ── Buttons ── */
   .auth-btn-primary {
     width: 100%;
-    height: 46px;
-    border-radius: 12px;
+    height: 2.75rem;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 0.875rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 0.5rem;
     cursor: pointer;
     border: none;
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    background: #0F172A;
     color: #FFFFFF;
-    box-shadow: 0 1px 2px rgba(2,132,199,0.2), 0 4px 12px rgba(14,165,233,0.25);
-    transition: all 0.18s ease;
-    letter-spacing: -0.01em;
+    transition: all 0.15s ease;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.01em;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15), 0 4px 12px rgba(15,23,42,0.15);
   }
-  .auth-btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
-    box-shadow: 0 2px 4px rgba(2,132,199,0.2), 0 8px 20px rgba(14,165,233,0.3);
+
+  .auth-btn-primary:hover {
+    background: #1E293B;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 8px 20px rgba(15,23,42,0.2);
     transform: translateY(-1px);
   }
+
   .auth-btn-primary:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
     transform: none;
   }
 
-  /* Ghost button */
+  .auth-btn-accent {
+    width: 100%;
+    height: 2.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    border: none;
+    background: linear-gradient(135deg, #0EA5E9, #0284C7);
+    color: #FFFFFF;
+    transition: all 0.15s ease;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 1px 3px rgba(14,165,233,0.3), 0 4px 12px rgba(14,165,233,0.2);
+  }
+
+  .auth-btn-accent:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 2px 6px rgba(14,165,233,0.4), 0 8px 20px rgba(14,165,233,0.25);
+    transform: translateY(-1px);
+  }
+
+  .auth-btn-accent:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   .auth-btn-ghost {
     width: 100%;
-    padding: 10px 16px;
-    border-radius: 10px;
+    height: 2.75rem;
+    border-radius: 8px;
     font-weight: 500;
-    font-size: 14px;
-    color: #6B7280;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
     background: transparent;
-    border: 1.5px solid #E5E7EB;
+    border: 1px solid #E2E8F0;
+    color: #64748B;
+    transition: all 0.15s ease;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .auth-btn-ghost:hover {
+    border-color: #CBD5E1;
+    color: #0F172A;
+    background: #F8FAFC;
+  }
+
+  /* ── Role cards ── */
+  .auth-role-card {
+    width: 100%;
+    text-align: left;
+    padding: 1rem 1.125rem;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #FAFAFA;
     cursor: pointer;
     transition: all 0.15s ease;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
-  .auth-btn-ghost:hover {
-    color: #111827;
-    border-color: #D1D5DB;
-    background: #F9F8F6;
+    gap: 0.875rem;
   }
 
-  /* Step dots */
-  .step-dot {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    transition: all 0.2s ease;
-  }
-  .step-dot-done {
-    background: #EFF8FF;
-    border: 1.5px solid #BAE6FD;
-    color: #0284C7;
-  }
-  .step-dot-active {
-    background: linear-gradient(135deg, #0ea5e9, #0284c7);
-    border: 1.5px solid #0ea5e9;
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(14,165,233,0.35);
-  }
-  .step-dot-idle {
-    background: #F3F4F6;
-    border: 1.5px solid #E5E7EB;
-    color: #D1D5DB;
-  }
-  .step-line {
-    flex: 1;
-    height: 1.5px;
-    background: #E5E7EB;
-    margin: 0 8px;
-    margin-bottom: 18px;
-  }
-  .step-line-done {
-    background: #BAE6FD;
-  }
-
-  /* Role cards */
-  .auth-role-card {
-    width: 100%;
-    text-align: left;
-    padding: 18px 20px;
-    border-radius: 14px;
-    border: 1.5px solid #E8E6E1;
-    background: #FAFAF8;
-    cursor: pointer;
-    transition: all 0.18s ease;
-  }
   .auth-role-card:hover {
     border-color: #BAE6FD;
     background: #F0F9FF;
     box-shadow: 0 2px 8px rgba(14,165,233,0.08);
   }
 
-  /* Success notice */
-  .auth-success-notice {
-    padding: 14px 16px;
-    background: #F0FDF4;
-    border: 1.5px solid #BBF7D0;
-    border-radius: 12px;
-  }
-
-  /* Link style */
-  .auth-link {
-    font-size: 12px;
-    font-weight: 500;
-    color: #0284C7;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: color 0.15s;
-  }
-  .auth-link:hover {
-    color: #0ea5e9;
-  }
-
-  /* Badge pills */
-  .auth-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 100px;
-    border: 1px solid #E5E7EB;
-    background: #F9F8F6;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #6B7280;
-  }
-
-  /* Stat numbers */
-  .auth-stat-number {
-    font-family: 'DM Serif Display', Georgia, serif !important;
-    font-size: 36px;
-    color: #111827;
-    line-height: 1;
-  }
-  .auth-stat-accent {
-    color: #0ea5e9;
-  }
-
-  /* Disclaimer box */
-  .auth-disclaimer {
-    border: 1.5px solid #E8E6E1;
-    border-radius: 12px;
-    padding: 14px 16px;
-    background: #FAFAF8;
-  }
-
-  /* Divider */
-  .auth-divider {
-    height: 1px;
-    background: #E8E6E1;
-    margin: 4px 0;
-  }
-
-  /* Confirmation overlay */
-  .auth-confirm-overlay {
-    background: #F7F6F3;
-    position: fixed;
-    inset: 0;
+  .auth-role-icon {
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 8px;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    flex-shrink: 0;
+    color: #0284C7;
   }
-  .auth-confirm-card {
-    background: #FFFFFF;
-    border: 1px solid #E8E6E1;
-    border-radius: 24px;
-    padding: 48px 40px;
+
+  .auth-role-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0F172A;
+  }
+
+  .auth-role-desc {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    margin-top: 0.15rem;
+  }
+
+  /* ── Success notice ── */
+  .auth-notice {
+    padding: 0.875rem 1rem;
+    background: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── Step indicators ── */
+  .auth-steps {
+    display: flex;
+    align-items: center;
     width: 100%;
-    max-width: 380px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    max-width: 280px;
+    margin-bottom: 2.5rem;
   }
+
+  .auth-step-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .auth-step-done {
+    background: #DCFCE7;
+    border: 1px solid #86EFAC;
+    color: #16A34A;
+  }
+
+  .auth-step-active {
+    background: #0F172A;
+    border: 1px solid #0F172A;
+    color: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(15,23,42,0.1);
+  }
+
+  .auth-step-idle {
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    color: #CBD5E1;
+  }
+
+  .auth-step-line {
+    flex: 1;
+    height: 1px;
+    background: #E2E8F0;
+    margin: 0 0.5rem;
+  }
+
+  .auth-step-line-done {
+    background: #86EFAC;
+  }
+
+  .auth-step-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.35rem;
+  }
+
+  /* ── Terms box ── */
+  .auth-terms {
+    border: 1px solid #F1F5F9;
+    border-radius: 8px;
+    padding: 0.875rem 1rem;
+    background: #FAFAFA;
+  }
+
+  /* ── Fullscreen flows ── */
+  .auth-flow-root {
+    min-height: 100vh;
+    background: #F4F3F0;
+    font-family: 'DM Sans', ui-sans-serif, sans-serif;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .auth-flow-root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23000' fill-opacity='0.03'/%3E%3C/svg%3E");
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .auth-flow-nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+
+  .auth-flow-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-flow-card {
+    width: 100%;
+    max-width: 480px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 2rem 1.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06);
+  }
+
+  @media (min-width: 640px) {
+    .auth-flow-card { padding: 2.25rem 2.25rem; }
+    .auth-flow-nav { padding: 1.25rem 2.5rem; }
+  }
+
+  .auth-role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #0284C7;
+    margin-bottom: 0.75rem;
+  }
+
+  .auth-flow-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.6rem;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+
+  .auth-flow-subtitle {
+    font-size: 0.85rem;
+    color: #94A3B8;
+  }
+
+  /* ── Confirmation overlay ── */
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: #F4F3F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .auth-overlay-card {
+    width: 100%;
+    max-width: 360px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+
+  /* ── Forgot password link ── */
+  .auth-link {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0EA5E9;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .auth-link:hover { color: #0284C7; }
+
+  /* ── Browse jobs ── */
+  .auth-browse {
+    margin-top: 1.5rem;
+    font-size: 0.72rem;
+    color: #CBD5E1;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  .auth-browse:hover { color: #94A3B8; }
+
+  /* ── Form gap ── */
+  .auth-form { display: flex; flex-direction: column; gap: 1.1rem; }
+  .auth-field { display: flex; flex-direction: column; }
+  .auth-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 `;
 
 export default function Auth() {
@@ -396,7 +707,6 @@ export default function Auth() {
     contactEmail: "",
     referralCode: "",
   });
-
   const [empFields, setEmpFields] = useState({
     fullName: "",
     email: "",
@@ -414,7 +724,6 @@ export default function Auth() {
     workerTypes: "",
     estimatedMonthlyVolume: "",
   });
-
   const [signinPanel, setSigninPanel] = useState<"signin" | "forgot" | "reset">("signin");
   const [forgotState, setForgotState] = useState({ email: "", sent: false, cooldownUntilMs: 0 });
   const [resetState, setResetState] = useState({ password: "", confirmPassword: "" });
@@ -435,12 +744,10 @@ export default function Auth() {
   const { t, i18n } = useTranslation();
 
   const openError = (title: string, description: string) => setErrorDialog({ open: true, title, description });
-
   const okLabel = useMemo(() => {
-    const label = t("common.ok");
-    return label === "common.ok" ? "OK" : label;
+    const l = t("common.ok");
+    return l === "common.ok" ? "OK" : l;
   }, [t]);
-
   const forgotEmailSchema = useMemo(() => z.string().trim().email().max(255), []);
   const resetPasswordSchema = useMemo(
     () =>
@@ -530,7 +837,6 @@ export default function Auth() {
       const authErrorCode = url.searchParams.get("error_code");
       const authErrorDesc = url.searchParams.get("error_description");
       const isRecovery = type === "recovery";
-
       if (isRecovery && window.location.pathname === "/auth") {
         navigate(`/reset-password${window.location.search}`, { replace: true });
         return;
@@ -551,7 +857,6 @@ export default function Auth() {
         return;
       }
       if (!code && !(type && tokenHash)) return;
-
       setIsLoading(true);
       setConfirmKind(isRecovery ? "recovery" : "email");
       setConfirmFlow({ active: true, state: "processing" });
@@ -635,9 +940,7 @@ export default function Auth() {
           .eq("role", "employer")
           .maybeSingle();
         navigate(roleData ? "/employer/dashboard" : "/dashboard");
-      } else {
-        navigate("/dashboard");
-      }
+      } else navigate("/dashboard");
     }
     setIsLoading(false);
   };
@@ -707,7 +1010,6 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-  // ─── Employer step validation ──────────────────────────────────────────
   const validateEmployerStep = (step: EmployerStep): string | null => {
     if (step === 1) {
       if (!empFields.fullName.trim()) return "Full name is required.";
@@ -739,7 +1041,6 @@ export default function Auth() {
     setEmployerStep((s) => (s + 1) as EmployerStep);
   };
 
-  // ─── Employer final submit ─────────────────────────────────────────────
   const handleEmployerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -763,10 +1064,10 @@ export default function Auth() {
         field === "confirmPassword" || code === "password_mismatch"
           ? t("auth.validation.password_mismatch")
           : field === "einTaxId" || code === "invalid_ein"
-            ? t("auth.validation.invalid_ein", "EIN must follow the format XX-XXXXXXX (e.g. 12-3456789)")
+            ? t("auth.validation.invalid_ein", "EIN must follow the format XX-XXXXXXX")
             : field === "acceptTerms" || code === "accept_required"
               ? t("auth.validation.accept_required")
-              : `Please fill in the required field: ${field}`;
+              : `Please fill in: ${field}`;
       openError(t("auth.toasts.signup_error_title"), description);
       setIsLoading(false);
       return;
@@ -807,20 +1108,22 @@ export default function Auth() {
       if (sessionData.session && isConfirmed) {
         const userId = sessionData.session.user.id;
         await supabase.from("user_roles").insert({ user_id: userId, role: "employer" } as any);
-        await supabase.from("employer_profiles").insert({
-          user_id: userId,
-          company_name: companyName,
-          legal_entity_name: legalEntityName || null,
-          ein_tax_id: einTaxId || null,
-          company_size: companySize,
-          industry,
-          website: website || null,
-          country,
-          state,
-          primary_hiring_location: primaryHiringLocation,
-          worker_types: workerTypes.split(",").map((s: string) => s.trim()),
-          estimated_monthly_volume: estimatedMonthlyVolume,
-        } as any);
+        await supabase
+          .from("employer_profiles")
+          .insert({
+            user_id: userId,
+            company_name: companyName,
+            legal_entity_name: legalEntityName || null,
+            ein_tax_id: einTaxId || null,
+            company_size: companySize,
+            industry,
+            website: website || null,
+            country,
+            state,
+            primary_hiring_location: primaryHiringLocation,
+            worker_types: workerTypes.split(",").map((s: string) => s.trim()),
+            estimated_monthly_volume: estimatedMonthlyVolume,
+          } as any);
         navigate("/employer/dashboard");
       } else {
         setTab("signin");
@@ -834,20 +1137,27 @@ export default function Auth() {
   // ─── Confirmation overlay ──────────────────────────────────────────────
   if (confirmFlow.active) {
     return (
-      <div className="auth-root auth-confirm-overlay">
+      <div className="auth-overlay">
         <style>{STYLES}</style>
-        <div className="auth-confirm-card">
-          <h1 className="auth-logo-text" style={{ fontSize: 24, color: "#111827", marginBottom: 32 }}>
-            H2 <span style={{ color: "#0ea5e9" }}>Linker</span>
-          </h1>
-          <div style={{ marginBottom: 12 }}>
+        <div className="auth-overlay-card">
+          <div
+            style={{
+              fontFamily: "'Instrument Serif', Georgia, serif",
+              fontSize: "1.5rem",
+              color: "#0F172A",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <span style={{ color: "#0EA5E9" }}>H2</span> Linker
+          </div>
+          <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}>
             {confirmFlow.state === "processing" && (
-              <Loader2 size={22} style={{ color: "#0ea5e9" }} className="animate-spin" />
+              <Loader2 size={22} style={{ color: "#0EA5E9" }} className="animate-spin" />
             )}
-            {confirmFlow.state === "success" && <CheckCircle2 size={22} style={{ color: "#16a34a" }} />}
+            {confirmFlow.state === "success" && <CheckCircle2 size={22} style={{ color: "#16A34A" }} />}
             {confirmFlow.state === "error" && <AlertTriangle size={22} style={{ color: "#DC2626" }} />}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 8 }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "#0F172A", marginBottom: "0.5rem" }}>
             {confirmKind === "recovery"
               ? confirmFlow.state === "success"
                 ? t("auth.recovery.confirmation.success_title")
@@ -860,7 +1170,7 @@ export default function Auth() {
                   ? t("auth.confirmation.processing_title")
                   : t("auth.confirmation.error_title")}
           </div>
-          <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.6 }}>
+          <div style={{ fontSize: "0.85rem", color: "#94A3B8", lineHeight: 1.6 }}>
             {confirmKind === "recovery"
               ? confirmFlow.state === "success"
                 ? t("auth.recovery.confirmation.success_desc")
@@ -878,7 +1188,6 @@ export default function Auth() {
     );
   }
 
-  // ─── Shared helpers ───────────────────────────────────────────────────
   const upd = (k: keyof typeof empFields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setEmpFields((p) => ({ ...p, [k]: e.target.value }));
   const wrkUpd = (k: keyof typeof wrkFields) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -994,23 +1303,24 @@ export default function Auth() {
     { n: 2, icon: Shield, label: t("auth.steps.details", "Details") },
   ] as const;
 
-  // ─── Error dialog (shared) ─────────────────────────────────────────────
   const ErrorDialog = () => (
     <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((p) => ({ ...p, open }))}>
-      <AlertDialogContent className="border-destructive/40 shadow-2xl">
+      <AlertDialogContent className="border-destructive/20 shadow-2xl">
         <AlertDialogHeader className="space-y-0 text-left">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
+            <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500">
+              <AlertTriangle className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <AlertDialogTitle className="text-base font-semibold">{errorDialog.title}</AlertDialogTitle>
-              <AlertDialogDescription className="mt-1 text-sm">{errorDialog.description}</AlertDialogDescription>
+              <AlertDialogTitle className="text-sm font-semibold text-gray-900">{errorDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription className="mt-1 text-sm text-gray-500">
+                {errorDialog.description}
+              </AlertDialogDescription>
             </div>
           </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogAction style={{ background: "#0F172A", color: "#fff", fontSize: "0.8rem", borderRadius: "7px" }}>
             {okLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -1018,7 +1328,6 @@ export default function Auth() {
     </AlertDialog>
   );
 
-  // ─── Step indicator (shared) ───────────────────────────────────────────
   const StepIndicator = ({
     steps,
     current,
@@ -1026,988 +1335,817 @@ export default function Auth() {
     steps: readonly { n: number; icon: any; label: string }[];
     current: number;
   }) => (
-    <div style={{ display: "flex", alignItems: "center", width: "100%", maxWidth: 320, margin: "0 auto 40px" }}>
+    <div className="auth-steps">
       {steps.map((s, i) => (
         <div key={s.n} style={{ display: "flex", alignItems: "center", flex: 1 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
             <div
-              className={`step-dot ${current > s.n ? "step-dot-done" : current === s.n ? "step-dot-active" : "step-dot-idle"}`}
+              className={`auth-step-dot ${current > s.n ? "auth-step-done" : current === s.n ? "auth-step-active" : "auth-step-idle"}`}
             >
-              {current > s.n ? <CheckCircle2 size={14} /> : <s.icon size={13} />}
+              {current > s.n ? <CheckCircle2 size={13} /> : <s.icon size={12} />}
             </div>
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: current >= s.n ? "#0284C7" : "#D1D5DB",
-              }}
-            >
+            <span className="auth-step-label" style={{ color: current >= s.n ? "#0EA5E9" : "#CBD5E1" }}>
               {s.label}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <div className={`step-line ${current > s.n ? "step-line-done" : ""}`} style={{ marginBottom: 20 }} />
+            <div
+              className={`auth-step-line ${current > s.n ? "auth-step-line-done" : ""}`}
+              style={{ marginBottom: "16px" }}
+            />
           )}
         </div>
       ))}
     </div>
   );
 
-  // ─── Multi-step nav header ─────────────────────────────────────────────
-  const StepNavHeader = ({
-    onBack,
-    backLabel,
-    roleLabel,
-  }: {
-    onBack: () => void;
-    backLabel: string;
-    roleLabel: string;
-  }) => (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "20px 32px",
-        borderBottom: "1px solid #EBEBEB",
-        background: "#FFFFFF",
-      }}
-    >
-      <h1 className="auth-logo-text" style={{ fontSize: 20, color: "#111827" }}>
-        H2 <span style={{ color: "#0ea5e9" }}>Linker</span>
-      </h1>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <button
-          onClick={onBack}
-          style={{
-            fontSize: 13,
-            color: "#9CA3AF",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          <ArrowLeft size={13} /> {backLabel}
-        </button>
-        <button
-          onClick={() => {
-            setTab("signin");
-            setSignupRole(null);
-          }}
-          style={{ fontSize: 13, color: "#9CA3AF", background: "transparent", border: "none", cursor: "pointer" }}
-        >
-          {t("auth.tabs.signin")}
-        </button>
-        <LanguageSwitcher
-          value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
-          onChange={handleChangeLanguage}
-          className="h-8 w-[120px] rounded-xl"
-          style={{ fontSize: 13 }}
-        />
-      </div>
-    </div>
-  );
-
   // ─── WORKER MULTI-STEP ────────────────────────────────────────────────
   if (tab === "signup" && signupRole === "worker") {
     return (
-      <div className="auth-root" style={{ minHeight: "100vh" }}>
+      <>
         <style>{STYLES}</style>
         <ErrorDialog />
-
-        <StepNavHeader
-          onBack={() => {
-            setSignupRole(null);
-            setWorkerStep(1);
-          }}
-          backLabel={t("auth.back_to_selection", "Back")}
-          roleLabel={t("auth.roles.worker")}
-        />
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "48px 24px",
-            minHeight: "calc(100vh - 65px)",
-          }}
-        >
-          {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: 36 }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 14px",
-                borderRadius: 100,
-                border: "1px solid #BAE6FD",
-                background: "#F0F9FF",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#0284C7",
-                marginBottom: 16,
-              }}
-            >
-              <HardHat size={10} /> {t("auth.roles.worker")}
+        <div className="auth-flow-root">
+          <nav className="auth-flow-nav">
+            <div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "1.2rem", color: "#0F172A" }}>
+              <span style={{ color: "#0EA5E9" }}>H2</span> Linker
             </div>
-            <h2 style={{ fontSize: 26, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", margin: 0 }}>
-              {workerStep === 1
-                ? t("auth.worker_steps.step1_title", "Create your account")
-                : t("auth.worker_steps.step2_title", "Personal details")}
-            </h2>
-            <p style={{ fontSize: 14, color: "#9CA3AF", marginTop: 6 }}>
-              {workerStep === 1
-                ? t("auth.worker_steps.step1_desc", "Your login credentials")
-                : t("auth.worker_steps.step2_desc", "So employers can reach you")}
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <button
+                onClick={() => {
+                  setSignupRole(null);
+                  setWorkerStep(1);
+                }}
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94A3B8",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                ← {t("auth.back_to_selection", "Back")}
+              </button>
+              <button
+                onClick={() => {
+                  setTab("signin");
+                  setSignupRole(null);
+                  setWorkerStep(1);
+                }}
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94A3B8",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                {t("auth.tabs.signin")}
+              </button>
+              <LanguageSwitcher
+                value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+                onChange={handleChangeLanguage}
+                className="h-8 w-[120px]"
+              />
+            </div>
+          </nav>
+
+          <div className="auth-flow-content">
+            <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+              <div className="auth-role-pill">
+                <HardHat size={10} /> {t("auth.roles.worker")}
+              </div>
+              <div className="auth-flow-title">
+                {workerStep === 1 && t("auth.worker_steps.step1_title", "Create your account")}
+                {workerStep === 2 && t("auth.worker_steps.step2_title", "Personal details")}
+              </div>
+              <div className="auth-flow-subtitle">
+                {workerStep === 1 && t("auth.worker_steps.step1_desc", "Your login credentials")}
+                {workerStep === 2 && t("auth.worker_steps.step2_desc", "So employers can reach you")}
+              </div>
+            </div>
+
+            <StepIndicator steps={WORKER_STEPS} current={workerStep} />
+
+            <div className="auth-flow-card">
+              {workerStep === 1 && (
+                <div className="auth-form">
+                  <div className="auth-field">
+                    <label className="auth-label">{t("auth.fields.full_name")} *</label>
+                    <Input
+                      value={wrkFields.fullName}
+                      onChange={wrkUpd("fullName")}
+                      required
+                      className="auth-input"
+                      placeholder="João Silva"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label">{t("auth.fields.email")} *</label>
+                    <Input
+                      type="email"
+                      value={wrkFields.email}
+                      onChange={wrkUpd("email")}
+                      required
+                      className="auth-input"
+                      placeholder="you@email.com"
+                    />
+                  </div>
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">{t("auth.fields.password")} *</label>
+                      <Input
+                        type="password"
+                        value={wrkFields.password}
+                        onChange={wrkUpd("password")}
+                        required
+                        minLength={6}
+                        className="auth-input"
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">{t("auth.fields.confirm_password")} *</label>
+                      <Input
+                        type="password"
+                        value={wrkFields.confirmPassword}
+                        onChange={wrkUpd("confirmPassword")}
+                        required
+                        minLength={6}
+                        className="auth-input"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleWorkerNext}
+                    className="auth-btn-primary"
+                    style={{ marginTop: "0.25rem" }}
+                  >
+                    {t("auth.actions.continue", "Continue")} <ArrowRight size={15} />
+                  </button>
+                </div>
+              )}
+
+              {workerStep === 2 && (
+                <form onSubmit={handleWorkerFinalSubmit} className="auth-form">
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">{t("auth.fields.age")} *</label>
+                      <Input
+                        type="number"
+                        min={14}
+                        max={90}
+                        value={wrkFields.age}
+                        onChange={wrkUpd("age")}
+                        required
+                        className="auth-input"
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">{t("auth.fields.phone")} *</label>
+                      <PhoneE164Input
+                        id="phone-wrk"
+                        name="phone-wrk"
+                        defaultCountry="BR"
+                        required
+                        inputClassName="auth-input"
+                        defaultValue={wrkFields.phone}
+                        onChange={(val) => setWrkFields((p) => ({ ...p, phone: val }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label">{t("auth.fields.contact_email")} *</label>
+                    <Input
+                      type="email"
+                      value={wrkFields.contactEmail}
+                      onChange={wrkUpd("contactEmail")}
+                      required
+                      className="auth-input"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label">{t("auth.fields.referral_code")}</label>
+                    <Input
+                      value={wrkFields.referralCode}
+                      onChange={wrkUpd("referralCode")}
+                      maxLength={12}
+                      className="auth-input"
+                    />
+                  </div>
+                  <div className="auth-terms">
+                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", lineHeight: 1.6, marginBottom: "0.75rem" }}>
+                      {t("auth.disclaimer")}
+                    </p>
+                    <div style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start" }}>
+                      <Checkbox
+                        id="accept-wrk"
+                        checked={acceptTerms}
+                        onCheckedChange={(v) => setAcceptTerms(v === true)}
+                        className="border-slate-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500 mt-0.5"
+                      />
+                      <label
+                        htmlFor="accept-wrk"
+                        style={{ fontSize: "0.72rem", color: "#64748B", lineHeight: 1.5, cursor: "pointer" }}
+                      >
+                        {t("auth.accept_terms")}
+                      </label>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.625rem" }}>
+                    <button type="button" onClick={() => setWorkerStep(1)} className="auth-btn-ghost">
+                      <ArrowLeft size={13} /> {t("auth.actions.back", "Back")}
+                    </button>
+                    <button type="submit" disabled={isLoading} className="auth-btn-accent">
+                      {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
+                      {t("auth.actions.signup")}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+            <p style={{ marginTop: "1rem", fontSize: "0.7rem", color: "#CBD5E1", fontFamily: "'DM Sans', sans-serif" }}>
+              Step {workerStep} of 2
             </p>
           </div>
-
-          <StepIndicator steps={WORKER_STEPS} current={workerStep} />
-
-          {/* Form card */}
-          <div className="auth-card" style={{ width: "100%", maxWidth: 480, padding: "36px 40px" }}>
-            {workerStep === 1 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <label className="auth-label">{t("auth.fields.full_name")} *</label>
-                  <Input
-                    value={wrkFields.fullName}
-                    onChange={wrkUpd("fullName")}
-                    required
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="João Silva"
-                  />
-                </div>
-                <div>
-                  <label className="auth-label">{t("auth.fields.email")} *</label>
-                  <Input
-                    type="email"
-                    value={wrkFields.email}
-                    onChange={wrkUpd("email")}
-                    required
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="you@email.com"
-                  />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">{t("auth.fields.password")} *</label>
-                    <Input
-                      type="password"
-                      value={wrkFields.password}
-                      onChange={wrkUpd("password")}
-                      required
-                      minLength={6}
-                      className="auth-input"
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                  <div>
-                    <label className="auth-label">{t("auth.fields.confirm_password")} *</label>
-                    <Input
-                      type="password"
-                      value={wrkFields.confirmPassword}
-                      onChange={wrkUpd("confirmPassword")}
-                      required
-                      minLength={6}
-                      className="auth-input"
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                </div>
-                <button type="button" onClick={handleWorkerNext} className="auth-btn-primary" style={{ marginTop: 4 }}>
-                  {t("auth.actions.continue", "Continue")} <ArrowRight size={15} />
-                </button>
-              </div>
-            )}
-
-            {workerStep === 2 && (
-              <form onSubmit={handleWorkerFinalSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">{t("auth.fields.age")} *</label>
-                    <Input
-                      type="number"
-                      min={14}
-                      max={90}
-                      value={wrkFields.age}
-                      onChange={wrkUpd("age")}
-                      required
-                      className="auth-input"
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                  <div>
-                    <label className="auth-label">{t("auth.fields.phone")} *</label>
-                    <PhoneE164Input
-                      id="phone-wrk"
-                      name="phone-wrk"
-                      defaultCountry="BR"
-                      required
-                      inputClassName="auth-input"
-                      defaultValue={wrkFields.phone}
-                      onChange={(val) => setWrkFields((p) => ({ ...p, phone: val }))}
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="auth-label">{t("auth.fields.contact_email")} *</label>
-                  <Input
-                    type="email"
-                    value={wrkFields.contactEmail}
-                    onChange={wrkUpd("contactEmail")}
-                    required
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                  />
-                </div>
-                <div>
-                  <label className="auth-label">{t("auth.fields.referral_code")}</label>
-                  <Input
-                    value={wrkFields.referralCode}
-                    onChange={wrkUpd("referralCode")}
-                    maxLength={12}
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                  />
-                </div>
-                <div className="auth-disclaimer">
-                  <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.6, marginBottom: 12 }}>
-                    {t("auth.disclaimer")}
-                  </p>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <Checkbox
-                      id="accept-wrk"
-                      checked={acceptTerms}
-                      onCheckedChange={(v) => setAcceptTerms(v === true)}
-                      className="border-gray-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500 mt-0.5"
-                    />
-                    <label
-                      htmlFor="accept-wrk"
-                      style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5, cursor: "pointer" }}
-                    >
-                      {t("auth.accept_terms")}
-                    </label>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                  <button type="button" onClick={() => setWorkerStep(1)} className="auth-btn-ghost">
-                    <ArrowLeft size={13} /> {t("auth.actions.back", "Back")}
-                  </button>
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary" style={{ marginTop: 0 }}>
-                    {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
-                    {t("auth.actions.signup")}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-          <p style={{ marginTop: 20, fontSize: 11, color: "#C4C4C0" }}>Step {workerStep} of 2</p>
         </div>
-      </div>
+      </>
     );
   }
 
   // ─── EMPLOYER MULTI-STEP ──────────────────────────────────────────────
   if (tab === "signup" && signupRole === "employer") {
     return (
-      <div className="auth-root" style={{ minHeight: "100vh" }}>
+      <>
         <style>{STYLES}</style>
         <ErrorDialog />
-
-        <StepNavHeader
-          onBack={() => {
-            setSignupRole(null);
-            setEmployerStep(1);
-          }}
-          backLabel={t("auth.back_to_selection", "Back")}
-          roleLabel="Employer"
-        />
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "48px 24px",
-            minHeight: "calc(100vh - 65px)",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: 36 }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 14px",
-                borderRadius: 100,
-                border: "1px solid #BAE6FD",
-                background: "#F0F9FF",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#0284C7",
-                marginBottom: 16,
-              }}
-            >
-              <Building2 size={10} /> Employer Account
+        <div className="auth-flow-root">
+          <nav className="auth-flow-nav">
+            <div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "1.2rem", color: "#0F172A" }}>
+              <span style={{ color: "#0EA5E9" }}>H2</span> Linker
             </div>
-            <h2 style={{ fontSize: 26, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", margin: 0 }}>
-              {employerStep === 1
-                ? "Create your account"
-                : employerStep === 2
-                  ? "Tell us about your company"
-                  : "Hiring details"}
-            </h2>
-            <p style={{ fontSize: 14, color: "#9CA3AF", marginTop: 6 }}>
-              {employerStep === 1
-                ? "Your login credentials"
-                : employerStep === 2
-                  ? "So workers know who you are"
-                  : "Help us match the right workers"}
-            </p>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <button
+                onClick={() => {
+                  setSignupRole(null);
+                  setEmployerStep(1);
+                }}
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94A3B8",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                ← {t("auth.back_to_selection", "Back")}
+              </button>
+              <button
+                onClick={() => {
+                  setTab("signin");
+                  setSignupRole(null);
+                  setEmployerStep(1);
+                }}
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94A3B8",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                {t("auth.tabs.signin")}
+              </button>
+              <LanguageSwitcher
+                value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+                onChange={handleChangeLanguage}
+                className="h-8 w-[120px]"
+              />
+            </div>
+          </nav>
 
-          <StepIndicator steps={EMPLOYER_STEPS} current={employerStep} />
-
-          <div className="auth-card" style={{ width: "100%", maxWidth: 480, padding: "36px 40px" }}>
-            {/* Step 1 */}
-            {employerStep === 1 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <label className="auth-label">Full Name *</label>
-                  <Input
-                    value={empFields.fullName}
-                    onChange={upd("fullName")}
-                    required
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="Jane Smith"
-                  />
-                </div>
-                <div>
-                  <label className="auth-label">Work Email *</label>
-                  <Input
-                    type="email"
-                    value={empFields.email}
-                    onChange={upd("email")}
-                    required
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="you@company.com"
-                  />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">Password *</label>
-                    <Input
-                      type="password"
-                      value={empFields.password}
-                      onChange={upd("password")}
-                      required
-                      minLength={6}
-                      className="auth-input"
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                  <div>
-                    <label className="auth-label">Confirm Password *</label>
-                    <Input
-                      type="password"
-                      value={empFields.confirmPassword}
-                      onChange={upd("confirmPassword")}
-                      required
-                      minLength={6}
-                      className="auth-input"
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleEmployerNext}
-                  className="auth-btn-primary"
-                  style={{ marginTop: 4 }}
-                >
-                  Continue <ArrowRight size={15} />
-                </button>
+          <div className="auth-flow-content">
+            <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+              <div className="auth-role-pill">
+                <Building2 size={10} /> Employer Account
               </div>
-            )}
+              <div className="auth-flow-title">
+                {employerStep === 1 && "Create your account"}
+                {employerStep === 2 && "Tell us about your company"}
+                {employerStep === 3 && "Hiring details"}
+              </div>
+              <div className="auth-flow-subtitle">
+                {employerStep === 1 && "Your login credentials"}
+                {employerStep === 2 && "So workers know who you are"}
+                {employerStep === 3 && "Help us match the right workers"}
+              </div>
+            </div>
 
-            {/* Step 2 */}
-            {employerStep === 2 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <label className="auth-label">Company Name *</label>
-                  <Input
-                    value={empFields.companyName}
-                    onChange={upd("companyName")}
-                    required
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="Acme Farms LLC"
-                  />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">Legal Entity Name</label>
+            <StepIndicator steps={EMPLOYER_STEPS} current={employerStep} />
+
+            <div className="auth-flow-card">
+              {employerStep === 1 && (
+                <div className="auth-form">
+                  <div className="auth-field">
+                    <label className="auth-label">Full Name *</label>
                     <Input
-                      value={empFields.legalEntityName}
-                      onChange={upd("legalEntityName")}
+                      value={empFields.fullName}
+                      onChange={upd("fullName")}
+                      required
                       className="auth-input"
-                      style={{ marginTop: 6 }}
-                      placeholder="Optional"
+                      placeholder="Jane Smith"
                     />
                   </div>
-                  <div>
-                    <label className="auth-label">EIN / Tax ID</label>
+                  <div className="auth-field">
+                    <label className="auth-label">Work Email *</label>
                     <Input
-                      value={empFields.einTaxId}
-                      onChange={upd("einTaxId")}
-                      maxLength={30}
+                      type="email"
+                      value={empFields.email}
+                      onChange={upd("email")}
+                      required
                       className="auth-input"
-                      style={{ marginTop: 6 }}
-                      placeholder="XX-XXXXXXX"
+                      placeholder="you@company.com"
                     />
                   </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">Company Size *</label>
-                    <select
-                      value={empFields.companySize}
-                      onChange={upd("companySize")}
-                      required
-                      className="auth-select"
-                      style={{ marginTop: 6 }}
-                    >
-                      <option value="">Select...</option>
-                      <option value="1-10">1–10 employees</option>
-                      <option value="11-50">11–50 employees</option>
-                      <option value="51-200">51–200 employees</option>
-                      <option value="201-500">201–500 employees</option>
-                      <option value="500+">500+ employees</option>
-                    </select>
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">Password *</label>
+                      <Input
+                        type="password"
+                        value={empFields.password}
+                        onChange={upd("password")}
+                        required
+                        minLength={6}
+                        className="auth-input"
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">Confirm Password *</label>
+                      <Input
+                        type="password"
+                        value={empFields.confirmPassword}
+                        onChange={upd("confirmPassword")}
+                        required
+                        minLength={6}
+                        className="auth-input"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="auth-label">Industry *</label>
-                    <select
-                      value={empFields.industry}
-                      onChange={upd("industry")}
-                      required
-                      className="auth-select"
-                      style={{ marginTop: 6 }}
-                    >
-                      <option value="">Select...</option>
-                      <option value="Agriculture">Agriculture</option>
-                      <option value="Construction">Construction</option>
-                      <option value="Hospitality">Hospitality</option>
-                      <option value="Landscaping">Landscaping</option>
-                      <option value="Food Processing">Food Processing</option>
-                      <option value="Manufacturing">Manufacturing</option>
-                      <option value="Forestry">Forestry</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="auth-label">Website</label>
-                  <Input
-                    type="url"
-                    value={empFields.website}
-                    onChange={upd("website")}
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                    placeholder="https://yourcompany.com (optional)"
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                  <button type="button" onClick={() => setEmployerStep(1)} className="auth-btn-ghost">
-                    <ArrowLeft size={13} /> Back
-                  </button>
                   <button
                     type="button"
                     onClick={handleEmployerNext}
                     className="auth-btn-primary"
-                    style={{ marginTop: 0 }}
+                    style={{ marginTop: "0.25rem" }}
                   >
                     Continue <ArrowRight size={15} />
                   </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Step 3 */}
-            {employerStep === 3 && (
-              <form onSubmit={handleEmployerSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">Country *</label>
+              {employerStep === 2 && (
+                <div className="auth-form">
+                  <div className="auth-field">
+                    <label className="auth-label">Company Name *</label>
                     <Input
-                      value={empFields.country}
-                      onChange={upd("country")}
+                      value={empFields.companyName}
+                      onChange={upd("companyName")}
                       required
                       className="auth-input"
-                      style={{ marginTop: 6 }}
+                      placeholder="Acme Farms LLC"
                     />
                   </div>
-                  <div>
-                    <label className="auth-label">State *</label>
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">Legal Entity Name</label>
+                      <Input
+                        value={empFields.legalEntityName}
+                        onChange={upd("legalEntityName")}
+                        className="auth-input"
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">EIN / Tax ID</label>
+                      <Input
+                        value={empFields.einTaxId}
+                        onChange={upd("einTaxId")}
+                        maxLength={30}
+                        className="auth-input"
+                        placeholder="XX-XXXXXXX"
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">Company Size *</label>
+                      <select
+                        value={empFields.companySize}
+                        onChange={upd("companySize")}
+                        required
+                        className="auth-select"
+                      >
+                        <option value="">Select...</option>
+                        <option value="1-10">1–10 employees</option>
+                        <option value="11-50">11–50 employees</option>
+                        <option value="51-200">51–200 employees</option>
+                        <option value="201-500">201–500 employees</option>
+                        <option value="500+">500+ employees</option>
+                      </select>
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">Industry *</label>
+                      <select value={empFields.industry} onChange={upd("industry")} required className="auth-select">
+                        <option value="">Select...</option>
+                        <option value="Agriculture">Agriculture</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Hospitality">Hospitality</option>
+                        <option value="Landscaping">Landscaping</option>
+                        <option value="Food Processing">Food Processing</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Forestry">Forestry</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label">Website</label>
                     <Input
-                      value={empFields.state}
-                      onChange={upd("state")}
-                      required
-                      placeholder="e.g. Texas"
+                      type="url"
+                      value={empFields.website}
+                      onChange={upd("website")}
                       className="auth-input"
-                      style={{ marginTop: 6 }}
+                      placeholder="https://yourcompany.com (optional)"
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="auth-label">Primary Hiring Location *</label>
-                  <Input
-                    value={empFields.primaryHiringLocation}
-                    onChange={upd("primaryHiringLocation")}
-                    required
-                    placeholder="City, State"
-                    className="auth-input"
-                    style={{ marginTop: 6 }}
-                  />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label className="auth-label">Worker Types *</label>
-                    <select
-                      value={empFields.workerTypes}
-                      onChange={upd("workerTypes")}
-                      required
-                      className="auth-select"
-                      style={{ marginTop: 6 }}
-                    >
-                      <option value="">Select...</option>
-                      <option value="H-2A">H-2A (Agricultural)</option>
-                      <option value="H-2B">H-2B (Non-Agricultural)</option>
-                      <option value="H-2A,H-2B">Both H-2A & H-2B</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="auth-label">Monthly Volume *</label>
-                    <select
-                      value={empFields.estimatedMonthlyVolume}
-                      onChange={upd("estimatedMonthlyVolume")}
-                      required
-                      className="auth-select"
-                      style={{ marginTop: 6 }}
-                    >
-                      <option value="">Select...</option>
-                      <option value="1-10">1–10 workers</option>
-                      <option value="11-50">11–50 workers</option>
-                      <option value="51-100">51–100 workers</option>
-                      <option value="100+">100+ workers</option>
-                    </select>
+                  <div style={{ display: "flex", gap: "0.625rem" }}>
+                    <button type="button" onClick={() => setEmployerStep(1)} className="auth-btn-ghost">
+                      <ArrowLeft size={13} /> Back
+                    </button>
+                    <button type="button" onClick={handleEmployerNext} className="auth-btn-primary">
+                      Continue <ArrowRight size={15} />
+                    </button>
                   </div>
                 </div>
-                <div className="auth-disclaimer">
-                  <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.6, marginBottom: 12 }}>
-                    {t("auth.disclaimer")}
-                  </p>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <Checkbox
-                      id="accept-emp"
-                      checked={acceptTerms}
-                      onCheckedChange={(v) => setAcceptTerms(v === true)}
-                      className="border-gray-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500 mt-0.5"
+              )}
+
+              {employerStep === 3 && (
+                <form onSubmit={handleEmployerSubmit} className="auth-form">
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">Country *</label>
+                      <Input value={empFields.country} onChange={upd("country")} required className="auth-input" />
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">State *</label>
+                      <Input
+                        value={empFields.state}
+                        onChange={upd("state")}
+                        required
+                        placeholder="e.g. Texas"
+                        className="auth-input"
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label">Primary Hiring Location *</label>
+                    <Input
+                      value={empFields.primaryHiringLocation}
+                      onChange={upd("primaryHiringLocation")}
+                      required
+                      placeholder="City, State"
+                      className="auth-input"
                     />
-                    <label
-                      htmlFor="accept-emp"
-                      style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5, cursor: "pointer" }}
-                    >
-                      {t("auth.accept_terms")}
-                    </label>
                   </div>
-                </div>
-                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                  <button type="button" onClick={() => setEmployerStep(2)} className="auth-btn-ghost">
-                    <ArrowLeft size={13} /> Back
-                  </button>
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary" style={{ marginTop: 0 }}>
-                    {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
-                    Create employer account
-                  </button>
-                </div>
-              </form>
-            )}
+                  <div className="auth-grid-2">
+                    <div className="auth-field">
+                      <label className="auth-label">Worker Types *</label>
+                      <select
+                        value={empFields.workerTypes}
+                        onChange={upd("workerTypes")}
+                        required
+                        className="auth-select"
+                      >
+                        <option value="">Select...</option>
+                        <option value="H-2A">H-2A (Agricultural)</option>
+                        <option value="H-2B">H-2B (Non-Agricultural)</option>
+                        <option value="H-2A,H-2B">Both H-2A & H-2B</option>
+                      </select>
+                    </div>
+                    <div className="auth-field">
+                      <label className="auth-label">Monthly Volume *</label>
+                      <select
+                        value={empFields.estimatedMonthlyVolume}
+                        onChange={upd("estimatedMonthlyVolume")}
+                        required
+                        className="auth-select"
+                      >
+                        <option value="">Select...</option>
+                        <option value="1-10">1–10 workers</option>
+                        <option value="11-50">11–50 workers</option>
+                        <option value="51-100">51–100 workers</option>
+                        <option value="100+">100+ workers</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="auth-terms">
+                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", lineHeight: 1.6, marginBottom: "0.75rem" }}>
+                      {t("auth.disclaimer")}
+                    </p>
+                    <div style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start" }}>
+                      <Checkbox
+                        id="accept-emp"
+                        checked={acceptTerms}
+                        onCheckedChange={(v) => setAcceptTerms(v === true)}
+                        className="border-slate-300 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500 mt-0.5"
+                      />
+                      <label
+                        htmlFor="accept-emp"
+                        style={{ fontSize: "0.72rem", color: "#64748B", lineHeight: 1.5, cursor: "pointer" }}
+                      >
+                        {t("auth.accept_terms")}
+                      </label>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.625rem" }}>
+                    <button type="button" onClick={() => setEmployerStep(2)} className="auth-btn-ghost">
+                      <ArrowLeft size={13} /> Back
+                    </button>
+                    <button type="submit" disabled={isLoading} className="auth-btn-accent">
+                      {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
+                      Create employer account
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+            <p style={{ marginTop: "1rem", fontSize: "0.7rem", color: "#CBD5E1", fontFamily: "'DM Sans', sans-serif" }}>
+              Step {employerStep} of 3
+            </p>
           </div>
-          <p style={{ marginTop: 20, fontSize: 11, color: "#C4C4C0" }}>Step {employerStep} of 3</p>
         </div>
-      </div>
+      </>
     );
   }
 
   // ─── DEFAULT LAYOUT ────────────────────────────────────────────────────
   return (
-    <div className="auth-root" style={{ minHeight: "100vh", display: "flex" }}>
+    <>
       <style>{STYLES}</style>
       <ErrorDialog />
-
-      {/* ── Left branding panel ── */}
-      <div
-        className="auth-panel-left"
-        style={{
-          display: "none",
-          width: "44%",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "56px 64px",
-          position: "relative",
-        }}
-        // Show on lg+ via CSS below
-      >
-        <style>{`.auth-panel-left { display: none; } @media (min-width: 1024px) { .auth-panel-left { display: flex !important; } }`}</style>
-        <div className="auth-panel-pattern" />
-        <div className="auth-panel-glow" />
-
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <h1 className="auth-logo-text" style={{ fontSize: 36, color: "#111827" }}>
-            H2 <span style={{ color: "#0ea5e9" }}>Linker</span>
-          </h1>
-          <p style={{ marginTop: 20, fontSize: 15, color: "#6B7280", maxWidth: 320, lineHeight: 1.7 }}>
-            {t("auth.hero_description")}
-          </p>
-          <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ height: 1, width: 48, background: "linear-gradient(to right, #BAE6FD, transparent)" }} />
-            <span
-              style={{
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "0.2em",
-                color: "#C4C4C0",
-                fontWeight: 600,
-              }}
-            >
-              {t("auth.visa_programs_label")}
-            </span>
-          </div>
-        </div>
-
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 32 }}>
-            <div>
-              <div className="auth-stat-number">
-                10,000<span className="auth-stat-accent">+</span>
+      <div className="auth-root">
+        <div className="auth-split">
+          {/* Left panel */}
+          <div className="auth-left">
+            <div className="auth-left-grid" />
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div className="auth-brand">
+                <span className="auth-brand-accent">H2</span> Linker
               </div>
-              <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>{t("auth.stats.jobs_in_database")}</div>
-            </div>
-            <div>
-              <div className="auth-stat-number">
-                100<span className="auth-stat-accent">%</span>
+              <p className="auth-tagline">{t("auth.hero_description")}</p>
+              <div className="auth-divider-label">
+                <div className="auth-divider-line" />
+                <span className="auth-divider-text">{t("auth.visa_programs_label")}</span>
               </div>
-              <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>{t("auth.stats.free_to_start")}</div>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <span className="auth-badge">{t("auth.badges.h2a")}</span>
-            <span className="auth-badge">{t("auth.badges.h2b")}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right form panel ── */}
-      <div
-        className="auth-panel-right"
-        style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "32px 24px" }}
-      >
-        {/* Top bar */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 420,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 32,
-          }}
-        >
-          <h1 className="auth-logo-text" style={{ fontSize: 22, color: "#111827" }}>
-            H2 <span style={{ color: "#0ea5e9" }}>Linker</span>
-          </h1>
-          <LanguageSwitcher
-            value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
-            onChange={handleChangeLanguage}
-            className="h-9 w-[130px] rounded-xl"
-          />
-        </div>
-
-        <div className="auth-card" style={{ width: "100%", maxWidth: 420, padding: "36px 40px", margin: "auto 0" }}>
-          {/* Tabs */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 6,
-              marginBottom: 32,
-              background: "#F3F2EF",
-              borderRadius: 12,
-              padding: 4,
-            }}
-          >
-            <button className={`auth-tab ${tab === "signin" ? "active" : ""}`} onClick={() => setTab("signin")}>
-              {t("auth.tabs.signin")}
-            </button>
-            <button className={`auth-tab ${tab === "signup" ? "active" : ""}`} onClick={() => setTab("signup")}>
-              {t("auth.tabs.signup")}
-            </button>
-          </div>
-
-          {/* ── SIGN IN ── */}
-          {tab === "signin" && (
-            <div>
-              {signupNotice.visible && (
-                <div className="auth-success-notice" style={{ marginBottom: 24 }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <CheckCircle2 size={15} style={{ color: "#16a34a", marginTop: 2, flexShrink: 0 }} />
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#15803D", margin: 0 }}>
-                        {t("auth.signup_notice.title")}
-                      </p>
-                      <p style={{ fontSize: 12, color: "#4ADE80", marginTop: 4 }}>
-                        {t("auth.signup_notice.desc", { email: signupNotice.email ?? "" })}
-                      </p>
-                    </div>
+            <div className="auth-stats" style={{ position: "relative", zIndex: 1 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "1.5rem" }}>
+                <div>
+                  <div className="auth-stat-number">
+                    10,000<span style={{ color: "#0EA5E9" }}>+</span>
                   </div>
+                  <div className="auth-stat-label">{t("auth.stats.jobs_in_database")}</div>
                 </div>
-              )}
+                <div>
+                  <div className="auth-stat-number">
+                    100<span style={{ color: "#0EA5E9" }}>%</span>
+                  </div>
+                  <div className="auth-stat-label">{t("auth.stats.free_to_start")}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <span className="auth-badge">{t("auth.badges.h2a")}</span>
+                <span className="auth-badge">{t("auth.badges.h2b")}</span>
+              </div>
+            </div>
+          </div>
 
-              {signinPanel === "signin" && (
-                <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <div>
-                    <label className="auth-label">{t("auth.fields.email")}</label>
-                    <Input
-                      name="email"
-                      type="email"
-                      placeholder={t("auth.placeholders.email")}
-                      required
-                      className="auth-input"
-                      style={{ marginTop: 6 }}
-                    />
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <label className="auth-label">{t("auth.fields.password")}</label>
-                      <button type="button" onClick={() => setSigninPanel("forgot")} className="auth-link">
-                        {t("auth.recovery.link")}
-                      </button>
-                    </div>
-                    <Input name="password" type="password" required className="auth-input" />
-                  </div>
-                  <button type="submit" disabled={isLoading} className="auth-btn-primary" style={{ marginTop: 4 }}>
-                    {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
-                    {t("auth.actions.signin")}
-                  </button>
-                </form>
-              )}
+          {/* Right panel */}
+          <div className="auth-right">
+            <div className="auth-right-topbar">
+              <div className="auth-mobile-brand" style={{ display: "block" }}>
+                <span style={{ color: "#0EA5E9" }}>H2</span> Linker
+              </div>
+              <LanguageSwitcher
+                value={isSupportedLanguage(i18n.language) ? (i18n.language as SupportedLanguage) : "en"}
+                onChange={handleChangeLanguage}
+                className="h-9 w-[130px]"
+              />
+            </div>
 
-              {signinPanel === "forgot" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>
-                      {t("auth.recovery.request_title")}
-                    </p>
-                    <p style={{ fontSize: 13, color: "#9CA3AF", marginTop: 6 }}>{t("auth.recovery.request_desc")}</p>
-                  </div>
-                  {forgotState.sent && (
-                    <div className="auth-success-notice">
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#15803D", margin: 0 }}>
-                        {t("auth.recovery.sent_title")}
-                      </p>
-                      <p style={{ fontSize: 12, color: "#4ADE80", marginTop: 4 }}>
-                        {t("auth.recovery.sent_desc", { email: forgotState.email })}
-                      </p>
+            <div className="auth-card">
+              {/* Tabs */}
+              <div className="auth-tabs">
+                <button className={`auth-tab ${tab === "signin" ? "active" : ""}`} onClick={() => setTab("signin")}>
+                  {t("auth.tabs.signin")}
+                </button>
+                <button className={`auth-tab ${tab === "signup" ? "active" : ""}`} onClick={() => setTab("signup")}>
+                  {t("auth.tabs.signup")}
+                </button>
+              </div>
+
+              {/* Sign in */}
+              {tab === "signin" && (
+                <div>
+                  {signupNotice.visible && (
+                    <div className="auth-notice">
+                      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                        <CheckCircle2 size={14} style={{ color: "#16A34A", marginTop: "1px", flexShrink: 0 }} />
+                        <div>
+                          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#15803D" }}>
+                            {t("auth.signup_notice.title")}
+                          </p>
+                          <p style={{ fontSize: "0.72rem", color: "#4ADE80", marginTop: "0.15rem" }}>
+                            {t("auth.signup_notice.desc", { email: signupNotice.email ?? "" })}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
-                  <form
-                    onSubmit={handleRequestPasswordReset}
-                    style={{ display: "flex", flexDirection: "column", gap: 14 }}
-                  >
-                    <div>
-                      <label className="auth-label">{t("auth.fields.email")}</label>
-                      <Input
-                        name="recoveryEmail"
-                        type="email"
-                        value={forgotState.email}
-                        onChange={(e) => setForgotState((p) => ({ ...p, email: e.target.value }))}
-                        required
-                        className="auth-input"
-                        style={{ marginTop: 6 }}
-                      />
+                  {signinPanel === "signin" && (
+                    <form onSubmit={handleSignIn} className="auth-form">
+                      <div className="auth-field">
+                        <label className="auth-label">{t("auth.fields.email")}</label>
+                        <Input
+                          name="email"
+                          type="email"
+                          placeholder={t("auth.placeholders.email")}
+                          required
+                          className="auth-input"
+                        />
+                      </div>
+                      <div className="auth-field">
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "0.4rem",
+                          }}
+                        >
+                          <label className="auth-label" style={{ marginBottom: 0 }}>
+                            {t("auth.fields.password")}
+                          </label>
+                          <button type="button" onClick={() => setSigninPanel("forgot")} className="auth-link">
+                            {t("auth.recovery.link")}
+                          </button>
+                        </div>
+                        <Input name="password" type="password" required className="auth-input" />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="auth-btn-primary"
+                        style={{ marginTop: "0.25rem" }}
+                      >
+                        {isLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
+                        {t("auth.actions.signin")}
+                      </button>
+                    </form>
+                  )}
+                  {signinPanel === "forgot" && (
+                    <div className="auth-form">
+                      <div>
+                        <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "#0F172A" }}>
+                          {t("auth.recovery.request_title")}
+                        </p>
+                        <p style={{ fontSize: "0.8rem", color: "#94A3B8", marginTop: "0.25rem" }}>
+                          {t("auth.recovery.request_desc")}
+                        </p>
+                      </div>
+                      {forgotState.sent && (
+                        <div className="auth-notice">
+                          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#15803D" }}>
+                            {t("auth.recovery.sent_title")}
+                          </p>
+                          <p style={{ fontSize: "0.72rem", color: "#4ADE80", marginTop: "0.15rem" }}>
+                            {t("auth.recovery.sent_desc", { email: forgotState.email })}
+                          </p>
+                        </div>
+                      )}
+                      <form onSubmit={handleRequestPasswordReset} className="auth-form" style={{ gap: "0.875rem" }}>
+                        <div className="auth-field">
+                          <label className="auth-label">{t("auth.fields.email")}</label>
+                          <Input
+                            name="recoveryEmail"
+                            type="email"
+                            value={forgotState.email}
+                            onChange={(e) => setForgotState((p) => ({ ...p, email: e.target.value }))}
+                            required
+                            className="auth-input"
+                          />
+                        </div>
+                        <button type="submit" disabled={isLoading} className="auth-btn-primary">
+                          {isLoading && <Loader2 size={15} className="animate-spin" />}
+                          {t("auth.recovery.actions.send_link")}
+                        </button>
+                        <button type="button" onClick={() => setSigninPanel("signin")} className="auth-btn-ghost">
+                          {t("auth.recovery.actions.back_to_login")}
+                        </button>
+                      </form>
                     </div>
-                    <button type="submit" disabled={isLoading} className="auth-btn-primary">
-                      {isLoading && <Loader2 size={15} className="animate-spin" />}
-                      {t("auth.recovery.actions.send_link")}
-                    </button>
-                    <button type="button" onClick={() => setSigninPanel("signin")} className="auth-btn-ghost">
-                      {t("auth.recovery.actions.back_to_login")}
-                    </button>
-                  </form>
+                  )}
+                  {signinPanel === "reset" && (
+                    <div className="auth-form">
+                      <div>
+                        <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "#0F172A" }}>
+                          {t("auth.recovery.reset_title")}
+                        </p>
+                        <p style={{ fontSize: "0.8rem", color: "#94A3B8", marginTop: "0.25rem" }}>
+                          {t("auth.recovery.reset_desc")}
+                        </p>
+                      </div>
+                      <form onSubmit={handleUpdatePassword} className="auth-form" style={{ gap: "0.875rem" }}>
+                        <div className="auth-field">
+                          <label className="auth-label">{t("auth.recovery.fields.new_password")}</label>
+                          <Input
+                            type="password"
+                            value={resetState.password}
+                            required
+                            minLength={6}
+                            onChange={(e) => setResetState((p) => ({ ...p, password: e.target.value }))}
+                            className="auth-input"
+                          />
+                        </div>
+                        <div className="auth-field">
+                          <label className="auth-label">{t("auth.recovery.fields.confirm_new_password")}</label>
+                          <Input
+                            type="password"
+                            value={resetState.confirmPassword}
+                            required
+                            minLength={6}
+                            onChange={(e) => setResetState((p) => ({ ...p, confirmPassword: e.target.value }))}
+                            className="auth-input"
+                          />
+                        </div>
+                        <button type="submit" disabled={isLoading} className="auth-btn-primary">
+                          {isLoading && <Loader2 size={15} className="animate-spin" />}
+                          {t("auth.recovery.actions.save_new_password")}
+                        </button>
+                      </form>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {signinPanel === "reset" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>
-                      {t("auth.recovery.reset_title")}
+              {/* Sign up — role picker */}
+              {tab === "signup" && (
+                <div className="auth-form">
+                  <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
+                    <h3 style={{ fontSize: "0.95rem", fontWeight: 600, color: "#0F172A" }}>
+                      {t("auth.role_picker.title", "Choose your account type")}
+                    </h3>
+                    <p style={{ fontSize: "0.8rem", color: "#94A3B8", marginTop: "0.25rem" }}>
+                      {t("auth.role_picker.desc", "Select how you'll use H2 Linker")}
                     </p>
-                    <p style={{ fontSize: 13, color: "#9CA3AF", marginTop: 6 }}>{t("auth.recovery.reset_desc")}</p>
                   </div>
-                  <form onSubmit={handleUpdatePassword} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div>
-                      <label className="auth-label">{t("auth.recovery.fields.new_password")}</label>
-                      <Input
-                        type="password"
-                        value={resetState.password}
-                        required
-                        minLength={6}
-                        onChange={(e) => setResetState((p) => ({ ...p, password: e.target.value }))}
-                        className="auth-input"
-                        style={{ marginTop: 6 }}
-                      />
+                  <button type="button" onClick={() => setSignupRole("worker")} className="auth-role-card">
+                    <div className="auth-role-icon">
+                      <HardHat size={20} />
                     </div>
-                    <div>
-                      <label className="auth-label">{t("auth.recovery.fields.confirm_new_password")}</label>
-                      <Input
-                        type="password"
-                        value={resetState.confirmPassword}
-                        required
-                        minLength={6}
-                        onChange={(e) => setResetState((p) => ({ ...p, confirmPassword: e.target.value }))}
-                        className="auth-input"
-                        style={{ marginTop: 6 }}
-                      />
+                    <div style={{ flex: 1 }}>
+                      <div className="auth-role-title">{t("auth.roles.worker")}</div>
+                      <div className="auth-role-desc">
+                        {t("auth.role_picker.worker_desc", "Find H-2A/H-2B jobs and apply directly to employers")}
+                      </div>
                     </div>
-                    <button type="submit" disabled={isLoading} className="auth-btn-primary">
-                      {isLoading && <Loader2 size={15} className="animate-spin" />}
-                      {t("auth.recovery.actions.save_new_password")}
-                    </button>
-                  </form>
+                    <ArrowRight size={15} style={{ color: "#CBD5E1", flexShrink: 0 }} />
+                  </button>
+                  <button type="button" onClick={() => setSignupRole("employer")} className="auth-role-card">
+                    <div className="auth-role-icon">
+                      <Building2 size={20} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="auth-role-title">{t("auth.roles.employer")}</div>
+                      <div className="auth-role-desc">
+                        {t("auth.role_picker.employer_desc", "Post jobs and recruit H-2 visa workers")}
+                      </div>
+                    </div>
+                    <ArrowRight size={15} style={{ color: "#CBD5E1", flexShrink: 0 }} />
+                  </button>
                 </div>
               )}
             </div>
-          )}
 
-          {/* ── SIGN UP — Role Picker ── */}
-          {tab === "signup" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ textAlign: "center", marginBottom: 8 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>
-                  {t("auth.role_picker.title", "Choose your account type")}
-                </h3>
-                <p style={{ fontSize: 13, color: "#9CA3AF", marginTop: 6 }}>
-                  {t("auth.role_picker.desc", "Select how you'll use H2 Linker")}
-                </p>
-              </div>
-
-              <button type="button" onClick={() => setSignupRole("worker")} className="auth-role-card">
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      background: "#F0F9FF",
-                      border: "1.5px solid #BAE6FD",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <HardHat size={20} style={{ color: "#0284C7" }} />
-                  </div>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "#111827", margin: 0 }}>
-                      {t("auth.roles.worker")}
-                    </p>
-                    <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 3 }}>
-                      {t("auth.role_picker.worker_desc", "Find H-2A/H-2B jobs and apply directly to employers")}
-                    </p>
-                  </div>
-                  <ArrowRight size={15} style={{ color: "#D1D5DB", flexShrink: 0 }} />
-                </div>
-              </button>
-
-              <button type="button" onClick={() => setSignupRole("employer")} className="auth-role-card">
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      background: "#F0F9FF",
-                      border: "1.5px solid #BAE6FD",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Building2 size={20} style={{ color: "#0284C7" }} />
-                  </div>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "#111827", margin: 0 }}>
-                      {t("auth.roles.employer")}
-                    </p>
-                    <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 3 }}>
-                      {t("auth.role_picker.employer_desc", "Post jobs and recruit H-2 visa workers")}
-                    </p>
-                  </div>
-                  <ArrowRight size={15} style={{ color: "#D1D5DB", flexShrink: 0 }} />
-                </div>
-              </button>
-            </div>
-          )}
+            <button onClick={() => navigate("/jobs")} className="auth-browse">
+              {t("auth.browse_jobs_link")}
+            </button>
+          </div>
         </div>
-
-        <button
-          onClick={() => navigate("/jobs")}
-          style={{
-            marginTop: 24,
-            fontSize: 12,
-            color: "#C4C4C0",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            letterSpacing: "0.05em",
-            transition: "color 0.15s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#9CA3AF")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#C4C4C0")}
-        >
-          {t("auth.browse_jobs_link")}
-        </button>
       </div>
-    </div>
+    </>
   );
 }
