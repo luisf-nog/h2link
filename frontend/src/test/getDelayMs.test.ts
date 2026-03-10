@@ -16,8 +16,12 @@ describe("getDelayMs", () => {
     expect(getDelayMs("free")).toBe(0);
   });
 
-  it("retorna 15000ms fixo para plano gold", () => {
-    expect(getDelayMs("gold")).toBe(15_000);
+  it("retorna entre 15-45 segundos para plano gold", () => {
+    for (let i = 0; i < 100; i++) {
+      const delay = getDelayMs("gold");
+      expect(delay).toBeGreaterThanOrEqual(15_000);
+      expect(delay).toBeLessThanOrEqual(45_000);
+    }
   });
 
   it("retorna entre 1-3 minutos para plano diamond", () => {
