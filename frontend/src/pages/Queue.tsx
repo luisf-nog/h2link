@@ -892,7 +892,7 @@ export default function Queue() {
           )}
 
           {failedItems.length > 0 && (
-            <Button variant="outline" onClick={handleRetryAllFailed} disabled={sending}>
+            <Button variant="outline" onClick={handleRetryAllFailed} disabled={sending || externalProcessing}>
               {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               {t("queue.actions.retry_all_failed", { count: failedItems.length })}
             </Button>
