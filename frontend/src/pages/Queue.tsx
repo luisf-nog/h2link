@@ -885,7 +885,7 @@ export default function Queue() {
           <AddManualJobDialog onAdded={fetchQueue} />
 
           {pausedItems.length > 0 && (
-            <Button variant="outline" onClick={handleRetryAllPaused} disabled={sending}>
+            <Button variant="outline" onClick={handleRetryAllPaused} disabled={sending || externalProcessing}>
               {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               {t("queue.actions.retry_all_paused", { count: pausedItems.length, defaultValue: "Reenviar pausadas ({{count}})" })}
             </Button>
