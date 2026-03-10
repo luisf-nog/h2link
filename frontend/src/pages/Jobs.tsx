@@ -305,7 +305,7 @@ export default function Jobs() {
               <Briefcase className="h-3.5 w-3.5" /> {sj.employer_legal_name || "—"}
             </span>
             <span className="flex items-center gap-1 uppercase">
-              <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${sj.state}` : "—"}
+              <MapPin className="h-3.5 w-3.5" /> {sj.city && sj.state ? `${sj.city}, ${getStateName(sj.state)}` : "—"}
             </span>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
