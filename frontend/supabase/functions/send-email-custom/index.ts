@@ -116,12 +116,6 @@ const SMTP_CONFIGS: Record<EmailProvider, SmtpConfig> = {
     useTls: true,
     useStartTls: false,
   },
-  outlook: {
-    host: "smtp.office365.com",
-    port: 587,
-    useTls: false,
-    useStartTls: true,
-  },
 };
 
 const encoder = new TextEncoder();
