@@ -9,16 +9,16 @@ const corsHeaders = {
 
 const EMPLOYER_PRICES: Record<string, Record<string, string>> = {
   essential: {
-    month: "price_1T6bxlKliiuLyRPmO9GFlS6r",
-    year: "price_1T6bxsKliiuLyRPmgvfvRGIP",
+    month: "price_1T6r3dKliiuLyRPmG9jZz17K",
+    year: "price_1T6r3dKliiuLyRPmjWL9NsSu",
   },
   professional: {
-    month: "price_1T6bxmKliiuLyRPmwJR0R7v3",
-    year: "price_1T6bxtKliiuLyRPmS25a2n9i",
+    month: "price_1T6r4CKliiuLyRPmCsUC8SHa",
+    year: "price_1T6r4CKliiuLyRPmR44u7HqC",
   },
   enterprise: {
-    month: "price_1T6bxnKliiuLyRPmqVuaZkco",
-    year: "price_1T6bxuKliiuLyRPmsb45WH0y",
+    month: "price_1T6r4sKliiuLyRPmIy0y7drp",
+    year: "price_1T6r4sKliiuLyRPmSp5PmrAq",
   },
 };
 
