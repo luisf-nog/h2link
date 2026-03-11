@@ -25,7 +25,7 @@ function getSendingMethod(planTier: PlanTier): SendingMethod {
   return planTier === "black" ? "dynamic" : "static";
 }
 
-type EmailProvider = "gmail" | "outlook";
+type EmailProvider = "gmail";
 
 interface QueueRow {
   id: string;
