@@ -204,7 +204,7 @@
       "title": "Conecte Seu Email",
       "description": "Usaremos seu email para enviar candidaturas em seu nome.",
       "why_app_password_title": "Por que usar Senha de Aplicativo?",
-      "why_app_password_desc": "Por segurança, Google e Microsoft não permitem que apps externos usem sua senha principal. Você precisa criar uma \"Senha de App\" especial — ela funciona apenas para enviar emails e pode ser revogada a qualquer momento.",
+      "why_app_password_desc": "Por segurança, o Google não permite que apps externos usem sua senha principal. Você precisa criar uma \"Senha de App\" especial — ela funciona apenas para enviar emails e pode ser revogada a qualquer momento.",
       "gmail_guide_title": "Como criar no Gmail",
       "gmail_step1": "Ative a verificação em duas etapas (2FA) na sua conta Google",
       "gmail_step2": "Acesse Senhas de App e crie uma com o nome \"H2 Linker\"",
