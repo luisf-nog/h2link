@@ -453,7 +453,7 @@ export default function Landing() {
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
-                    t("landing.role_worker_tag1"),
+                    `${jobCountLabel} DOL ${i18n.language === "en" ? "jobs" : i18n.language === "pt" ? "vagas" : "empleos"}`,
                     t("landing.role_worker_tag2"),
                     t("landing.role_worker_tag3"),
                     t("landing.role_worker_tag4"),
