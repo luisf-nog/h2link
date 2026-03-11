@@ -45,8 +45,8 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     price: {
       monthly: 49,
       annual: 470,
-      stripe_monthly: "price_1T6r3dKliiuLyRPmG9jZz17K",
-      stripe_annual: "price_1T6r3dKliiuLyRPmjWL9NsSu",
+      stripe_monthly: "price_1T6bxlKliiuLyRPmO9GFlS6r",
+      stripe_annual: "price_1T6bxsKliiuLyRPmgvfvRGIP",
     },
     features: [
       "1 active Featured job",
