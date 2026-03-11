@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { getCountry } from "@/lib/countries";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -216,7 +217,10 @@ function CandidateRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm text-foreground truncate">{app.full_name}</span>
+            <span className="font-medium text-sm text-foreground truncate flex items-center gap-1.5">
+              {app.country_code && (() => { const c = getCountry(app.country_code); return c ? <span className="text-base" title={c.name}>{c.flag}</span> : null; })()}
+              {app.full_name}
+            </span>
             {app.application_match_score !== null && (
               <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${getMatchScoreStyle(app.application_match_score)}`}>
                 {app.application_match_score}%
@@ -322,7 +326,10 @@ function CandidateRow({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-medium text-sm text-foreground">{app.full_name}</span>
+              <span className="font-medium text-sm text-foreground flex items-center gap-1">
+                {app.country_code && (() => { const c = getCountry(app.country_code); return c ? <span className="text-sm" title={c.name}>{c.flag}</span> : null; })()}
+                {app.full_name}
+              </span>
               {app.application_match_score !== null && (
                 <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${getMatchScoreStyle(app.application_match_score)}`}>
                   {app.application_match_score}%

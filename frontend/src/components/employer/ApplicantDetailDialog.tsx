@@ -3,6 +3,7 @@ import type { Application } from "@/pages/employer/JobApplicants";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { getCountry } from "@/lib/countries";
 import { Separator } from "@/components/ui/separator";
 
 interface Experience {
@@ -110,6 +111,10 @@ export function ApplicantDetailDialog({ app, open, onClose }: Props) {
             <h4 className="text-xs font-semibold uppercase text-muted-foreground">Qualifications</h4>
             <Field label="Work Authorization" value={formatValue("work_authorization_status", app.work_authorization_status)} />
             <Field label="U.S. Worker" value={app.is_us_worker} />
+            {app.country_code && (() => {
+              const c = getCountry(app.country_code);
+              return c ? <Field label="Country" value={`${c.flag} ${c.name}`} /> : <Field label="Country" value={app.country_code} />;
+            })()}
             <Field label="Citizenship" value={formatValue("citizenship_status", app.citizenship_status)} />
             <Field label="Experience" value={`${app.months_experience} months`} />
             <Field label="English Level" value={formatValue("english_level", app.english_level)} />

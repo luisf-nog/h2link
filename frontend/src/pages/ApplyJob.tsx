@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2, X } from "lucide-react";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { Separator } from "@/components/ui/separator";
+import { COUNTRIES } from "@/lib/countries";
 
 interface JobInfo {
   id: string;
@@ -52,6 +53,7 @@ export default function ApplyJob() {
     phone: "",
     is_us_authorized: "" as "" | "yes" | "no",
     non_us_location: "" as "" | "outside_us" | "inside_us_other",
+    country_code: "" as string,
     months_experience: 0,
     english_level: "none",
     drivers_license_type: "none",
@@ -84,7 +86,7 @@ export default function ApplyJob() {
     setExperiences((p) => p.map((exp, idx) => (idx === i ? { ...exp, [field]: value } : exp)));
   };
 
-  const isStep1Valid = form.full_name.trim() && form.email.trim() && form.is_us_authorized !== "" && (form.is_us_authorized === "yes" || form.non_us_location !== "");
+  const isStep1Valid = form.full_name.trim() && form.email.trim() && form.is_us_authorized !== "" && (form.is_us_authorized === "yes" || (form.non_us_location !== "" && (form.non_us_location !== "outside_us" || form.country_code !== "")));
   const isStep2Valid = true;
   const isStep3Valid = experiences.every((e) => {
     const hasAnyField = e.company_name.trim() || e.job_title.trim();
@@ -126,6 +128,7 @@ export default function ApplyJob() {
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
             is_in_us,
+            country_code: form.country_code || null,
             experiences: experiences.filter((e) => e.company_name.trim()),
             honeypot: form.company_website,
           }),
@@ -301,15 +304,43 @@ export default function ApplyJob() {
                 </div>
 
                 {form.is_us_authorized === "no" && (
-                  <div className="space-y-2">
-                    <Label>Current Location / Status</Label>
-                    <Select value={form.non_us_location} onValueChange={(v) => setForm((p) => ({ ...p, non_us_location: v as "" | "outside_us" | "inside_us_other" }))}>
-                      <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="outside_us">Outside the U.S.</SelectItem>
-                        <SelectItem value="inside_us_other">Inside the U.S. (on a different visa / out of status)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Current Location / Status</Label>
+                      <Select value={form.non_us_location} onValueChange={(v) => setForm((p) => ({ ...p, non_us_location: v as "" | "outside_us" | "inside_us_other", country_code: v === "outside_us" ? p.country_code : "" }))}>
+                        <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="outside_us">Outside the U.S.</SelectItem>
+                          <SelectItem value="inside_us_other">Inside the U.S. (on a different visa / out of status)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {form.non_us_location === "outside_us" && (
+                      <div className="space-y-2">
+                        <Label>Country of Residence *</Label>
+                        <Select value={form.country_code} onValueChange={(v) => setForm((p) => ({ ...p, country_code: v }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your country...">
+                              {form.country_code && (() => {
+                                const c = COUNTRIES.find(c => c.code === form.country_code);
+                                return c ? `${c.flag} ${c.name}` : form.country_code;
+                              })()}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[280px]">
+                            {COUNTRIES.map((c) => (
+                              <SelectItem key={c.code} value={c.code}>
+                                <span className="flex items-center gap-2">
+                                  <span className="text-base">{c.flag}</span>
+                                  <span>{c.name}</span>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
 
