@@ -1663,6 +1663,7 @@ export type Database = {
           overtime_rate: number | null
           pay_frequency: string | null
           positions_count: number | null
+          previous_h2_visa: string
           primary_duties: string | null
           prior_experience_required: boolean | null
           priority_level: string
@@ -1674,6 +1675,7 @@ export type Database = {
           req_full_contract_availability: boolean | null
           req_lift_lbs: number | null
           req_travel_worksite: boolean | null
+          returning_worker: string
           skill_level: string | null
           source_type: string | null
           start_date: string | null
@@ -1726,6 +1728,7 @@ export type Database = {
           overtime_rate?: number | null
           pay_frequency?: string | null
           positions_count?: number | null
+          previous_h2_visa?: string
           primary_duties?: string | null
           prior_experience_required?: boolean | null
           priority_level?: string
@@ -1737,6 +1740,7 @@ export type Database = {
           req_full_contract_availability?: boolean | null
           req_lift_lbs?: number | null
           req_travel_worksite?: boolean | null
+          returning_worker?: string
           skill_level?: string | null
           source_type?: string | null
           start_date?: string | null
@@ -1789,6 +1793,7 @@ export type Database = {
           overtime_rate?: number | null
           pay_frequency?: string | null
           positions_count?: number | null
+          previous_h2_visa?: string
           primary_duties?: string | null
           prior_experience_required?: boolean | null
           priority_level?: string
@@ -1800,6 +1805,7 @@ export type Database = {
           req_full_contract_availability?: boolean | null
           req_lift_lbs?: number | null
           req_travel_worksite?: boolean | null
+          returning_worker?: string
           skill_level?: string | null
           source_type?: string | null
           start_date?: string | null

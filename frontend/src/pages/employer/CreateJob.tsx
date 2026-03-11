@@ -120,6 +120,10 @@ export default function CreateJob() {
     req_experience: false,
     req_drivers_license: false,
     consular_only: false,
+
+    // H-2 specific preferences
+    returning_worker: "not_required",
+    previous_h2_visa: "not_required",
   });
 
   const scrollToSection = (id: string) => {
@@ -274,6 +278,10 @@ export default function CreateJob() {
       req_experience: form.req_experience,
       req_drivers_license: form.req_drivers_license,
       consular_only: form.consular_only,
+
+      // H-2 specific preferences
+      returning_worker: form.returning_worker,
+      previous_h2_visa: form.previous_h2_visa,
     });
 
     if (error) {
@@ -654,7 +662,7 @@ export default function CreateJob() {
                           onCheckedChange={(v) => setForm((p) => ({ ...p, req_experience: v }))}
                         />
                         <Label htmlFor="req_experience" className="text-sm text-muted-foreground cursor-pointer">
-                          Requisito eliminatório (exclui candidatos sem experiência)
+                          {t("employer.create_job.eliminatory_experience")}
                         </Label>
                       </div>
                     </div>
@@ -680,7 +688,7 @@ export default function CreateJob() {
                           onCheckedChange={(v) => setForm((p) => ({ ...p, req_english: v }))}
                         />
                         <Label htmlFor="req_english" className="text-sm text-muted-foreground cursor-pointer">
-                          Requisito eliminatório (exclui candidatos sem inglês)
+                          {t("employer.create_job.eliminatory_english")}
                         </Label>
                       </div>
                     </div>
@@ -705,7 +713,7 @@ export default function CreateJob() {
                           onCheckedChange={(v) => setForm((p) => ({ ...p, req_drivers_license: v }))}
                         />
                         <Label htmlFor="req_drivers_license" className="text-sm text-muted-foreground cursor-pointer">
-                          Requisito eliminatório (exclui candidatos sem CNH)
+                          {t("employer.create_job.eliminatory_license")}
                         </Label>
                       </div>
                     </div>
@@ -723,15 +731,18 @@ export default function CreateJob() {
                     </div>
                   </div>
 
-                  {/* Consular Only - Only for H-2 visas */}
-                  <div className="pt-2 border-t">
+                  {/* H-2 Specific Preferences */}
+                  <div className="pt-2 border-t space-y-4">
+                    <Label className="text-base">{t("employer.create_job.h2_preferences_title")}</Label>
+
+                    {/* Consular Only */}
                     <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
                       <div className="space-y-0.5 pr-4">
                         <Label className="text-base font-medium cursor-pointer" htmlFor="consular_only">
-                          Visto exclusivo para candidatos no exterior
+                          {t("employer.create_job.consular_only_label")}
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          Marca esta vaga como disponível apenas para candidatos que ainda estão fora dos EUA (processamento consular). Candidatos já nos EUA serão automaticamente desqualificados.
+                          {t("employer.create_job.consular_only_desc")}
                         </p>
                       </div>
                       <Switch
@@ -739,6 +750,52 @@ export default function CreateJob() {
                         checked={form.consular_only}
                         onCheckedChange={(v) => setForm((p) => ({ ...p, consular_only: v }))}
                       />
+                    </div>
+
+                    {/* Returning Worker */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors gap-4">
+                      <div className="space-y-0.5 pr-4">
+                        <Label className="text-base font-medium">
+                          {t("employer.create_job.returning_worker_label")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {t("employer.create_job.returning_worker_desc")}
+                        </p>
+                      </div>
+                      <Select
+                        value={form.returning_worker}
+                        onValueChange={(v) => setForm((p) => ({ ...p, returning_worker: v }))}
+                      >
+                        <SelectTrigger className="w-[180px] shrink-0"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="not_required">{t("employer.create_job.pref_not_required")}</SelectItem>
+                          <SelectItem value="preferred">{t("employer.create_job.pref_preferred")}</SelectItem>
+                          <SelectItem value="required">{t("employer.create_job.pref_required")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Previous H-2 Visa */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors gap-4">
+                      <div className="space-y-0.5 pr-4">
+                        <Label className="text-base font-medium">
+                          {t("employer.create_job.previous_h2_label")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {t("employer.create_job.previous_h2_desc")}
+                        </p>
+                      </div>
+                      <Select
+                        value={form.previous_h2_visa}
+                        onValueChange={(v) => setForm((p) => ({ ...p, previous_h2_visa: v }))}
+                      >
+                        <SelectTrigger className="w-[180px] shrink-0"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="not_required">{t("employer.create_job.pref_not_required")}</SelectItem>
+                          <SelectItem value="preferred">{t("employer.create_job.pref_preferred")}</SelectItem>
+                          <SelectItem value="required">{t("employer.create_job.pref_required")}</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

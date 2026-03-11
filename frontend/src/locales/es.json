@@ -2105,7 +2105,20 @@
       "limit_reached_desc": "Mejora tu plan para publicar más empleos.",
       "published": "¡Empleo Publicado!",
       "published_desc": "Tu empleo patrocinado está activo.",
-      "error": "Error"
+      "error": "Error",
+      "eliminatory_experience": "Eliminatorio (excluye candidatos sin experiencia)",
+      "eliminatory_english": "Eliminatorio (excluye candidatos sin inglés)",
+      "eliminatory_license": "Eliminatorio (excluye candidatos sin licencia)",
+      "h2_preferences_title": "Preferencias de Visa H-2",
+      "consular_only_label": "Solo candidatos fuera de EE.UU. (Procesamiento Consular)",
+      "consular_only_desc": "Solo se considerarán candidatos actualmente fuera de EE.UU. Los trabajadores ya en EE.UU. serán excluidos automáticamente.",
+      "returning_worker_label": "Trabajador H-2 Retornante",
+      "returning_worker_desc": "Preferencia por trabajadores que ya completaron un contrato H-2 con cualquier empleador.",
+      "previous_h2_label": "Experiencia Previa con Visa H-2",
+      "previous_h2_desc": "Preferencia por candidatos que ya tuvieron una visa H-2 (H-2A o H-2B).",
+      "pref_not_required": "No Requerido",
+      "pref_preferred": "Preferido",
+      "pref_required": "Requerido"
     },
     "applicants": {
       "back_to_jobs": "Volver a Empleos",
