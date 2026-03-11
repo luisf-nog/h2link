@@ -1079,7 +1079,8 @@
         "end": "Fin",
         "experience": "Exp.",
         "email": "Email",
-        "action": "Acción"
+        "action": "Acción",
+        "dol_verified": "DOL Verificado"
       },
       "experience_months": "{{count}} mes",
       "experience_months_plural": "{{count}} meses",
@@ -1131,6 +1132,9 @@
       "save_job": "Guardar Empleo",
       "save_job_mobile": "Guardar Empleo",
       "share": "Compartir",
+      "dol_verified_title": "Empleo Verificado por DOL ✓",
+      "dol_verified_desc": "Registro oficial disponible en SeasonalJobs.dol.gov",
+      "view_dol_order": "Ver Job Order Oficial (DOL)",
       "remove": "Eliminar",
       "copied": "¡Copiado!",
       "copy_success": "Texto copiado al portapapeles.",
