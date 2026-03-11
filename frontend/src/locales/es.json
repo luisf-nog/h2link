@@ -1079,7 +1079,8 @@
         "end": "Fin",
         "experience": "Exp.",
         "email": "Email",
-        "action": "Acción"
+        "action": "Acción",
+        "dol_verified": "DOL Verificado"
       },
       "experience_months": "{{count}} mes",
       "experience_months_plural": "{{count}} meses",
