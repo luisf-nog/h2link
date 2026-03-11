@@ -50,8 +50,8 @@ export default function ApplyJob() {
     full_name: "",
     email: "",
     phone: "",
-    candidate_status: "outside_us" as string,
-    h2_visa_expiry: "",
+    is_us_authorized: "" as "" | "yes" | "no",
+    non_us_location: "" as "" | "outside_us" | "inside_us_other",
     months_experience: 0,
     english_level: "none",
     drivers_license_type: "none",
@@ -84,7 +84,7 @@ export default function ApplyJob() {
     setExperiences((p) => p.map((exp, idx) => (idx === i ? { ...exp, [field]: value } : exp)));
   };
 
-  const isStep1Valid = form.full_name.trim() && form.email.trim();
+  const isStep1Valid = form.full_name.trim() && form.email.trim() && form.is_us_authorized !== "" && (form.is_us_authorized === "yes" || form.non_us_location !== "");
   const isStep2Valid = true;
   const isStep3Valid = experiences.every((e) => {
     const hasAnyField = e.company_name.trim() || e.job_title.trim();
@@ -99,18 +99,11 @@ export default function ApplyJob() {
     setError("");
 
     try {
-      // Derive legacy fields from consolidated candidate_status
-      const status = form.candidate_status;
-      const is_in_us = status !== "outside_us";
-      const is_us_worker = status === "in_us_authorized" || status === "us_citizen";
-      const work_authorization_status = status === "us_citizen" ? "us_authorized"
-        : status === "in_us_authorized" ? "us_authorized"
-        : status === "in_us_h2" ? "requires_sponsorship"
-        : "outside_us";
-      const citizenship_status = status === "us_citizen" ? "us_citizen"
-        : status === "in_us_authorized" ? "permanent_resident"
-        : status === "in_us_h2" ? "h2_applicant"
-        : "other";
+      // Derive fields from the master question
+      const isUsWorker = form.is_us_authorized === "yes";
+      const is_in_us = isUsWorker || form.non_us_location === "inside_us_other";
+      const work_authorization_status = isUsWorker ? "us_authorized" : "outside_us";
+      const citizenship_status = isUsWorker ? "us_citizen" : "other";
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-application`,
@@ -123,7 +116,7 @@ export default function ApplyJob() {
             email: form.email.trim().toLowerCase(),
             phone: form.phone.trim() || null,
             work_authorization_status,
-            is_us_worker,
+            is_us_worker: isUsWorker,
             months_experience: form.months_experience,
             english_level: form.english_level,
             drivers_license_type: form.drivers_license_type,
@@ -133,7 +126,6 @@ export default function ApplyJob() {
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
             is_in_us,
-            h2_visa_expiry: form.h2_visa_expiry || null,
             experiences: experiences.filter((e) => e.company_name.trim()),
             honeypot: form.company_website,
           }),
@@ -270,27 +262,54 @@ export default function ApplyJob() {
 
                 <Separator />
 
-                <div className="space-y-2">
-                  <Label>{t("apply.candidate_status_label")} *</Label>
-                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v, h2_visa_expiry: v === "in_us_h2" ? p.h2_visa_expiry : "" }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="outside_us">{t("apply.candidate_outside")}</SelectItem>
-                      <SelectItem value="in_us_h2">{t("apply.candidate_in_us_h2")}</SelectItem>
-                      <SelectItem value="in_us_authorized">{t("apply.candidate_in_us_authorized")}</SelectItem>
-                      <SelectItem value="us_citizen">{t("apply.candidate_us_citizen")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">
+                    Are you legally authorized to work in the United States? *
+                  </Label>
+
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, is_us_authorized: "yes", non_us_location: "" }))}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                        form.is_us_authorized === "yes"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-foreground">Yes</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        I am a U.S. Citizen, Permanent Resident (Green Card), or legally authorized U.S. worker.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, is_us_authorized: "no", non_us_location: "outside_us" }))}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                        form.is_us_authorized === "no"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-foreground">No</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        I require visa sponsorship (e.g., H-2A / H-2B) to work in the U.S.
+                      </p>
+                    </button>
+                  </div>
                 </div>
 
-                {form.candidate_status === "in_us_h2" && (
+                {form.is_us_authorized === "no" && (
                   <div className="space-y-2">
-                    <Label>{t("apply.h2_visa_expiry")}</Label>
-                    <Input
-                      type="date"
-                      value={form.h2_visa_expiry}
-                      onChange={(e) => setForm((p) => ({ ...p, h2_visa_expiry: e.target.value }))}
-                    />
+                    <Label>Current Location / Status</Label>
+                    <Select value={form.non_us_location} onValueChange={(v) => setForm((p) => ({ ...p, non_us_location: v as "" | "outside_us" | "inside_us_other" }))}>
+                      <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="outside_us">Outside the U.S.</SelectItem>
+                        <SelectItem value="inside_us_other">Inside the U.S. (on a different visa / out of status)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
