@@ -25,29 +25,56 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch job data
+    let title = '';
+    let location = '';
+    let salary = '';
+    let visaType = 'H-2B';
+    let jobIdForUrl = jobId;
+
+    // Try public_jobs first
     const { data: job, error } = await supabase
       .from('public_jobs')
-      .select('*')
+      .select('id, job_title, company, city, state, salary, visa_type')
       .eq('id', jobId)
       .single();
 
-    if (error || !job) {
-      return new Response('Job not found', { status: 404, headers: corsHeaders });
+    if (job && !error) {
+      visaType = job.visa_type || 'H-2B';
+      title = `${visaType}: ${job.job_title} - ${job.company}`;
+      location = `${job.city}, ${job.state}`;
+      salary = job.salary ? `$${job.salary.toFixed(2)}/hr` : '';
+      jobIdForUrl = job.id;
+    } else {
+      // Fallback: try sponsored_jobs
+      const { data: sj, error: sjErr } = await supabase
+        .from('sponsored_jobs')
+        .select('id, title, employer_legal_name, city, state, location, hourly_wage, visa_type')
+        .eq('id', jobId)
+        .eq('is_active', true)
+        .single();
+
+      if (sj && !sjErr) {
+        visaType = sj.visa_type || 'H-2B';
+        const company = sj.employer_legal_name || 'Employer';
+        title = `${visaType}: ${sj.title} - ${company}`;
+        if (sj.city && sj.state) {
+          location = `${sj.city}, ${sj.state}`;
+        } else if (sj.location) {
+          location = sj.location;
+        }
+        salary = sj.hourly_wage ? `$${sj.hourly_wage.toFixed(2)}/hr` : '';
+        jobIdForUrl = sj.id;
+      } else {
+        return new Response('Job not found', { status: 404, headers: corsHeaders });
+      }
     }
 
-    // Build meta tags
-    const visaType = job.visa_type || 'H-2B';
-    const title = `${visaType}: ${job.job_title} - ${job.company}`;
-    const location = `${job.city}, ${job.state}`;
-    const salary = job.salary ? `$${job.salary.toFixed(2)}/hr` : '';
-    
     const descriptionParts = ['Job opportunity', visaType, location];
     if (salary) descriptionParts.push(salary);
     const description = descriptionParts.join(' • ');
 
     const appUrl = Deno.env.get('APP_URL') || 'https://h2linker.com';
-    const shareUrl = `${appUrl}/job/${job.id}`;
+    const shareUrl = `${appUrl}/job/${jobIdForUrl}`;
     const logoUrl = 'https://storage.googleapis.com/gpt-engineer-file-uploads/qLZbvqI1JJV7s7qLCqiN2u0iNM93/uploads/1769111120896-Gemini_Generated_Image_yeubloyeubloyeub.png';
 
     // Generate HTML with meta tags
