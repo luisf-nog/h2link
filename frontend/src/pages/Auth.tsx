@@ -113,6 +113,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const liveJobCount = useActiveJobCount();
+  const jobCountLabel = formatJobCount(liveJobCount, i18n.language);
 
   const openError = (title: string, description: string) => setErrorDialog({ open: true, title, description });
 
