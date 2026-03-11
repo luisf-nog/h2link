@@ -131,7 +131,11 @@ serve(async (req) => {
           status: 409,
         });
       }
-      throw insertError;
+      console.error("[submit-application] Insert error:", insertError.message, insertError.code);
+      return new Response(JSON.stringify({ error: insertError.message || "Failed to submit application" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
     }
 
     // Insert work experiences
