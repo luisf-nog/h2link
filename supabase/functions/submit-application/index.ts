@@ -131,7 +131,11 @@ serve(async (req) => {
           status: 409,
         });
       }
-      throw insertError;
+      console.error("[submit-application] Insert error:", insertError.message, insertError.code);
+      return new Response(JSON.stringify({ error: insertError.message || "Failed to submit application" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
     }
 
     // Insert work experiences
@@ -157,7 +161,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? error.message : JSON.stringify(error);
     console.error("[submit-application] Error:", msg);
     return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
