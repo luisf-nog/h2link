@@ -120,6 +120,10 @@ export default function CreateJob() {
     req_experience: false,
     req_drivers_license: false,
     consular_only: false,
+
+    // H-2 specific preferences
+    returning_worker: "not_required",
+    previous_h2_visa: "not_required",
   });
 
   const scrollToSection = (id: string) => {
