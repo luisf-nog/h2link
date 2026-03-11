@@ -132,6 +132,7 @@ export default function ApplyJob() {
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
             is_in_us,
+            h2_visa_expiry: form.h2_visa_expiry || null,
             experiences: experiences.filter((e) => e.company_name.trim()),
             honeypot: form.company_website,
           }),
