@@ -104,7 +104,7 @@ export default function SharedJobView() {
           .select("id, title, description, location, city, state, visa_type, hourly_wage, start_date, end_date, created_at, num_positions, primary_duties, min_experience_months, employer_legal_name, is_active")
           .eq("id", jobId)
           .eq("is_active", true)
-          .single();
+          .maybeSingle();
 
         if (sj && !sjErr) {
           const location = sj.location || "";
