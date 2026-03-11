@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2 } from "lucide-react";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { Separator } from "@/components/ui/separator";
 
@@ -50,13 +50,11 @@ export default function ApplyJob() {
     full_name: "",
     email: "",
     phone: "",
-    work_authorization_status: "outside_us",
-    is_us_worker: false,
+    candidate_status: "outside_us" as string,
     months_experience: 0,
     english_level: "none",
     drivers_license_type: "none",
     h2b_visa_count: 0,
-    citizenship_status: "other",
     company_website: "",
   });
 
@@ -100,6 +98,18 @@ export default function ApplyJob() {
     setError("");
 
     try {
+      // Derive legacy fields from consolidated candidate_status
+      const status = form.candidate_status;
+      const is_in_us = status !== "outside_us";
+      const is_us_worker = status === "in_us_authorized" || status === "us_citizen";
+      const work_authorization_status = status === "us_citizen" ? "us_authorized"
+        : status === "in_us_authorized" ? "us_authorized"
+        : status === "in_us_h2" ? "requires_sponsorship"
+        : "outside_us";
+      const citizenship_status = status === "us_citizen" ? "us_citizen"
+        : status === "in_us_h2" ? "h2_visa"
+        : "other";
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-application`,
         {
@@ -110,17 +120,17 @@ export default function ApplyJob() {
             full_name: form.full_name.trim(),
             email: form.email.trim().toLowerCase(),
             phone: form.phone.trim() || null,
-            work_authorization_status: form.work_authorization_status,
-            is_us_worker: form.is_us_worker,
+            work_authorization_status,
+            is_us_worker,
             months_experience: form.months_experience,
             english_level: form.english_level,
             drivers_license_type: form.drivers_license_type,
             h2b_visa_count: form.h2b_visa_count,
-            citizenship_status: form.citizenship_status,
+            citizenship_status,
             has_english: form.english_level !== "none",
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
-            is_in_us: form.work_authorization_status === "us_authorized",
+            is_in_us,
             experiences: experiences.filter((e) => e.company_name.trim()),
             honeypot: form.company_website,
           }),
@@ -247,41 +257,14 @@ export default function ApplyJob() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label>{t("apply.work_auth_status")} *</Label>
-                  <Select value={form.work_authorization_status} onValueChange={(v) => setForm((p) => ({ ...p, work_authorization_status: v }))}>
+                  <Label>{t("apply.candidate_status_label")} *</Label>
+                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="us_authorized">{t("apply.work_auth_us")}</SelectItem>
-                      <SelectItem value="requires_sponsorship">{t("apply.work_auth_sponsorship")}</SelectItem>
-                      <SelectItem value="outside_us">{t("apply.work_auth_outside")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground flex items-start gap-1">
-                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-                    {t("apply.work_auth_warning")}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("apply.is_us_worker")} *</Label>
-                  <Select value={form.is_us_worker ? "yes" : "no"} onValueChange={(v) => setForm((p) => ({ ...p, is_us_worker: v === "yes" }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">{t("common.yes")}</SelectItem>
-                      <SelectItem value="no">{t("common.no")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("apply.citizenship_status")} *</Label>
-                  <Select value={form.citizenship_status} onValueChange={(v) => setForm((p) => ({ ...p, citizenship_status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="us_citizen">{t("apply.citizen_us")}</SelectItem>
-                      <SelectItem value="permanent_resident">{t("apply.citizen_permanent")}</SelectItem>
-                      <SelectItem value="h2_visa">{t("apply.citizen_h2")}</SelectItem>
-                      <SelectItem value="other">{t("apply.citizen_other")}</SelectItem>
+                      <SelectItem value="outside_us">{t("apply.candidate_outside")}</SelectItem>
+                      <SelectItem value="in_us_h2">{t("apply.candidate_in_us_h2")}</SelectItem>
+                      <SelectItem value="in_us_authorized">{t("apply.candidate_in_us_authorized")}</SelectItem>
+                      <SelectItem value="us_citizen">{t("apply.candidate_us_citizen")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
