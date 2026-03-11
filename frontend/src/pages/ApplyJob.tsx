@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2, X } from "lucide-react";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { Separator } from "@/components/ui/separator";
 
@@ -51,6 +51,7 @@ export default function ApplyJob() {
     email: "",
     phone: "",
     candidate_status: "outside_us" as string,
+    h2_visa_expiry: "",
     months_experience: 0,
     english_level: "none",
     drivers_license_type: "none",
@@ -131,6 +132,7 @@ export default function ApplyJob() {
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
             is_in_us,
+            h2_visa_expiry: form.h2_visa_expiry || null,
             experiences: experiences.filter((e) => e.company_name.trim()),
             honeypot: form.company_website,
           }),
@@ -191,12 +193,23 @@ export default function ApplyJob() {
   return (
     <div className="min-h-screen bg-background flex items-start justify-center py-8 px-4">
       <div className="w-full max-w-lg space-y-4">
-        {/* Job info */}
+        {/* Job info + exit */}
         <Card>
           <CardContent className="p-5 space-y-2">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-bold">{job.title}</h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-bold">{job.title}</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => window.location.href = "/jobs"}
+              >
+                <X className="h-4 w-4 mr-1" />
+                {t("apply.exit_form")}
+              </Button>
             </div>
             {job.location && (
               <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -258,7 +271,7 @@ export default function ApplyJob() {
 
                 <div className="space-y-2">
                   <Label>{t("apply.candidate_status_label")} *</Label>
-                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v }))}>
+                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v, h2_visa_expiry: v === "in_us_h2" ? p.h2_visa_expiry : "" }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="outside_us">{t("apply.candidate_outside")}</SelectItem>
@@ -268,6 +281,17 @@ export default function ApplyJob() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {form.candidate_status === "in_us_h2" && (
+                  <div className="space-y-2">
+                    <Label>{t("apply.h2_visa_expiry")}</Label>
+                    <Input
+                      type="date"
+                      value={form.h2_visa_expiry}
+                      onChange={(e) => setForm((p) => ({ ...p, h2_visa_expiry: e.target.value }))}
+                    />
+                  </div>
+                )}
 
                 <Button type="button" className="w-full" disabled={!isStep1Valid} onClick={() => setStep(2)}>
                   {t("apply.continue")}
