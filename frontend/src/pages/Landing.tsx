@@ -40,6 +40,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useActiveJobCount, formatJobCount } from "@/hooks/useActiveJobCount";
 
 type Role = "worker" | "employer" | null;
 
@@ -62,6 +63,8 @@ export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [hovered, setHovered] = useState<Role>(null);
   const [visible, setVisible] = useState(false);
+  const liveJobCount = useActiveJobCount();
+  const jobCountLabel = formatJobCount(liveJobCount, i18n.language);
 
   useEffect(() => {
     setVisible(true);
@@ -450,7 +453,7 @@ export default function Landing() {
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
                   {[
-                    t("landing.role_worker_tag1"),
+                    `${jobCountLabel} DOL ${i18n.language === "en" ? "jobs" : i18n.language === "pt" ? "vagas" : "empleos"}`,
                     t("landing.role_worker_tag2"),
                     t("landing.role_worker_tag3"),
                     t("landing.role_worker_tag4"),
@@ -779,7 +782,7 @@ export default function Landing() {
                     >
                       {[
                         {
-                          value: t("landing.stats_jobs_value"),
+                          value: jobCountLabel,
                           label: t("landing.stats_jobs_label"),
                           sub: t("landing.stats_jobs_sub"),
                         },

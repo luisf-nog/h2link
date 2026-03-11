@@ -29,6 +29,7 @@ import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import { getBaseUrl } from "@/config/app.config";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveJobCount, formatJobCount } from "@/hooks/useActiveJobCount";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,6 +113,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const liveJobCount = useActiveJobCount();
+  const jobCountLabel = formatJobCount(liveJobCount, i18n.language);
 
   const openError = (title: string, description: string) => setErrorDialog({ open: true, title, description });
 
@@ -660,7 +663,7 @@ export default function Auth() {
                 <Briefcase className="text-[#D4500A]" size={24} />
               </div>
               <div>
-                <h4 className="text-white text-lg font-semibold">10,000+ Active Jobs</h4>
+                <h4 className="text-white text-lg font-semibold">{jobCountLabel} Active Jobs</h4>
                 <p className="text-slate-400 text-sm mt-1">Updated daily from the DOL database.</p>
               </div>
             </div>
@@ -730,7 +733,7 @@ export default function Auth() {
         <div className="grid grid-cols-2 gap-10 pt-10 border-t border-white/10">
           <div>
             <div className="text-5xl font-bold text-white tracking-tight">
-              10k<span className="text-[#D4500A]">+</span>
+              {liveJobCount !== null ? new Intl.NumberFormat(i18n.language === "en" ? "en-US" : "pt-BR").format(Math.floor(liveJobCount / 1000)) + "k" : "10k"}<span className="text-[#D4500A]">+</span>
             </div>
             <div className="text-sm text-slate-400 mt-3 font-semibold uppercase tracking-wider">Active Jobs</div>
           </div>
