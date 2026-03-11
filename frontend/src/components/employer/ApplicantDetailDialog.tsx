@@ -3,6 +3,7 @@ import type { Application } from "@/pages/employer/JobApplicants";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { getCountry } from "@/lib/countries";
 import { Separator } from "@/components/ui/separator";
 
 interface Experience {
