@@ -108,7 +108,8 @@ export default function ApplyJob() {
         : status === "in_us_h2" ? "requires_sponsorship"
         : "outside_us";
       const citizenship_status = status === "us_citizen" ? "us_citizen"
-        : status === "in_us_h2" ? "h2_visa"
+        : status === "in_us_authorized" ? "permanent_resident"
+        : status === "in_us_h2" ? "h2_applicant"
         : "other";
 
       const res = await fetch(
