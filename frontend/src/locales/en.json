@@ -428,7 +428,7 @@
       "gmail_warning": "Note: to see this option, you must have 2-Step Verification (2FA) enabled.",
       "gmail_steps": "Open your Google Account (myaccount.google.com) and go to Security.\nMake sure 2-Step Verification is ON (turn it on if needed).\nUse the search bar and type: App passwords.\nOpen App passwords (Google may ask for your password again).\nIn Select app, choose Other (Custom name).\nType: H2 Linker.\nClick Generate and copy the 16-character password.",
       "gmail_tip": "Tip: you can paste it without spaces.",
-      "outlook_title": "Outlook / Hotmail (Microsoft)",
+      "faq_title": "FAQ",
       "outlook_steps": "Open your Microsoft account (account.microsoft.com) and go to Security.\nOpen Advanced security options.\nEnable 2-step verification (2FA) if it’s off.\nFind App passwords.\nClick Create a new app password.\nCopy the generated password and paste it into the app.",
       "faq_title": "FAQ",
       "faq_q_safe": "Is this safe?",
