@@ -136,7 +136,11 @@ export default function ApplyJob() {
       );
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t("apply.errors.generic"));
+        if (res.status === 409) {
+          setError("You have already applied to this job with this email address. Each candidate can only apply once per position.");
+        } else {
+          setError(data.error || t("apply.errors.generic"));
+        }
       } else {
         setSuccess(true);
       }
