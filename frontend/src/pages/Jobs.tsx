@@ -543,7 +543,14 @@ export default function Jobs() {
               >
                 <CardContent className="p-4 space-y-3">
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-slate-900 leading-tight flex-1">{j.job_title}</h3>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-900 leading-tight truncate">{j.job_title}</h3>
+                      {j.dol_pdf_available && (
+                        <Badge variant="outline" className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border-emerald-300 px-1.5 py-0 shrink-0">
+                          ✓ DOL
+                        </Badge>
+                      )}
+                    </div>
                     <span className="font-bold text-green-700 shrink-0">{renderPrice(j)}/h</span>
                   </div>
                   <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm text-slate-600">
