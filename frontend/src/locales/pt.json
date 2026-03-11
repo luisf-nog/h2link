@@ -210,11 +210,6 @@
       "gmail_step2": "Acesse Senhas de App e crie uma com o nome \"H2 Linker\"",
       "gmail_step3": "Copie a senha de 16 caracteres generada",
       "gmail_link": "Abrir Senhas de App do Google →",
-      "outlook_guide_title": "Como criar no Outlook",
-      "outlook_step1": "Ative a verificação em duas etapas na sua conta Microsoft",
-      "outlook_step2": "Acesse Opções de segurança avançadas",
-      "outlook_step3": "Crie uma nova senha de aplicativo e copie",
-      "outlook_link": "Abrir Segurança da Microsoft →",
       "password_hint": "Cole aqui a senha de 16 caracteres (pode colar sem espaços)",
       "continue": "Salvar & Continuar"
     },
