@@ -662,7 +662,7 @@ export default function CreateJob() {
                           onCheckedChange={(v) => setForm((p) => ({ ...p, req_experience: v }))}
                         />
                         <Label htmlFor="req_experience" className="text-sm text-muted-foreground cursor-pointer">
-                          Requisito eliminatório (exclui candidatos sem experiência)
+                          {t("employer.create_job.eliminatory_experience")}
                         </Label>
                       </div>
                     </div>
