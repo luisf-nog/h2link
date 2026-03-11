@@ -210,11 +210,6 @@
       "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2 Linker\"",
       "gmail_step3": "Copia la contraseña de 16 caracteres generada",
       "gmail_link": "Abrir Contraseñas de App de Google →",
-      "outlook_guide_title": "Cómo crear en Outlook",
-      "outlook_step1": "Activa la verificación en dos pasos en tu cuenta Microsoft",
-      "outlook_step2": "Ve a Opciones de seguridad avanzadas",
-      "outlook_step3": "Crea una nueva contraseña de aplicación y cópiala",
-      "outlook_link": "Abrir Seguridad de Microsoft →",
       "password_hint": "Pega aquí la contraseña de 16 caracteres (puedes pegarla sin espacios)",
       "continue": "Guardar & Continuar"
     },
