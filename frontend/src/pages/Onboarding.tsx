@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type Provider = "gmail" | "outlook";
+type Provider = "gmail";
 type RiskProfile = "conservative" | "standard" | "aggressive";
 
 export default function Onboarding() {
@@ -62,7 +62,7 @@ export default function Onboarding() {
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
-  const isOutlook = email.toLowerCase().endsWith("@outlook.com") || email.toLowerCase().endsWith("@hotmail.com");
+  
 
   useEffect(() => {
     if (!user?.id) return;
@@ -316,17 +316,6 @@ export default function Onboarding() {
                 </CardContent>
               </Card>
 
-              {isOutlook && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertTitle className="text-blue-800 font-bold">
-                    {t("onboarding.smtp.outlook_guide_title")}
-                  </AlertTitle>
-                  <AlertDescription className="text-blue-700 text-xs">
-                    {t("onboarding.smtp.outlook_step1")} • {t("onboarding.smtp.outlook_step2")}
-                  </AlertDescription>
-                </Alert>
-              )}
 
               <Card className="border-none shadow-2xl">
                 <CardHeader>
@@ -339,21 +328,9 @@ export default function Onboarding() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{t("smtp.fields.provider")}</Label>
-                      <Select
-                        value={provider}
-                        onValueChange={(v) => {
-                          setProvider(v as Provider);
-                          setPassword("");
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="gmail">{t("smtp.gmail_recommended")}</SelectItem>
-                          <SelectItem value="outlook">Outlook</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center h-10 px-3 rounded-md border bg-muted text-sm text-muted-foreground">
+                        Gmail
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>{t("smtp.fields.email")}</Label>

@@ -18,7 +18,7 @@ function getPlanHardCap(planTier: PlanTier): number {
   return 5;
 }
 
-type EmailProvider = "gmail" | "outlook";
+type EmailProvider = "gmail";
 
 function escapeHtml(input: string): string {
   return String(input)
@@ -115,12 +115,6 @@ const SMTP_CONFIGS: Record<EmailProvider, SmtpConfig> = {
     port: 465,
     useTls: true,
     useStartTls: false,
-  },
-  outlook: {
-    host: "smtp.office365.com",
-    port: 587,
-    useTls: false,
-    useStartTls: true,
   },
 };
 
@@ -476,7 +470,7 @@ function classifySmtpError(rawMessage: string): { category: string; userMessage:
   if (m.includes("connection refused") || m.includes("conexão recusada") || m.includes("econnrefused")) {
     return {
       category: "connection_refused",
-      userMessage: "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail/Outlook) está correto nas configurações.",
+      userMessage: "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail) está correto nas configurações.",
       rawError: rawMessage,
     };
   }
@@ -671,7 +665,7 @@ const handler = async (req: Request): Promise<Response> => {
       smtpPassword = secret.password;
     }
 
-    const normalizedProvider: EmailProvider = provider === "outlook" ? "outlook" : "gmail";
+    const normalizedProvider: EmailProvider = "gmail";
     const smtpConfig = SMTP_CONFIGS[normalizedProvider];
 
     let htmlBody = textToHtmlEmailBody(body.body);

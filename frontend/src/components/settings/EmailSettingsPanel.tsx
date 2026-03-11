@@ -13,7 +13,7 @@ import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding
 import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { Badge } from "@/components/ui/badge";
 
-type Provider = "gmail" | "outlook";
+type Provider = "gmail";
 
 export function EmailSettingsPanel() {
   const { user, profile, refreshProfile } = useAuth();
@@ -251,21 +251,9 @@ export function EmailSettingsPanel() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("smtp.fields.provider")}</Label>
-              <Select
-                value={provider}
-                onValueChange={(v) => {
-                  setProvider(v as Provider);
-                  setPassword("");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gmail">{t("smtp.gmail_recommended")}</SelectItem>
-                  <SelectItem value="outlook">Outlook</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center h-10 px-3 rounded-md border bg-muted text-sm text-muted-foreground">
+                Gmail
+              </div>
             </div>
             <div className="space-y-2">
               <Label>{t("smtp.fields.email")}</Label>

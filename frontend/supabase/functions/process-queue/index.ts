@@ -25,7 +25,7 @@ function getSendingMethod(planTier: PlanTier): SendingMethod {
   return planTier === "black" ? "dynamic" : "static";
 }
 
-type EmailProvider = "gmail" | "outlook";
+type EmailProvider = "gmail";
 
 interface QueueRow {
   id: string;
@@ -216,7 +216,6 @@ interface SmtpConfig {
 
 const SMTP_CONFIGS: Record<EmailProvider, SmtpConfig> = {
   gmail: { host: "smtp.gmail.com", port: 465, useTls: true, useStartTls: false },
-  outlook: { host: "smtp.office365.com", port: 587, useTls: false, useStartTls: true },
 };
 
 const encoder = new TextEncoder();
@@ -960,7 +959,7 @@ async function processOneUser(params: {
   if (secretErr) throw secretErr;
   const s = secret as SmtpSecretRow;
 
-  const provider: EmailProvider = c.provider === "outlook" ? "outlook" : "gmail";
+  const provider: EmailProvider = "gmail";
   const smtpEmail = c.email;
   const smtpPassword = s.password;
   const smtpConfig = SMTP_CONFIGS[provider];
