@@ -92,7 +92,7 @@ export default function SharedJobView() {
       }
       try {
         // Try public_jobs first
-        const { data, error } = await supabase.from("public_jobs").select("*").eq("id", jobId).single();
+        const { data, error } = await supabase.from("public_jobs").select("*").eq("id", jobId).maybeSingle();
         if (data && !error) {
           setJob(data as unknown as Job);
           return;
