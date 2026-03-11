@@ -688,7 +688,7 @@ export default function CreateJob() {
                           onCheckedChange={(v) => setForm((p) => ({ ...p, req_english: v }))}
                         />
                         <Label htmlFor="req_english" className="text-sm text-muted-foreground cursor-pointer">
-                          Requisito eliminatório (exclui candidatos sem inglês)
+                          {t("employer.create_job.eliminatory_english")}
                         </Label>
                       </div>
                     </div>
