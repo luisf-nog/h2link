@@ -428,8 +428,6 @@
       "gmail_warning": "Atención: para que aparezca esta opción, debes tener activada la verificación en dos pasos (2FA).",
       "gmail_steps": "Abre tu cuenta de Google (myaccount.google.com) y ve a Seguridad.\nVerifica que la verificación en dos pasos esté ACTIVADA (actívala si es necesario).\nUsa la búsqueda y escribe: Contraseñas de aplicaciones.\nAbre Contraseñas de aplicaciones (Google puede pedir tu contraseña nuevamente).\nEn Seleccionar app, elige Otra (Nombre personalizado).\nEscribe: H2 Linker.\nHaz clic en Generar y copia la contraseña de 16 caracteres.",
       "gmail_tip": "Consejo: puedes pegarla sin espacios.",
-      "outlook_title": "Outlook / Hotmail (Microsoft)",
-      "outlook_steps": "Acesse sua conta Microsoft (account.microsoft.com) e vá em Segurança.\nAbra Opções de segurança avançadas.\nAtive a Verificación em duas etapas (2FA), se estiver desligada.\nProcure por Senhas de aplicativos.\nClique em Criar uma nova senha de aplicativo.\nCopie a senha gerada e cole no sistema.",
       "faq_title": "Preguntas frecuentes",
       "faq_q_safe": "¿Esto es seguro?",
       "faq_a_safe": "Sí. Esta contraseña solo sirve para enviar emails. Si quieres revocar el acceso, elimina la contraseña de app sin cambiar tu contraseña principal.",
