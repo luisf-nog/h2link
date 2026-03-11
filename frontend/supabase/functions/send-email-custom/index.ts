@@ -18,7 +18,7 @@ function getPlanHardCap(planTier: PlanTier): number {
   return 5;
 }
 
-type EmailProvider = "gmail" | "outlook";
+type EmailProvider = "gmail";
 
 function escapeHtml(input: string): string {
   return String(input)
