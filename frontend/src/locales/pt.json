@@ -1653,7 +1653,7 @@
     "req2_title": "Conta Gmail",
     "req2_desc": "Os emails saem da SUA caixa de saída. Você mantém controle total sobre o que é enviado.",
     "req3_title": "\"Senha de App\" do seu email",
-    "req3_desc": "Uma senha especial (não a sua senha normal) gerada pelo Google ou Microsoft para autorizar envios via SMTP. Tutorial incluso.",
+    "req3_desc": "Uma senha especial (não a sua senha normal) gerada pelo Google para autorizar envios via SMTP. Tutorial incluso.",
     "req4_title": "Alguns minutos para revisar",
     "req4_desc": "Você escolhe as vagas, monta a fila e define quando enviar. Nada acontece sem seu comando.",
     "faq_tag": "FAQ",
