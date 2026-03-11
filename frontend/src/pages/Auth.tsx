@@ -29,6 +29,7 @@ import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { isSupportedLanguage, type SupportedLanguage } from "@/i18n";
 import { getBaseUrl } from "@/config/app.config";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveJobCount, formatJobCount } from "@/hooks/useActiveJobCount";
 import {
   AlertDialog,
   AlertDialogAction,
