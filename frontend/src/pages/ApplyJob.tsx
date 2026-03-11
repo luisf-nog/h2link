@@ -262,27 +262,54 @@ export default function ApplyJob() {
 
                 <Separator />
 
-                <div className="space-y-2">
-                  <Label>{t("apply.candidate_status_label")} *</Label>
-                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v, h2_visa_expiry: v === "in_us_h2" ? p.h2_visa_expiry : "" }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="outside_us">{t("apply.candidate_outside")}</SelectItem>
-                      <SelectItem value="in_us_h2">{t("apply.candidate_in_us_h2")}</SelectItem>
-                      <SelectItem value="in_us_authorized">{t("apply.candidate_in_us_authorized")}</SelectItem>
-                      <SelectItem value="us_citizen">{t("apply.candidate_us_citizen")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">
+                    Are you legally authorized to work in the United States? *
+                  </Label>
+
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, is_us_authorized: "yes", non_us_location: "" }))}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                        form.is_us_authorized === "yes"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-foreground">Yes</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        I am a U.S. Citizen, Permanent Resident (Green Card), or legally authorized U.S. worker.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, is_us_authorized: "no", non_us_location: "outside_us" }))}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                        form.is_us_authorized === "no"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-foreground">No</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        I require visa sponsorship (e.g., H-2A / H-2B) to work in the U.S.
+                      </p>
+                    </button>
+                  </div>
                 </div>
 
-                {form.candidate_status === "in_us_h2" && (
+                {form.is_us_authorized === "no" && (
                   <div className="space-y-2">
-                    <Label>{t("apply.h2_visa_expiry")}</Label>
-                    <Input
-                      type="date"
-                      value={form.h2_visa_expiry}
-                      onChange={(e) => setForm((p) => ({ ...p, h2_visa_expiry: e.target.value }))}
-                    />
+                    <Label>Current Location / Status</Label>
+                    <Select value={form.non_us_location} onValueChange={(v) => setForm((p) => ({ ...p, non_us_location: v as "" | "outside_us" | "inside_us_other" }))}>
+                      <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="outside_us">Outside the U.S.</SelectItem>
+                        <SelectItem value="inside_us_other">Inside the U.S. (on a different visa / out of status)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
