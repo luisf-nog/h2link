@@ -52,6 +52,7 @@ export default function ApplyJob() {
     phone: "",
     is_us_authorized: "" as "" | "yes" | "no",
     non_us_location: "" as "" | "outside_us" | "inside_us_other",
+    country_code: "" as string,
     months_experience: 0,
     english_level: "none",
     drivers_license_type: "none",
