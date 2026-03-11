@@ -192,12 +192,23 @@ export default function ApplyJob() {
   return (
     <div className="min-h-screen bg-background flex items-start justify-center py-8 px-4">
       <div className="w-full max-w-lg space-y-4">
-        {/* Job info */}
+        {/* Job info + exit */}
         <Card>
           <CardContent className="p-5 space-y-2">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-bold">{job.title}</h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-bold">{job.title}</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => window.location.href = "/jobs"}
+              >
+                <X className="h-4 w-4 mr-1" />
+                {t("apply.exit_form")}
+              </Button>
             </div>
             {job.location && (
               <p className="text-sm text-muted-foreground flex items-center gap-1">
