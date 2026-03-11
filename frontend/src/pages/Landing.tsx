@@ -40,6 +40,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useActiveJobCount, formatJobCount } from "@/hooks/useActiveJobCount";
 
 type Role = "worker" | "employer" | null;
 
