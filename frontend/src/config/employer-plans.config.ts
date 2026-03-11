@@ -45,8 +45,8 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     price: {
       monthly: 49,
       annual: 470,
-      stripe_monthly: "price_1T6r3dKliiuLyRPmG9jZz17K",
-      stripe_annual: "price_1T6r3dKliiuLyRPmjWL9NsSu",
+      stripe_monthly: "price_1T6bxlKliiuLyRPmO9GFlS6r",
+      stripe_annual: "price_1T6bxsKliiuLyRPmgvfvRGIP",
     },
     features: [
       "1 active Featured job",
@@ -67,8 +67,8 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     price: {
       monthly: 99,
       annual: 950,
-      stripe_monthly: "price_1T6r4CKliiuLyRPmCsUC8SHa",
-      stripe_annual: "price_1T6r4CKliiuLyRPmR44u7HqC",
+      stripe_monthly: "price_1T6bxmKliiuLyRPmwJR0R7v3",
+      stripe_annual: "price_1T6bxtKliiuLyRPmS25a2n9i",
     },
     features: [
       "3 active Featured jobs",
@@ -91,8 +91,8 @@ export const EMPLOYER_PLANS: Record<EmployerTier, EmployerPlanConfig> = {
     price: {
       monthly: 149,
       annual: 1430,
-      stripe_monthly: "price_1T6r4sKliiuLyRPmIy0y7drp",
-      stripe_annual: "price_1T6r4sKliiuLyRPmSp5PmrAq",
+      stripe_monthly: "price_1T6bxnKliiuLyRPmqVuaZkco",
+      stripe_annual: "price_1T6bxuKliiuLyRPmsb45WH0y",
     },
     features: [
       "5 active Featured jobs",
