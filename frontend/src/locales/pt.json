@@ -1572,7 +1572,7 @@
     "step1_title": "Importe seu currículo",
     "step1_desc": "Upload em PDF ou Word. O sistema extrai seus dados e personaliza cada candidatura.",
     "step2_title": "Configure seu email SMTP",
-    "step2_desc": "Conecte Gmail ou Outlook com \"Senha de App\". Os emails saem da sua caixa, sem intermediários.",
+    "step2_desc": "Conecte seu Gmail com \"Senha de App\". Os emails saem da sua caixa, sem intermediários.",
     "step3_title": "Personalize templates",
     "step3_desc": "Use templates prontos ou crie os seus. Nossa IA gera textos únicos para cada vaga.",
     "step4_title": "Explore as vagas H-2A/H-2B",
