@@ -204,7 +204,7 @@
       "title": "Conecta Tu Email",
       "description": "Usaremos tu email para enviar solicitudes en tu nombre.",
       "why_app_password_title": "¿Por qué usar Contraseña de Aplicación?",
-      "why_app_password_desc": "Por seguridad, Google e Microsoft no permiten que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails e puedes revocarla cuando quieras.",
+      "why_app_password_desc": "Por seguridad, Google no permite que apps externas usen tu contraseña principal. Necesitas crear una \"Contraseña de App\" especial — solo funciona para enviar emails y puedes revocarla cuando quieras.",
       "gmail_guide_title": "Cómo crear en Gmail",
       "gmail_step1": "Activa la verificación en dos pasos (2FA) en tu cuenta Google",
       "gmail_step2": "Ve a Contraseñas de aplicaciones y crea una con el nombre \"H2 Linker\"",
