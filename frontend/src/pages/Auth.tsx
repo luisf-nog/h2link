@@ -733,7 +733,7 @@ export default function Auth() {
         <div className="grid grid-cols-2 gap-10 pt-10 border-t border-white/10">
           <div>
             <div className="text-5xl font-bold text-white tracking-tight">
-              10k<span className="text-[#D4500A]">+</span>
+              {liveJobCount !== null ? new Intl.NumberFormat(i18n.language === "en" ? "en-US" : "pt-BR").format(Math.floor(liveJobCount / 1000)) + "k" : "10k"}<span className="text-[#D4500A]">+</span>
             </div>
             <div className="text-sm text-slate-400 mt-3 font-semibold uppercase tracking-wider">Active Jobs</div>
           </div>
