@@ -323,8 +323,18 @@ export default function ApplyJob() {
                           <SelectTrigger>
                             <SelectValue placeholder="Select your country...">
                               {form.country_code && (() => {
-                                const c = COUNTRIES.find(c => c.code === form.country_code);
-                                return c ? `${c.flag} ${c.name}` : form.country_code;
+                                const c = COUNTRIES.find(cc => cc.code === form.country_code);
+                                if (!c) return form.country_code;
+                                return (
+                                  <span className="flex items-center gap-2">
+                                    {c.code !== "OTHER" ? (
+                                      <img src={`https://flagcdn.com/w40/${c.code.toLowerCase()}.png`} alt={c.name} className="w-5 h-auto rounded-sm" />
+                                    ) : (
+                                      <span>🌍</span>
+                                    )}
+                                    <span>{c.name}</span>
+                                  </span>
+                                );
                               })()}
                             </SelectValue>
                           </SelectTrigger>
