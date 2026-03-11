@@ -38,35 +38,31 @@ serve(async (req) => {
       throw new Error("Missing required fields: job_id, full_name, email");
     }
 
-    // Rate limit by IP
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const { data: blocked } = await supabase
-      .from("ip_blacklist")
-      .select("id")
-      .eq("ip", clientIp)
-      .gt("blocked_until", new Date().toISOString())
-      .limit(1);
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (blocked && blocked.length > 0) {
+    // Run IP check and job fetch in parallel
+    const [blacklistRes, jobRes] = await Promise.all([
+      supabase.from("ip_blacklist").select("id").eq("ip", clientIp).gt("blocked_until", new Date().toISOString()).limit(1),
+      supabase.from("sponsored_jobs").select("english_proficiency, prior_experience_required, drivers_license, is_active").eq("id", job_id).single(),
+    ]);
+
+    if (blacklistRes.data && blacklistRes.data.length > 0) {
       return new Response(JSON.stringify({ error: "Too many requests" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 429,
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Get job screening toggles
-    const { data: job, error: jobError } = await supabase
-      .from("sponsored_jobs")
-      .select("english_proficiency, prior_experience_required, drivers_license, is_active")
-      .eq("id", job_id)
-      .single();
-
-    if (jobError || !job) throw new Error("Job not found");
+    const job = jobRes.data;
+    if (jobRes.error || !job) throw new Error("Job not found");
     if (!job.is_active) throw new Error("Job is no longer active");
 
-    // Compute match score using the new function
+    // Compute match score
+    const reqEnglish = job.english_proficiency !== "none" && job.english_proficiency !== null;
+    const reqExperience = job.prior_experience_required ?? false;
+    const reqLicense = job.drivers_license !== "not_required" && job.drivers_license !== null;
+
     const { data: matchResult } = await supabase.rpc("compute_match_score", {
       p_months_experience: months_experience ?? 0,
       p_english_level: english_level ?? "none",
@@ -74,28 +70,15 @@ serve(async (req) => {
       p_h2b_visa_count: h2b_visa_count ?? 0,
       p_work_authorization_status: work_authorization_status ?? "outside_us",
       p_is_us_worker: is_us_worker ?? false,
-      p_req_english: job.english_proficiency !== "none" && job.english_proficiency !== null,
-      p_req_experience: job.prior_experience_required ?? false,
-      p_req_drivers_license: job.drivers_license !== "not_required" && job.drivers_license !== null,
+      p_req_english: reqEnglish,
+      p_req_experience: reqExperience,
+      p_req_drivers_license: reqLicense,
       p_consular_only: false,
     });
 
     const matchScore = matchResult?.score ?? 0;
     const matchStatus = matchResult?.status ?? "yellow";
-
-    // Legacy score_color compat
-    const { data: legacyScore } = await supabase.rpc("compute_application_score", {
-      p_has_english: has_english ?? false,
-      p_has_experience: has_experience ?? false,
-      p_has_license: has_license ?? false,
-      p_is_in_us: is_in_us ?? false,
-      p_req_english: job.english_proficiency !== "none" && job.english_proficiency !== null,
-      p_req_experience: job.prior_experience_required ?? false,
-      p_req_drivers_license: job.drivers_license !== "not_required" && job.drivers_license !== null,
-      p_consular_only: false,
-    });
-
-    const score_color = legacyScore || "yellow";
+    const score_color = matchStatus;
 
     // Insert application
     const { data: insertedApp, error: insertError } = await supabase

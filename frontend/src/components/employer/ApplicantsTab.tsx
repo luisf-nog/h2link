@@ -61,13 +61,12 @@ function avatarColor(name: string) {
   return colors[h];
 }
 
-// Simplified work auth - focus on what matters to employers
-function getWorkAuthBadge(status: string, isInUs: boolean, isUsWorker: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
-  if (status === "outside_us") {
-    return { label: "Outside US", icon: "globe" };
+// Work auth badge - uses is_us_worker boolean for accuracy
+function getWorkAuthBadge(_status: string, _isInUs: boolean, isUsWorker: boolean): { label: string; icon: "check" | "globe" | "alert" } | null {
+  if (isUsWorker) {
+    return { label: "US Worker", icon: "check" };
   }
-  // us_authorized, inside_us, requires_sponsorship — all are US-based workers
-  return { label: "US Worker", icon: "check" };
+  return { label: "Outside US", icon: "globe" };
 }
 
 // Match score color - simple 3-tier system (90+, 70-89, <70)
