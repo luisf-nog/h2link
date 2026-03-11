@@ -99,18 +99,11 @@ export default function ApplyJob() {
     setError("");
 
     try {
-      // Derive legacy fields from consolidated candidate_status
-      const status = form.candidate_status;
-      const is_in_us = status !== "outside_us";
-      const is_us_worker = status === "in_us_authorized" || status === "us_citizen";
-      const work_authorization_status = status === "us_citizen" ? "us_authorized"
-        : status === "in_us_authorized" ? "us_authorized"
-        : status === "in_us_h2" ? "requires_sponsorship"
-        : "outside_us";
-      const citizenship_status = status === "us_citizen" ? "us_citizen"
-        : status === "in_us_authorized" ? "permanent_resident"
-        : status === "in_us_h2" ? "h2_applicant"
-        : "other";
+      // Derive fields from the master question
+      const isUsWorker = form.is_us_authorized === "yes";
+      const is_in_us = isUsWorker || form.non_us_location === "inside_us_other";
+      const work_authorization_status = isUsWorker ? "us_authorized" : "outside_us";
+      const citizenship_status = isUsWorker ? "us_citizen" : "other";
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-application`,
@@ -123,7 +116,7 @@ export default function ApplyJob() {
             email: form.email.trim().toLowerCase(),
             phone: form.phone.trim() || null,
             work_authorization_status,
-            is_us_worker,
+            is_us_worker: isUsWorker,
             months_experience: form.months_experience,
             english_level: form.english_level,
             drivers_license_type: form.drivers_license_type,
@@ -133,7 +126,6 @@ export default function ApplyJob() {
             has_experience: form.months_experience > 0,
             has_license: form.drivers_license_type !== "none",
             is_in_us,
-            h2_visa_expiry: form.h2_visa_expiry || null,
             experiences: experiences.filter((e) => e.company_name.trim()),
             honeypot: form.company_website,
           }),
