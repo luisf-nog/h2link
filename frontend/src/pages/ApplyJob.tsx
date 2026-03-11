@@ -259,7 +259,7 @@ export default function ApplyJob() {
 
                 <div className="space-y-2">
                   <Label>{t("apply.candidate_status_label")} *</Label>
-                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v }))}>
+                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v, h2_visa_expiry: v === "in_us_h2" ? p.h2_visa_expiry : "" }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="outside_us">{t("apply.candidate_outside")}</SelectItem>
@@ -269,6 +269,17 @@ export default function ApplyJob() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {form.candidate_status === "in_us_h2" && (
+                  <div className="space-y-2">
+                    <Label>{t("apply.h2_visa_expiry")}</Label>
+                    <Input
+                      type="date"
+                      value={form.h2_visa_expiry}
+                      onChange={(e) => setForm((p) => ({ ...p, h2_visa_expiry: e.target.value }))}
+                    />
+                  </div>
+                )}
 
                 <Button type="button" className="w-full" disabled={!isStep1Valid} onClick={() => setStep(2)}>
                   {t("apply.continue")}
