@@ -477,6 +477,7 @@ export type Database = {
           application_match_score: number | null
           application_status: string
           citizenship_status: string
+          country_code: string | null
           created_at: string
           drivers_license_type: string
           email: string
@@ -503,6 +504,7 @@ export type Database = {
           application_match_score?: number | null
           application_status?: string
           citizenship_status?: string
+          country_code?: string | null
           created_at?: string
           drivers_license_type?: string
           email: string
@@ -529,6 +531,7 @@ export type Database = {
           application_match_score?: number | null
           application_status?: string
           citizenship_status?: string
+          country_code?: string | null
           created_at?: string
           drivers_license_type?: string
           email?: string
