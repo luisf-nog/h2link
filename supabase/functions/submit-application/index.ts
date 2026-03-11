@@ -23,7 +23,7 @@ serve(async (req) => {
       work_authorization_status, is_us_worker, months_experience,
       english_level, drivers_license_type, h2b_visa_count,
       has_english, has_experience, has_license, is_in_us,
-      citizenship_status, experiences, honeypot,
+      citizenship_status, experiences, honeypot, country_code,
     } = body;
 
     // Anti-spam: honeypot check
