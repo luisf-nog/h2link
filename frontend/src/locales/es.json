@@ -781,7 +781,7 @@
     },
     "connection_refused": {
       "title": "Conexión rechazada",
-      "description": "El servidor SMTP rechazó la conexión. Verifica si el proveedor (Gmail/Outlook) es correcto en la configuración."
+      "description": "El servidor SMTP rechazó la conexión. Verifica si el proveedor (Gmail) es correcto en la configuración."
     },
     "connection_closed": {
       "title": "Conexión cerrada",
