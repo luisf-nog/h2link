@@ -429,8 +429,6 @@
       "gmail_steps": "Acesse sua conta Google (myaccount.google.com) and go to Security.\nMake sure 2-Step Verification is ON (turn it on if needed).\nUse the search bar and type: App passwords.\nOpen App passwords (Google may ask for your password again).\nIn Select app, choose Other (Custom name).\nType: H2 Linker.\nClick Generate and copy the 16-character password.",
       "gmail_tip": "Dica: você pode colar a senha toda junta, sem espaços.",
       "faq_title": "Perguntas comuns",
-      "outlook_steps": "Open your Microsoft account (account.microsoft.com) and go to Security.\nOpen Advanced security options.\nEnable 2-step verification (2FA) if it’s off.\nFind App passwords.\nClick Create a new app password.\nCopy the generated password and paste it into the app.",
-      "faq_title": "Perguntas comuns",
       "faq_q_safe": "Isso é seguro?",
       "faq_a_safe": "Yes. This password is only for sending email. You can revoke access by deleting the app password without changing your main password.",
       "faq_q_where": "Onde eu colo essa senha?",
