@@ -16,7 +16,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail, Trash2, Share2, Copy, Check } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Plus, Users, Eye, MapPin, Calendar, TrendingUp, AlertCircle, Mail, Trash2, Share2, Copy, Check, FileSearch, Briefcase, DollarSign, Shield, Dumbbell, Car, Globe, UserCheck } from "lucide-react";
 import { getTierJobLimit } from "@/config/employer-plans.config";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -36,6 +43,42 @@ interface SponsoredJob {
   _new_app_count?: number;
 }
 
+interface JobDetails {
+  id: string;
+  title: string;
+  location: string | null;
+  city: string | null;
+  state: string | null;
+  visa_type: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  num_positions: number | null;
+  wage_rate: string | null;
+  hourly_wage: number | null;
+  benefits: string | null;
+  deductions: string | null;
+  description: string | null;
+  primary_duties: string | null;
+  additional_notes: string | null;
+  dol_case_number: string | null;
+  employer_legal_name: string | null;
+  english_proficiency: string | null;
+  min_experience_months: number | null;
+  drivers_license: string | null;
+  equipment_experience: string | null;
+  req_lift_lbs: number | null;
+  req_extreme_weather: boolean | null;
+  req_full_contract_availability: boolean | null;
+  req_travel_worksite: boolean | null;
+  req_background_check: boolean | null;
+  req_english: boolean;
+  req_experience: boolean;
+  req_drivers_license: boolean;
+  consular_only: boolean;
+  returning_worker: string;
+  previous_h2_visa: string;
+}
+
 export default function EmployerJobs() {
   const navigate = useNavigate();
   const { employerProfile } = useIsEmployer();
@@ -47,6 +90,8 @@ export default function EmployerJobs() {
   const [deleteTarget, setDeleteTarget] = useState<SponsoredJob | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [viewJob, setViewJob] = useState<JobDetails | null>(null);
+  const [loadingView, setLoadingView] = useState(false);
 
   const getApplyUrl = (jobId: string) => `https://h2linker.com/job/${jobId}`;
 
@@ -60,6 +105,18 @@ export default function EmployerJobs() {
     } catch {
       toast({ title: "Error", variant: "destructive" });
     }
+  };
+
+  const handleViewJob = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLoadingView(true);
+    const { data } = await supabase
+      .from("sponsored_jobs")
+      .select("id, title, location, city, state, visa_type, start_date, end_date, num_positions, wage_rate, hourly_wage, benefits, deductions, description, primary_duties, additional_notes, dol_case_number, employer_legal_name, english_proficiency, min_experience_months, drivers_license, equipment_experience, req_lift_lbs, req_extreme_weather, req_full_contract_availability, req_travel_worksite, req_background_check, req_english, req_experience, req_drivers_license, consular_only, returning_worker, previous_h2_visa")
+      .eq("id", jobId)
+      .single();
+    setLoadingView(false);
+    if (data) setViewJob(data as JobDetails);
   };
 
   const loadJobs = async () => {
@@ -165,8 +222,154 @@ export default function EmployerJobs() {
   const jobLimit = employerProfile ? getTierJobLimit(employerProfile.tier) : 0;
   const canCreate = activeCount < jobLimit && employerProfile?.status === "active";
 
+  const BoolBadge = ({ value, label }: { value: boolean | null; label: string }) => (
+    <div className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30">
+      <div className={`w-2 h-2 rounded-full shrink-0 ${value ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+      <span className="text-sm">{label}</span>
+    </div>
+  );
+
+  const PrefBadge = ({ value, label }: { value: string; label: string }) => {
+    const color = value === "required" ? "bg-red-100 text-red-700" : value === "preferred" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground";
+    const text = value === "required" ? "Required" : value === "preferred" ? "Preferred" : "Not required";
+    return (
+      <div className="flex items-center justify-between p-2 rounded-md border border-border">
+        <span className="text-sm">{label}</span>
+        <Badge variant="secondary" className={color}>{text}</Badge>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      {/* View Job Requirements Dialog */}
+      <Dialog open={!!viewJob} onOpenChange={(open) => !open && setViewJob(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <FileSearch className="w-5 h-5 text-primary" />
+              {viewJob?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {viewJob?.dol_case_number && `DOL Case: ${viewJob.dol_case_number} · `}
+              {viewJob?.location || `${viewJob?.city || ""}, ${viewJob?.state || ""}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewJob && (
+            <div className="space-y-6 py-2">
+              {/* Job Info */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Briefcase className="w-4 h-4" /> Job Information
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-muted-foreground">Visa Type:</span> <strong>{viewJob.visa_type || "N/A"}</strong></div>
+                  <div><span className="text-muted-foreground">Employer:</span> <strong>{viewJob.employer_legal_name || "N/A"}</strong></div>
+                  <div><span className="text-muted-foreground">Positions:</span> <strong>{viewJob.num_positions || "N/A"}</strong></div>
+                  <div><span className="text-muted-foreground">Period:</span> <strong>{viewJob.start_date || "?"} → {viewJob.end_date || "?"}</strong></div>
+                </div>
+              </div>
+
+              {/* Financials */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" /> Compensation
+                </h3>
+                <div className="text-sm space-y-2">
+                  <div><span className="text-muted-foreground">Wage:</span> <strong>{viewJob.wage_rate || (viewJob.hourly_wage ? `$${viewJob.hourly_wage}/hr` : "N/A")}</strong></div>
+                  {viewJob.benefits && <div><span className="text-muted-foreground">Benefits/Housing:</span> <p className="mt-1 text-sm bg-muted/50 p-2 rounded">{viewJob.benefits}</p></div>}
+                  {viewJob.deductions && <div><span className="text-muted-foreground">Deductions:</span> <p className="mt-1 text-sm bg-muted/50 p-2 rounded">{viewJob.deductions}</p></div>}
+                </div>
+              </div>
+
+              {/* Description & Duties */}
+              {(viewJob.primary_duties || viewJob.description || viewJob.additional_notes) && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Description & Duties</h3>
+                  {viewJob.primary_duties && <p className="text-sm bg-muted/50 p-3 rounded whitespace-pre-wrap">{viewJob.primary_duties}</p>}
+                  {viewJob.description && !viewJob.primary_duties && <p className="text-sm bg-muted/50 p-3 rounded whitespace-pre-wrap">{viewJob.description}</p>}
+                  {viewJob.additional_notes && (
+                    <div>
+                      <span className="text-xs text-muted-foreground font-medium">Special Requirements:</span>
+                      <p className="text-sm bg-muted/50 p-3 rounded mt-1 whitespace-pre-wrap">{viewJob.additional_notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Screening Requirements (affects match score) */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> Screening Requirements (Match Score)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between p-2 rounded-md border border-border">
+                    <span className="text-sm flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> English</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">{viewJob.english_proficiency || "none"}</Badge>
+                      {viewJob.req_english && <Badge variant="destructive" className="text-[10px]">Eliminatory</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md border border-border">
+                    <span className="text-sm flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> Experience</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">{viewJob.min_experience_months ? `${viewJob.min_experience_months}+ months` : "None"}</Badge>
+                      {viewJob.req_experience && <Badge variant="destructive" className="text-[10px]">Eliminatory</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md border border-border">
+                    <span className="text-sm flex items-center gap-1.5"><Car className="w-3.5 h-3.5" /> Driver's License</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">{viewJob.drivers_license || "not_required"}</Badge>
+                      {viewJob.req_drivers_license && <Badge variant="destructive" className="text-[10px]">Eliminatory</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md border border-border">
+                    <span className="text-sm flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5" /> Consular Only</span>
+                    <Badge variant={viewJob.consular_only ? "destructive" : "outline"} className="text-xs">
+                      {viewJob.consular_only ? "Yes (Eliminatory)" : "No"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* H-2 Preferences */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">H-2 Preferences</h3>
+                <div className="space-y-2">
+                  <PrefBadge value={viewJob.returning_worker} label="Returning Worker" />
+                  <PrefBadge value={viewJob.previous_h2_visa} label="Previous H-2 Visa" />
+                </div>
+              </div>
+
+              {/* Physical Requirements */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4" /> Physical & Other Requirements
+                </h3>
+                {viewJob.req_lift_lbs && (
+                  <div className="p-2 rounded-md border border-border bg-muted/30 text-sm">
+                    Lifting: <strong>{viewJob.req_lift_lbs} lbs</strong> (≈ {Math.round(viewJob.req_lift_lbs * 0.453592)} kg)
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <BoolBadge value={viewJob.req_extreme_weather} label="Outdoor / Extreme Weather" />
+                  <BoolBadge value={viewJob.req_full_contract_availability} label="Full Contract Availability" />
+                  <BoolBadge value={viewJob.req_travel_worksite} label="Travel to Worksite" />
+                  <BoolBadge value={viewJob.req_background_check} label="Background Check" />
+                </div>
+                {viewJob.equipment_experience && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Equipment:</span> {viewJob.equipment_experience}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
@@ -316,6 +519,16 @@ export default function EmployerJobs() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8"
+                        onClick={(e) => handleViewJob(job.id, e)}
+                        aria-label="View requirements"
+                      >
+                        <FileSearch className="h-4 w-4" />
+                      </Button>
+
                       <Button
                         variant="ghost"
                         size="icon"
