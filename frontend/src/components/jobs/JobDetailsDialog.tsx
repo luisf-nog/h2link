@@ -350,7 +350,7 @@ export function JobDetailsDialog({
                   </div>
                 </div>
 
-                {/* DOL Job Order PDF */}
+                {/* DOL Job Order — Prominent Card */}
                 {!isSponsored && job?.job_id?.startsWith("H-") && (
                   dolPdfLoading ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
@@ -358,14 +358,28 @@ export function JobDetailsDialog({
                       {t("jobs.details.checking_dol", { defaultValue: "Checking DOL records..." })}
                     </div>
                   ) : dolPdfAvailable ? (
-                    <Button
-                      variant="outline"
-                      className="w-full justify-center gap-2 text-sm font-bold border-blue-200 text-blue-700 hover:bg-blue-50"
-                      onClick={() => window.open(`https://seasonaljobs.dol.gov/api/job-order/${job.job_id}`, "_blank")}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                      Job Order (DOL)
-                    </Button>
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-xl p-4 shadow-sm">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="bg-emerald-600 p-2 rounded-lg text-white shrink-0">
+                          <CheckCircle2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-emerald-900 uppercase tracking-tight">
+                            {t("jobs.details.dol_verified_title", { defaultValue: "DOL Verified Job Order" })}
+                          </p>
+                          <p className="text-xs text-emerald-700 font-medium">
+                            {t("jobs.details.dol_verified_desc", { defaultValue: "Official record available on SeasonalJobs.dol.gov" })}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm"
+                        onClick={() => window.open(`https://seasonaljobs.dol.gov/api/job-order/${job.job_id}`, "_blank")}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        {t("jobs.details.view_dol_order", { defaultValue: "View Official Job Order (DOL)" })}
+                      </Button>
+                    </div>
                   ) : null
                 )}
 
