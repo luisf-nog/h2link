@@ -34,6 +34,7 @@ export interface Application {
   application_match_score: number | null;
   match_status: string | null;
   application_status: string;
+  country_code: string | null;
 }
 
 export interface AuditEntry {

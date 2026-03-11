@@ -103,6 +103,7 @@ serve(async (req) => {
         application_match_score: matchScore,
         match_status: matchStatus,
         application_status: "received",
+        country_code: country_code || null,
       })
       .select("id")
       .single();
