@@ -663,7 +663,7 @@ export default function Auth() {
                 <Briefcase className="text-[#D4500A]" size={24} />
               </div>
               <div>
-                <h4 className="text-white text-lg font-semibold">10,000+ Active Jobs</h4>
+                <h4 className="text-white text-lg font-semibold">{jobCountLabel} Active Jobs</h4>
                 <p className="text-slate-400 text-sm mt-1">Updated daily from the DOL database.</p>
               </div>
             </div>
