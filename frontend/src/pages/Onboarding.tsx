@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type Provider = "gmail" | "outlook";
+type Provider = "gmail";
 type RiskProfile = "conservative" | "standard" | "aggressive";
 
 export default function Onboarding() {
