@@ -50,13 +50,11 @@ export default function ApplyJob() {
     full_name: "",
     email: "",
     phone: "",
-    work_authorization_status: "outside_us",
-    is_us_worker: false,
+    candidate_status: "outside_us" as string,
     months_experience: 0,
     english_level: "none",
     drivers_license_type: "none",
     h2b_visa_count: 0,
-    citizenship_status: "other",
     company_website: "",
   });
 
