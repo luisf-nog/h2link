@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2, X } from "lucide-react";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { Separator } from "@/components/ui/separator";
+import { COUNTRIES } from "@/lib/countries";
 
 interface JobInfo {
   id: string;
