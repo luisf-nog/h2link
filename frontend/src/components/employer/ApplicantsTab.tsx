@@ -218,7 +218,15 @@ function CandidateRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-foreground truncate flex items-center gap-1.5">
-              {app.country_code && (() => { const c = getCountry(app.country_code); return c ? <span className="text-base" title={c.name}>{c.flag}</span> : null; })()}
+              {app.country_code && (() => {
+                const c = getCountry(app.country_code);
+                if (!c) return null;
+                return c.code !== "OTHER" ? (
+                  <img src={`https://flagcdn.com/w40/${c.code.toLowerCase()}.png`} alt={c.name} title={c.name} className="w-5 h-auto rounded-sm" />
+                ) : (
+                  <span className="text-base" title={c.name}>🌍</span>
+                );
+              })()}
               {app.full_name}
             </span>
             {app.application_match_score !== null && (
