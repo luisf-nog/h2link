@@ -210,11 +210,6 @@
       "gmail_step2": "Go to App Passwords and create one named \"H2 Linker\"",
       "gmail_step3": "Copy the 16-character password generated",
       "gmail_link": "Open Google App Passwords →",
-      "outlook_guide_title": "How to create on Outlook",
-      "outlook_step1": "Enable 2-Step Verification on your Microsoft account",
-      "outlook_step2": "Go to Advanced security options",
-      "outlook_step3": "Create a new app password and copy it",
-      "outlook_link": "Open Microsoft Security →",
       "password_hint": "Paste the 16-character password here (you can paste without spaces)",
       "continue": "Save & Continue"
     },
