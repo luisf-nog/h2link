@@ -2105,7 +2105,20 @@
       "limit_reached_desc": "Upgrade your plan to post more jobs.",
       "published": "Job Published!",
       "published_desc": "Your sponsored posting is now live.",
-      "error": "Error"
+      "error": "Error",
+      "eliminatory_experience": "Eliminatory (excludes candidates without experience)",
+      "eliminatory_english": "Eliminatory (excludes candidates without English)",
+      "eliminatory_license": "Eliminatory (excludes candidates without license)",
+      "h2_preferences_title": "H-2 Visa Preferences",
+      "consular_only_label": "Only candidates outside the U.S. (Consular Processing)",
+      "consular_only_desc": "Only candidates currently outside the U.S. will be considered. Workers already in the U.S. will be automatically excluded.",
+      "returning_worker_label": "Returning H-2 Worker",
+      "returning_worker_desc": "Preference for workers who have previously completed an H-2 contract with any employer.",
+      "previous_h2_label": "Previous H-2 Visa Experience",
+      "previous_h2_desc": "Preference for candidates who have previously held an H-2 visa (H-2A or H-2B).",
+      "pref_not_required": "Not Required",
+      "pref_preferred": "Preferred",
+      "pref_required": "Required"
     },
     "applicants": {
       "back_to_jobs": "Back to Jobs",
