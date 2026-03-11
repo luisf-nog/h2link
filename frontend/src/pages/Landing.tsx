@@ -63,6 +63,8 @@ export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [hovered, setHovered] = useState<Role>(null);
   const [visible, setVisible] = useState(false);
+  const liveJobCount = useActiveJobCount();
+  const jobCountLabel = formatJobCount(liveJobCount, i18n.language);
 
   useEffect(() => {
     setVisible(true);
