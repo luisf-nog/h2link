@@ -13,7 +13,7 @@ import { EmailWarmupOnboarding, type RiskProfile } from "./EmailWarmupOnboarding
 import { parseSmtpError } from "@/lib/smtpErrorParser";
 import { Badge } from "@/components/ui/badge";
 
-type Provider = "gmail" | "outlook";
+type Provider = "gmail";
 
 export function EmailSettingsPanel() {
   const { user, profile, refreshProfile } = useAuth();
