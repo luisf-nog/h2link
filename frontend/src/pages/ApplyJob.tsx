@@ -86,7 +86,7 @@ export default function ApplyJob() {
     setExperiences((p) => p.map((exp, idx) => (idx === i ? { ...exp, [field]: value } : exp)));
   };
 
-  const isStep1Valid = form.full_name.trim() && form.email.trim() && form.is_us_authorized !== "" && (form.is_us_authorized === "yes" || form.non_us_location !== "");
+  const isStep1Valid = form.full_name.trim() && form.email.trim() && form.is_us_authorized !== "" && (form.is_us_authorized === "yes" || (form.non_us_location !== "" && (form.non_us_location !== "outside_us" || form.country_code !== "")));
   const isStep2Valid = true;
   const isStep3Valid = experiences.every((e) => {
     const hasAnyField = e.company_name.trim() || e.job_title.trim();
