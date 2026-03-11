@@ -1127,6 +1127,7 @@ export type Database = {
           created_at: string
           crop_activities: string | null
           description: string | null
+          dol_pdf_available: boolean | null
           education_required: string | null
           email: string
           email_invalid_dns: boolean
@@ -1197,6 +1198,7 @@ export type Database = {
           created_at?: string
           crop_activities?: string | null
           description?: string | null
+          dol_pdf_available?: boolean | null
           education_required?: string | null
           email: string
           email_invalid_dns?: boolean
@@ -1267,6 +1269,7 @@ export type Database = {
           created_at?: string
           crop_activities?: string | null
           description?: string | null
+          dol_pdf_available?: boolean | null
           education_required?: string | null
           email?: string
           email_invalid_dns?: boolean
@@ -1629,6 +1632,7 @@ export type Database = {
           city: string | null
           click_count: number
           compliance_acknowledged: boolean | null
+          consular_only: boolean
           created_at: string
           daily_meal_cost: number | null
           deductions: string | null
@@ -1663,6 +1667,9 @@ export type Database = {
           prior_experience_required: boolean | null
           priority_level: string
           req_background_check: boolean | null
+          req_drivers_license: boolean
+          req_english: boolean
+          req_experience: boolean
           req_extreme_weather: boolean | null
           req_full_contract_availability: boolean | null
           req_lift_lbs: number | null
@@ -1688,6 +1695,7 @@ export type Database = {
           city?: string | null
           click_count?: number
           compliance_acknowledged?: boolean | null
+          consular_only?: boolean
           created_at?: string
           daily_meal_cost?: number | null
           deductions?: string | null
@@ -1722,6 +1730,9 @@ export type Database = {
           prior_experience_required?: boolean | null
           priority_level?: string
           req_background_check?: boolean | null
+          req_drivers_license?: boolean
+          req_english?: boolean
+          req_experience?: boolean
           req_extreme_weather?: boolean | null
           req_full_contract_availability?: boolean | null
           req_lift_lbs?: number | null
@@ -1747,6 +1758,7 @@ export type Database = {
           city?: string | null
           click_count?: number
           compliance_acknowledged?: boolean | null
+          consular_only?: boolean
           created_at?: string
           daily_meal_cost?: number | null
           deductions?: string | null
@@ -1781,6 +1793,9 @@ export type Database = {
           prior_experience_required?: boolean | null
           priority_level?: string
           req_background_check?: boolean | null
+          req_drivers_license?: boolean
+          req_english?: boolean
+          req_experience?: boolean
           req_extreme_weather?: boolean | null
           req_full_contract_availability?: boolean | null
           req_lift_lbs?: number | null
