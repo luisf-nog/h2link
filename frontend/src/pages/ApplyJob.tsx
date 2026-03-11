@@ -257,41 +257,14 @@ export default function ApplyJob() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label>{t("apply.work_auth_status")} *</Label>
-                  <Select value={form.work_authorization_status} onValueChange={(v) => setForm((p) => ({ ...p, work_authorization_status: v }))}>
+                  <Label>{t("apply.candidate_status_label")} *</Label>
+                  <Select value={form.candidate_status} onValueChange={(v) => setForm((p) => ({ ...p, candidate_status: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="us_authorized">{t("apply.work_auth_us")}</SelectItem>
-                      <SelectItem value="requires_sponsorship">{t("apply.work_auth_sponsorship")}</SelectItem>
-                      <SelectItem value="outside_us">{t("apply.work_auth_outside")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground flex items-start gap-1">
-                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-                    {t("apply.work_auth_warning")}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("apply.is_us_worker")} *</Label>
-                  <Select value={form.is_us_worker ? "yes" : "no"} onValueChange={(v) => setForm((p) => ({ ...p, is_us_worker: v === "yes" }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">{t("common.yes")}</SelectItem>
-                      <SelectItem value="no">{t("common.no")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{t("apply.citizenship_status")} *</Label>
-                  <Select value={form.citizenship_status} onValueChange={(v) => setForm((p) => ({ ...p, citizenship_status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="us_citizen">{t("apply.citizen_us")}</SelectItem>
-                      <SelectItem value="permanent_resident">{t("apply.citizen_permanent")}</SelectItem>
-                      <SelectItem value="h2_visa">{t("apply.citizen_h2")}</SelectItem>
-                      <SelectItem value="other">{t("apply.citizen_other")}</SelectItem>
+                      <SelectItem value="outside_us">{t("apply.candidate_outside")}</SelectItem>
+                      <SelectItem value="in_us_h2">{t("apply.candidate_in_us_h2")}</SelectItem>
+                      <SelectItem value="in_us_authorized">{t("apply.candidate_in_us_authorized")}</SelectItem>
+                      <SelectItem value="us_citizen">{t("apply.candidate_us_citizen")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
