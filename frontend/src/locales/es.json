@@ -1570,7 +1570,7 @@
     "step1_title": "Importa tu currículum",
     "step1_desc": "Sube en PDF o Word. El sistema extrae tus datos y personaliza cada solicitud.",
     "step2_title": "Configura tu email SMTP",
-    "step2_desc": "Conecta Gmail u Outlook con \"Contraseña de App\". Los emails salen de tu bandeja, sin intermediarios.",
+    "step2_desc": "Conecta Gmail con \"Contraseña de App\". Los emails salen de tu bandeja, sin intermediarios.",
     "step3_title": "Personaliza plantillas",
     "step3_desc": "Usa plantillas listas o crea las tuyas. Nuestra IA genera textos únicos para cada empleo.",
     "step4_title": "Explora empleos H-2A/H-2B",
