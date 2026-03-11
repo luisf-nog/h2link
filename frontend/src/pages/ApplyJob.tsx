@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Loader2, Briefcase, MapPin, Plus, Trash2 } from "lucide-react";
 import { PhoneE164Input } from "@/components/inputs/PhoneE164Input";
 import { Separator } from "@/components/ui/separator";
 
