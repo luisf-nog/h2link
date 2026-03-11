@@ -470,7 +470,7 @@ function classifySmtpError(rawMessage: string): { category: string; userMessage:
   if (m.includes("connection refused") || m.includes("conexão recusada") || m.includes("econnrefused")) {
     return {
       category: "connection_refused",
-      userMessage: "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail/Outlook) está correto nas configurações.",
+      userMessage: "O servidor SMTP recusou a conexão. Verifique se o provedor (Gmail) está correto nas configurações.",
       rawError: rawMessage,
     };
   }
