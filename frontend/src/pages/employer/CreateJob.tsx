@@ -713,7 +713,7 @@ export default function CreateJob() {
                           onCheckedChange={(v) => setForm((p) => ({ ...p, req_drivers_license: v }))}
                         />
                         <Label htmlFor="req_drivers_license" className="text-sm text-muted-foreground cursor-pointer">
-                          Requisito eliminatório (exclui candidatos sem CNH)
+                          {t("employer.create_job.eliminatory_license")}
                         </Label>
                       </div>
                     </div>
