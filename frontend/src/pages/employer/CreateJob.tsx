@@ -278,6 +278,10 @@ export default function CreateJob() {
       req_experience: form.req_experience,
       req_drivers_license: form.req_drivers_license,
       consular_only: form.consular_only,
+
+      // H-2 specific preferences
+      returning_worker: form.returning_worker,
+      previous_h2_visa: form.previous_h2_visa,
     });
 
     if (error) {
