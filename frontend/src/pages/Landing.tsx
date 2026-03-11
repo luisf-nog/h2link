@@ -782,7 +782,7 @@ export default function Landing() {
                     >
                       {[
                         {
-                          value: t("landing.stats_jobs_value"),
+                          value: jobCountLabel,
                           label: t("landing.stats_jobs_label"),
                           sub: t("landing.stats_jobs_sub"),
                         },
