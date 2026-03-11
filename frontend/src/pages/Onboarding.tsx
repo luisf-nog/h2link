@@ -316,17 +316,6 @@ export default function Onboarding() {
                 </CardContent>
               </Card>
 
-              {isOutlook && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertTitle className="text-blue-800 font-bold">
-                    {t("onboarding.smtp.outlook_guide_title")}
-                  </AlertTitle>
-                  <AlertDescription className="text-blue-700 text-xs">
-                    {t("onboarding.smtp.outlook_step1")} • {t("onboarding.smtp.outlook_step2")}
-                  </AlertDescription>
-                </Alert>
-              )}
 
               <Card className="border-none shadow-2xl">
                 <CardHeader>
