@@ -783,7 +783,7 @@
     },
     "connection_refused": {
       "title": "Connection refused",
-      "description": "The SMTP server refused the connection. Check if the provider (Gmail/Outlook) is correct in settings."
+      "description": "The SMTP server refused the connection. Check if the provider (Gmail) is correct in settings."
     },
     "connection_closed": {
       "title": "Connection closed",
