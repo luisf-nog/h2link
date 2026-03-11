@@ -1572,7 +1572,7 @@
     "step1_title": "Import your resume",
     "step1_desc": "Upload as PDF or Word. The system extracts your data and personalizes each application.",
     "step2_title": "Set up your SMTP email",
-    "step2_desc": "Connect Gmail or Outlook with an \"App Password\". Emails are sent from your inbox, no middlemen.",
+    "step2_desc": "Connect Gmail with an \"App Password\". Emails are sent from your inbox, no middlemen.",
     "step3_title": "Customize templates",
     "step3_desc": "Use ready-made templates or create your own. Our AI generates unique text for each job.",
     "step4_title": "Explore H-2A/H-2B jobs",
