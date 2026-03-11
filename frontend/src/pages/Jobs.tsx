@@ -625,14 +625,7 @@ export default function Jobs() {
                     className="cursor-pointer hover:bg-slate-50 transition-colors"
                   >
                     <TableCell className="font-semibold text-sm">
-                      <div className="flex items-center gap-2">
-                        {j.job_title}
-                        {j.dol_pdf_available && (
-                          <Badge variant="outline" className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border-emerald-300 px-1.5 py-0 shrink-0">
-                            ✓ DOL
-                          </Badge>
-                        )}
-                      </div>
+                      {j.job_title}
                     </TableCell>
                     <TableCell className="text-sm text-slate-600">{j.company}</TableCell>
                     <TableCell className="text-sm">
