@@ -959,7 +959,7 @@ async function processOneUser(params: {
   if (secretErr) throw secretErr;
   const s = secret as SmtpSecretRow;
 
-  const provider: EmailProvider = c.provider === "outlook" ? "outlook" : "gmail";
+  const provider: EmailProvider = "gmail";
   const smtpEmail = c.email;
   const smtpPassword = s.password;
   const smtpConfig = SMTP_CONFIGS[provider];

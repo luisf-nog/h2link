@@ -665,7 +665,7 @@ const handler = async (req: Request): Promise<Response> => {
       smtpPassword = secret.password;
     }
 
-    const normalizedProvider: EmailProvider = provider === "outlook" ? "outlook" : "gmail";
+    const normalizedProvider: EmailProvider = "gmail";
     const smtpConfig = SMTP_CONFIGS[normalizedProvider];
 
     let htmlBody = textToHtmlEmailBody(body.body);

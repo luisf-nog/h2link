@@ -58,19 +58,10 @@ serve(async (req) => {
       auth: { user: email, pass: password },
     };
 
-    if (provider === "gmail") {
-      smtpConfig.host = "smtp.gmail.com";
-      smtpConfig.port = 465;
-      smtpConfig.secure = true;
-    } else if (provider === "outlook") {
-      smtpConfig.host = "smtp-mail.outlook.com";
-      smtpConfig.port = 587;
-      smtpConfig.secure = false; // Outlook usa STARTTLS na porta 587
-    } else if (provider === "custom") {
-      smtpConfig.host = host;
-      smtpConfig.port = Number(port);
-      smtpConfig.secure = Number(port) === 465;
-    }
+    // Gmail only
+    smtpConfig.host = "smtp.gmail.com";
+    smtpConfig.port = 465;
+    smtpConfig.secure = true;
 
     // 2. TESTAR CONEXÃO (O "Pulo do Gato")
     const transporter = nodemailer.createTransport(smtpConfig);
