@@ -193,7 +193,7 @@
       "title": "¡Bienvenido a H2 Linker!",
       "description": "Let's set up your account to start sending job applications safely.",
       "step1_title": "Conecta tu email",
-      "step1_desc": "Configura SMTP con tu cuenta de Gmail u Outlook.",
+      "step1_desc": "Configura SMTP con tu cuenta de Gmail.",
       "step2_title": "Elige tu velocidad de envío",
       "step2_desc": "Configura el calentamiento de email para proteger tu reputación.",
       "step3_title": "Empieza a aplicar",
