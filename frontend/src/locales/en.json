@@ -204,7 +204,7 @@
       "title": "Connect Your Email",
       "description": "We'll use your email to send job applications on your behalf.",
       "why_app_password_title": "Why use an App Password?",
-      "why_app_password_desc": "For security, Google and Microsoft don't allow external apps to use your main password. You need to create a special \"App Password\" — it only works for sending emails and can be revoked anytime.",
+      "why_app_password_desc": "For security, Google doesn't allow external apps to use your main password. You need to create a special \"App Password\" — it only works for sending emails and can be revoked anytime.",
       "gmail_guide_title": "How to create on Gmail",
       "gmail_step1": "Enable 2-Step Verification (2FA) on your Google account",
       "gmail_step2": "Go to App Passwords and create one named \"H2 Linker\"",
