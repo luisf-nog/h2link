@@ -217,7 +217,7 @@
       "title": "Protect Your Reputation",
       "subtitle": "Configure smart email warm-up",
       "why_title": "Why is warm-up essential?",
-      "why_desc": "Providers like Gmail and Outlook monitor sending patterns. If you send too many emails at once with a new account, you risk:",
+      "why_desc": "Providers like Gmail monitor sending patterns. If you send too many emails at once with a new account, you risk:",
       "why_point1": "Your emails going straight to Spam",
       "why_point2": "Temporary or permanent account blocks",
       "why_point3": "Damaging your sender reputation long-term",
