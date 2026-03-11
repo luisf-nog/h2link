@@ -24,12 +24,28 @@ serve(async (req) => {
     }
 
     const url = `https://seasonaljobs.dol.gov/api/job-order/${etaNumber}`;
-    console.log(`[check-dol-pdf] HEAD ${url}`);
+    console.log(`[check-dol-pdf] GET ${url}`);
 
-    const res = await fetch(url, { method: "HEAD", redirect: "follow" });
-    console.log(`[check-dol-pdf] Status: ${res.status}`);
+    // Use GET instead of HEAD — the DOL site doesn't respond properly to HEAD requests
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; H2Link/1.0)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    console.log(`[check-dol-pdf] Status: ${res.status}, Content-Length: ${res.headers.get("content-length")}`);
 
-    if (res.status === 200) {
+    // Consume body to check content (required by Deno to avoid resource leaks)
+    const body = await res.text();
+    
+    // The page is available if we get 200 AND the body contains meaningful job content
+    // (not just an error page or empty shell)
+    const isAvailable = res.status === 200 && body.length > 500 && !body.includes("Job order not found");
+    console.log(`[check-dol-pdf] Available: ${isAvailable}, Body length: ${body.length}`);
+
+    if (isAvailable) {
       // Cache positive result in DB
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
