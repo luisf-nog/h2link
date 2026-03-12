@@ -1417,7 +1417,7 @@ export default function Landing() {
                           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#020617" }}>
                             {f.title}
                           </h3>
-                          <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }}>{f.desc}</p>
+                          <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: f.desc }} />
                         </div>
                       ))}
                     </div>
