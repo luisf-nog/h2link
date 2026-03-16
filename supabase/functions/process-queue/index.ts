@@ -1458,6 +1458,18 @@ const handler = async (req: Request): Promise<Response> => {
         return json(401, { ok: false, error: "Unauthorized" });
       }
 
+      // OPTIMIZATION: Quick check if there are ANY pending items before fan-out
+      const { count: pendingCount, error: pendingErr } = await serviceClient
+        .from("my_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .limit(1);
+      
+      if (!pendingErr && (pendingCount === 0 || pendingCount === null)) {
+        console.log(`[process-queue] No pending items in queue, skipping fan-out`);
+        return json(200, { ok: true, mode: "cron-skip", reason: "no_pending_items" });
+      }
+
       const { data: users, error: uErr } = await serviceClient
         .from("profiles")
         .select("id,plan_tier")

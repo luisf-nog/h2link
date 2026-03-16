@@ -1,86 +1,164 @@
 
 
-# Análise detalhada do consumo de Database Server (84%)
+# H2 Linker B2B Pivot -- Phase 1: Foundation
 
-## Resumo executivo
+## Overview
+Add an employer portal alongside the existing worker system. Phase 1 covers: database schema, role separation (RBAC), employer profiles, sponsored jobs, guest application flow, and Stripe subscription billing for employers.
 
-O alto consumo do database server vem de **3 fontes principais**, todas ligadas a edge functions executadas via cron jobs. Não é o frontend ou usuários navegando — são os processos automatizados rodando em background.
+## Pricing (USD only for employers, subscription model)
 
----
-
-## Os maiores consumidores (ranking por impacto)
-
-### 1. `process-queue` (cron: **a cada 1 minuto**) — MAIOR VILÃO
-
-Esta edge function roda **1.440 vezes por dia** e, com o padrão fan-out, dispara múltiplas sub-invocações paralelas (uma por usuário ativo). Cada invocação faz:
-
-- Query na `my_queue` para buscar itens pendentes por usuário
-- Query na `profiles` para buscar dados do usuário (plano, créditos, resume_data)
-- Query na `smtp_credentials` e `smtp_credentials_secrets`
-- Query na `email_templates`
-- Query na `queue_send_history` para deduplicação
-- Query na `public_jobs` para montar o email
-- Updates na `profiles` (credits_used_today, consecutive_errors)
-- Updates/inserts na `my_queue` (status)
-
-**Números das tabelas afetadas:**
-| Tabela | Sequential reads | Index reads | Updates |
-|--------|-----------------|-------------|---------|
-| `my_queue` | 44.6M rows | 14.7M | 8,868 |
-| `public_jobs` | 23.2M rows | 71.2M | 42,319 |
-| `profiles` | 6.8M rows (21K seq scans!) | 270K | 7,623 |
-| `queue_send_history` | 6.3M rows | 640K | 1,547 |
-| `email_templates` | 1.2M rows (20K seq scans!) | 272K | 2 |
-| `smtp_credentials` | — | 235K | 570 |
-
-**Problema crítico**: `profiles` tem **21.226 sequential scans** e `email_templates` tem **19.961 sequential scans**. Sequential scans leem a tabela inteira — isso significa que essas queries não estão usando índice, lendo todos os rows repetidamente.
-
-### 2. `process-radar` (cron: **a cada 5 minutos**) — SEGUNDO MAIOR
-
-Roda **288 vezes por dia**. Para cada perfil radar ativo:
-- Busca até **2.000 jobs** da `public_jobs` (que tem 9.054 ativos de 19.735 totais)
-- A tabela `public_jobs` ocupa **101 MB** — cada query pode ler uma porção significativa
-- Faz **674.171 updates** na `radar_matched_jobs` (marcando `already_in_queue`, etc.)
-- A `radar_matched_jobs` ocupa **43 MB** com apenas 1.538 rows atuais (inchaço por updates/deletes)
-
-### 3. `auto-import-jobs` (cron: **múltiplas execuções por hora, horário 06:00-07:30**)
-
-São **6 cron jobs** diferentes para importação:
-- h2a, h2b, jo — cada um com 2 schedules (um pontual e um a cada minuto durante uma janela)
-- Fazem inserts/updates massivos na `public_jobs` (42.319 updates, 1.674 inserts)
+| Tier | Monthly | Annual |
+|------|---------|--------|
+| Essential | $49/mo | $470/yr |
+| Professional | $99/mo | $950/yr |
+| Enterprise | $149/mo | $1,430/yr |
 
 ---
 
-## Problemas estruturais identificados
+## Step 1: Stripe Products & Prices
 
-### A. Sequential scans excessivos
-- `profiles`: 21K seq scans para apenas 12 rows → **falta de índice** ou queries sem WHERE adequado
-- `email_templates`: 20K seq scans para ~9 rows → mesmo problema
-- `my_queue`: 13K seq scans → a query provavelmente não filtra por índice
-
-### B. Tabela `public_jobs` inchada (101 MB)
-- 19.735 rows ocupando 101 MB = ~5KB por row em média
-- Com 42.319 updates, o PostgreSQL cria "dead tuples" que inflam o tamanho
-- Cada query do radar puxa até 2.000 dessas rows
-
-### C. `radar_matched_jobs` — 674K updates em 1.538 rows
-- Média de **438 updates por row** — isso gera enorme churn de dead tuples
-- 43 MB para 1.538 rows = ~28KB por row (extremamente inchado)
-
-### D. Frequência excessiva dos crons
-- `process-queue` a cada 1 min pode ser demais se não há items pendentes
-- `process-radar` a cada 5 min com 2.000 jobs por profile é agressivo
+Create 6 Stripe prices (monthly + annual for each tier) using Stripe tools before writing any code.
 
 ---
 
-## Recomendações de otimização (para implementar depois)
+## Step 2: Database Migration
 
-1. **Criar índices** em `profiles`, `email_templates`, `my_queue` para eliminar seq scans
-2. **Reduzir frequência** do `process-queue` para cada 2-3 min
-3. **Limitar** o `process-radar` — usar `LIMIT 500` com filtro `posted_date > now() - interval '7 days'`
-4. **VACUUM FULL** na `public_jobs` e `radar_matched_jobs` para recuperar espaço
-5. **Skip cron** quando não há items: adicionar uma query rápida de contagem antes do fan-out
-6. Selecionar apenas colunas necessárias na `public_jobs` (em vez de `select("id")` + depois `select("*")`)
+### New Enum
+```text
+employer_tier: 'essential' | 'professional' | 'enterprise'
+employer_status: 'active' | 'inactive'
+```
 
-Quer que eu implemente alguma dessas otimizações?
+### New Tables
+
+**employer_profiles**
+- id (uuid PK), user_id (uuid, references auth.users, unique), company_name, tier (employer_tier), is_verified (bool, default false), contact_email, contact_phone, status (employer_status, default 'active'), stripe_customer_id, stripe_subscription_id, created_at, updated_at
+- Indexes: user_id, tier, status
+
+**sponsored_jobs**
+- id (uuid PK), employer_id (uuid FK -> employer_profiles), title, description, location, start_date, end_date, is_active (bool, default true), is_sponsored (bool, default true), priority_level (text: free/essential/professional/enterprise), req_english, req_experience, req_drivers_license, consular_only (booleans), view_count, click_count (integers, default 0), created_at
+- Indexes: employer_id, is_active, priority_level, created_at
+
+**job_applications** (immutable -- no delete)
+- id (uuid PK), job_id (FK -> sponsored_jobs), full_name, email, phone, has_english, has_experience, has_license, is_in_us (booleans), citizenship_status (text enum), employer_status (text: new/contacted/rejected, default 'new'), rejection_reason, score_color (text: green/yellow/red), created_at
+- UNIQUE(email, job_id)
+- Indexes: job_id, employer_status, citizenship_status, created_at
+
+**audit_logs** (immutable -- INSERT only, no UPDATE/DELETE)
+- id (uuid PK), job_id, application_id, employer_id (uuid FK), action (text: contacted/rejected), reason, created_at
+
+### Add 'employer' to existing app_role enum
+```sql
+ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'employer';
+```
+
+### RLS Policies
+
+- **employer_profiles**: SELECT/UPDATE only where user_id = auth.uid()
+- **sponsored_jobs**: Employer CRUD on own jobs; Public SELECT where is_active = true
+- **job_applications**: Anon INSERT only; Employer SELECT/UPDATE(employer_status only) on own jobs' applications
+- **audit_logs**: Employer SELECT on own jobs; INSERT via server function only
+
+### DB Functions
+- `check_employer_job_limit(employer_id)`: enforces tier-based active job limits (1/3/5)
+- `compute_application_score(job_id, application_id)`: server-side green/yellow/red scoring
+- `deactivate_employer_jobs(employer_id)`: sets all sponsored jobs to free when subscription lapses
+
+---
+
+## Step 3: Edge Functions
+
+### create-employer-checkout
+- Accepts tier + billing_interval (month/year)
+- Creates Stripe checkout session with mode: 'subscription'
+- Stores user_id in metadata
+
+### check-employer-subscription
+- Queries Stripe for active subscription by customer email
+- Returns: subscribed, tier, subscription_end
+- Called on login + periodically
+
+### employer-portal (customer portal)
+- Creates Stripe billing portal session for subscription management
+
+### submit-application (public, no auth)
+- Validates honeypot field, rate limits by IP
+- Normalizes email, checks UNIQUE(email, job_id)
+- Computes score_color server-side
+- Inserts into job_applications
+
+### Update existing stripe-webhook
+- Handle `customer.subscription.updated` and `customer.subscription.deleted` events
+- On cancellation/failure: update employer_profiles.status = 'inactive', call deactivate_employer_jobs()
+- On reactivation: restore status = 'active'
+
+---
+
+## Step 4: Frontend -- Role-Based Routing
+
+### Auth Page Updates
+- Add role selector on signup: "I'm looking for work" (worker) vs "I'm hiring" (employer)
+- Store role in user_roles table on signup
+- Worker signup keeps current flow (no SMTP required initially per spec -- but existing onboarding stays for now)
+- Employer signup skips SMTP onboarding entirely
+
+### Route Guards
+- New `EmployerRoute` component that checks user role
+- Worker routes remain unchanged
+- Employer routes: /employer/dashboard, /employer/jobs, /employer/jobs/:id/applicants, /employer/plans, /employer/settings
+
+---
+
+## Step 5: Frontend -- Employer Pages
+
+### Employer Plans Page (/employer/plans)
+- 3 cards: Essential ($49/mo), Professional ($99/mo), Enterprise ($149/mo)
+- Annual toggle showing discounted prices
+- Checkout via create-employer-checkout edge function
+
+### Employer Dashboard (/employer/dashboard)
+- Active jobs count (with tier limit indicator)
+- Total applications count
+- Quick actions: Create Job, View Applicants
+- When status = 'inactive': blurred dashboard with "Reactivate" CTA
+
+### Create/Edit Job (/employer/jobs/new)
+- Form: title, description, location, dates, screening toggles
+- Tier limit enforcement (1/3/5 active jobs)
+
+### Applicant Table (/employer/jobs/:id/applicants)
+- Columns: Name, Email, Phone, Citizenship Badge, Score (traffic light), Status, Date
+- Contact buttons (mailto, tel) that log to audit_logs
+- Reject button with modal + reason dropdown
+- Paginated, sortable
+
+### Guest Application Page (/apply/:jobId)
+- Public route, no login required
+- Fetches job details, renders form based on screening toggles
+- Honeypot field, basic rate limiting
+- Success message after submission
+
+---
+
+## Step 6: Hub Integration
+
+Update the existing Jobs page to display sponsored jobs with priority ordering:
+1. Enterprise (Gold badge)
+2. Professional (Silver badge)
+3. Essential (Sponsored badge)
+4. Free (existing DOL jobs)
+
+Add "Sponsored" / "Verified Employer" badges to job cards.
+
+---
+
+## Technical Notes
+
+- All existing worker functionality (mailing queue, worker plans, radar, etc.) remains completely untouched
+- Employer billing is subscription-based (Stripe subscriptions), separate from worker one-time payments
+- The profiles table is NOT modified -- employer data lives in employer_profiles
+- Role check uses existing `has_role()` function and user_roles table
+- Scoring computation happens server-side only (edge function), never on the client
+- US citizen/permanent resident applications get "Priority Review" badge, pinned above others
+- Compliance disclaimer shown on screening setup page
 
