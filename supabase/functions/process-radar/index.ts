@@ -60,14 +60,16 @@ serve(async (req) => {
 
         // FIX: Do NOT skip user when credits are 0 — always detect matches
 
-        // Build job query based on radar criteria — NO hard limit (uses 2000 safety cap)
+        // Build job query based on radar criteria — OPTIMIZED: limit to last 14 days + cap at 500
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let jobQuery = supabase
           .from("public_jobs")
           .select("id")
           .eq("is_banned", false)
           .eq("is_active", true)
+          .gte("posted_date", fourteenDaysAgo)
           .order("posted_date", { ascending: false })
-          .limit(2000);
+          .limit(500);
 
         if (radar.visa_type && radar.visa_type !== "all") {
           jobQuery = jobQuery.eq("visa_type", radar.visa_type);
