@@ -149,7 +149,7 @@ export default function PublicProfile() {
         } else {
           const { data } = await supabase
             .from("profiles")
-            .select("id, full_name, phone_e164, resume_url, contact_email, resume_data, ai_summary")
+            .select("id, full_name, phone_e164, resume_url, contact_email, resume_data, resume_data_h2a, resume_data_h2b, ai_summary")
             .eq("public_token", token)
             .single();
           trackingData = data;
@@ -161,16 +161,20 @@ export default function PublicProfile() {
         if (!trackingData.resume_data && trackingData.id) {
           const { data: extra } = await supabase
             .from("profiles")
-            .select("contact_email, resume_data, ai_summary")
+            .select("contact_email, resume_data, resume_data_h2a, resume_data_h2b, ai_summary")
             .eq("id", trackingData.id)
             .single();
           if (extra) {
             trackingData.contact_email = extra.contact_email;
-            trackingData.resume_data = extra.resume_data;
+            trackingData.resume_data = extra.resume_data || extra.resume_data_h2b || extra.resume_data_h2a;
             trackingData.ai_summary = extra.ai_summary;
           }
         }
 
+        // Merge h2b/h2a resume_data into generic field for AI summary trigger
+        if (!trackingData.resume_data && (trackingData.resume_data_h2b || trackingData.resume_data_h2a)) {
+          trackingData.resume_data = trackingData.resume_data_h2b || trackingData.resume_data_h2a;
+        }
         const profileData = trackingData as ProfileData;
         setProfile(profileData);
 
