@@ -257,30 +257,6 @@ const AppRoutes = () => (
       }
     />
     <Route
-      path="/resume-converter"
-      element={
-        <ProtectedRoute>
-          <ResumeConverter />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/settings"
-      element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/settings/email"
-      element={
-        <ProtectedRoute>
-          <Settings defaultTab="email" />
-        </ProtectedRoute>
-      }
-    />
-    <Route
       path="/payment-success"
       element={
         <ProtectedRoute>
