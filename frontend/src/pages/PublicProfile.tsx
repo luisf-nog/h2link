@@ -171,6 +171,10 @@ export default function PublicProfile() {
           }
         }
 
+        // Merge h2b/h2a resume_data into generic field for AI summary trigger
+        if (!trackingData.resume_data && (trackingData.resume_data_h2b || trackingData.resume_data_h2a)) {
+          trackingData.resume_data = trackingData.resume_data_h2b || trackingData.resume_data_h2a;
+        }
         const profileData = trackingData as ProfileData;
         setProfile(profileData);
 
