@@ -149,7 +149,7 @@ export default function PublicProfile() {
         } else {
           const { data } = await supabase
             .from("profiles")
-            .select("id, full_name, phone_e164, resume_url, contact_email, resume_data, ai_summary")
+            .select("id, full_name, phone_e164, resume_url, contact_email, resume_data, resume_data_h2a, resume_data_h2b, ai_summary")
             .eq("public_token", token)
             .single();
           trackingData = data;

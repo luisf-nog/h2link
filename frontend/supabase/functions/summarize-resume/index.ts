@@ -19,7 +19,7 @@ serve(async (req) => {
 
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("full_name, resume_data, resume_url, ai_summary")
+      .select("full_name, resume_data, resume_data_h2a, resume_data_h2b, resume_url, ai_summary")
       .eq("public_token", token)
       .single();
 
@@ -37,7 +37,8 @@ serve(async (req) => {
       });
     }
 
-    const resumeData = profile.resume_data as any;
+    // Use the best available resume data: h2b > h2a > generic
+    const resumeData = (profile.resume_data_h2b || profile.resume_data_h2a || profile.resume_data) as any;
     if (!resumeData) {
       return new Response(JSON.stringify({ error: "No resume data available" }), {
         status: 404,
