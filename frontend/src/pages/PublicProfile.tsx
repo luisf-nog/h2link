@@ -161,7 +161,7 @@ export default function PublicProfile() {
         if (!trackingData.resume_data && trackingData.id) {
           const { data: extra } = await supabase
             .from("profiles")
-            .select("contact_email, resume_data, ai_summary")
+            .select("contact_email, resume_data, resume_data_h2a, resume_data_h2b, ai_summary")
             .eq("id", trackingData.id)
             .single();
           if (extra) {
