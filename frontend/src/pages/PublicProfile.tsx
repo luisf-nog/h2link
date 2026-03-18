@@ -166,7 +166,7 @@ export default function PublicProfile() {
             .single();
           if (extra) {
             trackingData.contact_email = extra.contact_email;
-            trackingData.resume_data = extra.resume_data;
+            trackingData.resume_data = extra.resume_data || extra.resume_data_h2b || extra.resume_data_h2a;
             trackingData.ai_summary = extra.ai_summary;
           }
         }
