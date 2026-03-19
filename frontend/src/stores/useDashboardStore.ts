@@ -54,7 +54,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
     try {
       // Try RPC first (single query instead of paginated loop of 10k+ rows)
-      const { data: rpcData, error: rpcError } = await supabase.rpc("get_market_dashboard_stats");
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)("get_market_dashboard_stats");
 
       if (!rpcError && rpcData) {
         const d = rpcData as any;
