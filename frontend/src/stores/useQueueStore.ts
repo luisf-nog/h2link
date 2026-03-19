@@ -73,23 +73,21 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   },
 
   forceFetchQueue: async () => {
-    // Auto-recover stale processing items
-    const staleCutoffIso = new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000).toISOString();
-    await supabase
-      .from("my_queue")
-      .update({
-        status: "paused",
-        last_error:
-          "[PROCESSING_TIMEOUT] Item pausado automaticamente por travar no processamento (acima do tempo máximo esperado).",
-        last_attempt_at: new Date().toISOString(),
-        processing_started_at: null,
-      })
-      .eq("status", "processing")
-      .or(
-        `processing_started_at.lt.${staleCutoffIso},and(processing_started_at.is.null,created_at.lt.${staleCutoffIso})`,
-      );
-
     const { data, error } = await supabase
+      .from("my_queue")
+      .select(
+        `
+        id, status, sent_at, opened_at, profile_viewed_at, tracking_id, created_at, processing_started_at, send_count, email_open_count, last_error,
+        public_jobs (id, job_title, company, email, city, state, visa_type),
+        manual_jobs (id, company, job_title, email, eta_number, phone)
+      `,
+      )
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      set({ queue: (data as unknown as QueueItem[]) || [], lastFetchedAt: Date.now() });
+    }
+  },
       .from("my_queue")
       .select(
         `

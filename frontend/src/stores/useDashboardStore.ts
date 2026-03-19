@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 
-const STALE_MS = 30_000;
+const MARKET_STALE_MS = 120_000; // 2 minutes — market data rarely changes
+const PERSONAL_STALE_MS = 60_000; // 1 minute
+const ENGAGEMENT_STALE_MS = 120_000; // 2 minutes
 
 interface DashboardStore {
   // Market data
@@ -48,14 +50,51 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   engagementLastFetchedAt: 0,
 
   fetchMarketData: async (force = false) => {
-    if (!force && Date.now() - get().marketDataLastFetchedAt < STALE_MS) return;
-
-    const PAGE_SIZE = 1000;
-    let allRows: any[] = [];
-    let page = 0;
-    let hasMore = true;
+    if (!force && Date.now() - get().marketDataLastFetchedAt < MARKET_STALE_MS) return;
 
     try {
+      // Try RPC first (single query instead of paginated loop of 10k+ rows)
+      const { data: rpcData, error: rpcError } = await supabase.rpc("get_market_dashboard_stats");
+
+      if (!rpcError && rpcData) {
+        const d = rpcData as any;
+        const total = (d.h2a || 0) + (d.h2b || 0) + (d.early || 0);
+        const rawCats = (d.top_categories || []) as Array<{ name: string; count: number }>;
+        const totalCats = rawCats.reduce((a, c) => a + c.count, 0);
+        const topCategories = rawCats.map((c) => ({
+          name: c.name,
+          count: c.count,
+          percent: totalCats > 0 ? (c.count / totalCats) * 100 : 0,
+        }));
+
+        const rawStates = (d.top_states || []) as Array<{ name: string; count: number }>;
+        const totalStates = rawStates.reduce((a, s) => a + s.count, 0);
+        const topStates = rawStates.map((s) => ({
+          name: s.name,
+          count: s.count,
+          percent: totalStates > 0 ? (s.count / totalStates) * 100 : 0,
+        }));
+
+        const topPayingStates = (d.top_paying_states || []) as Array<{ name: string; avgSalary: number }>;
+
+        set({
+          visaCounts: { h2a: d.h2a || 0, h2b: d.h2b || 0, early: d.early || 0 },
+          hotCount: d.hot || 0,
+          topCategories,
+          topStates,
+          topPayingStates,
+          marketDataLastFetchedAt: Date.now(),
+        });
+        return;
+      }
+
+      // Fallback: old paginated approach if RPC not yet deployed
+      console.warn("RPC get_market_dashboard_stats not available, using fallback");
+      const PAGE_SIZE = 1000;
+      let allRows: any[] = [];
+      let page = 0;
+      let hasMore = true;
+
       while (hasMore) {
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
@@ -109,17 +148,17 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         }
       });
 
-      const totalCats = Array.from(cats.values()).reduce((a, b) => a + b, 0);
+      const totalCatsVal = Array.from(cats.values()).reduce((a, b) => a + b, 0);
       const topCategories = Array.from(cats.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 6)
-        .map(([name, count]) => ({ name, count, percent: totalCats > 0 ? (count / totalCats) * 100 : 0 }));
+        .map(([name, count]) => ({ name, count, percent: totalCatsVal > 0 ? (count / totalCatsVal) * 100 : 0 }));
 
-      const totalStates = Array.from(states.values()).reduce((a, b) => a + b, 0);
+      const totalStatesVal = Array.from(states.values()).reduce((a, b) => a + b, 0);
       const topStates = Array.from(states.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 6)
-        .map(([name, count]) => ({ name, count, percent: totalStates > 0 ? (count / totalStates) * 100 : 0 }));
+        .map(([name, count]) => ({ name, count, percent: totalStatesVal > 0 ? (count / totalStatesVal) * 100 : 0 }));
 
       const topPayingStates = Array.from(salaries.entries())
         .map(([name, val]) => ({ name, avgSalary: val.sum / val.count, count: val.count }))
@@ -141,7 +180,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   fetchPersonalStats: async (userId, force = false) => {
-    if (!force && Date.now() - get().personalLastFetchedAt < STALE_MS) return;
+    if (!force && Date.now() - get().personalLastFetchedAt < PERSONAL_STALE_MS) return;
 
     const { count: pendingCount } = await supabase
       .from("my_queue")
@@ -163,9 +202,28 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   fetchEngagement: async (userId, emailsSentTotal, force = false) => {
-    if (!force && Date.now() - get().engagementLastFetchedAt < STALE_MS) return;
+    if (!force && Date.now() - get().engagementLastFetchedAt < ENGAGEMENT_STALE_MS) return;
 
     try {
+      // Try RPC first (single query instead of paginated loop of 9+ queries)
+      const { data: rpcData, error: rpcError } = await supabase.rpc("get_engagement_stats", {
+        p_user_id: userId,
+      });
+
+      if (!rpcError && rpcData) {
+        const d = rpcData as any;
+        set({
+          totalEmailsSent: emailsSentTotal,
+          totalSentItems: d.sent_count || 0,
+          totalOpened: d.opened_count || 0,
+          totalCvViewed: d.cv_viewed_count || 0,
+          engagementLastFetchedAt: Date.now(),
+        });
+        return;
+      }
+
+      // Fallback: old paginated approach
+      console.warn("RPC get_engagement_stats not available, using fallback");
       let sentCount = 0;
       let openedCount = 0;
       let cvViewedCount = 0;

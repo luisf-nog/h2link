@@ -169,7 +169,7 @@ export default function Queue() {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         if (!cancelled) fetchQueue();
-      }, 800);
+      }, 1500);
     };
 
     const run = async () => {
