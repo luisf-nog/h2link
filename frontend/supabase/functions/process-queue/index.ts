@@ -25,7 +25,7 @@ function getSendingMethod(planTier: PlanTier): SendingMethod {
   return planTier === "black" ? "dynamic" : "static";
 }
 
-type EmailProvider = "gmail";
+type EmailProvider = "gmail" | "outlook";
 
 interface QueueRow {
   id: string;
@@ -88,6 +88,8 @@ function isCircuitBreakerError(message: string): boolean {
   if (m.includes("tls") || m.includes("ssl") || m.includes("handshake") || m.includes("certificate")) return true;
   // AI gateway errors — systemic (AI API is down)
   if (m.includes("non-2xx") || m.includes("ai error") || m.includes("ai gateway") || m.includes("generate-job-email") || m.includes("generation failed")) return true;
+  // Edge Function infrastructure errors — systemic (Bug 4 fix)
+  if (m.includes("edge function") || m.includes("failed to send a request")) return true;
   // Rate limiting from SMTP provider — systemic
   if (m.includes("421") || m.includes("429") || m.includes("rate limit") || m.includes("too many requests")) return true;
   // NOT included: 550, 551, 552, 553, 554 — these are per-recipient errors
@@ -216,6 +218,7 @@ interface SmtpConfig {
 
 const SMTP_CONFIGS: Record<EmailProvider, SmtpConfig> = {
   gmail: { host: "smtp.gmail.com", port: 465, useTls: true, useStartTls: false },
+  outlook: { host: "smtp.office365.com", port: 587, useTls: false, useStartTls: true },
 };
 
 const encoder = new TextEncoder();
@@ -810,18 +813,29 @@ async function processOneUser(params: {
   const p = profile as ProfileRow;
   if (p.plan_tier === "free") return { processed: 0, sent: 0, failed: 0 };
 
-  // Daily limit enforcement (backend)
+  // Daily limit enforcement (backend) — use warm-up aware limit
   const today = new Date().toISOString().slice(0, 10);
   let creditsUsed = Number(p.credits_used_today ?? 0);
   const resetDate = String(p.credits_reset_date ?? "");
   if (resetDate !== today) {
     creditsUsed = 0;
+    // Auto-reset consecutive_errors on new day (Bug 2 fix)
     await (serviceClient
       .from("profiles")
-      .update({ credits_used_today: 0, credits_reset_date: today } as any)
+      .update({ credits_used_today: 0, credits_reset_date: today, consecutive_errors: 0 } as any)
       .eq("id", userId)) as any;
+    consecutiveErrors = 0;
   }
-  const dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
+  // Use warm-up aware limit via RPC instead of plan hard cap (Bug 3 fix)
+  let dailyLimit: number;
+  try {
+    const { data: effectiveLimit, error: limitErr } = await serviceClient.rpc('get_effective_daily_limit', { p_user_id: userId });
+    if (limitErr) throw limitErr;
+    dailyLimit = Number(effectiveLimit ?? getDailyEmailLimit(p.plan_tier));
+  } catch (e) {
+    console.warn(`[process-queue] Failed to get effective limit, falling back to plan cap:`, e);
+    dailyLimit = getDailyEmailLimit(p.plan_tier) + Number(p.referral_bonus_limit ?? 0);
+  }
 
   // Diamond: manter processamento automático também fora da janela local
   // (itens vindos do Radar devem sair da fila automaticamente)
@@ -834,6 +848,7 @@ async function processOneUser(params: {
     }
   }
 
+  // Note: consecutiveErrors may have been reset above if new day
   let consecutiveErrors = Number(p.consecutive_errors ?? 0);
 
   // No retry: if profile is incomplete, mark first pending as failed and stop
@@ -959,7 +974,7 @@ async function processOneUser(params: {
   if (secretErr) throw secretErr;
   const s = secret as SmtpSecretRow;
 
-  const provider: EmailProvider = "gmail";
+  const provider: EmailProvider = c.provider === "outlook" ? "outlook" : "gmail";
   const smtpEmail = c.email;
   const smtpPassword = s.password;
   const smtpConfig = SMTP_CONFIGS[provider];
@@ -982,6 +997,40 @@ async function processOneUser(params: {
   let processed = 0;
   let sent = 0;
   let failed = 0;
+
+  // Build dedup set: emails already sent today for this user (BATCH — no N+1)
+  const sentTodayEmails = new Set<string>();
+  try {
+    const { data: sentToday } = await serviceClient
+      .from("my_queue")
+      .select("job_id,manual_job_id")
+      .eq("user_id", userId)
+      .eq("status", "sent")
+      .gte("sent_at", today + "T00:00:00Z")
+      .limit(1000);
+
+    if (sentToday && sentToday.length > 0) {
+      // Collect IDs by type
+      const jobIds = sentToday.filter((s: any) => s.job_id).map((s: any) => s.job_id);
+      const manualIds = sentToday.filter((s: any) => s.manual_job_id).map((s: any) => s.manual_job_id);
+
+      // Batch fetch emails in 2 queries max (instead of N individual queries)
+      const [jobEmails, manualEmails] = await Promise.all([
+        jobIds.length > 0
+          ? serviceClient.from("public_jobs").select("id,email").in("id", jobIds).then((r: any) => r.data || [])
+          : Promise.resolve([]),
+        manualIds.length > 0
+          ? serviceClient.from("manual_jobs").select("id,email").in("id", manualIds).then((r: any) => r.data || [])
+          : Promise.resolve([]),
+      ]);
+
+      for (const j of jobEmails) { if (j.email) sentTodayEmails.add(j.email.toLowerCase()); }
+      for (const m of manualEmails) { if (m.email) sentTodayEmails.add(m.email.toLowerCase()); }
+    }
+    console.log(`[process-queue] Dedup: ${sentTodayEmails.size} emails already sent today for user ${userId}`);
+  } catch (e) {
+    console.error(`[process-queue] Dedup check failed, continuing without dedup:`, e);
+  }
 
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
@@ -1058,6 +1107,22 @@ async function processOneUser(params: {
       }
 
       if (!job?.email) throw new Error("Destino (email) ausente");
+
+      // DEDUP: Skip if already sent to this email today
+      if (sentTodayEmails.has(job.email.toLowerCase())) {
+        console.log(`[process-queue] DEDUP: Skipping queue ${row.id} — already sent to ${job.email} today`);
+        await (serviceClient
+          .from("my_queue")
+          .update({
+            status: "paused",
+            processing_started_at: null,
+            last_error: "[DEDUP] Email já enviado para este destinatário hoje.",
+            last_attempt_at: new Date().toISOString(),
+          } as any)
+          .eq("id", row.id)) as any;
+        failed += 1;
+        continue;
+      }
 
       // Validate email domain before sending (prevent hard bounces)
       const emailValidation = await validateEmailDNS(job.email);
@@ -1297,11 +1362,17 @@ async function processOneUser(params: {
         } as any)) as any;
 
       sent += 1;
+      sentTodayEmails.add(job.email.toLowerCase()); // Track for dedup within batch
       creditsUsed += 1;
       await (serviceClient
         .from("profiles")
         .update({ credits_used_today: creditsUsed, credits_reset_date: today, consecutive_errors: 0 } as any)
         .eq("id", userId)) as any;
+
+      // Increment SMTP warm-up counter (keeps smtp_credentials.emails_sent_today in sync)
+      if (p.plan_tier !== "free") {
+        await serviceClient.rpc("increment_smtp_email_count", { p_user_id: userId });
+      }
 
       consecutiveErrors = 0;
     } catch (err: unknown) {
@@ -1394,14 +1465,29 @@ const handler = async (req: Request): Promise<Response> => {
         return json(401, { ok: false, error: "Unauthorized" });
       }
 
-      const { data: users, error: uErr } = await serviceClient
-        .from("profiles")
-        .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond", "black"])
+      // OPTIMIZATION: Quick check if there are ANY pending items before fan-out
+      const { count: pendingCount, error: pendingErr } = await serviceClient
+        .from("my_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .limit(1);
+      
+      if (!pendingErr && (pendingCount === 0 || pendingCount === null)) {
+        console.log(`[process-queue] No pending items in queue, skipping fan-out`);
+        return json(200, { ok: true, mode: "cron-skip", reason: "no_pending_items" });
+      }
+
+      // OPTIMIZATION: Only fan-out to users who actually HAVE pending items
+      const { data: usersWithPending, error: uErr } = await serviceClient
+        .from("my_queue")
+        .select("user_id")
+        .eq("status", "pending")
         .limit(200);
       if (uErr) throw uErr;
 
-      const userList = (users ?? []) as Array<{ id: string }>;
+      // Deduplicate user IDs
+      const uniqueUserIds = [...new Set((usersWithPending ?? []).map((r: any) => r.user_id))];
+      const userList = uniqueUserIds.map((id) => ({ id }));
       console.log(`[process-queue] Fan-out: disparando ${userList.length} invocações paralelas`);
 
       // Fan-out: fire a separate self-invocation for each user
