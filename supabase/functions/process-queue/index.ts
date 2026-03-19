@@ -998,7 +998,7 @@ async function processOneUser(params: {
   let sent = 0;
   let failed = 0;
 
-  // Build dedup set: emails already sent today for this user
+  // Build dedup set: emails already sent today for this user (BATCH — no N+1)
   const sentTodayEmails = new Set<string>();
   try {
     const { data: sentToday } = await serviceClient
@@ -1006,19 +1006,26 @@ async function processOneUser(params: {
       .select("job_id,manual_job_id")
       .eq("user_id", userId)
       .eq("status", "sent")
-      .gte("sent_at", today + "T00:00:00Z");
-    if (sentToday) {
-      for (const s of sentToday) {
-        let email: string | null = null;
-        if (s.job_id) {
-          const { data: pj } = await serviceClient.from("public_jobs").select("email").eq("id", s.job_id).maybeSingle();
-          email = pj?.email ?? null;
-        } else if (s.manual_job_id) {
-          const { data: mj } = await serviceClient.from("manual_jobs").select("email").eq("id", s.manual_job_id).maybeSingle();
-          email = mj?.email ?? null;
-        }
-        if (email) sentTodayEmails.add(email.toLowerCase());
-      }
+      .gte("sent_at", today + "T00:00:00Z")
+      .limit(1000);
+
+    if (sentToday && sentToday.length > 0) {
+      // Collect IDs by type
+      const jobIds = sentToday.filter((s: any) => s.job_id).map((s: any) => s.job_id);
+      const manualIds = sentToday.filter((s: any) => s.manual_job_id).map((s: any) => s.manual_job_id);
+
+      // Batch fetch emails in 2 queries max (instead of N individual queries)
+      const [jobEmails, manualEmails] = await Promise.all([
+        jobIds.length > 0
+          ? serviceClient.from("public_jobs").select("id,email").in("id", jobIds).then((r: any) => r.data || [])
+          : Promise.resolve([]),
+        manualIds.length > 0
+          ? serviceClient.from("manual_jobs").select("id,email").in("id", manualIds).then((r: any) => r.data || [])
+          : Promise.resolve([]),
+      ]);
+
+      for (const j of jobEmails) { if (j.email) sentTodayEmails.add(j.email.toLowerCase()); }
+      for (const m of manualEmails) { if (m.email) sentTodayEmails.add(m.email.toLowerCase()); }
     }
     console.log(`[process-queue] Dedup: ${sentTodayEmails.size} emails already sent today for user ${userId}`);
   } catch (e) {
@@ -1470,14 +1477,17 @@ const handler = async (req: Request): Promise<Response> => {
         return json(200, { ok: true, mode: "cron-skip", reason: "no_pending_items" });
       }
 
-      const { data: users, error: uErr } = await serviceClient
-        .from("profiles")
-        .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond", "black"])
+      // OPTIMIZATION: Only fan-out to users who actually HAVE pending items
+      const { data: usersWithPending, error: uErr } = await serviceClient
+        .from("my_queue")
+        .select("user_id")
+        .eq("status", "pending")
         .limit(200);
       if (uErr) throw uErr;
 
-      const userList = (users ?? []) as Array<{ id: string }>;
+      // Deduplicate user IDs
+      const uniqueUserIds = [...new Set((usersWithPending ?? []).map((r: any) => r.user_id))];
+      const userList = uniqueUserIds.map((id) => ({ id }));
       console.log(`[process-queue] Fan-out: disparando ${userList.length} invocações paralelas`);
 
       // Fan-out: fire a separate self-invocation for each user

@@ -31,6 +31,34 @@ serve(async (req) => {
       );
     }
 
+    // EARLY EXIT: Check if any new jobs exist since the oldest last_scan_at
+    // If no new jobs were added, skip the entire scan to save DB resources
+    const oldestScan = radarProfiles.reduce((oldest: string | null, rp: any) => {
+      if (!rp.last_scan_at) return oldest; // null means never scanned, must scan
+      if (!oldest) return rp.last_scan_at;
+      return rp.last_scan_at < oldest ? rp.last_scan_at : oldest;
+    }, null as string | null);
+
+    const hasNeverScanned = radarProfiles.some((rp: any) => !rp.last_scan_at);
+
+    if (oldestScan && !hasNeverScanned) {
+      const { count: newJobCount } = await supabase
+        .from("public_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true)
+        .eq("is_banned", false)
+        .gt("created_at", oldestScan);
+
+      if (newJobCount === 0 || newJobCount === null) {
+        console.log(`[process-radar] No new jobs since ${oldestScan}, skipping scan`);
+        return new Response(
+          JSON.stringify({ message: "No new jobs since last scan", skipped: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.log(`[process-radar] ${newJobCount} new jobs since ${oldestScan}, proceeding with scan`);
+    }
+
     console.log(`[process-radar] Found ${radarProfiles.length} active profiles`);
 
     let totalMatches = 0;
