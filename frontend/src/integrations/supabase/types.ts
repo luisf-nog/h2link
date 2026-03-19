@@ -1981,6 +1981,8 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_engagement_stats: { Args: { p_user_id: string }; Returns: Json }
+      get_market_dashboard_stats: { Args: never; Returns: Json }
       get_normalized_category: { Args: { raw_cat: string }; Returns: string }
       get_radar_stats:
         | {
