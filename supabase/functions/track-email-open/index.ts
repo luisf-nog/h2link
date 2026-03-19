@@ -69,6 +69,7 @@ async function computeSuspicion(
   const fetchDest = (req.headers.get("sec-fetch-dest") ?? "").toLowerCase();
   const secChUa = req.headers.get("sec-ch-ua") ?? null;
 
+  // Fast header-only checks (0 DB queries)
   const matchedKeyword = BOT_UA_KEYWORDS.find((kw) => ua.includes(kw));
   if (matchedKeyword) { score += 80; reasons.push(`bot_ua:${matchedKeyword}`); }
   if (!ua || ua.length < 10) { score += 60; reasons.push("empty_ua"); }
@@ -77,31 +78,36 @@ async function computeSuspicion(
 
   const sentAt = historyRow.sent_at ? new Date(historyRow.sent_at as string) : null;
   if (!sentAt) {
-    // sent_at not yet recorded — email still in transit, any open is a scanner
     score += 90; reasons.push("no_sent_at");
   } else {
     const secSinceSend = (Date.now() - sentAt.getTime()) / 1000;
     if (secSinceSend < ANTIVIRUS_DELAY_SECONDS) { score += 70; reasons.push(`fast:${Math.round(secSinceSend)}s`); }
   }
 
+  // SHORT-CIRCUIT: If already above threshold from header checks alone, skip DB queries
+  if (score >= SUSPICION_THRESHOLD) {
+    return { score: Math.min(score, 100), reasons };
+  }
+
+  // Run all DB checks in PARALLEL (was sequential before)
   const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
-  const { count: recentCount } = await db
-    .from("pixel_open_events").select("id", { count: "exact", head: true })
-    .eq("tracking_id", trackingId).gte("created_at", oneHourAgo);
-  if ((recentCount ?? 0) >= MAX_OPENS_PER_HOUR) { score += 70; reasons.push(`rate:${recentCount}`); }
-
   const debounceFrom = new Date(Date.now() - DEBOUNCE_SECONDS * 1000).toISOString();
-  const { count: recentByIp } = await db
-    .from("pixel_open_events").select("id", { count: "exact", head: true })
-    .eq("tracking_id", trackingId).eq("ip", ip).gte("created_at", debounceFrom);
-  if ((recentByIp ?? 0) > 0) { score += 40; reasons.push("debounce"); }
-
   const windowFrom = new Date(Date.now() - MULTI_IP_WINDOW_SECONDS * 1000).toISOString();
-  const { data: recentIps } = await db
-    .from("pixel_open_events").select("ip")
-    .eq("tracking_id", trackingId).gte("created_at", windowFrom);
+
+  const [recentCountRes, recentByIpRes, recentIpsRes] = await Promise.all([
+    db.from("pixel_open_events").select("id", { count: "exact", head: true })
+      .eq("tracking_id", trackingId).gte("created_at", oneHourAgo),
+    db.from("pixel_open_events").select("id", { count: "exact", head: true })
+      .eq("tracking_id", trackingId).eq("ip", ip).gte("created_at", debounceFrom),
+    db.from("pixel_open_events").select("ip")
+      .eq("tracking_id", trackingId).gte("created_at", windowFrom),
+  ]);
+
+  if ((recentCountRes.count ?? 0) >= MAX_OPENS_PER_HOUR) { score += 70; reasons.push(`rate:${recentCountRes.count}`); }
+  if ((recentByIpRes.count ?? 0) > 0) { score += 40; reasons.push("debounce"); }
+
   // deno-lint-ignore no-explicit-any
-  const distinctIps = new Set((recentIps ?? []).map((r: any) => r.ip)).size;
+  const distinctIps = new Set((recentIpsRes.data ?? []).map((r: any) => r.ip)).size;
   if (distinctIps >= MULTI_IP_THRESHOLD) { score += 60; reasons.push(`multi_ip:${distinctIps}`); }
 
   return { score: Math.min(score, 100), reasons };
