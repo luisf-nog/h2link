@@ -1477,14 +1477,17 @@ const handler = async (req: Request): Promise<Response> => {
         return json(200, { ok: true, mode: "cron-skip", reason: "no_pending_items" });
       }
 
-      const { data: users, error: uErr } = await serviceClient
-        .from("profiles")
-        .select("id,plan_tier")
-        .in("plan_tier", ["gold", "diamond", "black"])
+      // OPTIMIZATION: Only fan-out to users who actually HAVE pending items
+      const { data: usersWithPending, error: uErr } = await serviceClient
+        .from("my_queue")
+        .select("user_id")
+        .eq("status", "pending")
         .limit(200);
       if (uErr) throw uErr;
 
-      const userList = (users ?? []) as Array<{ id: string }>;
+      // Deduplicate user IDs
+      const uniqueUserIds = [...new Set((usersWithPending ?? []).map((r: any) => r.user_id))];
+      const userList = uniqueUserIds.map((id) => ({ id }));
       console.log(`[process-queue] Fan-out: disparando ${userList.length} invocações paralelas`);
 
       // Fan-out: fire a separate self-invocation for each user
