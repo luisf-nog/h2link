@@ -32,7 +32,7 @@ export interface QueueItem {
   } | null;
 }
 
-const STALE_MS = 30_000;
+const STALE_MS = 60_000;
 const STUCK_PROCESSING_MINUTES = 10;
 
 interface QueueStore {
