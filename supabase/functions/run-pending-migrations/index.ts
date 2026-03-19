@@ -73,6 +73,62 @@ const MIGRATIONS = [
        END $$;`,
     ],
   },
+  {
+    name: "RPC get_market_dashboard_stats",
+    sqls: [
+      `CREATE OR REPLACE FUNCTION public.get_market_dashboard_stats()
+       RETURNS jsonb
+       LANGUAGE plpgsql
+       STABLE
+       SECURITY DEFINER
+       SET search_path TO 'public'
+       AS $fn$
+       DECLARE result jsonb;
+       BEGIN
+         SELECT jsonb_build_object(
+           'h2a', COUNT(*) FILTER (WHERE visa_type = 'H-2A'),
+           'h2b', COUNT(*) FILTER (WHERE visa_type = 'H-2B'),
+           'early', COUNT(*) FILTER (WHERE job_id LIKE 'JO-%' OR visa_type LIKE '%Early%'),
+           'hot', COUNT(*) FILTER (WHERE posted_date >= CURRENT_DATE - 1),
+           'total', COUNT(*),
+           'top_categories', (SELECT COALESCE(jsonb_agg(row_to_json(c)), '[]'::jsonb) FROM (
+             SELECT category as name, COUNT(*)::int as count FROM public_jobs WHERE is_active=true AND category IS NOT NULL AND category != '' GROUP BY category ORDER BY count DESC LIMIT 6
+           ) c),
+           'top_states', (SELECT COALESCE(jsonb_agg(row_to_json(s)), '[]'::jsonb) FROM (
+             SELECT state as name, COUNT(*)::int as count FROM public_jobs WHERE is_active=true AND state IS NOT NULL AND state != '' GROUP BY state ORDER BY count DESC LIMIT 6
+           ) s),
+           'top_paying_states', (SELECT COALESCE(jsonb_agg(row_to_json(p)), '[]'::jsonb) FROM (
+             SELECT state as name, ROUND(AVG(salary)::numeric, 2) as "avgSalary" FROM public_jobs WHERE is_active=true AND salary > 7 AND salary < 150 GROUP BY state HAVING COUNT(*) >= 5 ORDER BY "avgSalary" DESC LIMIT 5
+           ) p)
+         ) INTO result FROM public_jobs WHERE is_active = true;
+         RETURN result;
+       END; $fn$;`,
+    ],
+  },
+  {
+    name: "RPC get_engagement_stats",
+    sqls: [
+      `CREATE OR REPLACE FUNCTION public.get_engagement_stats(p_user_id uuid)
+       RETURNS jsonb
+       LANGUAGE sql
+       STABLE
+       SECURITY DEFINER
+       SET search_path TO 'public'
+       AS $fn$
+         SELECT jsonb_build_object(
+           'sent_count', COUNT(*)::int,
+           'opened_count', COUNT(*) FILTER (WHERE opened_at IS NOT NULL)::int,
+           'cv_viewed_count', COUNT(*) FILTER (WHERE profile_viewed_at IS NOT NULL)::int
+         ) FROM my_queue WHERE user_id = p_user_id AND status = 'sent';
+       $fn$;`,
+    ],
+  },
+  {
+    name: "Index queue_send_history user+status+sent_at",
+    sqls: [
+      `CREATE INDEX IF NOT EXISTS idx_queue_send_history_user_status_sent ON public.queue_send_history (user_id, status, sent_at DESC);`,
+    ],
+  },
 ];
 
 serve(async (req) => {

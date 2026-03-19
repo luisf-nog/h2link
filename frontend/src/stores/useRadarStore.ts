@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 
-const STALE_MS = 30_000;
+const STALE_MS = 120_000;
 
 interface RadarStore {
   radarProfile: any | null;
