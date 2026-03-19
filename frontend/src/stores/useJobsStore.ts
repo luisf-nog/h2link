@@ -97,25 +97,15 @@ export const useJobsStore = create<JobsStore>((set, get) => ({
   },
 
   syncQueue: async (userId: string) => {
-    const allJobIds: string[] = [];
-    let from = 0;
-    const batchSize = 1000;
-    let hasMore = true;
-    while (hasMore) {
-      const { data } = await supabase
-        .from("my_queue")
-        .select("job_id")
-        .eq("user_id", userId)
-        .not("job_id", "is", null)
-        .range(from, from + batchSize - 1);
-      if (data && data.length > 0) {
-        allJobIds.push(...data.map((r) => r.job_id).filter((id): id is string => id !== null));
-        from += batchSize;
-        hasMore = data.length === batchSize;
-      } else {
-        hasMore = false;
-      }
-    }
-    set({ queuedJobIds: new Set(allJobIds) });
+    // Single query with limit instead of paginated loop
+    // Most users have <5000 queue items; this avoids multiple round-trips
+    const { data } = await supabase
+      .from("my_queue")
+      .select("job_id")
+      .eq("user_id", userId)
+      .not("job_id", "is", null)
+      .limit(5000);
+    const ids = (data || []).map((r) => r.job_id).filter((id): id is string => id !== null);
+    set({ queuedJobIds: new Set(ids) });
   },
 }));

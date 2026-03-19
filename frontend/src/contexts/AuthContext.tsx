@@ -34,11 +34,23 @@ interface SmtpStatus {
   hasRiskProfile: boolean;
 }
 
+interface EmployerProfile {
+  id: string;
+  company_name: string;
+  tier: "free" | "essential" | "professional" | "enterprise";
+  status: "active" | "inactive";
+  is_verified: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   smtpStatus: SmtpStatus | null;
+  isAdmin: boolean;
+  isEmployer: boolean;
+  employerProfile: EmployerProfile | null;
+  rolesLoading: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
@@ -54,11 +66,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Emails that are always admin (hardcoded safety net)
+const ADMIN_EMAILS = ["seu.email.real@gmail.com"];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [smtpStatus, setSmtpStatus] = useState<SmtpStatus | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isEmployer, setIsEmployer] = useState(false);
+  const [employerProfile, setEmployerProfile] = useState<EmployerProfile | null>(null);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -74,10 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     if (data) {
-      // Check if credits_reset_date is from a previous day - if so, credits should be 0
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const today = new Date().toISOString().slice(0, 10);
       if (data.credits_reset_date && data.credits_reset_date < today) {
-        // The backend hasn't reset yet, so treat credits_used_today as 0 in the UI
         return { ...data, credits_used_today: 0 } as Profile;
       }
     }
@@ -96,6 +113,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasPassword: Boolean(data?.has_password),
       hasRiskProfile: Boolean(data?.risk_profile),
     };
+  };
+
+  const fetchRoles = async (userId: string, userEmail: string | undefined) => {
+    // Check admin via hardcoded list first
+    const isEmailAdmin = !!(userEmail && ADMIN_EMAILS.includes(userEmail));
+
+    // Single query to get all roles + employer profile in parallel
+    const [rolesRes, empRes] = await Promise.all([
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId),
+      supabase
+        .from('employer_profiles')
+        .select('id, company_name, tier, status, is_verified')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ]);
+
+    const roles = (rolesRes.data || []).map((r) => r.role);
+    setIsAdmin(isEmailAdmin || roles.includes('admin'));
+    setIsEmployer(roles.includes('employer'));
+    setEmployerProfile(
+      empRes.data
+        ? {
+            id: empRes.data.id,
+            company_name: empRes.data.company_name,
+            tier: empRes.data.tier as EmployerProfile['tier'],
+            status: empRes.data.status as EmployerProfile['status'],
+            is_verified: empRes.data.is_verified,
+          }
+        : null,
+    );
+    setRolesLoading(false);
   };
 
   const refreshProfile = async () => {
@@ -137,62 +188,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loadUserData = async (currentSession: Session) => {
+    try {
+      const [profileData, smtp] = await Promise.all([
+        fetchProfile(currentSession.user.id),
+        fetchSmtpStatus(currentSession.user.id),
+      ]);
+      setProfile(profileData);
+      setSmtpStatus(smtp);
+
+      // Fetch roles (cached for entire session)
+      fetchRoles(currentSession.user.id, currentSession.user.email).catch(() => {
+        setRolesLoading(false);
+      });
+
+      if (profileData) {
+        tryApplyPendingReferral(currentSession, profileData).catch(() => undefined);
+      }
+    } catch (err) {
+      console.error('Error loading user data:', err);
+      setSmtpStatus({ hasPassword: false, hasRiskProfile: false });
+      setRolesLoading(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearUserState = () => {
+    setProfile(null);
+    setSmtpStatus(null);
+    setIsAdmin(false);
+    setIsEmployer(false);
+    setEmployerProfile(null);
+    setRolesLoading(true);
+  };
+
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-        // Use setTimeout to avoid potential deadlocks
-          setTimeout(async () => {
-            try {
-              const [profileData, smtp] = await Promise.all([
-                fetchProfile(session.user.id),
-                fetchSmtpStatus(session.user.id),
-              ]);
-              setProfile(profileData);
-              setSmtpStatus(smtp);
-              if (session && profileData) {
-                tryApplyPendingReferral(session, profileData).catch(() => undefined);
-              }
-            } catch (err) {
-              console.error('Error loading user data:', err);
-              setSmtpStatus({ hasPassword: false, hasRiskProfile: false });
-            } finally {
-              setLoading(false);
-            }
-          }, 0);
+          setTimeout(() => loadUserData(session), 0);
         } else {
-          setProfile(null);
-          setSmtpStatus(null);
+          clearUserState();
           setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        Promise.all([
-          fetchProfile(session.user.id),
-          fetchSmtpStatus(session.user.id),
-        ]).then(([profileData, smtp]) => {
-          setProfile(profileData);
-          setSmtpStatus(smtp);
-          if (session && profileData) {
-            tryApplyPendingReferral(session, profileData).catch(() => undefined);
-          }
-          setLoading(false);
-        }).catch((err) => {
-          console.error('Error loading user data:', err);
-          setSmtpStatus({ hasPassword: false, hasRiskProfile: false });
-          setLoading(false);
-        });
+        loadUserData(session);
       } else {
         setLoading(false);
       }
@@ -229,7 +280,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!error && profileData) {
-      // If we have an active session (auto-confirm enabled), update profile immediately.
       const sessionToUse = data.session ?? (await supabase.auth.getSession()).data.session;
       const userId = data.user?.id ?? sessionToUse?.user?.id;
 
@@ -244,7 +294,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq("id", userId);
 
         if (!profileError) {
-          // keep local profile in sync
           refreshProfile().catch(() => undefined);
         }
       }
@@ -257,8 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
-    setProfile(null);
-    setSmtpStatus(null);
+    clearUserState();
   };
 
   return (
@@ -268,6 +316,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         smtpStatus,
+        isAdmin,
+        isEmployer,
+        employerProfile,
+        rolesLoading,
         loading,
         signIn,
         signUp,
