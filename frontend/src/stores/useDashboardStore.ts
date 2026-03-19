@@ -206,7 +206,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
     try {
       // Try RPC first (single query instead of paginated loop of 9+ queries)
-      const { data: rpcData, error: rpcError } = await supabase.rpc("get_engagement_stats", {
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)("get_engagement_stats", {
         p_user_id: userId,
       });
 
