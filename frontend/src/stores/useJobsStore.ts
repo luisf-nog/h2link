@@ -54,7 +54,7 @@ export interface FeaturedJob {
   wage_rate: string | null;
 }
 
-const STALE_MS = 30_000;
+const STALE_MS = 60_000;
 
 interface JobsStore {
   jobs: Job[];
