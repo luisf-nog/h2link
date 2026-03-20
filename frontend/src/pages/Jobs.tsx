@@ -175,8 +175,8 @@ export default function Jobs() {
     let query = supabase
       .from("public_jobs")
       .select("*", { count: "exact" })
-      .eq("is_banned", false)
-      .eq("is_active", true);
+      .eq("is_banned", false);
+    if (!showInactive) query = query.eq("is_active", true);
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
 
     if (visaType !== "all") query = query.eq("visa_type", visaType);
