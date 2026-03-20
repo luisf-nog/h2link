@@ -523,6 +523,17 @@ export default function Jobs() {
                 className="h-10"
               />
             </div>
+            <div className="flex items-center gap-2 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground select-none">
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => { setShowInactive(e.target.checked); setPage(1); }}
+                  className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                />
+                {t("jobs.filters.show_inactive")}
+              </label>
+            </div>
           </CardHeader>
         </Card>
 
