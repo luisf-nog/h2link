@@ -1052,7 +1052,8 @@
       "category": "Category",
       "category_all": "All categories",
       "min_salary": "Min hourly rate ($)",
-      "max_salary": "Max hourly rate ($)"
+      "max_salary": "Max hourly rate ($)",
+      "show_inactive": "Show inactive jobs"
     },
     "search": {
       "placeholder": "Search by role, company, city..."

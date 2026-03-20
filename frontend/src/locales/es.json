@@ -1052,7 +1052,8 @@
       "category": "Categoría",
       "category_all": "Todas as categorías",
       "min_salary": "Valor/hora mín ($)",
-      "max_salary": "Valor/hora máx ($)"
+      "max_salary": "Valor/hora máx ($)",
+      "show_inactive": "Mostrar empleos inactivos"
     },
     "search": {
       "placeholder": "Buscar por puesto, empresa, ciudad..."

@@ -101,6 +101,7 @@ export default function Jobs() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [minSalary, setMinSalary] = useState("");
   const [maxSalary, setMaxSalary] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [page, setPage] = useState(1);
 
   type SortKey =
@@ -174,8 +175,8 @@ export default function Jobs() {
     let query = supabase
       .from("public_jobs")
       .select("*", { count: "exact" })
-      .eq("is_banned", false)
-      .eq("is_active", true);
+      .eq("is_banned", false);
+    if (!showInactive) query = query.eq("is_active", true);
     query = query.order(sortKey, { ascending: sortDir === "asc", nullsFirst: false });
 
     if (visaType !== "all") query = query.eq("visa_type", visaType);
@@ -196,7 +197,7 @@ export default function Jobs() {
 
   useEffect(() => {
     fetchJobs();
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, minSalary, maxSalary, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, minSalary, maxSalary, sortKey, sortDir, page, showInactive]);
 
   const addToQueue = async (job: Job) => {
     if (!profile?.id || planSettings.job_db_blur) {
@@ -521,6 +522,17 @@ export default function Jobs() {
                 onChange={(e) => setMaxSalary(e.target.value)}
                 className="h-10"
               />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground select-none">
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => { setShowInactive(e.target.checked); setPage(1); }}
+                  className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                />
+                {t("jobs.filters.show_inactive")}
+              </label>
             </div>
           </CardHeader>
         </Card>
