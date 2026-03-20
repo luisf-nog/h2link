@@ -101,6 +101,7 @@ export default function Jobs() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [minSalary, setMinSalary] = useState("");
   const [maxSalary, setMaxSalary] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [page, setPage] = useState(1);
 
   type SortKey =
