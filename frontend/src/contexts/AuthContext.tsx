@@ -220,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setIsEmployer(false);
     setEmployerProfile(null);
-    setRolesLoading(true);
+    setRolesLoading(false);
   };
 
   useEffect(() => {
@@ -245,6 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         loadUserData(session);
       } else {
+        clearUserState();
         setLoading(false);
       }
     });
