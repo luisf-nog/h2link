@@ -197,7 +197,7 @@ export default function Jobs() {
 
   useEffect(() => {
     fetchJobs();
-  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, minSalary, maxSalary, sortKey, sortDir, page]);
+  }, [visaType, searchTerm, stateFilter, cityFilter, categoryFilter, minSalary, maxSalary, sortKey, sortDir, page, showInactive]);
 
   const addToQueue = async (job: Job) => {
     if (!profile?.id || planSettings.job_db_blur) {
