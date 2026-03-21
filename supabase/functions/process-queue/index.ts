@@ -1477,17 +1477,12 @@ const handler = async (req: Request): Promise<Response> => {
         return json(200, { ok: true, mode: "cron-skip", reason: "no_pending_items" });
       }
 
-      // OPTIMIZATION: Only fan-out to users who actually HAVE pending items
-      const { data: usersWithPending, error: uErr } = await serviceClient
-        .from("my_queue")
-        .select("user_id")
-        .eq("status", "pending")
-        .limit(200);
+      // OPTIMIZATION: Smart fan-out via RPC — excludes free users who hit 5/day limit
+      // and paid users without verified SMTP
+      const { data: eligibleUsers, error: uErr } = await serviceClient.rpc('get_eligible_queue_users');
       if (uErr) throw uErr;
 
-      // Deduplicate user IDs
-      const uniqueUserIds = [...new Set((usersWithPending ?? []).map((r: any) => r.user_id))];
-      const userList = uniqueUserIds.map((id) => ({ id }));
+      const userList = (eligibleUsers ?? []).map((r: any) => ({ id: r.user_id }));
       console.log(`[process-queue] Fan-out: disparando ${userList.length} invocações paralelas`);
 
       // Fan-out: fire a separate self-invocation for each user
