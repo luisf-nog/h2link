@@ -195,7 +195,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       .from("queue_send_history")
       .select("*", { count: "exact", head: true })
       .eq("user_id", userId)
-      .eq("status", "sent")
+      .eq("status", "success")
       .gte("sent_at", startOfMonth.toISOString());
 
     set({ queueCount: pendingCount ?? 0, sentThisMonth: monthCount ?? 0, personalLastFetchedAt: Date.now() });
