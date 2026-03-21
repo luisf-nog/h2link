@@ -271,7 +271,7 @@ export default function Dashboard() {
                       {engagementLoading ? (
                         <span className="animate-pulse opacity-50">--</span>
                       ) : (
-                        formatNumber(totalEmailsSent)
+                        formatNumber(totalSentItems)
                       )}
                     </h3>
                     <p className="text-xs text-slate-400 mt-1 font-medium">
