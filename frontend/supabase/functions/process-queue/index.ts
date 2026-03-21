@@ -811,7 +811,7 @@ async function processOneUser(params: {
 
   if (profileErr) throw profileErr;
   const p = profile as ProfileRow;
-  if (p.plan_tier === "free") return { processed: 0, sent: 0, failed: 0 };
+  // Free users are allowed up to 5 emails/day — dailyLimit logic below handles the cap
 
   // Daily limit enforcement (backend) — use warm-up aware limit
   const today = new Date().toISOString().slice(0, 10);
