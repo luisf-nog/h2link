@@ -129,6 +129,15 @@ const MIGRATIONS = [
       `CREATE INDEX IF NOT EXISTS idx_queue_send_history_user_status_sent ON public.queue_send_history (user_id, status, sent_at DESC);`,
     ],
   },
+  {
+    name: "cron process-queue 10 min interval",
+    sqls: [
+      `SELECT cron.alter_job(
+        (SELECT jobid FROM cron.job WHERE jobname = 'process-queue-every-minute'),
+        '*/10 * * * *'
+      );`,
+    ],
+  },
 ];
 
 serve(async (req) => {
