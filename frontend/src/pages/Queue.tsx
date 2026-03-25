@@ -160,57 +160,15 @@ export default function Queue() {
     if (profile?.id) checkSmtp(profile.id);
   }, [profile?.id, checkSmtp]);
 
+  // Light polling only while sending is in progress (replaces Realtime subscription)
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const debouncedFetch = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        if (!cancelled) fetchQueue();
-      }, 1500);
-    };
-
-    const run = async () => {
-      const { data } = await supabase.auth.getUser();
-      const userId = data.user?.id;
-      if (!userId || cancelled) return;
-
-      channel = supabase
-        .channel("my_queue_realtime")
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "my_queue",
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload: any) => {
-            if (payload.eventType === "UPDATE") {
-              const next = payload?.new;
-              if (!next?.id) return;
-              setQueue((prev) => prev.map((it) => (it.id === next.id ? { ...it, ...next } : it)));
-              // Skip full refetch while sending to avoid overwriting optimistic state
-              if (!sendingRef.current) debouncedFetch();
-            } else {
-              // INSERT or DELETE — refetch to get full joined data
-              if (!sendingRef.current) debouncedFetch();
-            }
-          },
-        )
-        .subscribe();
-    };
-
-    run();
-
-    return () => {
-      cancelled = true;
-      if (debounceTimer) clearTimeout(debounceTimer);
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, []);
+    if (!sendingRef.current) return;
+    const id = window.setInterval(() => {
+      if (!sendingRef.current) return;
+      fetchQueue();
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [sendingRef.current]);
 
   const STUCK_PROCESSING_MINUTES = 10;
 
