@@ -455,7 +455,7 @@ export default function Radar() {
   const [groupFilter, setGroupFilter] = useState("all");
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
-  const isPremium = true; // Radar is now free for all users
+  const isPremium = profile?.plan_tier === "diamond" || profile?.plan_tier === "black";
 
   // -------------------------------------------------------------------------
   // displayedCategories: keeps selected categories visible even with 0 listings

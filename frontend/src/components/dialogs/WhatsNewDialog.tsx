@@ -17,7 +17,7 @@ interface UpdateEntry {
 }
 
 const UPDATES: UpdateEntry[] = [
-  { key: "radar", date: "2026-03-26", isPremium: false },
+  { key: "radar", date: "2026-03-26", isPremium: true },
   { key: "h2resume", date: "2026-02-26", isPremium: true },
   // Future updates go here ↑
 ];

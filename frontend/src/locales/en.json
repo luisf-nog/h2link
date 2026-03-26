@@ -1885,17 +1885,18 @@
     "footer_link": "What's New",
     "updates": {
       "radar": {
-        "badge": "FREE",
-        "title": "Smart Radar — Now Free for Everyone!",
-        "problem": "Finding the right H-2A/H-2B job used to mean scrolling through hundreds of listings every day, hoping not to miss the perfect opportunity before it's gone.",
-        "solution": "Smart Radar does the work for you:",
-        "check1": "Auto-scans new DOL jobs every 30 min",
-        "check2": "Filter by state, visa, wage & category",
-        "check3": "Autopilot: auto-queue matching jobs",
+        "badge": "NEW",
+        "title": "Smart Radar — Your Personal Job Scanner",
+        "problem": "Manually checking for new H-2A/H-2B jobs every day is exhausting. By the time you find the right listing, it may already be full or expired.",
+        "solution": "Set your filters once and let Smart Radar do the rest:",
+        "check1": "Scans new DOL jobs daily — automatically",
+        "check2": "Filter by state, visa type, wage & category",
+        "check3": "Autopilot: auto-sends matching jobs for you",
         "check4": "Real-time match stats & sector breakdown",
-        "check5": "Instant manual scan on demand",
-        "value": "What was previously a premium-only feature is now completely free. Every user can set up their own personalized radar and never miss a matching job again.",
-        "cta": "Set up your Radar now and let the jobs come to you."
+        "check5": "One-tap manual scan whenever you want",
+        "value": "Just set your preferred state, visa type, wage range and job categories — Smart Radar will find and send matching opportunities without you lifting a finger.",
+        "cta": "Configure your Radar once. Let the jobs come to you.",
+        "lock": "Available exclusively for Premium users (Diamond & Black)."
       },
       "h2resume": {
         "badge": "NEW",
