@@ -1884,6 +1884,19 @@
     "close": "¡Entendido!",
     "footer_link": "Novedades",
     "updates": {
+      "radar": {
+        "badge": "GRATIS",
+        "title": "Smart Radar — ¡Ahora Gratis para Todos!",
+        "problem": "Encontrar el trabajo H-2A/H-2B correcto significaba revisar cientos de ofertas cada día, esperando no perder la oportunidad perfecta antes de que desapareciera.",
+        "solution": "Smart Radar hace el trabajo por ti:",
+        "check1": "Escanea nuevos trabajos del DOL cada 30 min",
+        "check2": "Filtra por estado, visa, salario y categoría",
+        "check3": "Piloto Automático: pone en cola los trabajos compatibles",
+        "check4": "Estadísticas de coincidencia en tiempo real por sector",
+        "check5": "Escaneo manual instantáneo bajo demanda",
+        "value": "Lo que antes era exclusivo para planes premium ahora es completamente gratis. Todos pueden configurar su propio radar y nunca más perder un trabajo compatible.",
+        "cta": "Configura tu Radar ahora y deja que los trabajos vengan a ti."
+      },
       "h2resume": {
         "badge": "NUEVO",
         "title": "H2 Resume",

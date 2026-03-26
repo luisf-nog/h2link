@@ -1884,6 +1884,19 @@
     "close": "Got it!",
     "footer_link": "What's New",
     "updates": {
+      "radar": {
+        "badge": "FREE",
+        "title": "Smart Radar — Now Free for Everyone!",
+        "problem": "Finding the right H-2A/H-2B job used to mean scrolling through hundreds of listings every day, hoping not to miss the perfect opportunity before it's gone.",
+        "solution": "Smart Radar does the work for you:",
+        "check1": "Auto-scans new DOL jobs every 30 min",
+        "check2": "Filter by state, visa, wage & category",
+        "check3": "Autopilot: auto-queue matching jobs",
+        "check4": "Real-time match stats & sector breakdown",
+        "check5": "Instant manual scan on demand",
+        "value": "What was previously a premium-only feature is now completely free. Every user can set up their own personalized radar and never miss a matching job again.",
+        "cta": "Set up your Radar now and let the jobs come to you."
+      },
       "h2resume": {
         "badge": "NEW",
         "title": "H2 Resume",

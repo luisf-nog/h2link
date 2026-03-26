@@ -86,7 +86,6 @@ export function AppSidebar() {
       title: "Radar",
       url: "/radar",
       icon: Radar,
-      comingSoon: true,
     },
     { title: t("nav.plans"), url: "/plans", icon: Diamond },
     { title: "H2 Resume", url: "/resume-converter", icon: FileText },
