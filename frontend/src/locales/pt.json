@@ -1884,6 +1884,19 @@
     "close": "Entendi!",
     "footer_link": "Novidades",
     "updates": {
+      "radar": {
+        "badge": "GRÁTIS",
+        "title": "Smart Radar — Agora Grátis para Todos!",
+        "problem": "Encontrar a vaga H-2A/H-2B certa significava rolar centenas de listagens todo dia, torcendo para não perder a oportunidade perfeita antes que ela acabasse.",
+        "solution": "O Smart Radar faz o trabalho por você:",
+        "check1": "Escaneia novas vagas do DOL a cada 30 min",
+        "check2": "Filtre por estado, visto, salário e categoria",
+        "check3": "Piloto Automático: enfileira vagas compatíveis",
+        "check4": "Estatísticas de match em tempo real por setor",
+        "check5": "Scan manual instantâneo sob demanda",
+        "value": "O que antes era exclusivo para planos premium agora é completamente grátis. Todos podem configurar seu próprio radar e nunca mais perder uma vaga compatível.",
+        "cta": "Configure seu Radar agora e deixe as vagas virem até você."
+      },
       "h2resume": {
         "badge": "NOVO",
         "title": "H2 Resume",
